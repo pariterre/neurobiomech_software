@@ -56,6 +56,6 @@ jobs:
 
       - name: Install lokomat_fes and test if it works
         run: |
-          python setup.py install
+          pip install .
           cd
           python -c "import lokomat_fes"

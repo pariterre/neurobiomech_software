@@ -27,6 +27,6 @@ setup(
         "License :: OSI Approved :: MIT License",
     ],
     include_package_data=True,
-    python_requires=">=3.11",
+    python_requires=">=3.12",
     zip_safe=False,
 )
