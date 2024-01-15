@@ -45,6 +45,12 @@ jobs:
       - name: Install extra dependencies
         run: mamba install black pytest pytest-cov codecov packaging -cconda-forge
 
+      - name: Install lokomat_fes and test if it works
+        run: |
+          python setup.py install
+          cd
+          python -c "import lokomat_fes"
+
       - name: Run tests
         run: pytest -v --color=yes --cov-report term-missing --cov=lokomat_fes tests
 
@@ -53,9 +59,3 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         if: matrix.label == 'Linux'
-
-      - name: Test installed version of lokomat_fes
-        run: |
-          python setup.py install
-          cd
-          python -c "import lokomat_fes"
