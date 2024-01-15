@@ -45,10 +45,11 @@ jobs:
       - name: Install extra dependencies
         run: mamba install black pytest pytest-cov codecov packaging -cconda-forge
 
-      - name: Run tests
-        run: pytest -v --color=yes --cov-report term-missing --cov=lokomat_fes tests
+      - name: Run tests without coverage
+        run: pytest -v --color=yes tests
+        if: matrix.label != 'Linux'
 
-      - name: Upload coverage reports to Codecov
+      - name: Run tests with coverage
         run: |
           pytest -v --color=yes --cov-report term-missing --cov=lokomat_fes tests
           codecov
