@@ -1,0 +1,61 @@
+name: Run the tests
+
+on: [pull_request]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: Linux
+            prefix: /usr/share/miniconda3/envs/lokomat_fes
+          - os: macos-latest
+            label: Macos
+            prefix: /Users/runner/miniconda3/envs/lokomat_fes
+          - os: windows-latest
+            label: Windows
+            prefix: C:\Miniconda3\envs\lokomat_fes
+    name: Tests on ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup environment
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          miniforge-variant: Mambaforge
+          miniforge-version: latest
+          use-mamba: true
+          activate-environment: lokomat_fes
+          environment-file: environment.yml
+
+      - name: Print mamba info
+        run: |
+          mamba config --show
+          mamba info
+          mamba list
+
+      - name: Install extra dependencies
+        run: mamba install pytest-cov black pytest pytest-cov codecov packaging -cconda-forge
+
+      - name: Test installed version of lokomat_fes
+        run: |
+          python setup.py install
+          cd
+          python -c "import lokomat_fes"
+
+      - name: Run tests
+        run: pytest -v --color=yes --cov-report term-missing --cov=lokomat_fes tests
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        if: matrix.label == 'Linux'
