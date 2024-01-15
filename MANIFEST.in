@@ -1,0 +1,9 @@
+include __init__.py
+include LICENSE
+include README.md
+recursive-include docs *.md
+recursive-include examples *.py
+prune *sandbox*
+prune *c_generated_code*
+global-exclude *.py[cod]
+
