@@ -1,3 +1,7 @@
+import os
+
+print(os.getcwd())
+
 from lokomat_fes import __version__ as lokomat_fes_version
 from setuptools import setup
 
