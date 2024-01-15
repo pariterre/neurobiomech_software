@@ -43,7 +43,7 @@ conda install -cconda-forge
 ```
 
 # Troubleshooting
-Despite our best efforts to assist you with this long Readme and several examples, you may experience some problems with bioptim.
+Despite our best efforts to assist you with this long Readme and several examples, you may experience some problems with `lokomat_fes`.
 Fortunately, this troubleshooting section will guide you through solving some known issues.
 
 There is no troubleshooting so far.

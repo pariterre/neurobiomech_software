@@ -1,3 +1,3 @@
 from .common import __version__
 
-from .nidaq import NiDaqMock
+from .lokomat_nidaq import LokomatNiDaqMock
