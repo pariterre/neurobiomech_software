@@ -1,0 +1,2 @@
+class NiDaqMock:
+    pass
