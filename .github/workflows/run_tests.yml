@@ -43,19 +43,20 @@ jobs:
           mamba list
 
       - name: Install extra dependencies
-        run: mamba install pytest-cov black pytest pytest-cov codecov packaging -cconda-forge
+        run: mamba install black pytest pytest-cov codecov packaging -cconda-forge
 
-      - name: Test installed version of lokomat_fes
+      - name: Run tests without coverage
+        run: pytest -v --color=yes tests
+        if: matrix.label != 'Linux'
+
+      - name: Run tests with coverage
         run: |
-          python setup.py install
+          pytest -v --color=yes --cov-report term-missing --cov=lokomat_fes tests
+          codecov
+        if: matrix.label == 'Linux'
+
+      - name: Install lokomat_fes and test if it works
+        run: |
+          pip install .
           cd
           python -c "import lokomat_fes"
-
-      - name: Run tests
-        run: pytest -v --color=yes --cov-report term-missing --cov=lokomat_fes tests
-
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v3
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        if: matrix.label == 'Linux'

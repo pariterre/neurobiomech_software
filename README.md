@@ -24,7 +24,7 @@
 
 # How to install 
 ## Installing from the sources (For Linux, Mac, and Windows)
-From the root directory simply run the command `python setup.py install`.
+From the root directory simply run the command `pip install .`.
 
 ## Dependencies
 `lokomat_fes` relies on several libraries. 

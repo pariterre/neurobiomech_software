@@ -1,3 +1,5 @@
+from setuptools import setup, find_packages
+
 from lokomat_fes import __version__ as lokomat_fes_version
 from setuptools import setup
 
@@ -12,18 +14,19 @@ setup(
     description="Helps physical rehab using the functional electric stimulation using the Lokomat",
     long_description=long_description,
     url="https://github.com/cr-crme/lokomat_fes",
-    packages=[
-        ".",
-        "lokomat_fes",
-        "examples",
-    ],
+    packages=find_packages(),
     license="LICENSE",
-    keywords=["Functional electric stimulation", "Lokomat", "Physical rehab", "biomechanics"],
+    keywords=[
+        "Functional electric stimulation",
+        "Lokomat",
+        "Physical rehab",
+        "biomechanics",
+    ],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
     ],
     include_package_data=True,
-    python_requires=">=3.11",
+    python_requires=">=3.12",
     zip_safe=False,
 )
