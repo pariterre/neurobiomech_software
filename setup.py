@@ -15,10 +15,17 @@ setup(
     packages=[
         ".",
         "lokomat_fes",
+        "lokomat_fes/misc",
+        "lokomat_fes/nidaq",
         "examples",
     ],
     license="LICENSE",
-    keywords=["Functional electric stimulation", "Lokomat", "Physical rehab", "biomechanics"],
+    keywords=[
+        "Functional electric stimulation",
+        "Lokomat",
+        "Physical rehab",
+        "biomechanics",
+    ],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
