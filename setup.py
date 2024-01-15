@@ -15,8 +15,8 @@ setup(
     packages=[
         ".",
         "lokomat_fes",
-        "lokomat_fes/misc",
-        "lokomat_fes/nidaq",
+        "lokomat_fes.misc",
+        "lokomat_fes.nidaq",
         "examples",
     ],
     license="LICENSE",
