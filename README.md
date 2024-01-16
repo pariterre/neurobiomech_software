@@ -39,8 +39,12 @@ conda env create -f environment.yml
 
 Alternatively, you can install the dependencies manually by running the following command:
 ```bash
-conda install -cconda-forge
+conda install numpy nidaqmx-python -cconda-forge
 ```
+
+`lokomat_fes` also need `pyScienceMode`. 
+This dependency should be downloaded when git-cloning the current repository, assuming you initialized the submodule.
+Once it is done, please navigate to `{ROOT}/external/pyScienceMode` and follow the install instruction.
 
 # Troubleshooting
 Despite our best efforts to assist you with this long Readme and several examples, you may experience some problems with `lokomat_fes`.
