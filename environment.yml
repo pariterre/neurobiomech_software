@@ -6,3 +6,9 @@ dependencies:
 - python ==3.12
 - numpy
 - nidaqmx-python
+- pip
+- pip:
+  - crccheck 
+  - colorama 
+  - pyserial 
+- pytest

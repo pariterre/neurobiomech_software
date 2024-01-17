@@ -80,7 +80,7 @@ def test_start_recording_records_data():
 
     nidaq = LokomatNiDaqMock(on_data_ready_callback=data_callback)
     nidaq.start_recording()
-    time.sleep(nidaq._time_between_samples + nidaq.dt)  # Wait for slightly longer that one call
+    time.sleep(2 * nidaq._time_between_samples)  # Wait for long enough so we get at least 1 sample
     nidaq.stop_recording()
 
     assert _callback_called >= 1  # Do not use == as the timer might not be precise
