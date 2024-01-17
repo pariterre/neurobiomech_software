@@ -34,7 +34,7 @@ class Rehastim2Device(RehastimDeviceAbstract):
         return "Rehastim2"
 
     def _to_sciencemode(self):
-        from pyScienceMode import Rehastim2
+        from pyScienceMode.rehastim2 import Rehastim2
 
         return Rehastim2(port=self.port, show_log=self.show_log)
 
