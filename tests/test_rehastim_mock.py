@@ -6,5 +6,5 @@ def test_rehastim_initialize():
     assert rehastim._device is not None
     assert rehastim._device.show_log is False
     assert rehastim._device.port == "/dev/ttyUSB0"
-    assert rehastim._device.get_name() == "rehastim_mock"
+    assert rehastim._device.get_name() == "Rehastim2"
     rehastim.dispose()

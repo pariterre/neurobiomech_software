@@ -1,6 +1,6 @@
 from abc import ABC, abstractproperty, abstractstaticmethod, abstractmethod
 
-from .pysciencemode_interfaces import Channel
+from pyScienceMode import Channel
 
 
 class RehastimDeviceAbstract(ABC):
@@ -9,7 +9,6 @@ class RehastimDeviceAbstract(ABC):
         self.show_log = show_log
 
         self._pysciencemode_device = self._to_sciencemode()
-        channels = [channel.to_sciencemode() for channel in channels]
         self._init_channel(channels=channels, low_frequency_factor=low_frequency_factor)
 
     @abstractstaticmethod

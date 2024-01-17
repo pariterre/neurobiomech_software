@@ -1,9 +1,9 @@
-from lokomat_fes.rehastim import LokomatRehastim
+from lokomat_fes.rehastim import LokomatRehastimMock
 
 
 def __main__():
-    rehastim = LokomatRehastim()
-    rehastim.initialize()
+    rehastim = LokomatRehastimMock()
+
     rehastim.dispose()
 
 

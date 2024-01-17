@@ -1,12 +1,13 @@
+from pyScienceMode import Channel
+
 from .lokomat_rehastim import LokomatRehastim
-from .pysciencemode_interfaces import Channel
 from .rehastim_interface import RehastimDeviceAbstract
 
 
 class RehastimDeviceMock(RehastimDeviceAbstract):
     @staticmethod
     def get_name():
-        return "rehastim_mock"
+        return "Rehastim2"
 
     def _to_sciencemode(self):
         return self
@@ -37,8 +38,3 @@ class LokomatRehastimMock(LokomatRehastim):
     @property
     def _chosen_device(self):
         return RehastimDeviceMock
-
-    @staticmethod
-    def _initialize_channels(self) -> list[Channel]:
-        channels = super(LokomatRehastimMock, self)._initialize_channels(self)
-        return [ChannelMock(channel) for channel in channels]
