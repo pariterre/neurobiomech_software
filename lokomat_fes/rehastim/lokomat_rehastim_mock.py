@@ -1,3 +1,5 @@
+import time
+
 from pyScienceMode import Channel
 
 from .lokomat_rehastim import LokomatRehastim
@@ -5,6 +7,10 @@ from .rehastim_interface import RehastimDeviceAbstract
 
 
 class RehastimDeviceMock(RehastimDeviceAbstract):
+    def __init__(self, *args, **kwargs):
+        super(RehastimDeviceMock, self).__init__(*args, **kwargs)
+        self._is_stimulating = False
+
     @staticmethod
     def get_name():
         return "Rehastim2"
@@ -14,6 +20,11 @@ class RehastimDeviceMock(RehastimDeviceAbstract):
 
     def _init_channel(self, channels: list[Channel], low_frequency_factor: int):
         pass
+
+    def start_stimulation(self, stimulation_duration: float):
+        self._is_stimulating = True
+        time.sleep(stimulation_duration)
+        self._is_stimulating = False
 
 
 class ChannelMock(Channel):

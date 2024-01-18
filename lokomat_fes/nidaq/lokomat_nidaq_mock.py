@@ -15,9 +15,6 @@ class LokomatNiDaqMock(LokomatNiDaq):
     def _setup_task(self):
         pass
 
-    def _dispose_task(self):
-        pass
-
     def _start_task(self):
         """Simulate the start of the task by launching a timer that calls the callback function every dt seconds"""
         self._timer = PerpetualTimer(1, self._generate_fake_data)
