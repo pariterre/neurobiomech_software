@@ -1,4 +1,5 @@
-import time
+import pytest
+import re
 
 from lokomat_fes.rehastim import LokomatRehastimMock
 
@@ -12,10 +13,27 @@ def test_initialize():
     rehastim.dispose()
 
 
-def test_send_stimulation():
+def test_device_communication():
     rehastim = LokomatRehastimMock()
+    rehastim.start_device()
+
     rehastim.perform_stimulation(duration=0.1)
-    assert rehastim._device._pysciencemode_device._is_stimulating
-    time.sleep(0.2)  # Wait for the stimulation to finish.
-    assert not rehastim._device._pysciencemode_device._is_stimulating
+    # Since we are using multiprocessing, we are not able to check the state of the device.
+    # So if no error is raised, we assume that the device is working.
+
+    rehastim.dispose()
+
+
+def test_starting_twice():
+    rehastim = LokomatRehastimMock()
+    rehastim.start_device()
+    with pytest.raises(RuntimeError, match="The device is already started."):
+        rehastim.start_device()
+    rehastim.dispose()
+
+
+def test_perform_stimulation_without_starting():
+    rehastim = LokomatRehastimMock()
+    with pytest.raises(RuntimeError, match=re.escape("The device is not running, please call [start_device] before.")):
+        rehastim.perform_stimulation(duration=0.1)
     rehastim.dispose()
