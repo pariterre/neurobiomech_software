@@ -40,7 +40,7 @@ class RehastimDeviceAbstract(ABC):
         """Start the device."""
         self._stimulation_process.start()
 
-    def perform_stimulation(self, duration: float):
+    def start_stimulation(self, duration: float):
         """Perform a stimulation.
 
         Parameters
@@ -53,12 +53,19 @@ class RehastimDeviceAbstract(ABC):
 
         self._set_event(self._events, RehastimDeviceEvent.STIMULATION_DURATION, duration)
 
+    def end_stimulation(self):
+        """End the stimulation."""
+        if not self._stimulation_process.is_alive():
+            return
+
+        self._set_event(self._events, RehastimDeviceEvent.STOP, True)
+
     def stop_device(self):
         """Stop the device."""
         if not self._stimulation_process.is_alive():
             return
 
-        self._set_event(self._events, RehastimDeviceEvent.STOP, True)
+        self.end_stimulation()
 
     def dispose(self):
         """Dispose the device."""
@@ -67,6 +74,7 @@ class RehastimDeviceAbstract(ABC):
 
         self.stop_device()
         self._stimulation_process.join()
+        print("coucou")
 
     def _wait_for_stimulation_request(self, events):
         """Wait for a stimulation to finish.
@@ -88,6 +96,10 @@ class RehastimDeviceAbstract(ABC):
                 self._pysciencemode_device.start_stimulation(stimulation_duration=duration)
 
             time.sleep(0)
+
+        self._pysciencemode_device.end_stimulation()
+        self._pysciencemode_device.disconnect()
+        self._pysciencemode_device.close_port()
 
     @staticmethod
     def _set_event(events, new_event, value):
@@ -122,7 +134,7 @@ class Rehastim2Device(RehastimDeviceAbstract):
         return "Rehastim2"
 
     def _to_sciencemode(self):
-        from pyScienceMode.rehastim2 import Rehastim2
+        from pyScienceMode.devices.rehastim2 import Rehastim2
 
         return Rehastim2(port=self.port, show_log=self.show_log)
 
@@ -167,8 +179,11 @@ class RehastimInterface(ABC):
         """Start the device."""
         self._device.start_device()
 
-    def perform_stimulation(self, duration: float):
-        self._device.perform_stimulation(duration=duration)
+    def start_stimulation(self, duration: float):
+        self._device.start_stimulation(duration=duration)
+
+    def end_stimulation(self):
+        self._device.end_stimulation()
 
     def stop_device(self):
         """Stop the device."""
