@@ -73,26 +73,29 @@ class GenericNiDaq(ABC):
     def dispose(self):
         """Dispose the NiDaq class"""
         self.stop_recording()
-        self._task = None
+        if self._task is not None:
+            self._task.close()
+            self._task = None
 
     def _reset_data(self):
         """Reset data to start a new trial"""
         self._t = []
         self._samples = []
 
-    def _new_data_has_arrived(self, data: np.ndarray):
+    def _data_has_arrived(self, data: np.ndarray):
         """
         Callback function for reading signals.
         It automatically computes the time vector and calls the callback function if it exists.
         """
 
-        print("Yeah! I got some data!")
         t0 = 0 if not self._t else (self._t[-1][-1] + self.dt)
         self._t.append(np.linspace(t0, t0 + 1 - self.dt, self.frame_rate))
         self._samples.append(data)
 
         if self._on_data_ready_callback is not None:
             self._on_data_ready_callback(self._t, self._samples)
+
+        return 1
 
     def _setup_task(self):
         """Setup the NiDaq task"""
@@ -108,7 +111,7 @@ class GenericNiDaq(ABC):
         n_samples = self._time_between_samples * self.frame_rate
         self._task.register_every_n_samples_acquired_into_buffer_event(
             n_samples,
-            lambda *_, **__: self._new_data_has_arrived(self, self._task.read(number_of_samples_per_channel=n_samples)),
+            lambda *_, **__: self._data_has_arrived(np.array(self._task.read(number_of_samples_per_channel=n_samples))),
         )
 
     @abstractmethod

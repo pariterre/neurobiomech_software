@@ -35,6 +35,6 @@ class LokomatNiDaqMock(LokomatNiDaq):
         # First row is hip angle that resembles a sine wave which takes about 1 second to complete
         fake_data[0, :] = np.sin(2 * np.pi * normalized_time)
 
-        self._new_data_has_arrived(fake_data)
+        self._data_has_arrived(fake_data)
 
         self._timer_counter += self._time_between_samples

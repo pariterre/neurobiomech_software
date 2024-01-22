@@ -86,3 +86,15 @@ def test_start_recording_records_data():
     assert _callback_called >= 1  # Do not use == as the timer might not be precise
 
     nidaq.dispose()
+
+
+def test_resuming_recording():
+    nidaq = LokomatNiDaqMock()
+
+    nidaq.start_recording()
+    nidaq.stop_recording()
+
+    nidaq.start_recording()
+    nidaq.stop_recording()
+
+    nidaq.dispose()
