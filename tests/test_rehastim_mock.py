@@ -59,15 +59,14 @@ def test_stimulate_for_a_specific_duration():
     # Preinitialize so it doesn't mess up the timing
     rehastim.initialize_stimulation()
 
-    # If time is not specified, the function is non-blocking
+    # Both of these should be non-blocking
     initial_time = time.perf_counter()
     rehastim.start_stimulation()
     assert time.perf_counter() - initial_time < 0.2
 
-    # If time is specified, the function is blocking
     initial_time = time.perf_counter()
-    rehastim.start_stimulation(duration=0.2)
-    assert time.perf_counter() - initial_time >= 0.2
+    rehastim.start_stimulation(duration=2)
+    assert time.perf_counter() - initial_time < 0.2
 
     rehastim.dispose()
     assert not device.stimulation_active

@@ -1,3 +1,4 @@
+from threading import Timer
 from abc import ABC, abstractproperty, abstractmethod
 
 from pyScienceMode import Channel, RehastimGeneric
@@ -40,7 +41,9 @@ class RehastimDeviceAbstract(ABC):
         if self._channels_has_changed:
             channels = self.get_channels()
 
-        self._device.start_stimulation(stimulation_duration=duration, upd_list_channels=channels)
+        self._device.start_stimulation(upd_list_channels=channels)
+        if duration is not None:
+            Timer(duration, self.stop_stimulation).start()
 
     def stop_stimulation(self) -> None:
         """Pause the stimulation."""
