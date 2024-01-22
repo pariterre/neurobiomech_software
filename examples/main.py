@@ -1,7 +1,7 @@
 from time import sleep
 
-from lokomat_fes.rehastim import LokomatRehastim
-from lokomat_fes.nidaq import LokomatNiDaqMock
+from lokomat_fes.rehastim.mocks import LokomatRehastimMock
+from lokomat_fes.nidaq.mocks import LokomatNiDaqMock
 
 
 def _received_data(t, data):
@@ -9,9 +9,7 @@ def _received_data(t, data):
 
 
 def __main__():
-    rehastim = LokomatRehastim()
-    rehastim.start_device()
-
+    rehastim = LokomatRehastimMock()
     nidaq = LokomatNiDaqMock(on_data_ready_callback=_received_data)
 
     nidaq.start_recording()
@@ -20,12 +18,10 @@ def __main__():
     sleep(5)
 
     nidaq.stop_recording()
-    rehastim.end_stimulation()
+    rehastim.stop_stimulation()
 
     rehastim.dispose()
     nidaq.dispose()
-
-    # The current implementation does not exit properly
 
 
 if __name__ == "__main__":

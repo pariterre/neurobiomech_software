@@ -1,39 +1,47 @@
-import pytest
-import re
-
-from lokomat_fes.rehastim import LokomatRehastimMock
+from lokomat_fes.rehastim.mocks import LokomatRehastimMock, Rehastim2Mock
 
 
 def test_initialize():
     rehastim = LokomatRehastimMock()
-    assert rehastim._device is not None
-    assert rehastim._device.show_log is False
-    assert rehastim._device.port == "/dev/ttyUSB0"
-    assert rehastim._device.get_name() == "Rehastim2"
+
+    assert rehastim.show_log is False
+    assert rehastim.port == "NoPort"
+    assert rehastim.device_name == "Rehastim2"
+
+    device: Rehastim2Mock = rehastim._device
+    assert device is not None
+    assert device.port.port == "NoPort"
+
+    assert device.list_channels is None
+    rehastim.initialize_stimulation()
+    assert len(device.list_channels) == 8
+
     rehastim.dispose()
 
 
-def test_device_communication():
+def test_initialize_by_starting_stimulation():
     rehastim = LokomatRehastimMock()
-    rehastim.start_device()
 
-    rehastim.start_stimulation(duration=0.1)
-    # Since we are using multiprocessing, we are not able to check the state of the device.
-    # So if no error is raised, we assume that the device is working.
+    device: Rehastim2Mock = rehastim._device
+    assert device.list_channels is None
+    rehastim.start_stimulation()
+    assert len(device.list_channels) == 8
 
     rehastim.dispose()
 
 
-def test_starting_twice():
+def test_stop_stimulation():
     rehastim = LokomatRehastimMock()
-    rehastim.start_device()
-    with pytest.raises(RuntimeError, match="The device is already started."):
-        rehastim.start_device()
-    rehastim.dispose()
 
+    device: Rehastim2Mock = rehastim._device
+    assert device.stimulation_active
+    assert device.amplitude == []
 
-def test_start_stimulation_without_starting():
-    rehastim = LokomatRehastimMock()
-    with pytest.raises(RuntimeError, match=re.escape("The device is not running, please call [start_device] before.")):
-        rehastim.start_stimulation(duration=0.1)
+    rehastim.start_stimulation()
+    for amplitude in device.amplitude:
+        assert amplitude == 50
+
+    rehastim.stop_stimulation()
+
     rehastim.dispose()
+    assert not device.stimulation_active

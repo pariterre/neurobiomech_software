@@ -10,7 +10,11 @@ class PerpetualTimer:
     def handle_function(self):
         self.hFunction()
         self.thread = Timer(self.t, self.handle_function)
-        self.thread.start()
+        try:
+            self.thread.start()
+        except RuntimeError:
+            # This should not happen, but it does when the user is in debug mode and blocked on a breakpoint
+            pass
 
     def start(self):
         self.thread.start()
