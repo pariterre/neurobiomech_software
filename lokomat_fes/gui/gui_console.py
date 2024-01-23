@@ -1,7 +1,9 @@
+import logging
 from typing import override
 
 from .gui_generic import GuiGeneric
-from ..common.logger import logger
+
+logger = logging.getLogger("lokomat_fes")
 
 
 class GuiConsole(GuiGeneric):

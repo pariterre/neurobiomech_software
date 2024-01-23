@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
+import logging
 
 from ..rehastim import RehastimGeneric
 from ..nidaq import NiDaqGeneric
-from ..common.logger import logger
+
+logger = logging.getLogger("lokomat_fes")
 
 
 class GuiGeneric(ABC):

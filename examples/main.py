@@ -1,7 +1,9 @@
 # from time import sleep
+import logging
 
 from matplotlib import pyplot as plt
 
+from lokomat_fes import setup_logger
 from lokomat_fes.gui import GuiConsole
 
 # Load the NiDaq device
@@ -15,11 +17,15 @@ from lokomat_fes.nidaq.mocks import NiDaqLokomatMock as NiDaqLokomat
 from lokomat_fes.rehastim.mocks import RehastimLokomatMock as RehastimLokomat
 
 
+logger = logging.getLogger("lokomat_fes")
+
+
 def _received_data(t, data) -> None:
     """Callback function that is called when new data are received"""
 
     t_index = 0
     hip_index = 0
+    logger.info("coucou")
     print(f"Received data, at {t[t_index]}, initial hip angle: {data[hip_index, t_index]}")
 
 
@@ -33,6 +39,8 @@ def plot_data(data: NiDaqData) -> None:
 
 
 def __main__() -> None:
+    setup_logger(logging.WARNING)
+
     # Define the devices
     rehastim = RehastimLokomat()
     nidaq = NiDaqLokomat(on_data_ready=_received_data)
