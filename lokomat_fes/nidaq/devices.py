@@ -3,13 +3,12 @@ from typing import Callable
 
 import numpy as np
 
+from .data import NiDaqData
+
 
 class NiDaqGeneric(ABC):
     def __init__(
-        self,
-        num_channels: int,
-        frame_rate: int,
-        on_data_ready_callback: Callable | None = None,
+        self, num_channels: int, frame_rate: int, on_data_ready: Callable[[np.ndarray, np.ndarray], None] | None = None
     ) -> None:
         """
         Parameters
@@ -18,20 +17,19 @@ class NiDaqGeneric(ABC):
             Number of channels connected to the NiDaq
         rate : int
             Frames per second
-        on_data_ready_callback : Callable
-            Callback function that is called when data is ready
+        on_data_ready : Callable[[np.ndarray, np.ndarray], None] | None
+            Callback function that is called when new data is ready (the new time and data are passed as arguments)
         """
         self._num_channels = num_channels
         self._frame_rate = frame_rate
         self._time_between_samples: float = 1  # second
 
         # Data releated variables
-        self._t: list[np.ndarray] = []
-        self._samples: list[np.ndarray] = []
+        self._data: NiDaqData = NiDaqData()
 
         # Callback function that is called when new data are added
         self._is_recording: bool = False
-        self._on_data_ready_callback = on_data_ready_callback
+        self._on_data_ready_callback = on_data_ready
 
         # Setup the NiDaq task
         self._task = None
@@ -70,6 +68,11 @@ class NiDaqGeneric(ABC):
         self._stop_task()
         self._is_recording = False
 
+    @property
+    def data(self) -> NiDaqData:
+        """Data from the NiDaq"""
+        return self._data.copy
+
     def dispose(self):
         """Dispose the NiDaq class"""
         self.stop_recording()
@@ -79,8 +82,7 @@ class NiDaqGeneric(ABC):
 
     def _reset_data(self):
         """Reset data to start a new trial"""
-        self._t = []
-        self._samples = []
+        self._data = NiDaqData()
 
     def _data_has_arrived(self, data: np.ndarray):
         """
@@ -88,12 +90,14 @@ class NiDaqGeneric(ABC):
         It automatically computes the time vector and calls the callback function if it exists.
         """
 
-        t0 = 0 if not self._t else (self._t[-1][-1] + self.dt)
-        self._t.append(np.linspace(t0, t0 + 1 - self.dt, self.frame_rate))
-        self._samples.append(data)
+        prev_t, _ = self._data.sample_block(index=-1, unsafe=True)
+        t0 = 0 if prev_t is None else (prev_t[-1] + self.dt)
+        t = np.linspace(t0, t0 + self._time_between_samples - self.dt, self.frame_rate)
+
+        self._data.add(t, data)
 
         if self._on_data_ready_callback is not None:
-            self._on_data_ready_callback(self._t, self._samples)
+            self._on_data_ready_callback(*self._data.sample_block(index=-1, unsafe=True))
 
         return 1
 

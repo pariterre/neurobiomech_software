@@ -62,7 +62,7 @@ def test_on_data_ready_callback():
         nonlocal _callback_called
         _callback_called = True
 
-    nidaq = NiDaqLokomatMock(on_data_ready_callback=data_callback)
+    nidaq = NiDaqLokomatMock(on_data_ready=data_callback)
     nidaq._generate_fake_data()
     assert len(nidaq._samples) == 1
     assert len(nidaq._t) == 1
@@ -78,7 +78,7 @@ def test_start_recording_records_data():
         nonlocal _callback_called
         _callback_called += 1
 
-    nidaq = NiDaqLokomatMock(on_data_ready_callback=data_callback)
+    nidaq = NiDaqLokomatMock(on_data_ready=data_callback)
     nidaq.start_recording()
     time.sleep(2 * nidaq._time_between_samples)  # Wait for long enough so we get at least 1 sample
     nidaq.stop_recording()
