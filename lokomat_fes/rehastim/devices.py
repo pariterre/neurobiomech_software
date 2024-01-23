@@ -1,4 +1,5 @@
 from threading import Timer
+from typing import override
 from abc import ABC, abstractproperty, abstractmethod
 
 from pyScienceMode import Channel, RehastimGeneric as pyScienceModeRehastimGeneric
@@ -92,15 +93,18 @@ class Rehastim2(RehastimGeneric):
         self._stimulation_interval = stimulation_interval
         self._low_frequency_factor = low_frequency_factor
 
+    @override
     @property
     def device_name(self) -> str:
         return "Rehastim2"
 
+    @override
     def _get_initialized_device(self) -> pyScienceModeRehastimGeneric:
         from pyScienceMode.devices.rehastim2 import Rehastim2 as pyScienceModeRehastim2
 
         return pyScienceModeRehastim2(port=self.port, show_log=self.show_log)
 
+    @override
     def _initialize_stimulation(self) -> None:
         from pyScienceMode.devices.rehastim2 import Rehastim2 as pyScienceModeRehastim2
 
@@ -116,15 +120,18 @@ class RehastimP24(RehastimGeneric):
     def __init__(self, port: str, show_log: bool = False) -> None:
         raise NotImplementedError("The RehastimP24Device is not implemented yet.")
 
+    @override
     @property
     def device_name(self) -> str:
         return "RehastimP24"
 
+    @override
     def _get_initialized_device(self) -> pyScienceModeRehastimGeneric:
         from pyScienceMode.devices.rehastimP24 import RehastimP24 as pyScienceModeRehastimP24
 
         return pyScienceModeRehastimP24(port=self.port, show_log=self.show_log)
 
+    @override
     def _initialize_stimulation(self) -> None:
         from pyScienceMode.devices.rehastimP24 import RehastimP24 as pyScienceModeRehastimP24
 

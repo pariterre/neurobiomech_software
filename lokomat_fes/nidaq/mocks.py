@@ -1,3 +1,5 @@
+from typing import override
+
 import numpy as np
 
 from .lokomat_nidaq import NiDaqLokomat
@@ -12,15 +14,18 @@ class NiDaqLokomatMock(NiDaqLokomat):
         self._timer: PerpetualTimer | None = None
         self._timer_counter: int = 0
 
+    @override
     def _setup_task(self):
         pass
 
+    @override
     def _start_task(self):
         """Simulate the start of the task by launching a timer that calls the callback function every dt seconds"""
         self._timer = PerpetualTimer(1, self._generate_fake_data)
         self._timer_counter = 0
         self._timer.start()
 
+    @override
     def _stop_task(self):
         self._timer.cancel()
         self._timer = None

@@ -1,3 +1,5 @@
+from typing import override
+
 from pyScienceMode import Channel, Modes
 
 from .devices import Rehastim2
@@ -13,8 +15,10 @@ class RehastimLokomat(Rehastim2):
                 Channel(mode=Modes.SINGLE, no_channel=i, amplitude=50, pulse_width=100, device_type=self.device_name)
             )
 
+    @override
     def _set_channels(self, channels: list[Channel]) -> None:
         raise RuntimeError("Channels for LokomatRehastim cannot be set.")
 
+    @override
     def get_channels(self) -> list[Channel]:
         return self._channels
