@@ -36,14 +36,12 @@ class NiDaqData:
         self._t.append(t)
         self._data.append(data)
 
-    def sample_block(
-        self, index: int | slice | range, unsafe: bool = False
-    ) -> tuple[np.ndarray | None, np.ndarray | None]:
+    def sample_block(self, index: int | slice, unsafe: bool = False) -> tuple[np.ndarray | None, np.ndarray | None]:
         """Get a block of data.
 
         Parameters
         ----------
-        index : int | slice | range
+        index : int | slice
             Index of the block.
         unsafe : bool
             If True, the data are returned as a reference to the original data (meaning it is faster but it can be
@@ -85,6 +83,9 @@ class NiDaqData:
         t : np.ndarray
             Time vector of the data.
         """
+        if not self._t:
+            return np.array([])
+
         return np.concatenate(self._t)
 
     @property
@@ -99,6 +100,9 @@ class NiDaqData:
         data : np.ndarray
             Data from the NI DAQ device.
         """
+        if not self._data:
+            return np.array([[]])
+
         return np.concatenate(self._data, axis=1)
 
     @property
