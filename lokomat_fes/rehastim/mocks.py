@@ -1,8 +1,7 @@
-from pyScienceMode.devices.rehastim2 import Rehastim2
-from pyScienceMode.devices.rehastim_generic import RehastimGeneric
-from pyScienceMode import Rehastim2Commands
+from pyScienceMode.devices.rehastim_generic import RehastimGeneric as pyScienceModeRehastimGeneric
+from pyScienceMode.devices.rehastim2 import Rehastim2 as pyScienceModeRehastim2
 
-from .lokomat_rehastim import LokomatRehastim
+from .lokomat_rehastim import RehastimLokomat
 
 
 class PortMock:
@@ -16,7 +15,7 @@ class PortMock:
         pass
 
 
-class Rehastim2Mock(Rehastim2):
+class pyScienceModeRehastim2Mock(pyScienceModeRehastim2):
     def _get_last_device_ack(self) -> list:
         return [None, None, None, None, None, 0]
 
@@ -28,9 +27,9 @@ class Rehastim2Mock(Rehastim2):
         return self._are_channels_initialized
 
 
-class LokomatRehastimMock(LokomatRehastim):
+class RehastimLokomatMock(RehastimLokomat):
     def __init__(self, *args, **kwargs):
         super().__init__(port="NoPort", *args, **kwargs)
 
-    def _get_initialized_device(self) -> RehastimGeneric:
-        return Rehastim2Mock(port=self.port)
+    def _get_initialized_device(self) -> pyScienceModeRehastimGeneric:
+        return pyScienceModeRehastim2Mock(port=self.port)

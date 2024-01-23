@@ -4,7 +4,7 @@ from typing import Callable
 import numpy as np
 
 
-class GenericNiDaq(ABC):
+class NiDaqGeneric(ABC):
     def __init__(
         self,
         num_channels: int,

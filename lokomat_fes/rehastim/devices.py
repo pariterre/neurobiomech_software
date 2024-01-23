@@ -1,10 +1,10 @@
 from threading import Timer
 from abc import ABC, abstractproperty, abstractmethod
 
-from pyScienceMode import Channel, RehastimGeneric
+from pyScienceMode import Channel, RehastimGeneric as pyScienceModeRehastimGeneric
 
 
-class RehastimDeviceAbstract(ABC):
+class RehastimGeneric(ABC):
     """
     This device mechanism serves as a standardisation layer to account for discrepancies of the implementation of the
     devices in the pyScienceMode library.
@@ -57,7 +57,7 @@ class RehastimDeviceAbstract(ABC):
         self._device.close_port()
 
     @abstractmethod
-    def _get_initialized_device(self) -> RehastimGeneric:
+    def _get_initialized_device(self) -> pyScienceModeRehastimGeneric:
         """Convert to a pyScienceMode device."""
 
     def initialize_stimulation(self) -> None:
@@ -86,7 +86,7 @@ class RehastimDeviceAbstract(ABC):
         """Initialize the channels."""
 
 
-class Rehastim2Device(RehastimDeviceAbstract):
+class Rehastim2(RehastimGeneric):
     def __init__(self, stimulation_interval: int, low_frequency_factor: int, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._stimulation_interval = stimulation_interval
@@ -96,15 +96,15 @@ class Rehastim2Device(RehastimDeviceAbstract):
     def device_name(self) -> str:
         return "Rehastim2"
 
-    def _get_initialized_device(self) -> RehastimGeneric:
-        from pyScienceMode.devices.rehastim2 import Rehastim2
+    def _get_initialized_device(self) -> pyScienceModeRehastimGeneric:
+        from pyScienceMode.devices.rehastim2 import Rehastim2 as pyScienceModeRehastim2
 
-        return Rehastim2(port=self.port, show_log=self.show_log)
+        return pyScienceModeRehastim2(port=self.port, show_log=self.show_log)
 
     def _initialize_stimulation(self) -> None:
-        from pyScienceMode.devices.rehastim2 import Rehastim2
+        from pyScienceMode.devices.rehastim2 import Rehastim2 as pyScienceModeRehastim2
 
-        self._device: Rehastim2
+        self._device: pyScienceModeRehastim2
         self._device.init_channel(
             stimulation_interval=self._stimulation_interval,
             list_channels=self.get_channels(),
@@ -112,7 +112,7 @@ class Rehastim2Device(RehastimDeviceAbstract):
         )
 
 
-class RehastimP24Device(RehastimDeviceAbstract):
+class RehastimP24(RehastimGeneric):
     def __init__(self, port: str, show_log: bool = False) -> None:
         raise NotImplementedError("The RehastimP24Device is not implemented yet.")
 
@@ -120,13 +120,13 @@ class RehastimP24Device(RehastimDeviceAbstract):
     def device_name(self) -> str:
         return "RehastimP24"
 
-    def _get_initialized_device(self) -> RehastimGeneric:
-        from pyScienceMode.devices.rehastimP24 import RehastimP24
+    def _get_initialized_device(self) -> pyScienceModeRehastimGeneric:
+        from pyScienceMode.devices.rehastimP24 import RehastimP24 as pyScienceModeRehastimP24
 
-        return RehastimP24(port=self.port, show_log=self.show_log)
+        return pyScienceModeRehastimP24(port=self.port, show_log=self.show_log)
 
     def _initialize_stimulation(self) -> None:
-        from pyScienceMode.devices.rehastimP24 import RehastimP24
+        from pyScienceMode.devices.rehastimP24 import RehastimP24 as pyScienceModeRehastimP24
 
-        self._device: RehastimP24
+        self._device: pyScienceModeRehastimP24
         self._device.init_stimulation(list_channels=self.get_channels())

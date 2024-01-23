@@ -1,1 +1,2 @@
-from .lokomat_nidaq import LokomatNiDaq
+from .devices import NiDaqGeneric
+from .lokomat_nidaq import NiDaqLokomat

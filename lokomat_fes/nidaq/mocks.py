@@ -1,10 +1,10 @@
 import numpy as np
 
-from .lokomat_nidaq import LokomatNiDaq
+from .lokomat_nidaq import NiDaqLokomat
 from .perpetual_timer import PerpetualTimer
 
 
-class LokomatNiDaqMock(LokomatNiDaq):
+class NiDaqLokomatMock(NiDaqLokomat):
     """Mock class for NiDaq"""
 
     def __init__(self, *args, **kwargs) -> None:

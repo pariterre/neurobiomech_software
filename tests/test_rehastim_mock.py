@@ -1,16 +1,16 @@
 import time
 
-from lokomat_fes.rehastim.mocks import LokomatRehastimMock, Rehastim2Mock
+from lokomat_fes.rehastim.mocks import RehastimLokomatMock, pyScienceModeRehastim2Mock
 
 
 def test_initialize():
-    rehastim = LokomatRehastimMock()
+    rehastim = RehastimLokomatMock()
 
     assert rehastim.show_log is False
     assert rehastim.port == "NoPort"
     assert rehastim.device_name == "Rehastim2"
 
-    device: Rehastim2Mock = rehastim._device
+    device: pyScienceModeRehastim2Mock = rehastim._device
     assert device is not None
     assert device.port.port == "NoPort"
 
@@ -22,9 +22,9 @@ def test_initialize():
 
 
 def test_initialize_by_starting_stimulation():
-    rehastim = LokomatRehastimMock()
+    rehastim = RehastimLokomatMock()
 
-    device: Rehastim2Mock = rehastim._device
+    device: pyScienceModeRehastim2Mock = rehastim._device
     assert device.list_channels is None
     rehastim.start_stimulation()
     assert len(device.list_channels) == 8
@@ -33,9 +33,9 @@ def test_initialize_by_starting_stimulation():
 
 
 def test_stop_stimulation():
-    rehastim = LokomatRehastimMock()
+    rehastim = RehastimLokomatMock()
 
-    device: Rehastim2Mock = rehastim._device
+    device: pyScienceModeRehastim2Mock = rehastim._device
     assert device.stimulation_active
     assert device.amplitude == []
 
@@ -50,9 +50,9 @@ def test_stop_stimulation():
 
 
 def test_stimulate_for_a_specific_duration():
-    rehastim = LokomatRehastimMock()
+    rehastim = RehastimLokomatMock()
 
-    device: Rehastim2Mock = rehastim._device
+    device: pyScienceModeRehastim2Mock = rehastim._device
     assert device.stimulation_active
     assert device.amplitude == []
 
@@ -73,7 +73,7 @@ def test_stimulate_for_a_specific_duration():
 
 
 def test_resuming_stimulation():
-    rehastim = LokomatRehastimMock()
+    rehastim = RehastimLokomatMock()
 
     rehastim.start_stimulation()
     rehastim.stop_stimulation()
@@ -85,7 +85,7 @@ def test_resuming_stimulation():
 
 
 def test_stop_twice():
-    rehastim = LokomatRehastimMock()
+    rehastim = RehastimLokomatMock()
 
     rehastim.start_stimulation()
     rehastim.stop_stimulation()

@@ -1,11 +1,11 @@
 import pytest
 import time
 
-from lokomat_fes.nidaq.mocks import LokomatNiDaqMock
+from lokomat_fes.nidaq.mocks import NiDaqLokomatMock
 
 
 def test_nidaq_initialize():
-    nidaq = LokomatNiDaqMock()
+    nidaq = NiDaqLokomatMock()
     assert nidaq.num_channels == 25
     assert nidaq.frame_rate == 1000
     assert nidaq.dt == 1 / 1000
@@ -13,7 +13,7 @@ def test_nidaq_initialize():
 
 
 def test_start_recording():
-    nidaq = LokomatNiDaqMock()
+    nidaq = NiDaqLokomatMock()
     nidaq.start_recording()
     assert nidaq._is_recording
     assert nidaq._timer is not None
@@ -21,7 +21,7 @@ def test_start_recording():
 
 
 def test_stop_recording():
-    nidaq = LokomatNiDaqMock()
+    nidaq = NiDaqLokomatMock()
     nidaq.start_recording()
     nidaq.stop_recording()
     assert not nidaq._is_recording
@@ -30,7 +30,7 @@ def test_stop_recording():
 
 
 def test_start_recording_twice():
-    nidaq = LokomatNiDaqMock()
+    nidaq = NiDaqLokomatMock()
     nidaq.start_recording()
     with pytest.raises(RuntimeError, match="Already recording"):
         nidaq.start_recording()
@@ -38,7 +38,7 @@ def test_start_recording_twice():
 
 
 def test_generate_fake_data():
-    nidaq = LokomatNiDaqMock()
+    nidaq = NiDaqLokomatMock()
 
     nidaq._generate_fake_data()
     assert len(nidaq._samples) == 1
@@ -62,7 +62,7 @@ def test_on_data_ready_callback():
         nonlocal _callback_called
         _callback_called = True
 
-    nidaq = LokomatNiDaqMock(on_data_ready_callback=data_callback)
+    nidaq = NiDaqLokomatMock(on_data_ready_callback=data_callback)
     nidaq._generate_fake_data()
     assert len(nidaq._samples) == 1
     assert len(nidaq._t) == 1
@@ -78,7 +78,7 @@ def test_start_recording_records_data():
         nonlocal _callback_called
         _callback_called += 1
 
-    nidaq = LokomatNiDaqMock(on_data_ready_callback=data_callback)
+    nidaq = NiDaqLokomatMock(on_data_ready_callback=data_callback)
     nidaq.start_recording()
     time.sleep(2 * nidaq._time_between_samples)  # Wait for long enough so we get at least 1 sample
     nidaq.stop_recording()
@@ -89,7 +89,7 @@ def test_start_recording_records_data():
 
 
 def test_resuming_recording():
-    nidaq = LokomatNiDaqMock()
+    nidaq = NiDaqLokomatMock()
 
     nidaq.start_recording()
     nidaq.stop_recording()

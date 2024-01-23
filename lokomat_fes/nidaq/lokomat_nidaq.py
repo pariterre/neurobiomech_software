@@ -1,7 +1,7 @@
-from .generic_nidaq import GenericNiDaq
+from .devices import NiDaqGeneric
 
 
-class LokomatNiDaq(GenericNiDaq):
+class NiDaqLokomat(NiDaqGeneric):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, num_channels=25, frame_rate=1000, **kwargs)
 

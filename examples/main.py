@@ -1,10 +1,14 @@
 from time import sleep
 
-from lokomat_fes.rehastim.mocks import LokomatRehastimMock as LokomatRehastim
+from lokomat_fes.gui import GuiConsole
 
-from lokomat_fes.nidaq import LokomatNiDaq
+# Load the NiDaq device
+# from lokomat_fes.nidaq import NiDaqLokomat
+from lokomat_fes.nidaq.mocks import NiDaqLokomatMock as NiDaqLokomat
 
-# from lokomat_fes.nidaq.mocks import LokomatNiDaqMock as LokomatNiDaq
+# Load the Rehastim device
+# from lokomat_fes.rehastim import RehastimLokomat
+from lokomat_fes.rehastim.mocks import RehastimLokomatMock as RehastimLokomat
 
 
 def _received_data(t, data):
@@ -12,8 +16,10 @@ def _received_data(t, data):
 
 
 def __main__():
-    rehastim = LokomatRehastim()
-    nidaq = LokomatNiDaq(on_data_ready_callback=_received_data)
+    rehastim = RehastimLokomat()
+    nidaq = NiDaqLokomat(on_data_ready_callback=_received_data)
+
+    gui = GuiConsole(rehastim, nidaq)
 
     nidaq.start_recording()
     rehastim.start_stimulation(duration=1)

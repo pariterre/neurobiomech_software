@@ -1,9 +1,9 @@
 from pyScienceMode import Channel, Modes
 
-from .rehastim_interface import Rehastim2Device
+from .devices import Rehastim2
 
 
-class LokomatRehastim(Rehastim2Device):
+class RehastimLokomat(Rehastim2):
     def __init__(self, *args, **kwargs):
         super().__init__(stimulation_interval=200, low_frequency_factor=2, *args, **kwargs)
 
