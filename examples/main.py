@@ -12,29 +12,30 @@ from lokomat_fes.rehastim.mocks import RehastimLokomatMock as RehastimLokomat
 
 
 def _received_data(t, data):
-    print(f"Received data, first is {t[-1][0], data[0][:, 0]}")
+    pass
+    # print(f"Received data, first is {t[-1][0], data[0][:, 0]}")
 
 
 def __main__():
+    # Define the devices
     rehastim = RehastimLokomat()
     nidaq = NiDaqLokomat(on_data_ready_callback=_received_data)
-
     gui = GuiConsole(rehastim, nidaq)
 
+    # Start the devices
     nidaq.start_recording()
     rehastim.start_stimulation(duration=1)
 
-    sleep(1)
+    # Start the GUI (blocking)
+    gui.exec()
+    # Alternatively, you can use a blocking sleep to wait for the devices to record
+    # sleep(1)
 
-    nidaq.stop_recording()
-    rehastim.stop_stimulation()
+    # Stop the devices (this is not necessary if dispose() is called)
+    # nidaq.stop_recording()
+    # rehastim.stop_stimulation()
 
-    sleep(1)
-    nidaq.start_recording()
-    rehastim.start_stimulation(duration=1)
-
-    sleep(1)
-
+    # Stop and dispose the devices (this is important to avoid memory leaks and stop subprocesses)
     nidaq.dispose()
     rehastim.dispose()
 
