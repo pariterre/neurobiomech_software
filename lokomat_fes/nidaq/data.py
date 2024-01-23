@@ -10,8 +10,12 @@ class NiDaqData:
 
     Attributes
     ----------
-    data : dict
-        Dictionary with data from NI DAQ devices.
+    _start_recording_time : datetime | None
+        Starting time of the recording.
+    _t : list[np.ndarray]
+        List of time vectors.
+    _data : list[np.ndarray]
+        List of data vectors.
     """
 
     def __init__(self) -> None:

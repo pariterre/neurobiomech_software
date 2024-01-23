@@ -13,6 +13,7 @@ class GuiConsole(GuiGeneric):
     def exec(self):
         """Start the GUI."""
         logger.info("Starting console GUI.")
+
         print("Send 's' to start stimulation, 'q' to stop stimulation: ")
         while True:
             key = input()
@@ -22,6 +23,7 @@ class GuiConsole(GuiGeneric):
                     duration = float(duration)
                 except:
                     logger.exception("Invalid duration.")
+                    continue
 
                 self._rehastim.start_stimulation(duration=duration)
 

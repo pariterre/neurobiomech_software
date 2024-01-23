@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Callable
+from typing import Callable, Any
 
 import numpy as np
 
@@ -7,9 +7,7 @@ from .data import NiDaqData
 
 
 class NiDaqGeneric(ABC):
-    def __init__(
-        self, num_channels: int, frame_rate: int, on_data_ready: Callable[[np.ndarray, np.ndarray], None] | None = None
-    ) -> None:
+    def __init__(self, num_channels: int, frame_rate: int) -> None:
         """
         Parameters
         ----------
@@ -17,8 +15,6 @@ class NiDaqGeneric(ABC):
             Number of channels connected to the NiDaq
         rate : int
             Frames per second
-        on_data_ready : Callable[[np.ndarray, np.ndarray], None] | None
-            Callback function that is called when new data is ready (the new time and data are passed as arguments)
         """
         self._num_channels = num_channels
         self._frame_rate = frame_rate
@@ -29,7 +25,9 @@ class NiDaqGeneric(ABC):
 
         # Callback function that is called when new data are added
         self._is_recording: bool = False
-        self._on_data_ready_callback = on_data_ready
+        self._on_start_recording_callback: dict[Any, Callable[[], None]] = {}
+        self._on_data_ready_callback: dict[Any, Callable[[np.ndarray, np.ndarray], None]] = {}
+        self._on_stop_recording_callback: dict[Any, Callable[[NiDaqData], None]] = {}
 
         # Setup the NiDaq task
         self._task = None
@@ -50,10 +48,37 @@ class NiDaqGeneric(ABC):
         """Time between samples"""
         return 1 / self.frame_rate
 
+    def register_to_start_recording(self, callback: Callable[[], None]):
+        """Register a callback function that is called when the recording starts"""
+        self._on_start_recording_callback[id(callback)] = callback
+
+    def unregister_to_start_recording(self, callback: Callable[[], None]):
+        """Unregister a callback function that is called when the recording starts"""
+        del self._on_start_recording_callback[id(callback)]
+
+    def register_to_data_ready(self, callback: Callable[[np.ndarray, np.ndarray], None]):
+        """Register a callback function that is called when new data are ready"""
+        self._on_data_ready_callback[id(callback)] = callback
+
+    def unregister_to_data_ready(self, callback: Callable[[np.ndarray, np.ndarray], None]):
+        """Unregister a callback function that is called when new data are ready"""
+        del self._on_data_ready_callback[id(callback)]
+
+    def register_to_stop_recording(self, callback: Callable[[NiDaqData], None]):
+        """Register a callback function that is called when the recording stops"""
+        self._on_stop_recording_callback[id(callback)] = callback
+
+    def unregister_to_stop_recording(self, callback: Callable[[NiDaqData], None]):
+        """Unregister a callback function that is called when the recording stops"""
+        del self._on_stop_recording_callback[id(callback)]
+
     def start_recording(self):
         """Start recording"""
         if self._is_recording:
             raise RuntimeError("Already recording")
+
+        for key in self._on_start_recording_callback.keys():
+            self._on_start_recording_callback[key]()
 
         self._reset_data()
         self._start_task()
@@ -64,6 +89,9 @@ class NiDaqGeneric(ABC):
         if not self._is_recording:
             # If we are not currently recording, we don't need to stop the recording
             return
+
+        for key in self._on_stop_recording_callback.keys():
+            self._on_stop_recording_callback[key](self._data)
 
         self._stop_task()
         self._is_recording = False
@@ -96,8 +124,10 @@ class NiDaqGeneric(ABC):
 
         self._data.add(t, data)
 
-        if self._on_data_ready_callback is not None:
-            self._on_data_ready_callback(*self._data.sample_block(index=-1, unsafe=True))
+        if self._on_data_ready_callback:
+            data_for_callbacks = self._data.sample_block(index=-1, unsafe=True)
+            for key in self._on_data_ready_callback.keys():
+                self._on_data_ready_callback[key](*data_for_callbacks)
 
         return 1
 
