@@ -31,7 +31,13 @@ class GuiGeneric(ABC):
 
         # Initialize the callback to record the data
         self._nidaq.register_to_data_ready(self._data.nidaq.add_sample_block)
-        self._rehastim
+        self._rehastim.register_to_on_stimulation_started(self._data.rehastim.add)
+
+    def _finalize_data(self):
+        """Finalize the data."""
+        logger.info("Finalizing the data")
+        self._nidaq.unregister_to_data_ready(self._data.nidaq.add_sample_block)
+        self._rehastim.unregister_to_on_stimulation_started(self._data.rehastim.add)
 
     def _start_recording(self):
         """Start the recording."""
@@ -42,6 +48,8 @@ class GuiGeneric(ABC):
     def _stop_recording(self):
         """Stop the recording."""
         logger.info("Stopping recording")
+        self._finalize_data()
+
         self._rehastim.stop_stimulation()  # Interrupt any active stimulation if needed
         self._nidaq.stop_recording()
 
