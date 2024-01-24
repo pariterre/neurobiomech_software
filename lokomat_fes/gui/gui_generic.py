@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
 import logging
 
-from ..rehastim import RehastimGeneric
+from ..common.data import Data
 from ..nidaq import NiDaqGeneric
+from ..rehastim import RehastimGeneric
 
 logger = logging.getLogger("lokomat_fes")
 
@@ -16,36 +17,43 @@ class GuiGeneric(ABC):
 
         self._rehastim = rehastim
         self._nidaq = nidaq
+        self._data = None
 
     def exec(self):
         """Start the GUI."""
         logger.info("Starting the GUI")
         self._exec()
 
-    def _start_nidaq_recording(self):
-        """Start the NI-DAQ recording."""
-        logger.info("Starting NI-DAQ recording")
+    def _prepare_data(self):
+        """Prepare the data."""
+        logger.info("Preparing the data")
+        self._data = Data()
+
+        # Initialize the callback to record the data
+        self._nidaq.register_to_data_ready(self._data.nidaq.add_sample_block)
+        self._rehastim
+
+    def _start_recording(self):
+        """Start the recording."""
+        logger.info("Starting recording")
+        self._prepare_data()
         self._nidaq.start_recording()
 
-    def _stop_nidaq_recording(self):
-        """Stop the NI-DAQ recording."""
-        logger.info("Stopping NI-DAQ recording")
+    def _stop_recording(self):
+        """Stop the recording."""
+        logger.info("Stopping recording")
+        self._rehastim.stop_stimulation()  # Interrupt any active stimulation if needed
         self._nidaq.stop_recording()
 
-    def _start_rehastim_stimulation(self):
+    def _start_stimulation(self):
         """Start the Rehastim stimulation."""
         logger.info("Starting Rehastim stimulation")
         self._rehastim.start_stimulation()
 
-    def _stop_rehastim_stimulation(self):
+    def _stop_stimulation(self):
         """Stop the Rehastim stimulation."""
         logger.info("Stopping Rehastim stimulation")
         self._rehastim.stop_stimulation()
-
-    def _stop_devices(self):
-        """Stop the devices."""
-        self._stop_nidaq_recording()
-        self._stop_rehastim_stimulation()
 
     @abstractmethod
     def _exec(self) -> None:

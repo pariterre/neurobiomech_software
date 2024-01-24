@@ -48,31 +48,31 @@ class NiDaqGeneric(ABC):
         """Time between samples"""
         return 1 / self.frame_rate
 
-    def register_to_start_recording(self, callback: Callable[[], None]):
+    def register_to_start_recording(self, callback: Callable[[], None]) -> None:
         """Register a callback function that is called when the recording starts"""
         self._on_start_recording_callback[id(callback)] = callback
 
-    def unregister_to_start_recording(self, callback: Callable[[], None]):
+    def unregister_to_start_recording(self, callback: Callable[[], None]) -> None:
         """Unregister a callback function that is called when the recording starts"""
         del self._on_start_recording_callback[id(callback)]
 
-    def register_to_data_ready(self, callback: Callable[[np.ndarray, np.ndarray], None]):
+    def register_to_data_ready(self, callback: Callable[[np.ndarray, np.ndarray], None]) -> None:
         """Register a callback function that is called when new data are ready"""
         self._on_data_ready_callback[id(callback)] = callback
 
-    def unregister_to_data_ready(self, callback: Callable[[np.ndarray, np.ndarray], None]):
+    def unregister_to_data_ready(self, callback: Callable[[np.ndarray, np.ndarray], None]) -> None:
         """Unregister a callback function that is called when new data are ready"""
         del self._on_data_ready_callback[id(callback)]
 
-    def register_to_stop_recording(self, callback: Callable[[NiDaqData], None]):
+    def register_to_stop_recording(self, callback: Callable[[NiDaqData], None]) -> None:
         """Register a callback function that is called when the recording stops"""
         self._on_stop_recording_callback[id(callback)] = callback
 
-    def unregister_to_stop_recording(self, callback: Callable[[NiDaqData], None]):
+    def unregister_to_stop_recording(self, callback: Callable[[NiDaqData], None]) -> None:
         """Unregister a callback function that is called when the recording stops"""
         del self._on_stop_recording_callback[id(callback)]
 
-    def start_recording(self):
+    def start_recording(self) -> None:
         """Start recording"""
         if self._is_recording:
             raise RuntimeError("Already recording")
@@ -84,7 +84,7 @@ class NiDaqGeneric(ABC):
         self._start_task()
         self._is_recording = True
 
-    def stop_recording(self):
+    def stop_recording(self) -> None:
         """Stop recording"""
         if not self._is_recording:
             # If we are not currently recording, we don't need to stop the recording
@@ -101,18 +101,18 @@ class NiDaqGeneric(ABC):
         """Data from the NiDaq"""
         return self._data.copy
 
-    def dispose(self):
+    def dispose(self) -> None:
         """Dispose the NiDaq class"""
         self.stop_recording()
         if self._task is not None:
             self._task.close()
             self._task = None
 
-    def _reset_data(self):
+    def _reset_data(self) -> None:
         """Reset data to start a new trial"""
         self._data = NiDaqData()
 
-    def _data_has_arrived(self, data: np.ndarray):
+    def _data_has_arrived(self, data: np.ndarray) -> int:
         """
         Callback function for reading signals.
         It automatically computes the time vector and calls the callback function if it exists.
@@ -129,9 +129,9 @@ class NiDaqGeneric(ABC):
             for key in self._on_data_ready_callback.keys():
                 self._on_data_ready_callback[key](*data_for_callbacks)
 
-        return 1
+        return 1  # Success
 
-    def _setup_task(self):
+    def _setup_task(self) -> None:
         """Setup the NiDaq task"""
         import nidaqmx
         from nidaqmx.constants import AcquisitionType
@@ -152,9 +152,9 @@ class NiDaqGeneric(ABC):
     def _channel_name(self, channel: int) -> str:
         """Channel name assuming it is the channel number [channel]"""
 
-    def _start_task(self):
+    def _start_task(self) -> None:
         """Start the NiDaq task"""
         self._task.start()
 
-    def _stop_task(self):
+    def _stop_task(self) -> None:
         self._task.stop()

@@ -1,5 +1,5 @@
 from threading import Timer
-from typing import override
+from typing import override, Any, Callable
 from abc import ABC, abstractproperty, abstractmethod
 
 from pyScienceMode import Channel, RehastimGeneric as pyScienceModeRehastimGeneric
@@ -16,12 +16,28 @@ class RehastimGeneric(ABC):
         self.show_log = show_log
 
         self._device = self._get_initialized_device()
+        self._on_stimulation_started_callback: dict[Any, Callable[[], None]] = {}
         self._is_stimulation_initialized = False
         self._channels_has_changed = True
 
     @abstractproperty
     def device_name(self) -> str:
         """Get the name of the device."""
+
+    def register_to_on_stimulation_started(self, callback: Callable[[float, tuple[Channel, ...] | None], None]) -> None:
+        """Register a callback function that is called when the stimulation starts
+        The callback function takes two arguments:
+        - duration: the duration of the stimulation in seconds
+        - channels: the channels that are stimulated. If None is sent for the channels, it means that the channels have
+        not changed since the last stimulation (so the user can assume that the channels are the same as the last)
+        """
+        self._on_stimulation_started_callback[id(callback)] = callback
+
+    def unregister_to_on_stimulation_started(
+        self, callback: Callable[[float, tuple[Channel, ...] | None], None]
+    ) -> None:
+        """Unregister a callback function that is called when the stimulation starts"""
+        del self._on_stimulation_started_callback[id(callback)]
 
     def start_stimulation(self, duration: float = None) -> None:
         """Perform a stimulation.
@@ -35,12 +51,20 @@ class RehastimGeneric(ABC):
 
         if not self._is_stimulation_initialized:
             # On the very first call, we initialize the stimulation. This takes care of the channels at the same time.
-            self._initialize_stimulation()
-            self._channels_has_changed = False
+            self.initialize_stimulation()
+
+            # Notify the listeners to record the initial states of the channels
+            channels = self.get_channels()
+            for callback in self._on_stimulation_started_callback.values():
+                callback(0, channels)
 
         channels = None
         if self._channels_has_changed:
             channels = self.get_channels()
+
+        # Notify the listeners that the stimulation is starting
+        for callback in self._on_stimulation_started_callback.values():
+            callback(duration, channels)
 
         self._device.start_stimulation(upd_list_channels=channels)
         if duration is not None:

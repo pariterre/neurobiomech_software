@@ -89,16 +89,16 @@ def test_generate_fake_data():
     nidaq = NiDaqLokomatMock()
 
     nidaq._generate_fake_data()
-    assert len(nidaq._samples) == 1
-    assert nidaq._samples[0].shape == (25, 1000)
-    assert len(nidaq._t) == 1
-    assert nidaq._t[0].shape == (1000,)
+    assert len(nidaq._data._t) == 1
+    assert nidaq._data._t[0].shape == (1000,)
+    assert len(nidaq._data._data) == 1
+    assert nidaq._data._data[0].shape == (25, 1000)
 
     nidaq._generate_fake_data()
-    assert len(nidaq._samples) == 2
-    assert nidaq._samples[1].shape == (25, 1000)
-    assert len(nidaq._t) == 2
-    assert nidaq._t[1].shape == (1000,)
+    assert len(nidaq._data._t) == 2
+    assert nidaq._data._t[1].shape == (1000,)
+    assert len(nidaq._data._data) == 2
+    assert nidaq._data._data[1].shape == (25, 1000)
 
     nidaq.dispose()
 

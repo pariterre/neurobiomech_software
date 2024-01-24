@@ -2,7 +2,48 @@ from copy import deepcopy
 from datetime import datetime
 import pickle
 
+from pyScienceMode import Channel as pyScienceModeChannel
 import numpy as np
+
+
+class Channel:
+    """Class to store channel information.
+
+    Attributes
+    ----------
+    channel_number : int
+        Channel number.
+    amplitude : float
+        Amplitude of the stimulation.
+    """
+
+    def __init__(self, channel_index: int, amplitude: float) -> None:
+        self.channel_index = channel_index
+        self.amplitude = amplitude
+
+    @classmethod
+    def from_pysciencemode(cls, channel: pyScienceModeChannel) -> "Channel":
+        """Create a Channel from a pyScienceMode channel.
+
+        Parameters
+        ----------
+        channel : pyScienceModeChannel
+            pyScienceMode channel.
+
+        Returns
+        -------
+        out : Channel
+            Channel.
+        """
+        return cls(channel.get_no_channel(), channel.get_amplitude())
+
+    @property
+    def serialized(self):
+        return {"channel_index": self.channel_index, "amplitude": self.amplitude}
+
+    @classmethod
+    def deserialize(cls, data):
+        return cls(data["channel_index"], data["amplitude"])
 
 
 class RehastimData:
@@ -11,13 +52,25 @@ class RehastimData:
     Attributes
     ----------
     _data: list[tuple[datetime, float, float]]
-        List of data vectors. Each vector is a tuple of (time [datetime], duration [float], amplitude [float]).
+        List of data vectors.
+        Each vector is a tuple of (time [datetime], duration [float] ms, tuple of channels configuration).
     """
 
     def __init__(self) -> None:
-        self._data: list[tuple[datetime, float, float]] = []
+        self._data: list[tuple[datetime, float, tuple[Channel, ...]]] = []
 
-    def add(self, duration: float, amplitude: float) -> None:
+    @property
+    def has_data(self) -> bool:
+        """Check if the data has been initialized.
+
+        Returns
+        -------
+        out : bool
+            True if the data has been initialized.
+        """
+        return bool(self._data)
+
+    def add(self, duration: float, channels: tuple[Channel | pyScienceModeChannel, ...] | None) -> None:
         """Add data from a Rehastim device to the data.
 
         Parameters
@@ -28,9 +81,23 @@ class RehastimData:
             Amplitude of the stimulation.
         """
 
-        self._data.append((datetime.now(), duration, amplitude))
+        if channels is None:
+            # Copy the previous values
+            if not self.has_data:
+                raise RuntimeError("The first time you add data, you must specify the channels.")
+            channels = self._data[-1][2]
+        else:
+            # Make a copy of the channels to avoid modifying the original, if the channel is a pyScienceModeChannel
+            # we convert it to the simplified version (Channel)
+            channels = tuple(
+                Channel.from_pysciencemode(channel) if isinstance(channel, pyScienceModeChannel) else deepcopy(channel)
+                for channel in channels
+            )
+        self._data.append((datetime.now(), duration, channels))
 
-    def sample_block(self, index: int | slice) -> tuple[datetime | None, float | None, float | None]:
+    def sample_block(
+        self, index: int | slice
+    ) -> tuple[datetime, float, tuple[Channel, ...]] | list[tuple[datetime, float, tuple[Channel, ...]]]:
         """Get a block of data.
 
         Parameters
@@ -48,7 +115,7 @@ class RehastimData:
             Amplitude of the stimulation.
         """
         if not self._data:
-            return None, None, None
+            return None
 
         return self._data[index]
 
@@ -86,7 +153,7 @@ class RehastimData:
 
     @property
     def amplitude_as_array(self) -> np.ndarray:
-        """Get amplitude data to a numpy array.
+        """Get amplitude data to a numpy array (n_channels x n_samples).
 
         Parameters
         ----------
@@ -99,7 +166,7 @@ class RehastimData:
         if not self._data:
             return np.array([[]])
 
-        return np.array([a for _, _, a in self._data])
+        return np.array([[channel.amplitude for channel in channels] for _, _, channels in self._data]).T
 
     @property
     def copy(self) -> "RehastimData":
@@ -125,7 +192,7 @@ class RehastimData:
         """
 
         with open(path, "wb") as f:
-            pickle.dump(self.serialize, f)
+            pickle.dump(self.serialized, f)
 
     @classmethod
     def load(cls, path: str) -> "RehastimData":
@@ -147,7 +214,7 @@ class RehastimData:
         return cls.deserialize(data)
 
     @property
-    def serialize(self) -> dict:
+    def serialized(self) -> dict:
         """Serialize the data.
 
         Returns

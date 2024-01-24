@@ -40,6 +40,34 @@ class NiDaqData:
         self._t.append(t)
         self._data.append(data)
 
+    def add_sample_block(self, t, data) -> None:
+        """Add data from a NI DAQ device to the data.
+        Data are expected to from a single sample block. This creates a shallow copy of the data.
+
+        Parameters
+        ----------
+        t : np.ndarray
+            Time vector of the new data
+        data : np.ndarray
+            Data vector
+        """
+
+        if self._start_recording_time is None:
+            self._start_recording_time = datetime.now()
+        self._t.append(t)
+        self._data.append(data)
+
+    @property
+    def has_data(self) -> bool:
+        """Check if the data contains data.
+
+        Returns
+        -------
+        out : bool
+            True if the data contains data, False otherwise.
+        """
+        return len(self._t) > 0
+
     def sample_block(self, index: int | slice, unsafe: bool = False) -> tuple[np.ndarray | None, np.ndarray | None]:
         """Get a block of data.
 
@@ -59,7 +87,7 @@ class NiDaqData:
         data : np.ndarray
             Data from the NI DAQ device.
         """
-        if not self._t:
+        if not self.has_data:
             return None, None
 
         if unsafe:
@@ -87,7 +115,7 @@ class NiDaqData:
         t : np.ndarray
             Time vector of the data.
         """
-        if not self._t:
+        if not self.has_data:
             return np.array([])
 
         return np.concatenate(self._t)
@@ -104,7 +132,7 @@ class NiDaqData:
         data : np.ndarray
             Data from the NI DAQ device.
         """
-        if not self._data:
+        if not self.has_data:
             return np.array([[]])
 
         return np.concatenate(self._data, axis=1)
@@ -135,7 +163,7 @@ class NiDaqData:
         """
 
         with open(path, "wb") as f:
-            pickle.dump(self.serialize, f)
+            pickle.dump(self.serialized, f)
 
     @classmethod
     def load(cls, path: str) -> "NiDaqData":
@@ -157,7 +185,7 @@ class NiDaqData:
         return cls.deserialize(data)
 
     @property
-    def serialize(self) -> dict:
+    def serialized(self) -> dict:
         """Serialize the data.
 
         Returns

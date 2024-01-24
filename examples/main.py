@@ -2,7 +2,7 @@ from time import sleep
 import logging
 
 from matplotlib import pyplot as plt
-from lokomat_fes import setup_logger
+from lokomat_fes import setup_logger, Data
 from lokomat_fes.gui import GuiConsole
 from lokomat_fes.nidaq.data import NiDaqData
 from lokomat_fes.nidaq import NiDaqLokomat
@@ -39,7 +39,7 @@ def __main__() -> None:
     # Define the devices
     rehastim = RehastimLokomat()
     nidaq = NiDaqLokomat()
-    nidaq.register_to_data_ready(_received_data)
+    nidaq.register_to_data_ready(_received_data)  # This is to monitor the data. It is not necessary if you use the GUI
     gui = GuiConsole(rehastim, nidaq)
 
     # Start the devices (this is not necessary if exec() is called)
