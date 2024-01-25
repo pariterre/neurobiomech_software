@@ -8,20 +8,20 @@ from ..rehastim import RehastimGeneric
 logger = logging.getLogger("lokomat_fes")
 
 
-class GuiGeneric(ABC):
-    """Abstract base class for GUIs."""
+class RunnerGeneric(ABC):
+    """Abstract base class for Runners."""
 
     def __init__(self, rehastim: RehastimGeneric, nidaq: NiDaqGeneric) -> None:
-        """Initialize the GUI."""
-        logger.info("Initializing the GUI")
+        """Initialize the Runner."""
+        logger.info("Initializing the Runner")
 
         self._rehastim = rehastim
         self._nidaq = nidaq
         self._data = None
 
     def exec(self):
-        """Start the GUI."""
-        logger.info("Starting the GUI")
+        """Start the Runner."""
+        logger.info("Starting the Runner")
         self._exec()
 
     def _prepare_data(self):
@@ -65,4 +65,4 @@ class GuiGeneric(ABC):
 
     @abstractmethod
     def _exec(self) -> None:
-        """Start the GUI (implementation)."""
+        """Start the Runner (implementation)."""

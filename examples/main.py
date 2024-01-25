@@ -3,7 +3,7 @@ import logging
 
 from matplotlib import pyplot as plt
 from lokomat_fes import setup_logger, Data
-from lokomat_fes.gui import GuiConsole
+from lokomat_fes.runner import RunnerConsole
 from lokomat_fes.nidaq.data import NiDaqData
 from lokomat_fes.nidaq import NiDaqLokomat
 from lokomat_fes.rehastim import RehastimLokomat
@@ -36,17 +36,17 @@ def plot_data(data: NiDaqData) -> None:
 def __main__() -> None:
     setup_logger(level=logging.WARNING)  # Change to logging.INFO to see more logs
 
-    # Define the devices
+    # Define the devices and the runner
     rehastim = RehastimLokomat()
     nidaq = NiDaqLokomat()
-    nidaq.register_to_data_ready(_received_data)  # This is to monitor the data. It is not necessary if you use the GUI
-    gui = GuiConsole(rehastim, nidaq)
+    nidaq.register_to_data_ready(_received_data)  # This is to monitor the data. It is not necessary if you use a runner
+    runner = RunnerConsole(rehastim, nidaq)
 
     # Start the devices (this is not necessary if exec() is called)
     # nidaq.start_recording()
 
-    # Start the GUI (blocking)
-    gui.exec()
+    # Start the runner (blocking)
+    runner.exec()
     # Alternatively, you can use a blocking sleep to wait for the devices to record
     # sleep(1)
 

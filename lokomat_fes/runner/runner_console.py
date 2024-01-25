@@ -1,18 +1,18 @@
 import logging
 from typing import override
 
-from .gui_generic import GuiGeneric
+from .runner_generic import RunnerGeneric
 
 logger = logging.getLogger("lokomat_fes")
 
 
-class GuiConsole(GuiGeneric):
-    """Console GUI."""
+class RunnerConsole(RunnerGeneric):
+    """Run the program in a local console."""
 
     @override
-    def exec(self):
-        """Start the GUI."""
-        logger.info("Starting console GUI.")
+    def _exec(self):
+        """Start the runner."""
+        logger.info("Starting console runner.")
 
         print("Send 's' to start stimulation, 'q' to stop stimulation: ")
         while True:
@@ -30,4 +30,4 @@ class GuiConsole(GuiGeneric):
             elif key == "q":
                 break
 
-        logger.info("Console GUI exited.")
+        logger.info("Runner Console exited.")

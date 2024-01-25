@@ -4,7 +4,7 @@ import socket
 import threading
 from typing import override
 
-from .gui_generic import GuiGeneric
+from .runner_generic import RunnerGeneric
 
 logger = logging.getLogger("lokomat_fes")
 
@@ -14,11 +14,11 @@ class AcquisitionCommand(Enum):
     EXIT = 2
 
 
-class GuiExternal(GuiGeneric):
-    """GUI that connects to an external GUI by TCP/IP."""
+class RunnerTcpip(RunnerGeneric):
+    """Runner that connects to an external software (e.g. GUI) by TCP/IP."""
 
     def __init__(self, ip_address: str = "localhost", port: int = 4042, *args, **kwargs) -> None:
-        """Initialize the GUI.
+        """Initialize the Runner.
 
         Args:
             port: Port to listen on.
@@ -41,7 +41,7 @@ class GuiExternal(GuiGeneric):
         logger.info(f"Connected to {addr}")
 
     def receive_acquisition_command(self):
-        """Receive an acquisition command and int value from the external GUI."""
+        """Receive an acquisition command and int value from the external software."""
         data = self._client_socket.recv(1024).decode()
         command_str, value_str = data.split(":")
         command = AcquisitionCommand(int(command_str))
@@ -50,7 +50,7 @@ class GuiExternal(GuiGeneric):
         return command, value
 
     def _send_acknowledgment(self):
-        """Send an acknowledgment back to the external GUI."""
+        """Send an acknowledgment back to the external sotware."""
         acknowledgment = "ACK"
         self._client_socket.sendall(acknowledgment.encode())
         logger.info(f"Sent acknowledgment: {acknowledgment}")
@@ -63,7 +63,7 @@ class GuiExternal(GuiGeneric):
 
     @override
     def _exec(self) -> None:
-        """Start the GUI."""
+        """Start the runner (internal)."""
         self.start_connection()
 
         # Start a thread for non-blocking execution
@@ -85,7 +85,7 @@ class GuiExternal(GuiGeneric):
         # Close the connection when done
         self.close_connection()
 
-        logger.info("Starting console GUI.")
+        logger.info("Starting tcp/ip runner.")
 
         print("Send 's' to start stimulation, 'q' to stop stimulation: ")
         while True:
@@ -103,4 +103,4 @@ class GuiExternal(GuiGeneric):
             elif key == "q":
                 break
 
-        logger.info("Console GUI exited.")
+        logger.info("Runner tcp/ip exited.")
