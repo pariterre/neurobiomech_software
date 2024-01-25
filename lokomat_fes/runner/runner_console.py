@@ -92,7 +92,7 @@ class RunnerConsole(RunnerGeneric):
                 return
 
         if len(parameters) >= 3:
-            width = _parse_float("width", parameters[2])
+            width = _parse_int("width", parameters[2])
             if width is None:
                 return
 
@@ -107,7 +107,9 @@ class RunnerConsole(RunnerGeneric):
         success = _try_command(self._start_stimulation, duration)
         if not success:
             return
-        print(f"Simulating for {duration}s")
+        amplitude = self._rehastim.get_pulse_amplitude()[0]
+        width = self._rehastim.get_pulse_width()[0]
+        print(f"Simulating for {duration}s at {amplitude}mA and {width}ms.")
 
     def _save_command(self, parameters: list[str]):
         success = _check_number_parameters("save", parameters, expected={"filename": True})
@@ -166,6 +168,14 @@ def _parse_float(name: str, value: str) -> float:
         return float(value)
     except:
         logger.exception(f"Invalid {name}, it must be a float.")
+        return None
+
+
+def _parse_int(name: str, value: str) -> int:
+    try:
+        return int(value)
+    except:
+        logger.exception(f"Invalid {name}, it must be an integer.")
         return None
 
 

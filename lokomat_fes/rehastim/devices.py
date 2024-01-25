@@ -73,15 +73,22 @@ class RehastimGeneric(ABC):
         """
 
     @abstractmethod
-    def set_pulse_width(self, width: float | list[float]) -> None:
+    def get_pulse_amplitude(self) -> list[float]:
+        """Get the amplitude of the channels."""
+
+    @abstractmethod
+    def set_pulse_width(self, widths: int | list[int]) -> None:
         """Set the width of the stimulation.
 
         Parameters
         ----------
-        width : float | list[float]
-            The width of the stimulation in milliseconds. If a float is given, then all the channels will have the same
-            width.
+        widths : int | list[int]
+            The width of the stimulation in milliseconds. If a int is given, then all the channels will have the same width.
         """
+
+    @abstractmethod
+    def get_pulse_width(self) -> list[int]:
+        """Get the width of the stimulation."""
 
     @abstractmethod
     def set_pulse_interval(self, interval: float) -> None:
@@ -196,13 +203,19 @@ class Rehastim2(RehastimGeneric):
             channel.set_amplitude(amplitudes[channel.get_no_channel() - 1])
         self._channels_has_changed = True
 
-    def set_pulse_width(self, widths: float | list[float]) -> None:
-        if isinstance(widths, (float, int)):
+    def get_pulse_amplitude(self) -> list[float]:
+        return [channel.get_amplitude() for channel in self._channels]
+
+    def set_pulse_width(self, widths: int | list[int]) -> None:
+        if isinstance(widths, int):
             widths = [widths] * self.nb_channels
 
         for channel in self._channels:
             channel.set_pulse_width(widths[channel.get_no_channel() - 1])
         self._channels_has_changed = True
+
+    def get_pulse_width(self) -> list[int]:
+        return [channel.get_pulse_width() for channel in self._channels]
 
     def set_pulse_interval(self, _: float) -> None:
         raise NotImplementedError(

@@ -121,16 +121,16 @@ class RunnerGeneric(ABC):
         logger.info("Setting Rehastim stimulation amplitude")
         self._rehastim.set_pulse_amplitude(amplitudes=amplitudes)
 
-    def _set_stimulation_pulse_width(self, width: float):
+    def _set_stimulation_pulse_width(self, widths: int | list[int]):
         """Set the Rehastim stimulation pulse width.
 
         Parameters
         ----------
-        width : float
+        widths : int | list[int]
             The width to set.
         """
         logger.info("Setting Rehastim stimulation pulse width")
-        self._rehastim.set_pulse_width(width=width)
+        self._rehastim.set_pulse_width(widths=widths)
 
     def _set_stimulation_pulse_interval(self, interval: float):
         """Set the Rehastim stimulation interval.

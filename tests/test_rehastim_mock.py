@@ -122,13 +122,10 @@ def test_changing_pulse_amplitude():
     rehastim = RehastimLokomatMock()
     rehastim.initialize_stimulation()
 
-    device: pyScienceModeRehastim2Mock = rehastim._device
-    assert device.amplitude == [50] * 8  # Default amplitude
+    assert rehastim.get_pulse_amplitude() == [50] * 8  # Default amplitude
 
     rehastim.set_pulse_amplitude(100)
-    rehastim.start_stimulation()  # Starting the stimulation is needed to actually change the pulse amplitude for the device
-    rehastim.stop_stimulation()
-    assert device.amplitude == [100] * 8
+    assert rehastim.get_pulse_amplitude() == [100] * 8
 
     rehastim.dispose()
 
@@ -137,13 +134,10 @@ def test_changing_pulse_width():
     rehastim = RehastimLokomatMock()
     rehastim.initialize_stimulation()
 
-    device: pyScienceModeRehastim2Mock = rehastim._device
-    assert device.pulse_width == [100] * 8  # Default width
+    assert rehastim.get_pulse_width() == [100] * 8  # Default width
 
     rehastim.set_pulse_width(200)
-    rehastim.start_stimulation()  # Starting the stimulation is needed to actually change the pulse width for the device
-    rehastim.stop_stimulation()
-    assert device.pulse_width == [200] * 8
+    assert rehastim.get_pulse_width() == [200] * 8
 
     rehastim.dispose()
 
