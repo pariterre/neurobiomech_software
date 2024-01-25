@@ -17,47 +17,70 @@ class RunnerGeneric(ABC):
 
         self._rehastim = rehastim
         self._nidaq = nidaq
-        self._data = None
+        self._trial_data = None
+        self._is_recording = False
 
     def exec(self):
         """Start the Runner."""
         logger.info("Starting the Runner")
         self._exec()
 
+        # Make sure the devices are stopped
+        self._stop_recording()
+
     @abstractmethod
     def _exec(self) -> None:
         """Start the Runner (implementation)."""
 
     ### DATA RELATED METHODS ###
-    def _prepare_data(self):
+    @property
+    def last_trial(self) -> Data | None:
+        """Get the last recorded trial.
+
+        Returns
+        -------
+        Data
+            The last recorded trial.
+        """
+        return self._trial_data
+
+    def _prepare_trial(self):
         """Prepare the data."""
         logger.info("Preparing the data")
-        self._data = Data()
+        self._trial_data = Data()
 
         # Initialize the callback to record the data
-        self._nidaq.register_to_data_ready(self._data.nidaq.add_sample_block)
-        self._rehastim.register_to_on_stimulation_started(self._data.rehastim.add)
+        self._nidaq.register_to_data_ready(self._trial_data.nidaq.add_sample_block)
+        self._rehastim.register_to_on_stimulation_started(self._trial_data.rehastim.add)
 
-    def _finalize_data(self):
+    def _finalize_trial(self):
         """Finalize the data."""
         logger.info("Finalizing the data")
-        self._nidaq.unregister_to_data_ready(self._data.nidaq.add_sample_block)
-        self._rehastim.unregister_to_on_stimulation_started(self._data.rehastim.add)
+        self._nidaq.unregister_to_data_ready(self._trial_data.nidaq.add_sample_block)
+        self._rehastim.unregister_to_on_stimulation_started(self._trial_data.rehastim.add)
 
     ### KINEMATIC DEVICE (NIDAQ) RELATED METHODS ###
     def _start_recording(self):
+        if self._is_recording:
+            return
+
         """Start the recording."""
         logger.info("Starting recording")
-        self._prepare_data()
+        self._prepare_trial()
         self._nidaq.start_recording()
+        self._is_recording = True
 
     def _stop_recording(self):
         """Stop the recording."""
+        if not self._is_recording:
+            return
+
         logger.info("Stopping recording")
-        self._finalize_data()
+        self._finalize_trial()
 
         self._rehastim.stop_stimulation()  # Interrupt any active stimulation if needed
         self._nidaq.stop_recording()
+        self._is_recording = False
 
     ### STIMULATION DEVICE (REHASTIM) RELATED METHODS ###
     def _start_stimulation(self):

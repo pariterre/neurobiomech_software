@@ -40,7 +40,8 @@ class RehastimGeneric(ABC):
         self, callback: Callable[[float, tuple[Channel, ...] | None], None]
     ) -> None:
         """Unregister a callback function that is called when the stimulation starts"""
-        del self._on_stimulation_started_callback[id(callback)]
+        if id(callback) in self._on_stimulation_started_callback:
+            del self._on_stimulation_started_callback[id(callback)]
 
     def start_stimulation(self, duration: float = None) -> None:
         """Perform a stimulation.
@@ -103,7 +104,8 @@ class RehastimGeneric(ABC):
 
     def stop_stimulation(self) -> None:
         """Pause the stimulation."""
-
+        if not self._is_stimulation_initialized:
+            return
         self._device.pause_stimulation()
 
     def dispose(self) -> None:

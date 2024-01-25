@@ -14,20 +14,39 @@ class RunnerConsole(RunnerGeneric):
         """Start the runner."""
         logger.info("Starting console runner.")
 
-        print("Send 's' to start stimulation, 'q' to stop stimulation: ")
+        print("Type your command and press enter, use 'list' the print the commands:")
         while True:
-            key = input()
-            if key == "s":
-                duration = input("How long should the stimulation last? (in seconds): ")
+            request = input().lower()
+            command = request.split(" ")[0]
+            parameters = request.split(" ")[1:]
+
+            if command == "list":
+                print("List of commands:")
+                print("\tlist: list all the commands")
+                print("\tstart: start recording")
+                print("\tstop: stop recording")
+                print("\tstim X: stimulate for X seconds")
+                print("\tquit: quit")
+
+            elif command == "start":
+                self._start_recording()
+                print("Recording started.")
+
+            elif command == "stop":
+                self._stop_recording()
+                print("Recording stopped.")
+
+            elif command == "stim":
+                duration = parameters[0]
                 try:
                     duration = float(duration)
                 except:
-                    logger.exception("Invalid duration.")
+                    logger.exception("Invalid duration, it must be a float.")
                     continue
 
                 self._rehastim.start_stimulation(duration=duration)
 
-            elif key == "q":
+            elif command == "quit":
                 break
 
         logger.info("Runner Console exited.")

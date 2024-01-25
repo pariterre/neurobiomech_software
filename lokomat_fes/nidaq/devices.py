@@ -54,7 +54,8 @@ class NiDaqGeneric(ABC):
 
     def unregister_to_start_recording(self, callback: Callable[[], None]) -> None:
         """Unregister a callback function that is called when the recording starts"""
-        del self._on_start_recording_callback[id(callback)]
+        if id(callback) in self._on_start_recording_callback:
+            del self._on_start_recording_callback[id(callback)]
 
     def register_to_data_ready(self, callback: Callable[[np.ndarray, np.ndarray], None]) -> None:
         """Register a callback function that is called when new data are ready"""
@@ -62,7 +63,8 @@ class NiDaqGeneric(ABC):
 
     def unregister_to_data_ready(self, callback: Callable[[np.ndarray, np.ndarray], None]) -> None:
         """Unregister a callback function that is called when new data are ready"""
-        del self._on_data_ready_callback[id(callback)]
+        if id(callback) in self._on_data_ready_callback:
+            del self._on_data_ready_callback[id(callback)]
 
     def register_to_stop_recording(self, callback: Callable[[NiDaqData], None]) -> None:
         """Register a callback function that is called when the recording stops"""
@@ -70,7 +72,8 @@ class NiDaqGeneric(ABC):
 
     def unregister_to_stop_recording(self, callback: Callable[[NiDaqData], None]) -> None:
         """Unregister a callback function that is called when the recording stops"""
-        del self._on_stop_recording_callback[id(callback)]
+        if id(callback) in self._on_stop_recording_callback:
+            del self._on_stop_recording_callback[id(callback)]
 
     def start_recording(self) -> None:
         """Start recording"""
