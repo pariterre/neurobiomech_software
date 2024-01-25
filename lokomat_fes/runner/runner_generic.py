@@ -26,13 +26,30 @@ class RunnerGeneric(ABC):
         self._exec()
 
         # Make sure the devices are stopped
-        self._stop_recording()
+        if self._is_recording:
+            self._stop_recording()
 
     @abstractmethod
     def _exec(self) -> None:
         """Start the Runner (implementation)."""
 
     ### DATA RELATED METHODS ###
+    def save_trial(self, filename: str) -> None:
+        """Save the last recorded trial.
+
+        Parameters
+        ----------
+        filename : str
+            The filename to save the trial to.
+        """
+        if self._trial_data is None:
+            raise RuntimeError("No trial recorded")
+        if self._is_recording:
+            raise RuntimeError("Cannot save while recording")
+
+        logger.info("Saving the last recorded trial")
+        self._trial_data.save(filename)
+
     @property
     def last_trial(self) -> Data | None:
         """Get the last recorded trial.
@@ -62,7 +79,7 @@ class RunnerGeneric(ABC):
     ### KINEMATIC DEVICE (NIDAQ) RELATED METHODS ###
     def _start_recording(self):
         if self._is_recording:
-            return
+            raise RuntimeError("Already recording")
 
         """Start the recording."""
         logger.info("Starting recording")
@@ -73,7 +90,7 @@ class RunnerGeneric(ABC):
     def _stop_recording(self):
         """Stop the recording."""
         if not self._is_recording:
-            return
+            raise RuntimeError("Not recording")
 
         logger.info("Stopping recording")
         self._finalize_trial()
@@ -83,10 +100,10 @@ class RunnerGeneric(ABC):
         self._is_recording = False
 
     ### STIMULATION DEVICE (REHASTIM) RELATED METHODS ###
-    def _start_stimulation(self):
+    def _start_stimulation(self, duration: float):
         """Start the Rehastim stimulation."""
         logger.info("Starting Rehastim stimulation")
-        self._rehastim.start_stimulation()
+        self._rehastim.start_stimulation(duration)
 
     def _stop_stimulation(self):
         """Stop the Rehastim stimulation."""
