@@ -10,8 +10,14 @@ class NiDaqData:
 
     Attributes
     ----------
-    _start_recording_time : datetime | None
-        Starting time of the recording.
+    _t0 : datetime | None
+        Starting time of the recording (set at the moment of the declaration of the class or that the
+        time [set_t0] is called).
+    _t0_offset : float
+        Offset to add to the time to get the real time (in seconds). It is the difference between the t0 and actual first data.
+        This is to account for the fact that the NI DAQ device takes time to launch, but the first data are still
+        considered to be at time=0. The offset makes sure the _t0 (in datetime) actually corresponds to the first data
+        so it can be synchronized with other devices. This value should correspond to the first time of the first data block.
     _t : list[np.ndarray]
         List of time vectors.
     _data : list[np.ndarray]
@@ -19,11 +25,26 @@ class NiDaqData:
     """
 
     def __init__(self) -> None:
-        self._start_recording_time: datetime | None = None
+        self._t0: datetime = datetime.now()
+        self._t0_offset: float = 0  # Offset to add to the time to get the real time. It is the difference between the t0 and actual first data received.
         self._t: list[np.ndarray] = []
         self._data: list[np.ndarray] = []
 
-    def add(self, t, data) -> None:
+    def set_t0(self, new_t0: datetime | None) -> None:
+        """Reset the starting time of the recording.
+
+        Parameters
+        ----------
+        new_t0 : datetime | None
+            New starting time of the recording. If None, the starting time is set to the current time.
+        """
+        self._t0 = new_t0 if new_t0 is not None else datetime.now()
+
+    def _set_t0_offset(self) -> None:
+        """Reset the starting time offset of the recording."""
+        self._t0_offset = (datetime.now() - self._t0).microseconds / 1e6  # seconds
+
+    def add(self, t: np.ndarray, data: np.ndarray) -> None:
         """Add data from a NI DAQ device to the data.
         Data are expected to be [channels x time].
 
@@ -34,13 +55,13 @@ class NiDaqData:
         data : np.ndarray
             Data vector
         """
+        if not self.has_data:
+            self._set_t0_offset()
 
-        if self._start_recording_time is None:
-            self._start_recording_time = datetime.now()
-        self._t.append(t)
+        self._t.append(t + self._t0_offset)
         self._data.append(data)
 
-    def add_sample_block(self, t, data) -> None:
+    def add_sample_block(self, t: np.ndarray, data: np.ndarray) -> None:
         """Add data from a NI DAQ device to the data.
         Data are expected to from a single sample block. This creates a shallow copy of the data.
 
@@ -51,10 +72,10 @@ class NiDaqData:
         data : np.ndarray
             Data vector
         """
+        if not self.has_data:
+            self._set_t0_offset()
 
-        if self._start_recording_time is None:
-            self._start_recording_time = datetime.now()
-        self._t.append(t)
+        self._t.append(t + self._t0_offset)
         self._data.append(data)
 
     @property
@@ -83,7 +104,7 @@ class NiDaqData:
         Returns
         -------
         t : np.ndarray
-            Time vector of the data.
+            Time vector of the data. Warning, this is without the t0 offset!
         data : np.ndarray
             Data from the NI DAQ device.
         """
@@ -96,15 +117,15 @@ class NiDaqData:
             return deepcopy(self._t[index]), deepcopy(self._data[index])
 
     @property
-    def start_recording_time(self) -> datetime | None:
-        """Get the starting time of the recording.
+    def t0(self) -> datetime:
+        """Get the starting time of the recording (without t0 offset).
 
         Returns
         -------
         t : datetime
             Starting time of the recording.
         """
-        return deepcopy(self._start_recording_time)
+        return deepcopy(self._t0)
 
     @property
     def time(self) -> np.ndarray:
@@ -148,9 +169,10 @@ class NiDaqData:
         """
 
         out = NiDaqData()
+        out._t0 = deepcopy(self._t0)
+        out._t0_offset = deepcopy(self._t0_offset)
         out._t = deepcopy(self._t)
         out._data = deepcopy(self._data)
-        out._start_recording_time = deepcopy(self._start_recording_time)
         return out
 
     def save(self, path: str) -> None:
@@ -194,7 +216,8 @@ class NiDaqData:
             Serialized data.
         """
         return {
-            "start_recording_time": self._start_recording_time,
+            "t0": self._t0,
+            "t0_offset": self._t0_offset,
             "t": self._t,
             "data": self._data,
         }
@@ -214,7 +237,8 @@ class NiDaqData:
             Deserialized data.
         """
         out = cls()
-        out._start_recording_time = data["start_recording_time"]
+        out._t0 = data["t0"]
+        out._t0_offset = data["t0_offset"]
         out._t = data["t"]
         out._data = data["data"]
         return out

@@ -51,12 +51,16 @@ class RehastimData:
 
     Attributes
     ----------
+    _t0 : datetime
+        Starting time of the recording (set at the moment of the declaration of the class or that the
+        time [set_t0] is called).
     _data: list[tuple[datetime, float, float]]
         List of data vectors.
         Each vector is a tuple of (time [datetime], duration [float] ms, tuple of channels configuration).
     """
 
     def __init__(self) -> None:
+        self._t0: datetime = datetime.now()
         self._data: list[tuple[datetime, float, tuple[Channel, ...]]] = []
 
     @property
@@ -69,6 +73,16 @@ class RehastimData:
             True if the data has been initialized.
         """
         return bool(self._data)
+
+    def set_t0(self, new_t0: datetime | None = None) -> None:
+        """Reset the starting time of the recording.
+
+        Parameters
+        ----------
+        new_t0 : datetime | None
+            New starting time of the recording. If None, the starting time is set to the current time.
+        """
+        self._t0 = new_t0 if new_t0 is not None else datetime.now()
 
     def add(self, duration: float, channels: tuple[Channel | pyScienceModeChannel, ...] | None) -> None:
         """Add data from a Rehastim device to the data.
@@ -131,7 +145,7 @@ class RehastimData:
         if not self._data:
             return np.array([])
 
-        t0 = self._data[0][0]
+        t0 = self._t0
         return np.array([(t - t0).total_seconds() for t, _, _ in self._data])
 
     @property
@@ -179,6 +193,7 @@ class RehastimData:
         """
 
         out = RehastimData()
+        out._t0 = deepcopy(self._t0)
         out._data = deepcopy(self._data)
         return out
 
@@ -222,7 +237,7 @@ class RehastimData:
         out : dict
             Serialized data.
         """
-        return {"data": self._data}
+        return {"t0": self._t0, "data": self._data}
 
     @classmethod
     def deserialize(cls, data: dict) -> "RehastimData":
@@ -239,5 +254,6 @@ class RehastimData:
             Deserialized data.
         """
         out = cls()
+        out._t0 = data["t0"]
         out._data = data["data"]
         return out

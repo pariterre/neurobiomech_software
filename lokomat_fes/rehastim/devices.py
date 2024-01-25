@@ -54,11 +54,13 @@ class RehastimGeneric(ABC):
         """
         channels = self._get_channel_list_for_stimulation()
 
+        self._device.start_stimulation(upd_list_channels=channels)
+
         # Notify the listeners that the stimulation is starting
+        channels = self._get_channels()
         for callback in self._on_stimulation_started_callback.values():
             callback(duration, channels)
 
-        self._device.start_stimulation(upd_list_channels=channels)
         if duration is not None:
             Timer(duration, self.stop_stimulation).start()
 
@@ -239,11 +241,6 @@ class Rehastim2(RehastimGeneric):
         if not self._is_stimulation_initialized:
             # On the very first call, we initialize the stimulation. This takes care of the channels at the same time.
             self.initialize_stimulation()
-
-            # Notify the listeners to record the initial states of the channels
-            channels = self._channels
-            for callback in self._on_stimulation_started_callback.values():
-                callback(0, channels)
 
         channels = None
         if self._channels_has_changed:

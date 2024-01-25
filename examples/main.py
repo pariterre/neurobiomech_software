@@ -23,14 +23,30 @@ def _received_data(t: np.ndarray, data: np.ndarray) -> None:
 
 def plot_data(data: Data) -> None:
     nidaq_data = data.nidaq
+    rehastim_data = data.rehastim
 
     plt.figure("Data against time")
 
-    ax = plt.axes()
-    ax.set_xlabel(f"Time [s] (first sample at {nidaq_data.start_recording_time})")
-    ax.set_ylabel("Data (mV)")
+    # On left-hand side axes, plot nidaq data
+    color = "blue"
+    ax1 = plt.axes()
+    ax1.set_xlabel(f"Time [s] (first sample at {nidaq_data.t0})")
+    ax1.set_ylabel("Data [mV]", color=color)
+    ax1.tick_params(axis="y", labelcolor=color)
+    plt.plot(nidaq_data.time, nidaq_data.as_array.T, color=color)
 
-    plt.plot(nidaq_data.time, nidaq_data.as_array.T)
+    # On right-hand side axes, plot rehastim data as stair data (from t0 to duration at height of amplitude)
+    color = "red"
+    ax2 = ax1.twinx()
+    ax2.set_ylabel("Amplitude [mA]", color=color)
+    ax2.tick_params(axis="y", labelcolor=color)
+    all_time = rehastim_data.time
+    all_duration = rehastim_data.duration_as_array
+    all_amplitude = rehastim_data.amplitude_as_array.T
+    for time, duration, amplitude in zip(all_time, all_duration, all_amplitude):
+        channel_index = 0  # Only show the first channel as they are all the same (currently)
+        plt.plot([time, time + duration], amplitude[[channel_index, channel_index]], color=color)
+
     plt.show()
 
 

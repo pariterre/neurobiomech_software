@@ -1,3 +1,4 @@
+from datetime import datetime
 import pickle
 
 from ..nidaq.data import NiDaqData
@@ -19,6 +20,21 @@ class Data:
         """
         self.nidaq = NiDaqData()
         self.rehastim = RehastimData()
+        self.set_t0()  # Just make sure t0 is the exact same for both devices
+
+    def set_t0(self, new_t0: datetime | None = None) -> None:
+        """Reset the time.
+
+        Parameters
+        ----------
+        new_t0 : datetime | None
+            New starting time of the recording. If None, the starting time is set to the current time.
+        """
+        if new_t0 is None:
+            new_t0 = datetime.now()
+
+        self.nidaq.set_t0(new_t0=new_t0)
+        self.rehastim.set_t0(new_t0=new_t0)
 
     def add_nidaq_data(self, t: float, data: float) -> None:
         """Add data to the NiDaq data.
