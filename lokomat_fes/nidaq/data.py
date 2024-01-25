@@ -26,11 +26,11 @@ class NiDaqData:
 
     def __init__(self) -> None:
         self._t0: datetime = datetime.now()
-        self._t0_offset: float = 0  # Offset to add to the time to get the real time. It is the difference between the t0 and actual first data received.
+        self._t0_offset: float = None  # Offset to add to the time to get the real time. It is the difference between the t0 and actual first data received.
         self._t: list[np.ndarray] = []
         self._data: list[np.ndarray] = []
 
-    def set_t0(self, new_t0: datetime | None) -> None:
+    def set_t0(self, new_t0: datetime | None = None) -> None:
         """Reset the starting time of the recording.
 
         Parameters
@@ -40,9 +40,29 @@ class NiDaqData:
         """
         self._t0 = new_t0 if new_t0 is not None else datetime.now()
 
-    def _set_t0_offset(self) -> None:
-        """Reset the starting time offset of the recording."""
-        self._t0_offset = (datetime.now() - self._t0).microseconds / 1e6  # seconds
+    def set_t0_offset(self, new_t0_offset: datetime | None = None) -> None:
+        """Reset the starting time offset of the recording.
+
+        Parameters
+        ----------
+        new_t0_offset : datetime | None
+            New starting time offset of the recording. If None, the starting time offset is set to the current time.
+        """
+        if new_t0_offset is None:
+            self._t0_offset = (datetime.now() - self._t0).microseconds / 1e6  # seconds
+        else:
+            self._t0_offset = new_t0_offset
+
+    @property
+    def t0_offset(self) -> float:
+        """Get the starting time offset of the recording.
+
+        Returns
+        -------
+        t : float
+            Starting time offset of the recording.
+        """
+        return self._t0_offset
 
     def add(self, t: np.ndarray, data: np.ndarray) -> None:
         """Add data from a NI DAQ device to the data.
@@ -55,8 +75,8 @@ class NiDaqData:
         data : np.ndarray
             Data vector
         """
-        if not self.has_data:
-            self._set_t0_offset()
+        if self._t0_offset is None:
+            self.set_t0_offset()
 
         self._t.append(t + self._t0_offset)
         self._data.append(data)
@@ -72,8 +92,8 @@ class NiDaqData:
         data : np.ndarray
             Data vector
         """
-        if not self.has_data:
-            self._set_t0_offset()
+        if self._t0_offset is None:
+            self.set_t0_offset()
 
         self._t.append(t + self._t0_offset)
         self._data.append(data)

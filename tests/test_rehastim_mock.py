@@ -55,15 +55,15 @@ def test_stimulating_with_callback():
 
     def stimulation_callback(duration, channels):
         nonlocal _callback_called
-        assert (channels is None) if _callback_called else (channels is not None)
         _callback_called = True
+        assert channels is not None
 
     rehastim = RehastimLokomatMock()
     rehastim.register_to_on_stimulation_started(stimulation_callback)
 
     rehastim.start_stimulation()
     assert _callback_called
-    rehastim.start_stimulation()  # Second time, channels should be empty (no change)
+    rehastim.start_stimulation()  # Second time, channels should not be empty again
 
     _callback_called = False
     rehastim.unregister_to_on_stimulation_started(stimulation_callback)

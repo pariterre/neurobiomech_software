@@ -82,13 +82,18 @@ def test_time_accessor():
     rehastim_data = RehastimData()
 
     # Add data
+    now = time.time()
+    _generate_data(rehastim_data)
+    then = time.time() - now
+    time.sleep(0.01)  # Make sure that the time is different
     _generate_data(rehastim_data)
 
     # Get the data back by index
     t = rehastim_data.time
-    assert t.shape == (3,)
-    assert t[0] == 0
-    assert t[-1] > 0  # This is highly dependent on the time it takes to run the test, so we are very loose on the value
+    assert t.shape == (6,)
+    assert t[0] >= 0
+    assert t[0] <= then
+    assert t[-1] >= then
 
 
 def test_duration_accessor():
