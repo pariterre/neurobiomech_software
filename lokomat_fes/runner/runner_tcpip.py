@@ -20,8 +20,12 @@ class RunnerTcpip(RunnerGeneric):
     def __init__(self, ip_address: str = "localhost", port: int = 4042, *args, **kwargs) -> None:
         """Initialize the Runner.
 
-        Args:
-            port: Port to listen on.
+        Parameters
+        ----------
+        ip_address : str, optional
+            IP address to connect to, by default "localhost"
+        port : int, optional
+            Port to connect to, by default 4042
         """
         super().__init__(*args, **kwargs)
 

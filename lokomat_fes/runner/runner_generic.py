@@ -24,6 +24,11 @@ class RunnerGeneric(ABC):
         logger.info("Starting the Runner")
         self._exec()
 
+    @abstractmethod
+    def _exec(self) -> None:
+        """Start the Runner (implementation)."""
+
+    ### DATA RELATED METHODS ###
     def _prepare_data(self):
         """Prepare the data."""
         logger.info("Preparing the data")
@@ -39,6 +44,7 @@ class RunnerGeneric(ABC):
         self._nidaq.unregister_to_data_ready(self._data.nidaq.add_sample_block)
         self._rehastim.unregister_to_on_stimulation_started(self._data.rehastim.add)
 
+    ### KINEMATIC DEVICE (NIDAQ) RELATED METHODS ###
     def _start_recording(self):
         """Start the recording."""
         logger.info("Starting recording")
@@ -53,6 +59,7 @@ class RunnerGeneric(ABC):
         self._rehastim.stop_stimulation()  # Interrupt any active stimulation if needed
         self._nidaq.stop_recording()
 
+    ### STIMULATION DEVICE (REHASTIM) RELATED METHODS ###
     def _start_stimulation(self):
         """Start the Rehastim stimulation."""
         logger.info("Starting Rehastim stimulation")
@@ -63,6 +70,35 @@ class RunnerGeneric(ABC):
         logger.info("Stopping Rehastim stimulation")
         self._rehastim.stop_stimulation()
 
-    @abstractmethod
-    def _exec(self) -> None:
-        """Start the Runner (implementation)."""
+    def _set_stimulation_pulse_amplitude(self, amplitudes: float | list[float]):
+        """Set the Rehastim stimulation amplitude.
+
+        Parameters
+        ----------
+        amplitudes : float | list[float]
+            The amplitude to set. If a list is provided, the amplitude is set for each channel.
+        """
+        logger.info("Setting Rehastim stimulation amplitude")
+        self._rehastim.set_pulse_amplitude(amplitudes=amplitudes)
+
+    def _set_stimulation_pulse_width(self, width: float):
+        """Set the Rehastim stimulation pulse width.
+
+        Parameters
+        ----------
+        width : float
+            The width to set.
+        """
+        logger.info("Setting Rehastim stimulation pulse width")
+        self._rehastim.set_pulse_width(width=width)
+
+    def _set_stimulation_pulse_interval(self, interval: float):
+        """Set the Rehastim stimulation interval.
+
+        Parameters
+        ----------
+        interval : float
+            The interval to set.
+        """
+        logger.info("Setting Rehastim stimulation interval")
+        self._rehastim.set_pulse_interval(interval=interval)

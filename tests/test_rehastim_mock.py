@@ -1,3 +1,4 @@
+import pytest
 import time
 
 from lokomat_fes.rehastim.mocks import RehastimLokomatMock, pyScienceModeRehastim2Mock
@@ -113,5 +114,92 @@ def test_stop_twice():
     rehastim.start_stimulation()
     rehastim.stop_stimulation()
     rehastim.stop_stimulation()
+
+    rehastim.dispose()
+
+
+def test_changing_pulse_amplitude():
+    rehastim = RehastimLokomatMock()
+    rehastim.initialize_stimulation()
+
+    device: pyScienceModeRehastim2Mock = rehastim._device
+    assert device.amplitude == [50] * 8  # Default amplitude
+
+    rehastim.set_pulse_amplitude(100)
+    rehastim.start_stimulation()  # Starting the stimulation is needed to actually change the pulse amplitude for the device
+    rehastim.stop_stimulation()
+    assert device.amplitude == [100] * 8
+
+    rehastim.dispose()
+
+
+def test_changing_pulse_width():
+    rehastim = RehastimLokomatMock()
+    rehastim.initialize_stimulation()
+
+    device: pyScienceModeRehastim2Mock = rehastim._device
+    assert device.pulse_width == [100] * 8  # Default width
+
+    rehastim.set_pulse_width(200)
+    rehastim.start_stimulation()  # Starting the stimulation is needed to actually change the pulse width for the device
+    rehastim.stop_stimulation()
+    assert device.pulse_width == [200] * 8
+
+    rehastim.dispose()
+
+
+def test_changing_pulse_interval():
+    rehastim = RehastimLokomatMock()
+    rehastim.initialize_stimulation()
+
+    device: pyScienceModeRehastim2Mock = rehastim._device
+    assert device.stimulation_interval == 200  # Default interval
+
+    with pytest.raises(
+        NotImplementedError,
+        match="The Rehastim2Device does not support changing the interval parameter once it is initialized.",
+    ):
+        rehastim.set_pulse_interval(0)
+
+    rehastim.dispose()
+
+
+def test_changing_low_frequency_factor():
+    rehastim = RehastimLokomatMock()
+    rehastim.initialize_stimulation()
+
+    device: pyScienceModeRehastim2Mock = rehastim._device
+    assert device.low_frequency_factor == 2  # Default low frequency factor
+
+    with pytest.raises(
+        NotImplementedError,
+        match="The Rehastim2Device does not support changing the low_frequency_factor parameter once it is initialized.",
+    ):
+        rehastim.set_low_frequency_factor(0.5)
+
+    rehastim.dispose()
+
+
+def test_reset_pulse_to_default():
+    rehastim = RehastimLokomatMock()
+    rehastim.initialize_stimulation()
+
+    device: pyScienceModeRehastim2Mock = rehastim._device
+    assert device.amplitude == [50] * 8  # Default amplitude
+    assert device.pulse_width == [100] * 8  # Default width
+    assert device.stimulation_interval == 200  # Default interval
+
+    rehastim.set_pulse_amplitude(100)
+    rehastim.set_pulse_width(200)
+    rehastim.start_stimulation()  # Starting the stimulation is needed to actually change the pulse width for the device
+    rehastim.stop_stimulation()
+    assert device.amplitude == [100] * 8
+    assert device.pulse_width == [200] * 8
+
+    with pytest.raises(
+        NotImplementedError,
+        match="The Rehastim2Device does not support changing the interval parameter once it is initialized.",
+    ):
+        rehastim.reset_pulse_values_to_default()
 
     rehastim.dispose()
