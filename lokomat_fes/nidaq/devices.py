@@ -7,7 +7,7 @@ from .data import NiDaqData
 
 
 class NiDaqGeneric(ABC):
-    def __init__(self, num_channels: int, frame_rate: int) -> None:
+    def __init__(self, num_channels: int, frame_rate: int, time_between_samples: int = 1) -> None:
         """
         Parameters
         ----------
@@ -15,10 +15,14 @@ class NiDaqGeneric(ABC):
             Number of channels connected to the NiDaq
         rate : int
             Frames per second
+        time_between_samples : int
+            Time between samples in seconds (this determines the number of samples per frame)
         """
         self._num_channels = num_channels
+
         self._frame_rate = frame_rate
-        self._time_between_samples: float = 1 / self.frame_rate
+        self._time_between_samples = time_between_samples
+        self._n_samples_per_frame = int(self._time_between_samples * self._frame_rate)
 
         # Data releated variables
         self._data: NiDaqData = NiDaqData()
@@ -146,10 +150,11 @@ class NiDaqGeneric(ABC):
 
         self._task.timing.cfg_samp_clk_timing(self.frame_rate, sample_mode=AcquisitionType.CONTINUOUS)
 
-        n_samples = self._time_between_samples * self.frame_rate
         self._task.register_every_n_samples_acquired_into_buffer_event(
-            n_samples,
-            lambda *_, **__: self._data_has_arrived(np.array(self._task.read(number_of_samples_per_channel=n_samples))),
+            self._n_samples_per_frame,
+            lambda *_, **__: self._data_has_arrived(
+                np.array(self._task.read(number_of_samples_per_channel=self._n_samples_per_frame))
+            ),
         )
 
     @abstractmethod

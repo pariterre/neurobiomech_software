@@ -83,7 +83,7 @@ def __main__() -> None:
 
     # Define the devices and the runner
     rehastim = RehastimLokomat()
-    nidaq = NiDaqLokomat()
+    nidaq = NiDaqLokomat(time_between_samples=0.01)
     runner = RunnerConsole(rehastim, nidaq)
 
     runner.schedule_stimulation(StrideBasedStimulation(condition_function=_stimulate_in_swing_phase))

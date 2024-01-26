@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import override
 
 import numpy as np
@@ -32,10 +33,12 @@ class NiDaqLokomatMock(NiDaqLokomat):
 
     def _generate_fake_data(self):
         """Generate fake data and call the callback function"""
-        n_frame = int(self.frame_rate * self._time_between_samples)
-        normalized_time = np.linspace(self._timer_counter, self._timer_counter + self._time_between_samples, n_frame)
 
-        fake_data = np.ndarray((self.num_channels, n_frame)) * np.nan
+        normalized_time = np.linspace(
+            self._timer_counter, self._timer_counter + self._time_between_samples, self._n_samples_per_frame
+        )
+
+        fake_data = np.ndarray((self.num_channels, self._n_samples_per_frame)) * np.nan
         # First row is hip angle that resembles a sine wave which takes about 1 second to complete
         fake_data[0, :] = np.sin(2 * np.pi * normalized_time)
 
