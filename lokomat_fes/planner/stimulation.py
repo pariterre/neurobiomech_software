@@ -74,6 +74,55 @@ class StrideBasedStimulation(StimulationAbstract):
 
         return out
 
+    @classmethod
+    def stimulate_in_swing_phase(cls, side: Side = Side.BOTH) -> "StrideBasedStimulation":
+        """Stimulate when the leg (27% to 56% of the stride) is in swing phase.
+        The channels for the Rehastim2 are first four on the left then next four on the right.
+
+        Parameters
+        ----------
+        side : Side
+            The side to stimulate.
+
+        Returns
+        -------
+        StrideBasedStimulation
+            The stimulation.
+        """
+
+        return cls(condition_function=lambda left, right: cls._stimulate_in_swing_phase(left, right, side=side))
+
+    @staticmethod
+    def _stimulate_in_swing_phase(left, right, side: Side = Side.RIGHT):
+        """Stimulate when the leg (27% to 56% of the stride) is in swing phase.
+        The channels for the Rehastim2 are first four on the left then next four on the right.
+
+        Parameters
+        ----------
+        left : float
+            The current stride position of the left leg [0; 1]
+        right : float
+            The current stride position of the right leg [0; 1]
+
+        Returns
+        -------
+        list[bool]
+            Whether to stimulate or not for each channel.
+        """
+
+        out = []
+        if side in (Side.LEFT, Side.BOTH) and left >= 0.6:
+            out += [True, True, True, True]
+        else:
+            out += [False, False, False, False]
+
+        if side in (Side.RIGHT, Side.BOTH) and right >= 0.6:
+            out += [True, True, True, True]
+        else:
+            out += [False, False, False, False]
+
+        return out
+
 
 class TimeBasedStimulation(StimulationAbstract):
     def __init__(self, start_point: float, end_time: float) -> None:

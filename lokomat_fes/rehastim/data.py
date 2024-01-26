@@ -1,9 +1,13 @@
 from copy import deepcopy
 from datetime import datetime
+import logging
 import pickle
 
 from pyScienceMode import Channel as pyScienceModeChannel
 import numpy as np
+
+
+logger = logging.getLogger("lokomat_fes")
 
 
 class Channel:
@@ -134,7 +138,8 @@ class RehastimData:
     def stop_undefined_stimulation_duration(self):
         """Stop the stimulation duration that is set to None."""
         if not self._data:
-            raise RuntimeError("No data to stop")
+            logger.warning("No data to stop")
+            return
 
         if self._data[-1][1] is not None:
             return

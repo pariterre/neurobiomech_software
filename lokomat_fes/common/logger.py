@@ -2,7 +2,7 @@ import logging
 import logging.config
 
 
-def setup_logger(level: int = logging.DEBUG):
+def setup_logger(level: int = logging.DEBUG, show_exec: bool = True):
     logging_config = {
         "version": 1,
         "disable_existing_loggers": False,
@@ -11,9 +11,11 @@ def setup_logger(level: int = logging.DEBUG):
         },
         "datefmt": "%Y-%m-%d %H:%M:%S",
         "handlers": {
-            "console": {"class": "logging.StreamHandler", "formatter": "simple", "stream": "ext://sys.stdout"}
+            "console": {"class": "logging.StreamHandler", "formatter": "simple", "stream": "ext://sys.stdout"},
+            "runner": {"class": "logging.StreamHandler", "formatter": "simple", "stream": "ext://sys.stdout"},
         },
         "loggers": {
+            "runner": {"handlers": ["runner"], "level": logging.INFO if show_exec else logging.WARNING},
             "lokomat_fes": {"handlers": ["console"], "level": level},
             "pyScienceMode": {"handlers": ["console"], "level": level},
         },

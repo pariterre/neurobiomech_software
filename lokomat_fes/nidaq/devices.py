@@ -20,9 +20,9 @@ class NiDaqGeneric(ABC):
         """
         self._num_channels = num_channels
 
-        self._frame_rate = frame_rate
-        self._time_between_samples = time_between_samples
-        self._n_samples_per_frame = int(self._time_between_samples * self._frame_rate)
+        self._frame_rate = frame_rate  # Frames per second (Hz)
+        self._time_between_samples = time_between_samples  # Time between block of samples in seconds
+        self._n_samples_per_block = int(self._time_between_samples * self._frame_rate)  # Number of samples per block
 
         # Data releated variables
         self._data: NiDaqData = NiDaqData()
@@ -126,9 +126,12 @@ class NiDaqGeneric(ABC):
         """
 
         n_frames = int(self.frame_rate * self._time_between_samples)
+        dt = self.dt  # This is so we finish the time vector one dt before the next sample
+
         prev_t, _ = self._data.sample_block(index=-1, unsafe=True)
-        t0 = 0 if prev_t is None else (prev_t[-1] + self.dt)
-        t = np.linspace(t0, t0 + self._time_between_samples - self.dt, n_frames)
+
+        t0 = 0 if prev_t is None else (prev_t[-1] + dt - self._data.t0_offset)
+        t = np.linspace(t0, t0 + self._time_between_samples - dt, n_frames)
 
         self._data.add(t, data)
 
@@ -151,9 +154,9 @@ class NiDaqGeneric(ABC):
         self._task.timing.cfg_samp_clk_timing(self.frame_rate, sample_mode=AcquisitionType.CONTINUOUS)
 
         self._task.register_every_n_samples_acquired_into_buffer_event(
-            self._n_samples_per_frame,
+            self._n_samples_per_block,
             lambda *_, **__: self._data_has_arrived(
-                np.array(self._task.read(number_of_samples_per_channel=self._n_samples_per_frame))
+                np.array(self._task.read(number_of_samples_per_channel=self._n_samples_per_block))
             ),
         )
 

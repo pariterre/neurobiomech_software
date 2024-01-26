@@ -1,9 +1,13 @@
 import logging
 from typing import override
 
+import matplotlib.pyplot as plt
+
 from .runner_generic import RunnerGeneric
+from ..common.data import Data
 
 logger = logging.getLogger("lokomat_fes")
+logger_exec = logging.getLogger("runner")
 
 
 class RunnerConsole(RunnerGeneric):
@@ -32,6 +36,9 @@ class RunnerConsole(RunnerGeneric):
             elif command == "stim":
                 self._stimulate_command(parameters)
 
+            elif command == "plot":
+                self._plot_data(parameters)
+
             elif command == "save":
                 self._save_command(parameters)
 
@@ -52,6 +59,9 @@ class RunnerConsole(RunnerGeneric):
         print(
             "\tstim X [Y] [Z]: stimulate for X seconds, at amplitude Y mA, with a width Z ms (default for Y and Z are previously set values, or 0 if not set yet)"
         )
+        print(
+            "\tplot: plot the last trial, if available. This method is blocking (no other commands can be used while the plot is shown)"
+        )
         print("\tsave X: save the last trial to file X as a pickle file")
         print("\tquit: quit")
 
@@ -63,7 +73,7 @@ class RunnerConsole(RunnerGeneric):
         success = _try_command(self.start_recording)
         if not success:
             return
-        print("Recording started.")
+        logger_exec.info("Recording started.")
 
     def _stop_recording_command(self, parameters: list[str]):
         success = _check_number_parameters("stop", parameters, expected=None)
@@ -73,7 +83,7 @@ class RunnerConsole(RunnerGeneric):
         success = _try_command(self.stop_recording)
         if not success:
             return
-        print("Recording stopped.")
+        logger_exec.info("Recording stopped.")
 
     def _stimulate_command(self, parameters: list[str]):
         success = _check_number_parameters(
@@ -109,7 +119,48 @@ class RunnerConsole(RunnerGeneric):
             return
         amplitude = self._rehastim.get_pulse_amplitude()[0]
         width = self._rehastim.get_pulse_width()[0]
-        print(f"Simulating for {duration}s at {amplitude}mA and {width}ms.")
+        logger_exec.info(f"Simulating for {duration}s at {amplitude}mA and {width}ms.")
+
+    @staticmethod
+    def plot_data(data: Data) -> None:
+        nidaq_data = data.nidaq
+        rehastim_data = data.rehastim
+
+        plt.figure("Data against time")
+
+        # On left-hand side axes, plot nidaq data
+        color = "blue"
+        ax1 = plt.axes()
+        ax1.set_xlabel(f"Time [s] (first sample at {nidaq_data.t0})")
+        ax1.set_ylabel("Data [mV]", color=color)
+        ax1.tick_params(axis="y", labelcolor=color)
+        plt.plot(nidaq_data.time, nidaq_data.as_array.T, color=color)
+
+        # On right-hand side axes, plot rehastim data as stair data (from t0 to duration at height of amplitude)
+        color = "red"
+        ax2 = ax1.twinx()
+        ax2.set_ylabel("Amplitude [mA]", color=color)
+        ax2.tick_params(axis="y", labelcolor=color)
+        all_time = rehastim_data.time
+        all_duration = rehastim_data.duration_as_array
+        all_amplitude = rehastim_data.amplitude_as_array.T
+        for time, duration, amplitude in zip(all_time, all_duration, all_amplitude):
+            channel_index = 0  # Only show the first channel as they are all the same (currently)
+            plt.plot([time, time + duration], amplitude[[channel_index, channel_index]], color=color)
+
+        plt.show()
+
+    def _plot_data(self, parameters: list[str]):
+        success = _check_number_parameters("plot", parameters, expected=None)
+        if not success:
+            return
+
+        data = self.last_trial
+        if data is None:
+            logger_exec.error("No data to plot.")
+            return
+
+        self.plot_data(data)
 
     def _save_command(self, parameters: list[str]):
         success = _check_number_parameters("save", parameters, expected={"filename": True})
@@ -119,7 +170,7 @@ class RunnerConsole(RunnerGeneric):
         filename = parameters[0]
         if not _try_command(self.save_trial, filename):
             return
-        print(f"Trial saved to {filename}")
+        logger_exec.info(f"Trial saved to {filename}")
 
 
 def _check_number_parameters(command: str, parameters: list[str], expected: dict[str, bool] | None) -> bool:

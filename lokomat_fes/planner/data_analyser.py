@@ -8,6 +8,7 @@ from ..common.data import Data
 class Side(Enum):
     LEFT = 0
     RIGHT = 1
+    BOTH = 2
 
 
 class DataAnalyser:

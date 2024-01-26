@@ -1,9 +1,12 @@
 from datetime import datetime
+import logging
 import threading
 import time
 
 from .stimulation import StimulationAbstract
 from ..common.data import Data
+
+logger = logging.getLogger("runner")
 
 
 class Planner:
@@ -68,13 +71,13 @@ class Planner:
                 duration = max(duration_no_none) if duration_no_none else None
                 if duration is not None:
                     if duration > 0:
-                        print(f"Starting stimulation for {duration} seconds")
+                        logger.info(f"Starting stimulation for {duration} seconds")
                         self._runner.start_stimulation(duration=duration)
                     elif duration == 0:
-                        print(f"Starting stimulation indefinitely")
+                        logger.info(f"Starting stimulation indefinitely")
                         self._runner.start_stimulation(duration=None)
                     else:
-                        print(f"Stopping stimulation")
+                        logger.info(f"Stopping stimulation")
                         self._runner.stop_stimulation()
 
             time.sleep(0)
