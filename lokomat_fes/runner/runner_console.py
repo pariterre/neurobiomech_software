@@ -60,7 +60,7 @@ class RunnerConsole(RunnerGeneric):
         if not success:
             return
 
-        success = _try_command(self._start_recording)
+        success = _try_command(self.start_recording)
         if not success:
             return
         print("Recording started.")
@@ -70,7 +70,7 @@ class RunnerConsole(RunnerGeneric):
         if not success:
             return
 
-        success = _try_command(self._stop_recording)
+        success = _try_command(self.stop_recording)
         if not success:
             return
         print("Recording stopped.")
@@ -87,7 +87,7 @@ class RunnerConsole(RunnerGeneric):
             if amplitude is None:
                 return
 
-            success = _try_command(self._set_stimulation_pulse_amplitude, amplitude)
+            success = _try_command(self.set_stimulation_pulse_amplitude, amplitude)
             if not success:
                 return
 
@@ -96,7 +96,7 @@ class RunnerConsole(RunnerGeneric):
             if width is None:
                 return
 
-            success = _try_command(self._set_stimulation_pulse_width, width)
+            success = _try_command(self.set_stimulation_pulse_width, width)
             if not success:
                 return
 
@@ -104,7 +104,7 @@ class RunnerConsole(RunnerGeneric):
         if duration is None:
             return
 
-        success = _try_command(self._start_stimulation, duration)
+        success = _try_command(self.start_stimulation, duration)
         if not success:
             return
         amplitude = self._rehastim.get_pulse_amplitude()[0]

@@ -20,7 +20,20 @@ class Data:
         """
         self.nidaq = NiDaqData()
         self.rehastim = RehastimData()
-        self.set_t0()  # Just make sure t0 is the exact same for both devices
+        self._t0: datetime = datetime.now()
+        self.set_t0(new_t0=self._t0)  # Just make sure t0 is the exact same for both devices
+
+    @property
+    def t0(self) -> datetime:
+        """Get the starting time of the recording.
+
+        Returns
+        -------
+        out : datetime
+            Starting time of the recording.
+        """
+
+        return self._t0
 
     def set_t0(self, new_t0: datetime | None = None) -> None:
         """Reset the time.
@@ -33,8 +46,9 @@ class Data:
         if new_t0 is None:
             new_t0 = datetime.now()
 
-        self.nidaq.set_t0(new_t0=new_t0)
-        self.rehastim.set_t0(new_t0=new_t0)
+        self._t0 = new_t0
+        self.nidaq.set_t0(new_t0=self._t0)
+        self.rehastim.set_t0(new_t0=self._t0)
 
     def add_nidaq_data(self, t: float, data: float) -> None:
         """Add data to the NiDaq data.

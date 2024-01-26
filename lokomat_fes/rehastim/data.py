@@ -63,6 +63,16 @@ class RehastimData:
         self._t0: datetime = datetime.now()
         self._data: list[tuple[datetime, float, tuple[Channel, ...]]] = []
 
+    def __len__(self) -> int:
+        """Get the number of samples.
+
+        Returns
+        -------
+        out : int
+            Number of samples.
+        """
+        return len(self._data)
+
     @property
     def has_data(self) -> bool:
         """Check if the data has been initialized.
@@ -73,6 +83,17 @@ class RehastimData:
             True if the data has been initialized.
         """
         return bool(self._data)
+
+    @property
+    def t0(self) -> datetime:
+        """Get the starting time of the recording.
+
+        Returns
+        -------
+        out : datetime
+            Starting time of the recording.
+        """
+        return self._t0
 
     def set_t0(self, new_t0: datetime | None = None) -> None:
         """Reset the starting time of the recording.
@@ -90,7 +111,8 @@ class RehastimData:
         Parameters
         ----------
         duration : float
-            Duration of the stimulation.
+            Duration of the stimulation. If duration is set to None, the user must call stop_undefined_stimulation_duration
+            to compute the duration of the stimulation.
         amplitude : float
             Amplitude of the stimulation.
         """
@@ -108,6 +130,19 @@ class RehastimData:
                 for channel in channels
             )
         self._data.append((datetime.now(), duration, channels))
+
+    def stop_undefined_stimulation_duration(self):
+        """Stop the stimulation duration that is set to None."""
+        if not self._data:
+            raise RuntimeError("No data to stop")
+
+        if self._data[-1][1] is not None:
+            return
+
+        stimulation_started_at = self._data[-1][0]
+        stimulation_lasted = (datetime.now() - stimulation_started_at).total_seconds()
+        channels = self._data[-1][2]
+        self._data[-1] = (stimulation_started_at, stimulation_lasted, channels)
 
     def sample_block(
         self, index: int | slice

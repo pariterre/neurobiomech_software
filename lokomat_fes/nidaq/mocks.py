@@ -21,7 +21,7 @@ class NiDaqLokomatMock(NiDaqLokomat):
     @override
     def _start_task(self):
         """Simulate the start of the task by launching a timer that calls the callback function every dt seconds"""
-        self._timer = PerpetualTimer(1, self._generate_fake_data)
+        self._timer = PerpetualTimer(self._time_between_samples, self._generate_fake_data)
         self._timer_counter = 0
         self._timer.start()
 
@@ -32,11 +32,10 @@ class NiDaqLokomatMock(NiDaqLokomat):
 
     def _generate_fake_data(self):
         """Generate fake data and call the callback function"""
-        normalized_time = np.linspace(
-            self._timer_counter, self._timer_counter + self._time_between_samples, self.frame_rate
-        )
+        n_frame = int(self.frame_rate * self._time_between_samples)
+        normalized_time = np.linspace(self._timer_counter, self._timer_counter + self._time_between_samples, n_frame)
 
-        fake_data = np.ndarray((self.num_channels, self.frame_rate)) * np.nan
+        fake_data = np.ndarray((self.num_channels, n_frame)) * np.nan
         # First row is hip angle that resembles a sine wave which takes about 1 second to complete
         fake_data[0, :] = np.sin(2 * np.pi * normalized_time)
 

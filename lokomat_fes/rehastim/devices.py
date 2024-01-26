@@ -17,6 +17,7 @@ class RehastimGeneric(ABC):
 
         self._device = self._get_initialized_device()
         self._on_stimulation_started_callback: dict[Any, Callable[[], None]] = {}
+        self._on_stimulation_stopped_callback: dict[Any, Callable[[], None]] = {}
         self._is_stimulation_initialized = False
 
     @abstractproperty
@@ -42,6 +43,15 @@ class RehastimGeneric(ABC):
         """Unregister a callback function that is called when the stimulation starts"""
         if id(callback) in self._on_stimulation_started_callback:
             del self._on_stimulation_started_callback[id(callback)]
+
+    def register_to_on_stimulation_stopped(self, callback: Callable[[], None]) -> None:
+        """Register a callback function that is called when the stimulation stops"""
+        self._on_stimulation_stopped_callback[id(callback)] = callback
+
+    def unregister_to_on_stimulation_stopped(self, callback: Callable[[], None]) -> None:
+        """Unregister a callback function that is called when the stimulation stops"""
+        if id(callback) in self._on_stimulation_stopped_callback:
+            del self._on_stimulation_stopped_callback[id(callback)]
 
     def start_stimulation(self, duration: float = None) -> None:
         """Perform a stimulation.
@@ -116,6 +126,10 @@ class RehastimGeneric(ABC):
         if not self._is_stimulation_initialized:
             return
         self._device.pause_stimulation()
+
+        # Notify the listeners that the stimulation is stopping
+        for callback in self._on_stimulation_stopped_callback.values():
+            callback()
 
     def dispose(self) -> None:
         """Dispose the device."""

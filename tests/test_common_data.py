@@ -12,6 +12,8 @@ def test_data_creation():
     data = Data()
     assert isinstance(data.nidaq, NiDaqData)
     assert isinstance(data.rehastim, RehastimData)
+    assert data.nidaq.t0 == data.t0
+    assert data.rehastim.t0 == data.t0
 
 
 def test_add_nidaq_data():

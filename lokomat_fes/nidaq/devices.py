@@ -18,7 +18,7 @@ class NiDaqGeneric(ABC):
         """
         self._num_channels = num_channels
         self._frame_rate = frame_rate
-        self._time_between_samples: float = 1  # second
+        self._time_between_samples: float = 1 / self.frame_rate
 
         # Data releated variables
         self._data: NiDaqData = NiDaqData()
@@ -121,9 +121,10 @@ class NiDaqGeneric(ABC):
         It automatically computes the time vector and calls the callback function if it exists.
         """
 
+        n_frames = int(self.frame_rate * self._time_between_samples)
         prev_t, _ = self._data.sample_block(index=-1, unsafe=True)
         t0 = 0 if prev_t is None else (prev_t[-1] + self.dt)
-        t = np.linspace(t0, t0 + self._time_between_samples - self.dt, self.frame_rate)
+        t = np.linspace(t0, t0 + self._time_between_samples - self.dt, n_frames)
 
         self._data.add(t, data)
 

@@ -33,6 +33,19 @@ def test_data_creation():
     assert rehastim_data.amplitude_as_array.shape == (1, 0)
 
 
+def test_len_data():
+    rehastim_data = RehastimData()
+
+    # Check that the data is correct
+    assert len(rehastim_data) == 0
+
+    # Add data
+    _generate_data(rehastim_data)
+
+    # Check that the data is correct
+    assert len(rehastim_data) == 3
+
+
 def test_has_data():
     rehastim_data = RehastimData()
 

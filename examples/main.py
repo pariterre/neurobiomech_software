@@ -3,14 +3,11 @@ import logging
 
 import numpy as np
 from matplotlib import pyplot as plt
-from lokomat_fes import setup_logger, Data
-from lokomat_fes.runner import RunnerConsole
-from lokomat_fes.nidaq import NiDaqLokomat
-from lokomat_fes.rehastim import RehastimLokomat
+from lokomat_fes import setup_logger, Data, RunnerConsole, StrideBasedStimulation
+from lokomat_fes.lokomat import NiDaqLokomat, RehastimLokomat
 
-# If you want to use the real devices, comment the following lines
-from lokomat_fes.nidaq.mocks import NiDaqLokomatMock as NiDaqLokomat
-from lokomat_fes.rehastim.mocks import RehastimLokomatMock as RehastimLokomat
+# If you want to use the real devices, comment the following line
+from lokomat_fes.lokomat import NiDaqLokomatMock as NiDaqLokomat, RehastimLokomatMock as RehastimLokomat
 
 
 def _received_data(t: np.ndarray, data: np.ndarray) -> None:
@@ -50,6 +47,37 @@ def plot_data(data: Data) -> None:
     plt.show()
 
 
+def _stimulate_in_swing_phase(left, right):
+    """Stimulate when the leg (27% to 56% of the stride) is in swing phase.
+    The channels for the Rehastim2 are first four on the left then next four on the right.
+
+    Parameters
+    ----------
+    left : float
+        The current stride position of the left leg [0; 1]
+    right : float
+        The current stride position of the right leg [0; 1]
+
+    Returns
+    -------
+    list[bool]
+        Whether to stimulate or not for each channel.
+    """
+
+    out = []
+    if left >= 0.27 and left <= 0.56:
+        out += [True, True, True, True]
+    else:
+        out += [False, False, False, False]
+
+    if right >= 0.27 and right <= 0.56:
+        out += [False, False, False, False]  # [True, True, True, True]
+    else:
+        out += [False, False, False, False]
+
+    return out
+
+
 def __main__() -> None:
     setup_logger(level=logging.WARNING)  # Change to logging.INFO to see more logs
 
@@ -57,6 +85,8 @@ def __main__() -> None:
     rehastim = RehastimLokomat()
     nidaq = NiDaqLokomat()
     runner = RunnerConsole(rehastim, nidaq)
+
+    runner.schedule_stimulation(StrideBasedStimulation(condition_function=_stimulate_in_swing_phase))
 
     # Start the runner (blocking)
     runner.exec()

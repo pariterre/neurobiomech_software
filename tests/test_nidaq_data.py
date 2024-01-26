@@ -48,6 +48,26 @@ def test_data_add_data():
     assert data.shape == (1, n_frames * 3)
 
 
+def test_len_data():
+    nidaq_data = NiDaqData()
+
+    # Generate some fake data
+    n_frames = 100
+    block_time = 1
+    t = np.linspace(0, block_time, n_frames)
+
+    # Check that the data is correct
+    assert len(nidaq_data) == 0
+
+    # Add data
+    nidaq_data.add(t + block_time * 0, np.sin(t + block_time * 0)[np.newaxis, :])
+    nidaq_data.add(t + block_time * 1, np.sin(t + block_time * 1)[np.newaxis, :])
+    nidaq_data.add(t + block_time * 2, np.sin(t + block_time * 2)[np.newaxis, :])
+
+    # Check that the data is correct
+    assert len(nidaq_data) == 3
+
+
 def test_has_data():
     nidaq_data = NiDaqData()
 

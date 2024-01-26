@@ -98,6 +98,16 @@ class NiDaqData:
         self._t.append(t + self._t0_offset)
         self._data.append(data)
 
+    def __len__(self) -> int:
+        """Get the number of data blocks.
+
+        Returns
+        -------
+        out : int
+            Number of data blocks.
+        """
+        return len(self._t)
+
     @property
     def has_data(self) -> bool:
         """Check if the data contains data.

@@ -4,6 +4,8 @@ import logging
 from ..common.data import Data
 from ..nidaq import NiDaqGeneric
 from ..rehastim import RehastimGeneric
+from ..planner.planner import Planner
+from ..planner.stimulation import StimulationAbstract
 
 logger = logging.getLogger("lokomat_fes")
 
@@ -17,6 +19,11 @@ class RunnerGeneric(ABC):
 
         self._rehastim = rehastim
         self._nidaq = nidaq
+
+        self._data_for_planner = Data()
+        self._nidaq.register_to_data_ready(self._data_for_planner.nidaq.add_sample_block)
+        self._planner = Planner(runner=self, data=self._data_for_planner)
+
         self._trial_data = None
         self._is_recording = False
 
@@ -27,7 +34,7 @@ class RunnerGeneric(ABC):
 
         # Make sure the devices are stopped
         if self._is_recording:
-            self._stop_recording()
+            self.stop_recording()
 
     @abstractmethod
     def _exec(self) -> None:
@@ -69,15 +76,19 @@ class RunnerGeneric(ABC):
         # Initialize the callback to record the data
         self._nidaq.register_to_data_ready(self._trial_data.nidaq.add_sample_block)
         self._rehastim.register_to_on_stimulation_started(self._trial_data.rehastim.add)
+        self._rehastim.register_to_on_stimulation_stopped(self._trial_data.rehastim.stop_undefined_stimulation_duration)
 
     def _finalize_trial(self):
         """Finalize the data."""
         logger.info("Finalizing the data")
         self._nidaq.unregister_to_data_ready(self._trial_data.nidaq.add_sample_block)
         self._rehastim.unregister_to_on_stimulation_started(self._trial_data.rehastim.add)
+        self._rehastim.unregister_to_on_stimulation_stopped(
+            self._trial_data.rehastim.stop_undefined_stimulation_duration
+        )
 
     ### KINEMATIC DEVICE (NIDAQ) RELATED METHODS ###
-    def _start_recording(self):
+    def start_recording(self):
         if self._is_recording:
             raise RuntimeError("Already recording")
 
@@ -87,7 +98,7 @@ class RunnerGeneric(ABC):
         self._nidaq.start_recording()
         self._is_recording = True
 
-    def _stop_recording(self):
+    def stop_recording(self):
         """Stop the recording."""
         if not self._is_recording:
             raise RuntimeError("Not recording")
@@ -100,17 +111,52 @@ class RunnerGeneric(ABC):
         self._is_recording = False
 
     ### STIMULATION DEVICE (REHASTIM) RELATED METHODS ###
-    def _start_stimulation(self, duration: float):
+    def schedule_stimulation(self, stimulation: StimulationAbstract):
+        """Schedule a stimulation.
+
+        Parameters
+        ----------
+        duration : float
+            The duration of the stimulation.
+        amplitude : float
+            The amplitude of the stimulation.
+        """
+        logger.info("Scheduling a stimulation")
+        self._planner.add(stimulation=stimulation)
+
+    def get_scheduled_stimulations(self) -> list[StimulationAbstract]:
+        """Get the scheduled stimulations.
+
+        Returns
+        -------
+        list[StimulationAbstract]
+            The scheduled stimulations.
+        """
+        logger.info("Getting the scheduled stimulations")
+        return self._planner.get_stimulations()
+
+    def remove_scheduled_stimulation(self, index: int):
+        """Remove a scheduled stimulation. To list the currently scheduled stimulations, use get_scheduled_stimulations().
+
+        Parameters
+        ----------
+        index : int
+            The index of the stimulation to remove.
+        """
+        logger.info("Removing a scheduled stimulation")
+        self._planner.remove(stimulation=self._planner.get_stimulations()[index])
+
+    def start_stimulation(self, duration: float):
         """Start the Rehastim stimulation."""
         logger.info("Starting Rehastim stimulation")
         self._rehastim.start_stimulation(duration)
 
-    def _stop_stimulation(self):
+    def stop_stimulation(self):
         """Stop the Rehastim stimulation."""
         logger.info("Stopping Rehastim stimulation")
         self._rehastim.stop_stimulation()
 
-    def _set_stimulation_pulse_amplitude(self, amplitudes: float | list[float]):
+    def set_stimulation_pulse_amplitude(self, amplitudes: float | list[float]):
         """Set the Rehastim stimulation amplitude.
 
         Parameters
@@ -121,7 +167,7 @@ class RunnerGeneric(ABC):
         logger.info("Setting Rehastim stimulation amplitude")
         self._rehastim.set_pulse_amplitude(amplitudes=amplitudes)
 
-    def _set_stimulation_pulse_width(self, widths: int | list[int]):
+    def set_stimulation_pulse_width(self, widths: int | list[int]):
         """Set the Rehastim stimulation pulse width.
 
         Parameters
@@ -132,7 +178,7 @@ class RunnerGeneric(ABC):
         logger.info("Setting Rehastim stimulation pulse width")
         self._rehastim.set_pulse_width(widths=widths)
 
-    def _set_stimulation_pulse_interval(self, interval: float):
+    def set_stimulation_pulse_interval(self, interval: float):
         """Set the Rehastim stimulation interval.
 
         Parameters
