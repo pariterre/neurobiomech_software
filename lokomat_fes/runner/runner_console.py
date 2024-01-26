@@ -33,6 +33,19 @@ class RunnerConsole(RunnerGeneric):
             elif command == "stop":
                 self._stop_recording_command(parameters)
 
+            elif command == "list_available_schedules":
+                raise NotImplementedError("Listing available schedules is not implemented yet.")
+
+            elif command == "list_scheduled":
+                raise NotImplementedError("Listing scheduled stimulations is not implemented yet.")
+
+            elif command == "schedule_stim":
+                # TODO: CHANGE NAME OF PLANNER TO SCHEDULER
+                raise NotImplementedError("Scheduling stimulation is not implemented yet.")
+
+            elif command == "unschedule_stim":
+                raise NotImplementedError("Unscheduling stimulation is not implemented yet.")
+
             elif command == "stim":
                 self._stimulate_command(parameters)
 
@@ -56,6 +69,10 @@ class RunnerConsole(RunnerGeneric):
         print("\tlist: list all the commands")
         print("\tstart: start recording")
         print("\tstop: stop recording")
+        print("\tlist_available_schedules: list all the scheduled available stimulations")
+        print("\tlist_scheduled: list all the scheduled stimulations")
+        print("\tschedule_stim X: schedule stimulation X")
+        print("\tunschedule_stim X: unschedule stimulation X")
         print(
             "\tstim X [Y] [Z]: stimulate for X seconds, at amplitude Y mA, with a width Z ms (default for Y and Z are previously set values, or 0 if not set yet)"
         )
