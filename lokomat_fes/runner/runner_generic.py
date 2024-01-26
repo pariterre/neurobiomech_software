@@ -36,6 +36,8 @@ class RunnerGeneric(ABC):
         if self._is_recording:
             self.stop_recording()
 
+        self._planner.dispose()
+
     @abstractmethod
     def _exec(self) -> None:
         """Start the Runner (implementation)."""

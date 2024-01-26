@@ -18,6 +18,7 @@ class Planner:
 
         # Start a thread that will run the planner at each millisecond to check whether to stimulate or not
         self._is_paused = False
+        self._exit_flag = False
         self._thread = threading.Thread(target=self._run)
         self._thread.start()
 
@@ -42,9 +43,17 @@ class Planner:
         """Resume the planner."""
         self._is_paused = False
 
+    def dispose(self) -> None:
+        """Stop the planner."""
+        self._exit_flag = True
+        self._thread.join()
+
     def _run(self) -> None:
         """Run the planner to check whether to stimulate or not."""
         while True:
+            if self._exit_flag:
+                break
+
             if self._is_paused:
                 time.sleep(0)
                 continue
