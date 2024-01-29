@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
+import threading
 from typing import Callable, Any
 
 import numpy as np
 
 from .data import NiDaqData
+
+_mutex = threading.Lock()
 
 
 class NiDaqGeneric(ABC):
@@ -54,38 +57,56 @@ class NiDaqGeneric(ABC):
 
     def register_to_start_recording(self, callback: Callable[[], None]) -> None:
         """Register a callback function that is called when the recording starts"""
-        self._on_start_recording_callback[hash(callback)] = callback
+        if hash(callback) not in self._on_start_recording_callback:
+            _mutex.acquire()
+            self._on_start_recording_callback[hash(callback)] = callback
+            _mutex.release()
 
     def unregister_to_start_recording(self, callback: Callable[[], None]) -> None:
         """Unregister a callback function that is called when the recording starts"""
+
         if hash(callback) in self._on_start_recording_callback:
+            _mutex.acquire()
             del self._on_start_recording_callback[hash(callback)]
+            _mutex.release()
 
     def register_to_data_ready(self, callback: Callable[[np.ndarray, np.ndarray], None]) -> None:
         """Register a callback function that is called when new data are ready"""
-        self._on_data_ready_callback[hash(callback)] = callback
+        if hash(callback) not in self._on_data_ready_callback:
+            _mutex.acquire()
+            self._on_data_ready_callback[hash(callback)] = callback
+            _mutex.release()
 
     def unregister_to_data_ready(self, callback: Callable[[np.ndarray, np.ndarray], None]) -> None:
         """Unregister a callback function that is called when new data are ready"""
         if hash(callback) in self._on_data_ready_callback:
+            _mutex.acquire()
             del self._on_data_ready_callback[hash(callback)]
+            _mutex.release()
 
     def register_to_stop_recording(self, callback: Callable[[NiDaqData], None]) -> None:
         """Register a callback function that is called when the recording stops"""
-        self._on_stop_recording_callback[hash(callback)] = callback
+        if hash(callback) not in self._on_stop_recording_callback:
+            _mutex.acquire()
+            self._on_stop_recording_callback[hash(callback)] = callback
+            _mutex.release()
 
     def unregister_to_stop_recording(self, callback: Callable[[NiDaqData], None]) -> None:
         """Unregister a callback function that is called when the recording stops"""
         if hash(callback) in self._on_stop_recording_callback:
+            _mutex.acquire()
             del self._on_stop_recording_callback[hash(callback)]
+            _mutex.release()
 
     def start_recording(self) -> None:
         """Start recording"""
         if self._is_recording:
             raise RuntimeError("Already recording")
 
+        _mutex.acquire()
         for key in self._on_start_recording_callback.keys():
             self._on_start_recording_callback[key]()
+        _mutex.release()
 
         self._reset_data()
         self._start_task()
@@ -97,8 +118,10 @@ class NiDaqGeneric(ABC):
             # If we are not currently recording, we don't need to stop the recording
             return
 
+        _mutex.acquire()
         for key in self._on_stop_recording_callback.keys():
             self._on_stop_recording_callback[key](self._data)
+        _mutex.release()
 
         self._stop_task()
         self._is_recording = False
@@ -145,8 +168,10 @@ class NiDaqGeneric(ABC):
 
         if self._on_data_ready_callback:
             data_for_callbacks = self._data.sample_block(index=-1, unsafe=True)
+            _mutex.acquire()
             for key in self._on_data_ready_callback.keys():
                 self._on_data_ready_callback[key](*data_for_callbacks)
+            _mutex.release()
 
     def _setup_task(self) -> None:
         """Setup the NiDaq task"""

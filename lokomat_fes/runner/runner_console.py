@@ -22,6 +22,11 @@ _available_schedules = {
 class RunnerConsole(RunnerGeneric):
     """Run the program in a local console."""
 
+    def _receive_command(self) -> tuple[str, list[str]]:
+        request = input().lower().split(" ")
+        command = request[0]
+        parameters = request[1:]
+
     @override
     def _exec(self):
         """Start the runner."""
@@ -29,9 +34,7 @@ class RunnerConsole(RunnerGeneric):
 
         print("Type your command and press enter, use 'list' the print the commands:")
         while True:
-            request = input().lower().split(" ")
-            command = request[0]
-            parameters = request[1:]
+            command, parameters = self._receive_command()
 
             if command == "list":
                 self._list_commands(parameters)
@@ -58,7 +61,7 @@ class RunnerConsole(RunnerGeneric):
                 self._stimulate_command(parameters)
 
             elif command == "plot":
-                self._plot_data(parameters)
+                self._plot_data_command(parameters)
 
             elif command == "save":
                 self._save_command(parameters)
@@ -93,118 +96,130 @@ class RunnerConsole(RunnerGeneric):
         print("\tsave X: save the last trial to file X as a pickle file")
         print("\tquit: quit")
 
-    def _start_recording_command(self, parameters: list[str]):
+    def _start_recording_command(self, parameters: list[str]) -> bool:
         success = _check_number_parameters("start", parameters, expected=None)
         if not success:
-            return
+            return False
 
         success = _try_command(self.start_recording)
         if not success:
-            return
-        logger_runner.info("Recording started.")
+            return False
 
-    def _stop_recording_command(self, parameters: list[str]):
+        logger_runner.info("Recording started.")
+        return True
+
+    def _stop_recording_command(self, parameters: list[str]) -> bool:
         success = _check_number_parameters("stop", parameters, expected=None)
         if not success:
-            return
+            return False
 
         success = _try_command(self.stop_recording)
         if not success:
-            return
-        logger_runner.info("Recording stopped.")
+            return False
 
-    def _list_available_schedules_command(self, parameters: list[str]):
+        logger_runner.info("Recording stopped.")
+        return True
+
+    def _list_available_schedules_command(self, parameters: list[str]) -> bool:
         success = _check_number_parameters("available_stim", parameters, expected=None)
         if not success:
-            return
+            return False
 
         print("List of available schedules:")
         for i, key in enumerate(_available_schedules):
             print(f"\t{i} - {key}: {_available_schedules[key]['description']}")
 
-    def _schedule_stimulation_command(self, parameters: list[str]):
+        return True
+
+    def _schedule_stimulation_command(self, parameters: list[str]) -> bool:
         success = _check_number_parameters("schedule_stim", parameters, expected={"index": True, "side": False})
         if not success:
-            return
+            return False
 
         index = _parse_int("index", parameters[0])
         if index is None:
-            return
+            return False
         if index >= len(_available_schedules):
             logger_runner.error(f"Invalid index, there are only {len(_available_schedules)} available schedules.")
-            return
+            return False
         key = list(_available_schedules.keys())[index]
 
         side = Side.BOTH
         if len(parameters) >= 2:
             side_index = _parse_int("side", parameters[1])
             if side_index is None:
-                return
+                return False
             side = Side(side_index)
 
         self.schedule_stimulation(_available_schedules[key]["func"](side))
         logger_runner.info(f"Scheduled stimulation {key} on side {side}.")
+        return True
 
-    def _unschedule_stimulation_command(self, parameters: list[str]):
+    def _unschedule_stimulation_command(self, parameters: list[str]) -> bool:
         success = _check_number_parameters("unschedule_stim", parameters, expected={"index": True})
         if not success:
-            return
+            return False
 
         index = _parse_int("index", parameters[0])
         if index is None:
-            return
+            return False
 
         stimulations = self.get_scheduled_stimulations()
         if index >= len(stimulations):
             logger_runner.error(f"Invalid index, there are only {len(stimulations)} stimulations scheduled.")
-            return
+            return False
 
         self.remove_scheduled_stimulation(index)
         logger_runner.info(f"Unscheduled stimulation {index}.")
+        return True
 
-    def _print_scheduled_stimulations(self, parameters: list[str]):
+    def _print_scheduled_stimulations(self, parameters: list[str]) -> bool:
         success = _check_number_parameters("scheduled_stim", parameters, expected=None)
         if not success:
-            return
+            return False
 
         for i, stim in enumerate(self._scheduler.get_stimulations()):
             print(f"\t{i} - {stim.name}")
 
-    def _stimulate_command(self, parameters: list[str]):
+        return True
+
+    def _stimulate_command(self, parameters: list[str]) -> bool:
         success = _check_number_parameters(
             "stim", parameters, expected={"duration": True, "amplitude": False, "width": False}
         )
         if not success:
-            return
+            return False
 
         if len(parameters) >= 2:
             amplitude = _parse_float("amplitude", parameters[1])
             if amplitude is None:
-                return
+                return False
 
             success = _try_command(self.set_stimulation_pulse_amplitude, amplitude)
             if not success:
-                return
+                return False
 
         if len(parameters) >= 3:
             width = _parse_int("width", parameters[2])
             if width is None:
-                return
+                return False
 
             success = _try_command(self.set_stimulation_pulse_width, width)
             if not success:
-                return
+                return False
 
         duration = _parse_float("duration", parameters[0])
         if duration is None:
-            return
+            return False
 
         success = _try_command(self.start_stimulation, duration)
         if not success:
-            return
+            return False
+
         amplitude = self._rehastim.get_pulse_amplitude()[0]
         width = self._rehastim.get_pulse_width()[0]
         logger_runner.info(f"Simulating for {duration}s at {amplitude}mA and {width}ms.")
+        return True
 
     @staticmethod
     def plot_data(data: Data) -> None:
@@ -235,27 +250,30 @@ class RunnerConsole(RunnerGeneric):
 
         plt.show()
 
-    def _plot_data(self, parameters: list[str]):
+    def _plot_data_command(self, parameters: list[str]) -> bool:
         success = _check_number_parameters("plot", parameters, expected=None)
         if not success:
-            return
+            return False
 
         data = self.last_trial
         if data is None:
             logger_runner.error("No data to plot.")
-            return
+            return False
 
         self.plot_data(data)
+        return True
 
-    def _save_command(self, parameters: list[str]):
+    def _save_command(self, parameters: list[str]) -> None:
         success = _check_number_parameters("save", parameters, expected={"filename": True})
         if not success:
-            return
+            return False
 
         filename = parameters[0]
         if not _try_command(self.save_trial, filename):
-            return
+            return False
+
         logger_runner.info(f"Trial saved to {filename}")
+        return True
 
 
 def _check_number_parameters(command: str, parameters: list[str], expected: dict[str, bool] | None) -> bool:
