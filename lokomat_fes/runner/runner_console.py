@@ -8,7 +8,7 @@ from ..common.data import Data
 from ..scheduler.stimulation import Side, StrideBasedStimulation
 
 logger = logging.getLogger("lokomat_fes")
-logger_exec = logging.getLogger("runner")
+logger_runner = logging.getLogger("runner")
 
 
 _available_schedules = {
@@ -67,7 +67,7 @@ class RunnerConsole(RunnerGeneric):
                 break
 
             else:
-                logger_exec.error(f"Unknown command {command}.")
+                logger_runner.error(f"Unknown command {command}.")
 
         logger.info("Runner Console exited.")
 
@@ -101,7 +101,7 @@ class RunnerConsole(RunnerGeneric):
         success = _try_command(self.start_recording)
         if not success:
             return
-        logger_exec.info("Recording started.")
+        logger_runner.info("Recording started.")
 
     def _stop_recording_command(self, parameters: list[str]):
         success = _check_number_parameters("stop", parameters, expected=None)
@@ -111,7 +111,7 @@ class RunnerConsole(RunnerGeneric):
         success = _try_command(self.stop_recording)
         if not success:
             return
-        logger_exec.info("Recording stopped.")
+        logger_runner.info("Recording stopped.")
 
     def _list_available_schedules_command(self, parameters: list[str]):
         success = _check_number_parameters("available_stim", parameters, expected=None)
@@ -131,7 +131,7 @@ class RunnerConsole(RunnerGeneric):
         if index is None:
             return
         if index >= len(_available_schedules):
-            logger_exec.error(f"Invalid index, there are only {len(_available_schedules)} available schedules.")
+            logger_runner.error(f"Invalid index, there are only {len(_available_schedules)} available schedules.")
             return
         key = list(_available_schedules.keys())[index]
 
@@ -143,7 +143,7 @@ class RunnerConsole(RunnerGeneric):
             side = Side(side_index)
 
         self.schedule_stimulation(_available_schedules[key]["func"](side))
-        logger_exec.info(f"Scheduled stimulation {key} on side {side}.")
+        logger_runner.info(f"Scheduled stimulation {key} on side {side}.")
 
     def _unschedule_stimulation_command(self, parameters: list[str]):
         success = _check_number_parameters("unschedule_stim", parameters, expected={"index": True})
@@ -156,11 +156,11 @@ class RunnerConsole(RunnerGeneric):
 
         stimulations = self.get_scheduled_stimulations()
         if index >= len(stimulations):
-            logger_exec.error(f"Invalid index, there are only {len(stimulations)} stimulations scheduled.")
+            logger_runner.error(f"Invalid index, there are only {len(stimulations)} stimulations scheduled.")
             return
 
         self.remove_scheduled_stimulation(index)
-        logger_exec.info(f"Unscheduled stimulation {index}.")
+        logger_runner.info(f"Unscheduled stimulation {index}.")
 
     def _print_scheduled_stimulations(self, parameters: list[str]):
         success = _check_number_parameters("scheduled_stim", parameters, expected=None)
@@ -204,7 +204,7 @@ class RunnerConsole(RunnerGeneric):
             return
         amplitude = self._rehastim.get_pulse_amplitude()[0]
         width = self._rehastim.get_pulse_width()[0]
-        logger_exec.info(f"Simulating for {duration}s at {amplitude}mA and {width}ms.")
+        logger_runner.info(f"Simulating for {duration}s at {amplitude}mA and {width}ms.")
 
     @staticmethod
     def plot_data(data: Data) -> None:
@@ -242,7 +242,7 @@ class RunnerConsole(RunnerGeneric):
 
         data = self.last_trial
         if data is None:
-            logger_exec.error("No data to plot.")
+            logger_runner.error("No data to plot.")
             return
 
         self.plot_data(data)
@@ -255,7 +255,7 @@ class RunnerConsole(RunnerGeneric):
         filename = parameters[0]
         if not _try_command(self.save_trial, filename):
             return
-        logger_exec.info(f"Trial saved to {filename}")
+        logger_runner.info(f"Trial saved to {filename}")
 
 
 def _check_number_parameters(command: str, parameters: list[str], expected: dict[str, bool] | None) -> bool:
