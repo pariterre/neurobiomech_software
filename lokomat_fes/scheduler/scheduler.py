@@ -9,50 +9,50 @@ from ..common.data import Data
 logger = logging.getLogger("runner")
 
 
-class Planner:
+class Scheduler:
     def __init__(self, runner, data: Data) -> None:
-        """Initialize the planner."""
+        """Initialize the scheduler."""
         from ..runner import RunnerGeneric
 
         self._runner: RunnerGeneric = runner
         self._data = data
 
-        self._plans: dict[int, StimulationAbstract] = {}
+        self._schedules: dict[int, StimulationAbstract] = {}
 
-        # Start a thread that will run the planner at each millisecond to check whether to stimulate or not
+        # Start a thread that will run the scheduler at each millisecond to check whether to stimulate or not
         self._is_paused = False
         self._exit_flag = False
         self._thread = threading.Thread(target=self._run)
         self._thread.start()
 
     def add(self, stimulation: StimulationAbstract) -> None:
-        """Add a stimulation to the planner."""
-        self._plans[hash(stimulation)] = stimulation
+        """Add a stimulation to the scheduler."""
+        self._schedules[hash(stimulation)] = stimulation
 
     def get_stimulations(self) -> list[StimulationAbstract]:
-        """Get a stimulation from the planner."""
-        return list(self._plans.values())
+        """Get a stimulation from the scheduler."""
+        return list(self._schedules.values())
 
     def remove(self, stimulation: StimulationAbstract) -> None:
-        """Remove a stimulation from the planner."""
-        if hash(stimulation) in self._plans:
-            del self._plans[hash(stimulation)]
+        """Remove a stimulation from the scheduler."""
+        if hash(stimulation) in self._schedules:
+            del self._schedules[hash(stimulation)]
 
     def pause(self) -> None:
-        """Pause the planner."""
+        """Pause the scheduler."""
         self._is_paused = True
 
     def resume(self) -> None:
-        """Resume the planner."""
+        """Resume the scheduler."""
         self._is_paused = False
 
     def dispose(self) -> None:
-        """Stop the planner."""
+        """Stop the scheduler."""
         self._exit_flag = True
         self._thread.join()
 
     def _run(self) -> None:
-        """Run the planner to check whether to stimulate or not."""
+        """Run the scheduler to check whether to stimulate or not."""
         while True:
             if self._exit_flag:
                 break
@@ -63,7 +63,7 @@ class Planner:
 
             t = (self._data.t0 - datetime.now()).microseconds / 1e6
 
-            for stimulation in self._plans.values():
+            for stimulation in self._schedules.values():
                 duration = stimulation.stimulation_duration(t, self._data)
 
                 # TODO: See how to implement stimulation on a single channel at a time

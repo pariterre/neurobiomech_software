@@ -40,7 +40,6 @@ class RunnerConsole(RunnerGeneric):
                 raise NotImplementedError("Listing scheduled stimulations is not implemented yet.")
 
             elif command == "schedule_stim":
-                # TODO: CHANGE NAME OF PLANNER TO SCHEDULER
                 raise NotImplementedError("Scheduling stimulation is not implemented yet.")
 
             elif command == "unschedule_stim":

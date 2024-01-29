@@ -21,7 +21,7 @@ def _received_data(t: np.ndarray, data: np.ndarray) -> None:
 
 def __main__() -> None:
     """Main function"""
-    setup_logger(level=logging.WARNING, show_exec=False)  # Change to logging.INFO to see more logs
+    setup_logger(devices_logging_level=logging.WARNING, show_scheduler_logs=True)  # logging.INFO to see more logs
 
     # Define the devices and the runner
     rehastim = RehastimLokomat()

@@ -4,8 +4,8 @@ import logging
 from ..common.data import Data
 from ..nidaq import NiDaqGeneric
 from ..rehastim import RehastimGeneric
-from ..planner.planner import Planner
-from ..planner.stimulation import StimulationAbstract
+from ..scheduler.scheduler import Scheduler
+from ..scheduler.stimulation import StimulationAbstract
 
 logger = logging.getLogger("lokomat_fes")
 
@@ -20,9 +20,9 @@ class RunnerGeneric(ABC):
         self._rehastim = rehastim
         self._nidaq = nidaq
 
-        self._data_for_planner = Data()
-        self._nidaq.register_to_data_ready(self._data_for_planner.nidaq.add_sample_block)
-        self._planner = Planner(runner=self, data=self._data_for_planner)
+        self._data_for_scheduler = Data()
+        self._nidaq.register_to_data_ready(self._data_for_scheduler.nidaq.add_sample_block)
+        self._scheduler = Scheduler(runner=self, data=self._data_for_scheduler)
 
         self._trial_data = None
         self._is_recording = False
@@ -36,7 +36,7 @@ class RunnerGeneric(ABC):
         if self._is_recording:
             self.stop_recording()
 
-        self._planner.dispose()
+        self._scheduler.dispose()
 
     @abstractmethod
     def _exec(self) -> None:
@@ -124,7 +124,7 @@ class RunnerGeneric(ABC):
             The amplitude of the stimulation.
         """
         logger.info("Scheduling a stimulation")
-        self._planner.add(stimulation=stimulation)
+        self._scheduler.add(stimulation=stimulation)
 
     def get_scheduled_stimulations(self) -> list[StimulationAbstract]:
         """Get the scheduled stimulations.
@@ -135,7 +135,7 @@ class RunnerGeneric(ABC):
             The scheduled stimulations.
         """
         logger.info("Getting the scheduled stimulations")
-        return self._planner.get_stimulations()
+        return self._scheduler.get_stimulations()
 
     def remove_scheduled_stimulation(self, index: int):
         """Remove a scheduled stimulation. To list the currently scheduled stimulations, use get_scheduled_stimulations().
@@ -146,7 +146,7 @@ class RunnerGeneric(ABC):
             The index of the stimulation to remove.
         """
         logger.info("Removing a scheduled stimulation")
-        self._planner.remove(stimulation=self._planner.get_stimulations()[index])
+        self._scheduler.remove(stimulation=self._scheduler.get_stimulations()[index])
 
     def start_stimulation(self, duration: float):
         """Start the Rehastim stimulation."""
