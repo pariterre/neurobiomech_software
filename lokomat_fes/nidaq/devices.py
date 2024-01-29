@@ -121,7 +121,10 @@ class NiDaqGeneric(ABC):
 
     def _data_has_arrived(self, task_handle: int, event_type: int, num_samples: int, callback_data: Any) -> int:
         """Callback function for reading signals"""
-        data = self._task.read(number_of_samples_per_channel=self._n_samples_per_block)
+        try:
+            data = self._task.read(number_of_samples_per_channel=self._n_samples_per_block)
+        except:
+            return 0
         self._manage_new_data(np.array(data))
         return 1  # Success
 
