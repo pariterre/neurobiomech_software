@@ -1,13 +1,12 @@
-from time import sleep
 import logging
 
 import numpy as np
-from matplotlib import pyplot as plt
-from lokomat_fes import setup_logger, Data, RunnerConsole, StrideBasedStimulation, Side
+from lokomat_fes import setup_logger, RunnerConsole, StrideBasedStimulation, Side
 from lokomat_fes.lokomat import NiDaqLokomat, RehastimLokomat
 
-# If you want to use the real devices, comment the following line
-from lokomat_fes.lokomat import NiDaqLokomatMock as NiDaqLokomat, RehastimLokomatMock as RehastimLokomat
+# If you want to use the real devices, comment the following lines
+from lokomat_fes.lokomat import NiDaqLokomatMock as NiDaqLokomat
+from lokomat_fes.lokomat import RehastimLokomatMock as RehastimLokomat
 
 logger = logging.getLogger("runner")
 

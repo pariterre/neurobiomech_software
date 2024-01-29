@@ -185,7 +185,7 @@ def test_add_sample_block_data():
 
     # This should now create a shallow copy of the data (but not the time), so compare their id
     np.testing.assert_almost_equal(new_nidaq_data._t[0], nidaq_data._t[1])
-    assert id(new_nidaq_data._data[0]) == id(nidaq_data._data[1])
+    assert hash(new_nidaq_data._data[0]) == hash(nidaq_data._data[1])
 
 
 def test_copy_nidaq_data():

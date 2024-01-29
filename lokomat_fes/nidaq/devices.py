@@ -54,30 +54,30 @@ class NiDaqGeneric(ABC):
 
     def register_to_start_recording(self, callback: Callable[[], None]) -> None:
         """Register a callback function that is called when the recording starts"""
-        self._on_start_recording_callback[id(callback)] = callback
+        self._on_start_recording_callback[hash(callback)] = callback
 
     def unregister_to_start_recording(self, callback: Callable[[], None]) -> None:
         """Unregister a callback function that is called when the recording starts"""
-        if id(callback) in self._on_start_recording_callback:
-            del self._on_start_recording_callback[id(callback)]
+        if hash(callback) in self._on_start_recording_callback:
+            del self._on_start_recording_callback[hash(callback)]
 
     def register_to_data_ready(self, callback: Callable[[np.ndarray, np.ndarray], None]) -> None:
         """Register a callback function that is called when new data are ready"""
-        self._on_data_ready_callback[id(callback)] = callback
+        self._on_data_ready_callback[hash(callback)] = callback
 
     def unregister_to_data_ready(self, callback: Callable[[np.ndarray, np.ndarray], None]) -> None:
         """Unregister a callback function that is called when new data are ready"""
-        if id(callback) in self._on_data_ready_callback:
-            del self._on_data_ready_callback[id(callback)]
+        if hash(callback) in self._on_data_ready_callback:
+            del self._on_data_ready_callback[hash(callback)]
 
     def register_to_stop_recording(self, callback: Callable[[NiDaqData], None]) -> None:
         """Register a callback function that is called when the recording stops"""
-        self._on_stop_recording_callback[id(callback)] = callback
+        self._on_stop_recording_callback[hash(callback)] = callback
 
     def unregister_to_stop_recording(self, callback: Callable[[NiDaqData], None]) -> None:
         """Unregister a callback function that is called when the recording stops"""
-        if id(callback) in self._on_stop_recording_callback:
-            del self._on_stop_recording_callback[id(callback)]
+        if hash(callback) in self._on_stop_recording_callback:
+            del self._on_stop_recording_callback[hash(callback)]
 
     def start_recording(self) -> None:
         """Start recording"""
@@ -119,7 +119,13 @@ class NiDaqGeneric(ABC):
         """Reset data to start a new trial"""
         self._data = NiDaqData()
 
-    def _data_has_arrived(self, data: np.ndarray) -> int:
+    def _data_has_arrived(self, task_handle: int, event_type: int, num_samples: int, callback_data: Any) -> int:
+        """Callback function for reading signals"""
+        data = self._task.read(number_of_samples_per_channel=self._n_samples_per_block)
+        self._manage_new_data(np.array(data))
+        return 1  # Success
+
+    def _manage_new_data(self, data: np.ndarray) -> int:
         """
         Callback function for reading signals.
         It automatically computes the time vector and calls the callback function if it exists.
@@ -129,7 +135,6 @@ class NiDaqGeneric(ABC):
         dt = self.dt  # This is so we finish the time vector one dt before the next sample
 
         prev_t, _ = self._data.sample_block(index=-1, unsafe=True)
-
         t0 = 0 if prev_t is None else (prev_t[-1] + dt - self._data.t0_offset)
         t = np.linspace(t0, t0 + self._time_between_samples - dt, n_frames)
 
@@ -139,8 +144,6 @@ class NiDaqGeneric(ABC):
             data_for_callbacks = self._data.sample_block(index=-1, unsafe=True)
             for key in self._on_data_ready_callback.keys():
                 self._on_data_ready_callback[key](*data_for_callbacks)
-
-        return 1  # Success
 
     def _setup_task(self) -> None:
         """Setup the NiDaq task"""
@@ -155,9 +158,7 @@ class NiDaqGeneric(ABC):
 
         self._task.register_every_n_samples_acquired_into_buffer_event(
             self._n_samples_per_block,
-            lambda *_, **__: self._data_has_arrived(
-                np.array(self._task.read(number_of_samples_per_channel=self._n_samples_per_block))
-            ),
+            self._data_has_arrived,
         )
 
     @abstractmethod

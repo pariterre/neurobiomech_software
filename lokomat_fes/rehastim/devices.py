@@ -35,23 +35,23 @@ class RehastimGeneric(ABC):
         - channels: the channels that are stimulated. If None is sent for the channels, it means that the channels have
         not changed since the last stimulation (so the user can assume that the channels are the same as the last)
         """
-        self._on_stimulation_started_callback[id(callback)] = callback
+        self._on_stimulation_started_callback[hash(callback)] = callback
 
     def unregister_to_on_stimulation_started(
         self, callback: Callable[[float, tuple[Channel, ...] | None], None]
     ) -> None:
         """Unregister a callback function that is called when the stimulation starts"""
-        if id(callback) in self._on_stimulation_started_callback:
-            del self._on_stimulation_started_callback[id(callback)]
+        if hash(callback) in self._on_stimulation_started_callback:
+            del self._on_stimulation_started_callback[hash(callback)]
 
     def register_to_on_stimulation_stopped(self, callback: Callable[[], None]) -> None:
         """Register a callback function that is called when the stimulation stops"""
-        self._on_stimulation_stopped_callback[id(callback)] = callback
+        self._on_stimulation_stopped_callback[hash(callback)] = callback
 
     def unregister_to_on_stimulation_stopped(self, callback: Callable[[], None]) -> None:
         """Unregister a callback function that is called when the stimulation stops"""
-        if id(callback) in self._on_stimulation_stopped_callback:
-            del self._on_stimulation_stopped_callback[id(callback)]
+        if hash(callback) in self._on_stimulation_stopped_callback:
+            del self._on_stimulation_stopped_callback[hash(callback)]
 
     def start_stimulation(self, duration: float = None) -> None:
         """Perform a stimulation.

@@ -27,7 +27,7 @@ class Planner:
 
     def add(self, stimulation: StimulationAbstract) -> None:
         """Add a stimulation to the planner."""
-        self._plans[id(stimulation)] = stimulation
+        self._plans[hash(stimulation)] = stimulation
 
     def get_stimulations(self) -> list[StimulationAbstract]:
         """Get a stimulation from the planner."""
@@ -35,8 +35,8 @@ class Planner:
 
     def remove(self, stimulation: StimulationAbstract) -> None:
         """Remove a stimulation from the planner."""
-        if id(stimulation) in self._plans:
-            del self._plans[id(stimulation)]
+        if hash(stimulation) in self._plans:
+            del self._plans[hash(stimulation)]
 
     def pause(self) -> None:
         """Pause the planner."""

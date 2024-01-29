@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import override
 
 import numpy as np
@@ -32,7 +31,7 @@ class NiDaqLokomatMock(NiDaqLokomat):
         self._timer = None
 
     def _generate_fake_data(self):
-        """Generate fake data and call the callback function"""
+        """Generate fake data and call the callback function, emulating the [_data_has_arrived] method"""
         normalized_time = np.linspace(
             self._timer_counter, self._timer_counter + self._time_between_samples, self._n_samples_per_block
         )
@@ -41,6 +40,6 @@ class NiDaqLokomatMock(NiDaqLokomat):
         # First row is hip angle that resembles a sine wave which takes about 1 second to complete
         fake_data[0, :] = np.sin(2 * np.pi * normalized_time)
 
-        self._data_has_arrived(fake_data)
+        self._manage_new_data(fake_data)
 
         self._timer_counter += self._time_between_samples
