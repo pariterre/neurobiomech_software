@@ -186,7 +186,7 @@ class RehastimData:
             return np.array([])
 
         t0 = self._t0
-        return np.array([(t - t0).total_seconds() for t, _, _ in self._data])
+        return np.array([(t - t0).total_seconds() for t, duration, _ in self._data if duration is not None])
 
     @property
     def duration_as_array(self) -> np.ndarray:
@@ -203,7 +203,7 @@ class RehastimData:
         if not self._data:
             return np.array([[]])
 
-        return np.array([d for _, d, _ in self._data])
+        return np.array([duration for _, duration, _ in self._data if duration is not None])
 
     @property
     def amplitude_as_array(self) -> np.ndarray:
@@ -220,7 +220,13 @@ class RehastimData:
         if not self._data:
             return np.array([[]])
 
-        return np.array([[channel.amplitude for channel in channels] for _, _, channels in self._data]).T
+        return np.array(
+            [
+                [channel.amplitude for channel in channels]
+                for _, duration, channels in self._data
+                if duration is not None
+            ]
+        ).T
 
     @property
     def copy(self) -> "RehastimData":
