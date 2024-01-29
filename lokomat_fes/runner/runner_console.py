@@ -5,9 +5,18 @@ import matplotlib.pyplot as plt
 
 from .runner_generic import RunnerGeneric
 from ..common.data import Data
+from ..scheduler.stimulation import Side, StrideBasedStimulation
 
 logger = logging.getLogger("lokomat_fes")
 logger_exec = logging.getLogger("runner")
+
+
+_available_schedules = {
+    "hip_at_swing_phase": {
+        "func": StrideBasedStimulation.stimulate_in_swing_phase,
+        "description": "Stimulate when the leg (27% to 56% of the stride) is in swing phase. Second argument is the side (0: left, 1: right, 2: both).",
+    },
+}
 
 
 class RunnerConsole(RunnerGeneric):
@@ -33,17 +42,17 @@ class RunnerConsole(RunnerGeneric):
             elif command == "stop":
                 self._stop_recording_command(parameters)
 
-            elif command == "list_available_schedules":
-                raise NotImplementedError("Listing available schedules is not implemented yet.")
+            elif command == "available_stim":
+                self._list_available_schedules_command(parameters)
 
-            elif command == "list_scheduled":
-                raise NotImplementedError("Listing scheduled stimulations is not implemented yet.")
+            elif command == "scheduled_stim":
+                self._print_scheduled_stimulations(parameters)
 
             elif command == "schedule_stim":
-                raise NotImplementedError("Scheduling stimulation is not implemented yet.")
+                self._schedule_stimulation_command(parameters)
 
             elif command == "unschedule_stim":
-                raise NotImplementedError("Unscheduling stimulation is not implemented yet.")
+                self._unschedule_stimulation_command(parameters)
 
             elif command == "stim":
                 self._stimulate_command(parameters)
@@ -57,6 +66,9 @@ class RunnerConsole(RunnerGeneric):
             elif command == "quit":
                 break
 
+            else:
+                logger_exec.error(f"Unknown command {command}.")
+
         logger.info("Runner Console exited.")
 
     def _list_commands(self, parameters: list[str]):
@@ -68,9 +80,9 @@ class RunnerConsole(RunnerGeneric):
         print("\tlist: list all the commands")
         print("\tstart: start recording")
         print("\tstop: stop recording")
-        print("\tlist_available_schedules: list all the scheduled available stimulations")
-        print("\tlist_scheduled: list all the scheduled stimulations")
-        print("\tschedule_stim X: schedule stimulation X")
+        print("\tavailable_stim: list all the available stimulations")
+        print("\tscheduled_stim: list all the scheduled stimulations")
+        print("\tschedule_stim X [Y]: schedule stimulation X on side Y (default is both)")
         print("\tunschedule_stim X: unschedule stimulation X")
         print(
             "\tstim X [Y] [Z]: stimulate for X seconds, at amplitude Y mA, with a width Z ms (default for Y and Z are previously set values, or 0 if not set yet)"
@@ -100,6 +112,63 @@ class RunnerConsole(RunnerGeneric):
         if not success:
             return
         logger_exec.info("Recording stopped.")
+
+    def _list_available_schedules_command(self, parameters: list[str]):
+        success = _check_number_parameters("available_stim", parameters, expected=None)
+        if not success:
+            return
+
+        print("List of available schedules:")
+        for i, key in enumerate(_available_schedules):
+            print(f"\t{i} - {key}: {_available_schedules[key]['description']}")
+
+    def _schedule_stimulation_command(self, parameters: list[str]):
+        success = _check_number_parameters("schedule_stim", parameters, expected={"index": True, "side": False})
+        if not success:
+            return
+
+        index = _parse_int("index", parameters[0])
+        if index is None:
+            return
+        if index >= len(_available_schedules):
+            logger_exec.error(f"Invalid index, there are only {len(_available_schedules)} available schedules.")
+            return
+        key = list(_available_schedules.keys())[index]
+
+        side = Side.BOTH
+        if len(parameters) >= 2:
+            side_index = _parse_int("side", parameters[1])
+            if side_index is None:
+                return
+            side = Side(side_index)
+
+        self.schedule_stimulation(_available_schedules[key]["func"](side))
+        logger_exec.info(f"Scheduled stimulation {key} on side {side}.")
+
+    def _unschedule_stimulation_command(self, parameters: list[str]):
+        success = _check_number_parameters("unschedule_stim", parameters, expected={"index": True})
+        if not success:
+            return
+
+        index = _parse_int("index", parameters[0])
+        if index is None:
+            return
+
+        stimulations = self.get_scheduled_stimulations()
+        if index >= len(stimulations):
+            logger_exec.error(f"Invalid index, there are only {len(stimulations)} stimulations scheduled.")
+            return
+
+        self.remove_scheduled_stimulation(index)
+        logger_exec.info(f"Unscheduled stimulation {index}.")
+
+    def _print_scheduled_stimulations(self, parameters: list[str]):
+        success = _check_number_parameters("scheduled_stim", parameters, expected=None)
+        if not success:
+            return
+
+        for i, stim in enumerate(self._scheduler.get_stimulations()):
+            print(f"\t{i} - {stim.name}")
 
     def _stimulate_command(self, parameters: list[str]):
         success = _check_number_parameters(

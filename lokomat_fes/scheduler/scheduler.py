@@ -7,6 +7,7 @@ from .stimulation import StimulationAbstract
 from ..common.data import Data
 
 logger = logging.getLogger("runner")
+_mutex = threading.Lock()
 
 
 class Scheduler:
@@ -27,7 +28,11 @@ class Scheduler:
 
     def add(self, stimulation: StimulationAbstract) -> None:
         """Add a stimulation to the scheduler."""
+        if hash(stimulation) in self._schedules:
+            raise ValueError("This stimulation is already scheduled")
+        _mutex.acquire()
         self._schedules[hash(stimulation)] = stimulation
+        _mutex.release()
 
     def get_stimulations(self) -> list[StimulationAbstract]:
         """Get a stimulation from the scheduler."""
@@ -36,7 +41,9 @@ class Scheduler:
     def remove(self, stimulation: StimulationAbstract) -> None:
         """Remove a stimulation from the scheduler."""
         if hash(stimulation) in self._schedules:
+            _mutex.acquire()
             del self._schedules[hash(stimulation)]
+            _mutex.release()
 
     def pause(self) -> None:
         """Pause the scheduler."""
@@ -63,6 +70,7 @@ class Scheduler:
 
             t = (self._data.t0 - datetime.now()).microseconds / 1e6
 
+            _mutex.acquire()
             for stimulation in self._schedules.values():
                 duration = stimulation.stimulation_duration(t, self._data)
 
@@ -80,4 +88,5 @@ class Scheduler:
                         logger.info(f"Stopping stimulation")
                         self._runner.stop_stimulation()
 
+            _mutex.release()
             time.sleep(0)

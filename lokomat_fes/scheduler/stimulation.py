@@ -6,6 +6,15 @@ from .data_analyser import Side, DataAnalyser
 
 
 class StimulationAbstract(ABC):
+    def __init__(self, name) -> None:
+        """Initialize the stimulation."""
+        self._name = name
+
+    @property
+    def name(self) -> str:
+        """Get the name of the stimulation."""
+        return self._name
+
     @abstractmethod
     def stimulation_duration(self, current_time: float, data: Data) -> list[float | None]:
         """Check whether to stimulate at a given time.
@@ -32,15 +41,17 @@ class StimulationAbstract(ABC):
 
 
 class StrideBasedStimulation(StimulationAbstract):
-    def __init__(self, condition_function: Callable[[float, float], tuple[bool, ...]]) -> None:
+    def __init__(self, name: str, condition_function: Callable[[float, float], tuple[bool, ...]]) -> None:
         """
         Parameters
         ----------
+        name : str
+            The name of the stimulation.
         condition_function: Callable[[float, float], tuple[bool, ...]]
             A function that takes the current stride position on left and right [0; 1]
             and returns a tuple of stimulation for each channels.
         """
-        super(StrideBasedStimulation, self).__init__()
+        super(StrideBasedStimulation, self).__init__(name=name)
         self._condition = condition_function
 
         self._are_stimulating: list[bool] = []  # One per channel
@@ -90,7 +101,10 @@ class StrideBasedStimulation(StimulationAbstract):
             The stimulation.
         """
 
-        return cls(condition_function=lambda left, right: cls._stimulate_in_swing_phase(left, right, side=side))
+        return cls(
+            name=f"stimulate_in_swing_phase on {side}",
+            condition_function=lambda left, right: cls._stimulate_in_swing_phase(left, right, side=side),
+        )
 
     @staticmethod
     def _stimulate_in_swing_phase(left, right, side: Side = Side.RIGHT):
@@ -125,16 +139,18 @@ class StrideBasedStimulation(StimulationAbstract):
 
 
 class TimeBasedStimulation(StimulationAbstract):
-    def __init__(self, start_point: float, end_time: float) -> None:
+    def __init__(self, name: str, start_point: float, end_time: float) -> None:
         """
         Parameters
         ----------
+        name : str
+            The name of the stimulation.
         starting_point : float
             The starting point of the stimulation as a percentage of the stride [0; 1].
         end_time : float
             The end time of the stimulation in seconds.
         """
-        super(TimeBasedStimulation, self).__init__()
+        super(TimeBasedStimulation, self).__init__(name=name)
         self._starting_point = start_point
         self._end_time = end_time
 
