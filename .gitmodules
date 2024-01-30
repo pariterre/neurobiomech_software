@@ -1,3 +1,2 @@
-[submodule "external/pyScienceMode"]
-	path = external/pyScienceMode
+[submodule "server/external/pyScienceMode"]
 	url = https://github.com/s2mLab/pyScienceMode.git
