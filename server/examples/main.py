@@ -30,10 +30,10 @@ def __main__() -> None:
     runner = RunnerTcp(rehastim=rehastim, nidaq=nidaq)
 
     # Plan some stimulations based on where we are in the stride cycle
-    runner.schedule_stimulation(StrideBasedStimulation.stimulate_in_swing_phase(side=Side.LEFT))
+    # runner.schedule_stimulation(StrideBasedStimulation.stimulate_in_swing_phase(side=Side.LEFT))
 
     # This is to monitor the data. Note you can do that even when using exec() to monitor data while using the Runner
-    nidaq.register_to_data_ready(_received_data)
+    # nidaq.register_to_data_ready(_received_data)
 
     # Start the runner (blocking)
     runner.exec()

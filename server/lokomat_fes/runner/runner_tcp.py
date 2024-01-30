@@ -14,10 +14,11 @@ class _Command(Enum):
     START_RECORDING = 1
     STOP_RECORDING = 2
     STIMULATE = 3
-    PLOT_DATA = 4
-    SAVE_DATA = 5
-    QUIT = 6
-    SHUTDOWN = 7
+    FETCH_DATA = 4
+    PLOT_DATA = 5
+    SAVE_DATA = 6
+    QUIT = 7
+    SHUTDOWN = 8
 
     def __str__(self) -> str:
         if self.name == "START_RECORDING":
@@ -26,6 +27,8 @@ class _Command(Enum):
             return "stop"
         elif self.name == "STIMULATE":
             return "stim"
+        elif self.name == "FETCH_DATA":
+            return "fetch"
         elif self.name == "PLOT_DATA":
             return "plot"
         elif self.name == "SAVE_DATA":
@@ -144,6 +147,9 @@ class RunnerTcp(RunnerConsole):
 
                 elif command == str(_Command.STIMULATE):
                     success = self._stimulate_command(parameters)
+
+                elif command == str(_Command.FETCH_DATA):
+                    success = self._fetch_data_command(parameters)
 
                 elif command == str(_Command.PLOT_DATA):
                     success = self._plot_data_command(parameters)

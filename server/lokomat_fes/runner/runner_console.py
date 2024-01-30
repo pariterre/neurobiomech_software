@@ -222,6 +222,14 @@ class RunnerConsole(RunnerGeneric):
         logger_runner.info(f"Simulating for {duration}s at {amplitude}mA and {width}ms.")
         return True
 
+    def _fetch_data_command(self, parameters: list[str]) -> bool:
+        success = _check_number_parameters("fetch_data", parameters, expected=None)
+        if not success:
+            return False
+
+        raise NotImplementedError("fetch_data is not implemented yet.")  # Does this make sense for console?
+        return True
+
     @staticmethod
     def plot_data(data: Data) -> None:
         nidaq_data = data.nidaq
