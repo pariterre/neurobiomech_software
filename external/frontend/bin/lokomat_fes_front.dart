@@ -2,13 +2,16 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:logging/logging.dart';
+
 enum Command {
   startRecording,
   stopRecording,
   stimulate,
   plotData,
   saveData,
-  quit;
+  quit,
+  shutdown;
 
   int toInt() {
     switch (this) {
@@ -24,95 +27,110 @@ enum Command {
         return 5;
       case Command.quit:
         return 6;
+      case Command.shutdown:
+        return 7;
       default:
         return 0;
     }
   }
 }
 
-class Communication {
-  Socket socket;
-  String? lastAcknowledge;
-
-  Communication._(this.socket) {
-    socket.listen((data) => lastAcknowledge = utf8.decode(data));
-  }
-
-  static Future<Communication> connect(
+class TcpCommunication {
+  static Future<TcpCommunication> connect(
       {String serverIp = 'localhost', int serverPort = 4042}) async {
     while (true) {
       try {
         final socket = await Socket.connect(serverIp, serverPort);
-        return Communication._(socket);
+        return TcpCommunication._(socket);
       } on SocketException {
-        print('Connection failed, retrying...');
+        final log = Logger('TcpCommunication');
+        log.info('Connection failed, retrying...');
         await Future.delayed(Duration(seconds: 1));
       }
     }
   }
 
-  Future<bool> sendCommand(Command command, [List<String>? parameters]) async {
+  ///
+  /// Send a command to the server. If the command requires parameters, they
+  /// can be passed as a list of strings.
+  /// Returns true if the command was successfully sent the connexion to
+  /// the server is still alive, false otherwise.
+  /// If the command was "shutdown" or "quit", the connection is closed. By its
+  /// nature, the "shutdown" or "quit" commands will always return false.
+  Future<bool> send(Command command, [List<String>? parameters]) async {
     // Construct and send the command
-    lastAcknowledge = null;
+    _lastAcknowledge = null;
 
     String message = "${command.toInt()}:";
     if (parameters != null) {
       message += parameters.join(',');
     }
-    socket.write(message);
+    _socket.write(message);
     try {
-      await socket.flush();
+      await _socket.flush();
     } on SocketException {
-      print('Connexion was closed by the server');
+      log.info('Connexion was closed by the server');
       return false;
     }
-    print('Sent command: $command');
+    log.info('Sent command: $command');
+
+    if (command == Command.shutdown || command == Command.quit) {
+      _dispose();
+      return false;
+    }
 
     // Receive acknowledgment from the server
-    while (lastAcknowledge == null) {
+    while (_lastAcknowledge == null) {
       await Future.delayed(Duration(milliseconds: 100));
     }
-    return lastAcknowledge == "ACK - OK";
+    return _lastAcknowledge == "OK";
   }
 
-  void close() {
-    socket.close();
+  void _dispose() {
+    _socket.close();
+    log.info('Connection closed');
+  }
+
+  /// INTERNAL ///
+  final Socket _socket;
+  String? _lastAcknowledge;
+  final log = Logger('TcpCommunication');
+  TcpCommunication._(this._socket) {
+    _socket.listen((data) => _lastAcknowledge = utf8.decode(data));
   }
 }
 
 void main() async {
+  // Configure logging
+  Logger.root.onRecord.listen((record) {
+    print('${record.level.name}: ${record.time}: ${record.message}');
+  });
+
+  final log = Logger('Main');
+
   // Create a Communication instance
-  print('Connecting to server...');
-  Communication communication = await Communication.connect();
-  print('Connected to server');
+  log.info('Connecting to server...');
+  TcpCommunication communication = await TcpCommunication.connect();
+  log.info('Connected to server');
 
   // Send "start_device" request
-  if (!(await communication.sendCommand(Command.startRecording))) {
-    print('Communication was closed');
-    return;
-  }
-
-  // Wait for 5 seconds
-  await Future.delayed(Duration(seconds: 5));
+  await Future.delayed(Duration(seconds: 2));
+  if (!(await communication.send(Command.startRecording))) return;
+  await Future.delayed(Duration(seconds: 2));
 
   // Send "stimulate" request
-  if (!(await communication.sendCommand(Command.stimulate, ['2.2']))) {
-    print('Communication was closed');
-    return;
-  }
-
-  // Wait for 5 seconds
-  await Future.delayed(Duration(seconds: 5));
+  if (!(await communication.send(Command.stimulate, ['2.2']))) return;
+  await Future.delayed(Duration(seconds: 2));
 
   // Send "stop_device" request
-  if (!(await communication.sendCommand(Command.stopRecording))) {
-    print('Communication was closed');
-    return;
-  }
+  if (!(await communication.send(Command.stopRecording))) return;
+  await Future.delayed(Duration(seconds: 1));
 
-  // Wait for 5 seconds
-  await Future.delayed(Duration(seconds: 5));
+  // Send "save_data" request
+  if (!(await communication.send(Command.saveData, ["coucou.pkl"]))) return;
 
-  // Close the connection
-  communication.close();
+  // Send "shutdown" the server request
+  await communication.send(Command.shutdown);
+
+  return;
 }

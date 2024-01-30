@@ -1,6 +1,7 @@
 from enum import Enum
 import logging
 import socket
+import time
 from typing import override
 
 from .runner_console import RunnerConsole
@@ -16,6 +17,7 @@ class _Command(Enum):
     PLOT_DATA = 4
     SAVE_DATA = 5
     QUIT = 6
+    SHUTDOWN = 7
 
     def __str__(self) -> str:
         if self.name == "START_RECORDING":
@@ -30,6 +32,8 @@ class _Command(Enum):
             return "save"
         elif self.name == "QUIT":
             return "quit"
+        elif self.name == "SHUTDOWN":
+            return "shutdown"
         else:
             raise ValueError(f"Unknown command {self.name}")
 
@@ -57,7 +61,15 @@ class RunnerTcp(RunnerConsole):
     def _start_connection(self):
         """Start the TCP/IP connection."""
         self._server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._server.bind((self._ip_address, self._port))
+        while True:
+            try:
+                self._server.bind((self._ip_address, self._port))
+                break
+            except OSError:
+                logger_runner.error(f"Could not bind to {self._ip_address}:{self._port}. Retrying...")
+                time.sleep(1)
+                continue
+
         self._server.listen()
         logger_runner.info(f"Waiting for connection on {self._ip_address}:{self._port}...")
         self._connexion, addr = self._server.accept()
@@ -89,7 +101,7 @@ class RunnerTcp(RunnerConsole):
 
     def _send_acknowledgment(self, response):
         """Send an acknowledgment back to the external software."""
-        acknowledgment = "ACK - OK" if response else "ACK - ERROR"
+        acknowledgment = "OK" if response else "ERROR"
         try:
             self._connexion.sendall(acknowledgment.encode())
         except ...:
@@ -101,6 +113,9 @@ class RunnerTcp(RunnerConsole):
 
     def _close_connection(self):
         """Close the TCP/IP connection."""
+        # Give some time to the external software to close the connection
+        time.sleep(1)
+
         self._connexion.close()
         self._server.close()
         logger_runner.info("Connection closed")
@@ -136,7 +151,7 @@ class RunnerTcp(RunnerConsole):
                 elif command == str(_Command.SAVE_DATA):
                     success = self._save_command(parameters)
 
-                elif command == str(_Command.QUIT):
+                elif command in (str(_Command.QUIT), str(_Command.SHUTDOWN)):
                     # Stop the the server
                     break
 
@@ -155,7 +170,7 @@ class RunnerTcp(RunnerConsole):
             # Close the connection when done
             self._close_connection()
 
-            if command == _Command.QUIT:
+            if command == str(_Command.SHUTDOWN):
                 # Trickle down the quit command
                 break
 

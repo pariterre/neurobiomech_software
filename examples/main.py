@@ -16,7 +16,7 @@ def _received_data(t: np.ndarray, data: np.ndarray) -> None:
 
     t_index = 0
     hip_index = 0
-    logger.info(f"Received data, at {t[t_index]}, initial hip angle: {data[hip_index, t_index]}")
+    logger.debug(f"Received data, at {t[t_index]}, initial hip angle: {data[hip_index, t_index]}")
 
 
 def __main__() -> None:

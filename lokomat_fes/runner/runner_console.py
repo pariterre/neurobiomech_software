@@ -26,6 +26,7 @@ class RunnerConsole(RunnerGeneric):
         request = input().lower().split(" ")
         command = request[0]
         parameters = request[1:]
+        return command, parameters
 
     @override
     def _exec(self):
