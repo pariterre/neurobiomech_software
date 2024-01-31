@@ -159,8 +159,6 @@ class RunnerGeneric(ABC):
         _logger.info("Starting NiDaq")
         self._nidaq.connect()
 
-        self._continuous_data.set_t0()
-
     def stop_nidaq(self):
         """Stop the NiDaq."""
         _logger.info("Stopping NiDaq")

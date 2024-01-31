@@ -204,12 +204,7 @@ class RunnerTcp(RunnerConsole):
     def _fetch_continuous_data(self, from_top: bool = False) -> Data:
         data = super()._fetch_continuous_data(from_top)
 
-        # Prepare the json message
-        message = json.dumps(data.serialize(to_json=True))
-        len_prefix = pack(">I", len(message))
-        final_message = len_prefix + message.encode()
-
         # Send the message
-        self._connexion.sendall(final_message)
+        self._connexion.sendall(json.dumps(data.serialize(to_json=True)).encode())
 
         return data

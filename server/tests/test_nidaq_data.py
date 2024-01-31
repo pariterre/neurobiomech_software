@@ -22,7 +22,7 @@ def test_data_add_data():
     # Generate some fake data
     n_frames = 100
     block_time = 1
-    t = np.linspace(0, block_time, n_frames)
+    t = np.linspace(0, block_time, n_frames + 1)[:-1]
 
     # Add data
     time.sleep(0.01)  # Make sure that the time is different
@@ -56,7 +56,7 @@ def test_len_data():
     # Generate some fake data
     n_frames = 100
     block_time = 1
-    t = np.linspace(0, block_time, n_frames)
+    t = np.linspace(0, block_time, n_frames + 1)[:-1]
 
     # Check that the data is correct
     assert len(nidaq_data) == 0
@@ -76,7 +76,7 @@ def test_has_data():
     # Generate some fake data
     n_frames = 100
     block_time = 1
-    t = np.linspace(0, block_time, n_frames)
+    t = np.linspace(0, block_time, n_frames + 1)[:-1]
 
     # Check that the data is correct
     assert not nidaq_data.has_data
@@ -97,7 +97,7 @@ def test_block_data_accessor():
     # Generate some fake data
     n_frames = 100
     block_time = 1
-    t = np.linspace(0, block_time, n_frames)
+    t = np.linspace(0, block_time, n_frames + 1)[:-1]
 
     # Add data
     nidaq_data.add(t + block_time * 0, np.sin(t + block_time * 0)[np.newaxis, :])
@@ -170,7 +170,7 @@ def test_add_sample_block_data():
     # Generate some fake data
     n_frames = 100
     block_time = 1
-    t = np.linspace(0, block_time, n_frames)
+    t = np.linspace(0, block_time, n_frames + 1)[:-1]
 
     # Add data
     nidaq_data.add(t + block_time * 0, np.sin(t + block_time * 0)[np.newaxis, :])
@@ -197,7 +197,7 @@ def test_copy_nidaq_data():
     # Generate some fake data
     n_frames = 100
     block_time = 1
-    t = np.linspace(0, block_time, n_frames)
+    t = np.linspace(0, block_time, n_frames + 1)[:-1]
 
     # Add data
     nidaq_data.add(t + block_time * 0, np.sin(t + block_time * 0)[np.newaxis, :])
@@ -231,7 +231,7 @@ def test_serialize_nidaq_data():
     # Generate some fake data
     n_frames = 100
     block_time = 1
-    t = np.linspace(0, block_time, n_frames)
+    t = np.linspace(0, block_time, n_frames + 1)[:-1]
 
     # Add data
     nidaq_data.add(t + block_time * 0, np.sin(t + block_time * 0)[np.newaxis, :])
@@ -265,7 +265,7 @@ def test_save_and_load():
     # Generate some fake data
     n_frames = 100
     block_time = 1
-    t = np.linspace(0, block_time, n_frames)
+    t = np.linspace(0, block_time, n_frames + 1)[:-1]
 
     # Add data
     nidaq_data.add(t + block_time * 0, np.sin(t + block_time * 0)[np.newaxis, :])
