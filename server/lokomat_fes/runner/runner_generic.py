@@ -49,7 +49,7 @@ class RunnerGeneric(ABC):
         """Plot the data."""
 
         _logger.info("Plotting the data")
-        data = self._continuous_data  # self.last_trial
+        data = self._trial_data
         if data is None:
             _logger.error("No data to plot.")
             return False

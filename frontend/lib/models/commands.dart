@@ -1,4 +1,6 @@
-enum Commands {
+enum Command {
+  startNidaq,
+  stopNidaq,
   startRecording,
   stopRecording,
   stimulate,
@@ -10,24 +12,26 @@ enum Commands {
 
   int toInt() {
     switch (this) {
-      case Commands.startRecording:
+      case Command.startNidaq:
+        return 0;
+      case Command.stopNidaq:
         return 1;
-      case Commands.stopRecording:
+      case Command.startRecording:
         return 2;
-      case Commands.stimulate:
+      case Command.stopRecording:
         return 3;
-      case Commands.fetchData:
+      case Command.stimulate:
         return 4;
-      case Commands.plotData:
+      case Command.fetchData:
         return 5;
-      case Commands.saveData:
+      case Command.plotData:
         return 6;
-      case Commands.quit:
+      case Command.saveData:
         return 7;
-      case Commands.shutdown:
+      case Command.quit:
         return 8;
-      default:
-        return -1;
+      case Command.shutdown:
+        return 9;
     }
   }
 }

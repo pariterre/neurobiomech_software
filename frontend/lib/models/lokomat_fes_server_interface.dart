@@ -15,6 +15,7 @@ class LokomatFesServerInterface {
   ///
   /// If the communication initialized.
   bool get isInitialized => _socket != null;
+  bool get isNidaqConnected => _isNidaqConnected;
   bool get isRecording => _isRecording;
   bool get hasRecorded => _hasRecorded;
 
@@ -32,7 +33,7 @@ class LokomatFesServerInterface {
     while (nbOfRetries == null || nbOfRetries > 0) {
       try {
         _socket = await Socket.connect(serverIp, serverPort);
-        _socket!.listen(_listenToAcknowledge);
+        _socket!.listen(_listenToServerAnswer);
 
         return;
       } on SocketException {
@@ -51,14 +52,40 @@ class LokomatFesServerInterface {
   /// the server is still alive, false otherwise.
   /// If the command was "shutdown" or "quit", the connection is closed. By its
   /// nature, the "shutdown" or "quit" commands will always return false.
-  Future<bool> send(Commands command, [List<String>? parameters]) async {
-    if (!isInitialized) {
-      log.severe('Communication not initialized');
+  Future<bool> send(Command command, [List<String>? parameters]) async {
+    await _sendCommon(command, parameters);
+
+    if (command == Command.shutdown || command == Command.quit) {
+      _dispose();
       return false;
     }
 
+    // Receive acknowledgment from the server
+    String answer = await _waitForAnswer();
+
+    if (command == Command.startNidaq) {
+      answer = _finalizeStartNidaqCommand(answer);
+    } else if (command == Command.stopNidaq) {
+      answer = _finalizeStopNidaqCommand(answer);
+    } else if (command == Command.startRecording) {
+      answer = _finalizeStartCommand(answer);
+    } else if (command == Command.stopRecording) {
+      answer = _finalizeStopCommand(answer);
+    } else if (command == Command.fetchData) {
+      answer = _finalizeFetchCommand(answer);
+    }
+
+    return answer == "OK";
+  }
+
+  Future<void> _sendCommon(Command command, [List<String>? parameters]) async {
+    if (!isInitialized) {
+      log.severe('Communication not initialized');
+      return;
+    }
+
     // Construct and send the command
-    _lastAcknowledge = null;
+    _lastAnswer = null;
 
     String message = "${command.toInt()}:";
     if (parameters != null) {
@@ -69,44 +96,63 @@ class LokomatFesServerInterface {
       await _socket!.flush();
     } on SocketException {
       log.info('Connexion was closed by the server');
-      return false;
+      return;
     }
     log.info('Sent command: $command');
+  }
 
-    if (command == Commands.shutdown || command == Commands.quit) {
-      _dispose();
-      return false;
-    }
-
-    // Receive acknowledgment from the server
-    while (_lastAcknowledge == null) {
+  Future<String> _waitForAnswer() async {
+    while (_lastAnswer == null) {
       await Future.delayed(const Duration(milliseconds: 100));
     }
+    return _lastAnswer!;
+  }
 
-    if (command == Commands.startRecording) {
-      _isRecording = true;
-      _hasRecorded = true;
-    } else if (command == Commands.stopRecording) {
-      _isRecording = false;
-    }
+  String _finalizeStartNidaqCommand(String answer) {
+    _isNidaqConnected = true;
+    return answer;
+  }
 
-    return _lastAcknowledge == "OK";
+  String _finalizeStopNidaqCommand(String answer) {
+    _isNidaqConnected = false;
+    _isRecording = false;
+    return answer;
+  }
+
+  String _finalizeStartCommand(String answer) {
+    _isRecording = true;
+    _hasRecorded = true;
+    return answer;
+  }
+
+  String _finalizeStopCommand(String answer) {
+    _isRecording = false;
+    return answer;
+  }
+
+  String _finalizeFetchCommand(String answer) {
+    return "OK";
   }
 
   ///
   /// Close the connection to the server.
   void _dispose() {
     _socket?.close();
+    _socket = null;
+
+    _lastAnswer = null;
+    _isNidaqConnected = false;
     _isRecording = false;
     _hasRecorded = false;
-    _socket = null;
+
     log.info('Connection closed');
   }
 
   /// PRIVATE API ///
   Socket? _socket;
-  String? _lastAcknowledge;
+  String? _lastAnswer;
 
+  bool _isNidaqConnected = false;
   bool _isRecording = false;
   bool _hasRecorded = false;
 
@@ -114,8 +160,9 @@ class LokomatFesServerInterface {
 
   ///
   /// Listen to the server's acknowledgment.
-  void _listenToAcknowledge(List<int> data) =>
-      _lastAcknowledge = utf8.decode(data);
+  void _listenToServerAnswer(List<int> data) {
+    _lastAnswer = utf8.decode(data);
+  }
 
   // Prepare the singleton
   static final LokomatFesServerInterface _instance =

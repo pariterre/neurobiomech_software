@@ -14,17 +14,23 @@ _logger = logging.getLogger("lokomat_fes")
 
 
 class _Command(Enum):
-    START_RECORDING = 1
-    STOP_RECORDING = 2
-    STIMULATE = 3
-    FETCH_DATA = 4
-    PLOT_DATA = 5
-    SAVE_DATA = 6
-    QUIT = 7
-    SHUTDOWN = 8
+    START_NIDAQ = 0
+    STOP_NIDAQ = 1
+    START_RECORDING = 2
+    STOP_RECORDING = 3
+    STIMULATE = 4
+    FETCH_DATA = 5
+    PLOT_DATA = 6
+    SAVE_DATA = 7
+    QUIT = 8
+    SHUTDOWN = 9
 
     def __str__(self) -> str:
-        if self.name == "START_RECORDING":
+        if self.name == "START_NIDAQ":
+            return "start_nidaq"
+        elif self.name == "STOP_NIDAQ":
+            return "stop_nidaq"
+        elif self.name == "START_RECORDING":
             return "start"
         elif self.name == "STOP_RECORDING":
             return "stop"
@@ -142,7 +148,13 @@ class RunnerTcp(RunnerConsole):
                 if command is None:
                     break
 
-                if command == str(_Command.START_RECORDING):
+                if command == str(_Command.START_NIDAQ):
+                    success = self._start_nidaq_command(parameters)
+
+                elif command == str(_Command.STOP_NIDAQ):
+                    success = self._stop_nidaq_command(parameters)
+
+                elif command == str(_Command.START_RECORDING):
                     success = self._start_recording_command(parameters)
 
                 elif command == str(_Command.STOP_RECORDING):
