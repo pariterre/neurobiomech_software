@@ -148,6 +148,7 @@ class RunnerTcp(RunnerConsole):
                 if command is None:
                     break
 
+                skipAcknowledgment = False
                 if command == str(_Command.START_NIDAQ):
                     success = self._start_nidaq_command(parameters)
 
@@ -165,6 +166,7 @@ class RunnerTcp(RunnerConsole):
 
                 elif command == str(_Command.FETCH_DATA):
                     success = self._fetch_continuous_data_command(parameters)
+                    skipAcknowledgment = True
 
                 elif command == str(_Command.PLOT_DATA):
                     success = self._plot_data_command(parameters)
@@ -181,8 +183,9 @@ class RunnerTcp(RunnerConsole):
                     success = False
 
                 # Send acknowledgment back
-                if not self._send_acknowledgment(success):
-                    break
+                if not skipAcknowledgment:
+                    if not self._send_acknowledgment(success):
+                        break
 
             # Make sure the devices are stopped
             if self._is_recording:

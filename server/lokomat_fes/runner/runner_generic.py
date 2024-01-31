@@ -141,15 +141,17 @@ class RunnerGeneric(ABC):
         self._rehastim.register_to_on_stimulation_started(data.rehastim.add)
         self._rehastim.register_to_on_stimulation_stopped(data.rehastim.stop_undefined_stimulation_duration)
 
+    def _unregister_data_to_callbacks(self, data: Data):
+        """Unregister the data to the callbacks."""
+        self._nidaq.unregister_to_data_ready(data.nidaq.add_sample_block)
+        self._rehastim.unregister_to_on_stimulation_started(data.rehastim.add)
+        self._rehastim.unregister_to_on_stimulation_stopped(data.rehastim.stop_undefined_stimulation_duration)
+
     def _finalize_trial(self):
         """Finalize the data."""
         _logger.info("Finalizing the data")
 
-        self._nidaq.unregister_to_data_ready(self._trial_data.nidaq.add_sample_block)
-        self._rehastim.unregister_to_on_stimulation_started(self._trial_data.rehastim.add)
-        self._rehastim.unregister_to_on_stimulation_stopped(
-            self._trial_data.rehastim.stop_undefined_stimulation_duration
-        )
+        self._unregister_data_to_callbacks(self._trial_data)
 
     ### KINEMATIC DEVICE (NIDAQ) RELATED METHODS ###
     def start_nidaq(self):

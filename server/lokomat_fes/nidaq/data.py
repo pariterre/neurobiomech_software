@@ -311,8 +311,8 @@ class NiDaqData:
         """
 
         if to_json:
-            t = [t.tolist() for t in self._t]
-            data = [data.tolist() for data in self._data]
+            t = [np.round(t, decimals=3).tolist() for t in self._t]
+            data = [np.round(data, decimals=6).tolist() for data in self._data]
         else:
             t = self._t
             data = self._data
