@@ -7,17 +7,7 @@ from ..rehastim.data import RehastimData
 
 class Data:
     def __init__(self) -> None:
-        """Initialize the data.
-
-        Parameters
-        ----------
-        subject : str
-            Subject name.
-        project : str
-            Project name.
-        sub_project : str
-            Sub-project name.
-        """
+        """Initialize the data."""
         self.nidaq = NiDaqData()
         self.rehastim = RehastimData()
         self._t0: datetime = datetime.now()

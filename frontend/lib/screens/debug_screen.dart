@@ -177,7 +177,7 @@ class _DebugScreenState extends State<DebugScreen> {
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: canManipulateData ? _plotData : null,
+                onPressed: canSendCommand ? _plotData : null,
                 child: const Text('Plot'),
               ),
               const SizedBox(height: 12),
