@@ -1,5 +1,6 @@
+import json
 import os
-import time
+import pickle
 
 import numpy as np
 
@@ -74,6 +75,34 @@ def test_copy_data():
     np.testing.assert_almost_equal(d2[0, 0], 0)
     np.testing.assert_almost_equal(t_orig[0], 1)
     np.testing.assert_almost_equal(d_orig[0], 2)
+
+
+def test_serialize_data():
+    data = Data()
+
+    # Add data
+    data.nidaq.add(np.array([1]), np.array([[2]]))
+    data.rehastim.add(
+        duration=1, channels=(Channel(channel_index=1, amplitude=2), Channel(channel_index=2, amplitude=4))
+    )
+
+    # Serialize the data for pickle
+    serialized_data = data.serialize()
+    assert pickle.dumps(serialized_data)
+
+    # Check that the data is correct
+    assert serialized_data["t0"] == data.t0.timestamp()
+    assert serialized_data["nidaq"] == data.nidaq.serialize()
+    assert serialized_data["rehastim"] == data.rehastim.serialize()
+
+    # Serialize the data for json
+    serialized_data = data.serialize(to_json=True)
+    assert json.dumps(serialized_data)
+
+    # Check that the data is correct
+    assert serialized_data["t0"] == data.t0.timestamp()
+    assert serialized_data["nidaq"] == data.nidaq.serialize(to_json=True)
+    assert serialized_data["rehastim"] == data.rehastim.serialize(to_json=True)
 
 
 def test_save_and_load():

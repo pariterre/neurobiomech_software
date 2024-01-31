@@ -8,7 +8,7 @@ from lokomat_fes.lokomat import NiDaqLokomat, RehastimLokomat
 from lokomat_fes.lokomat import NiDaqLokomatMock as NiDaqLokomat
 from lokomat_fes.lokomat import RehastimLokomatMock as RehastimLokomat
 
-logger = logging.getLogger("runner")
+_logger = logging.getLogger("lokomat_fes")
 
 
 def _received_data(t: np.ndarray, data: np.ndarray) -> None:
@@ -16,7 +16,7 @@ def _received_data(t: np.ndarray, data: np.ndarray) -> None:
 
     t_index = 0
     hip_index = 0
-    logger.debug(f"Received data, at {t[t_index]}, initial hip angle: {data[hip_index, t_index]}")
+    _logger.debug(f"Received data, at {t[t_index]}, initial hip angle: {data[hip_index, t_index]}")
 
 
 def __main__() -> None:

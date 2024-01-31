@@ -1,5 +1,7 @@
 import os
 import time
+import json
+import pickle
 
 import numpy as np
 
@@ -185,7 +187,7 @@ def test_add_sample_block_data():
 
     # This should now create a shallow copy of the data (but not the time), so compare their id
     np.testing.assert_almost_equal(new_nidaq_data._t[0], nidaq_data._t[1])
-    assert hash(new_nidaq_data._data[0]) == hash(nidaq_data._data[1])
+    assert id(new_nidaq_data._data[0]) == id(nidaq_data._data[1])
 
 
 def test_copy_nidaq_data():
@@ -220,6 +222,41 @@ def test_copy_nidaq_data():
     np.testing.assert_almost_equal(nidaq_data_copy._data[1][0, 0], 0)
     np.testing.assert_almost_equal(nidaq_data._t[1][0], t[0] + block_time * 1 + nidaq_data.t0_offset)
     np.testing.assert_almost_equal(nidaq_data._data[1][0, 0], np.sin(t[0] + block_time * 1))
+
+
+def test_serialize_nidaq_data():
+    nidaq_data = NiDaqData()
+    nidaq_data.set_t0_offset(0.01)  # Simulate lag in the system
+
+    # Generate some fake data
+    n_frames = 100
+    block_time = 1
+    t = np.linspace(0, block_time, n_frames)
+
+    # Add data
+    nidaq_data.add(t + block_time * 0, np.sin(t + block_time * 0)[np.newaxis, :])
+    nidaq_data.add(t + block_time * 1, np.sin(t + block_time * 1)[np.newaxis, :])
+    nidaq_data.add(t + block_time * 2, np.sin(t + block_time * 2)[np.newaxis, :])
+
+    # Serialize the data for pickle
+    data = nidaq_data.serialize()
+    assert pickle.dumps(data)
+
+    # Check that the data is correct
+    assert data["t0"] == nidaq_data.t0.timestamp()
+    assert data["t0_offset"] == nidaq_data.t0_offset
+    np.testing.assert_almost_equal(np.array(data["t"]).reshape(-1), nidaq_data.time)
+    np.testing.assert_almost_equal(np.array(data["data"]).reshape(-1), nidaq_data.as_array[0, :])
+
+    # Serialize the data for json
+    data = nidaq_data.serialize(to_json=True)
+    assert json.dumps(data)
+
+    # Check that the data is correct
+    assert data["t0"] == nidaq_data.t0.timestamp()
+    assert data["t0_offset"] == nidaq_data.t0_offset
+    np.testing.assert_almost_equal(np.array(data["t"]).reshape(-1), nidaq_data.time)
+    np.testing.assert_almost_equal(np.array(data["data"]).reshape(-1), nidaq_data.as_array[0, :])
 
 
 def test_save_and_load():

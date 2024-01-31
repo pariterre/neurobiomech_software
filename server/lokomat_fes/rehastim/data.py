@@ -225,6 +225,41 @@ class RehastimData:
 
         return self._data[index]
 
+    def sample_block_between(self, t0: float, tf: float) -> list[tuple[datetime, float, tuple[Channel, ...]]]:
+        """Get a block of data between two times.
+
+        Parameters
+        ----------
+        t0 : float
+            Starting time.
+        tf : float
+            Ending time.
+
+        Returns
+        -------
+        out : list[tuple[datetime, float, float]]
+            List of data vectors.
+            Each vector is a tuple of (time [datetime], duration [float] ms, tuple of channels configuration).
+        """
+        if not self._data:
+            return []
+
+        time = self.time
+
+        first_index = 0
+        for i in range(len(time)):
+            if time[i] >= t0:
+                first_index = i
+                break
+
+        last_index = 0
+        for i in reversed(range(len(time))):
+            if time[i] <= tf:
+                last_index = i
+                break
+
+        return self.sample_block(slice(first_index, last_index + 1))
+
     @property
     def time(self) -> np.ndarray:
         """Get time of each event.
@@ -305,7 +340,7 @@ class RehastimData:
         """
 
         with open(path, "wb") as f:
-            pickle.dump(self.serialize, f)
+            pickle.dump(self.serialize(), f)
 
     @classmethod
     def load(cls, path: str) -> "RehastimData":
@@ -342,7 +377,7 @@ class RehastimData:
             Serialized data.
         """
         if to_json:
-            data = [list(d) for d in self._data]
+            data = [list((d[0], d[1], tuple(channel.serialize(to_json=True) for channel in d[2]))) for d in self._data]
         else:
             data = self._data
         return {"t0": self._t0.timestamp(), "data": data}

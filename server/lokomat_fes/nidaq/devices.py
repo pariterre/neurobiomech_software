@@ -115,10 +115,10 @@ class NiDaqGeneric(ABC):
     def start_recording(self) -> None:
         """Start recording"""
         if not self._is_connected:
-            raise RuntimeError("Not connected")
+            raise RuntimeError("Cannot start recording without the device being connected")
 
         if self._is_recording:
-            raise RuntimeError("Already recording")
+            raise RuntimeError("Cannot start recording while already recording")
 
         _mutex.acquire()
         for key in self._on_start_recording_callback.keys():
@@ -150,7 +150,7 @@ class NiDaqGeneric(ABC):
         """Dispose the NiDaq class"""
         self.stop_recording()
         if self._task is not None:
-            self._stop_task()
+            self.disconnect()
             self._task.close()
             self._task = None
 

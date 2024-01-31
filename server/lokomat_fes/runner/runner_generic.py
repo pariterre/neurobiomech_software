@@ -116,23 +116,7 @@ class RunnerGeneric(ABC):
         nidaq = self._continuous_data.nidaq.sample_block(slice(starting_index, last_data_index + 1))
 
         # Fetch the corresponding Rehastim data (comprised between the first and last NiDaq data)
-        t0 = nidaq[0][0][0]
-        tf = nidaq[0][-1][-1]
-        rehastim_all_time = self._continuous_data.rehastim.time
-
-        first_time_index = 0
-        for i in range(len(rehastim_all_time)):
-            if rehastim_all_time[i] >= t0:
-                first_time_index = i
-                break
-
-        last_time_index = 0
-        for i in reversed(range(len(rehastim_all_time))):
-            if rehastim_all_time[i] <= tf:
-                last_time_index = i
-                break
-
-        rehastim = self._continuous_data.rehastim.sample_block(slice(first_time_index, last_time_index + 1))
+        rehastim = self._continuous_data.rehastim.sample_block_between(t0=nidaq[0][0][0], tf=nidaq[0][-1][-1])
 
         # Update the last fetched data index
         self._last_fetch_continuous_data_index = last_data_index

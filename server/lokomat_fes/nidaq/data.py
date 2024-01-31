@@ -274,7 +274,7 @@ class NiDaqData:
         """
 
         with open(path, "wb") as f:
-            pickle.dump(self.serialize, f)
+            pickle.dump(self.serialize(), f)
 
     @classmethod
     def load(cls, path: str) -> "NiDaqData":

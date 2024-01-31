@@ -12,8 +12,16 @@ def test_nidaq_initialize():
     nidaq.dispose()
 
 
+def test_start_recording_without_connecting_device():
+    nidaq = NiDaqLokomatMock()
+    with pytest.raises(RuntimeError, match="Cannot start recording without the device being connected"):
+        nidaq.start_recording()
+    nidaq.dispose()
+
+
 def test_start_recording():
     nidaq = NiDaqLokomatMock()
+    nidaq.connect()
     nidaq.start_recording()
     assert nidaq._is_recording
     assert nidaq._timer is not None
@@ -29,6 +37,7 @@ def test_start_recording_with_callback():
 
     nidaq = NiDaqLokomatMock()
     nidaq.register_to_start_recording(start_recording_callback)
+    nidaq.connect()
     nidaq.start_recording()
     assert nidaq._is_recording
     assert nidaq._timer is not None
@@ -44,11 +53,14 @@ def test_start_recording_with_callback():
     nidaq.dispose()
 
 
-def test_stop_recording():
+def test_disconnecting():
     nidaq = NiDaqLokomatMock()
+    nidaq.connect()
     nidaq.start_recording()
     nidaq.stop_recording()
     assert not nidaq._is_recording
+    assert nidaq._timer is not None
+    nidaq.disconnect()
     assert nidaq._timer is None
     nidaq.dispose()
 
@@ -62,10 +74,11 @@ def test_stop_recording_with_callback():
 
     nidaq = NiDaqLokomatMock()
     nidaq.register_to_stop_recording(stop_recording_callback)
+    nidaq.connect()
     nidaq.start_recording()
     nidaq.stop_recording()
     assert not nidaq._is_recording
-    assert nidaq._timer is None
+    assert nidaq._timer is not None
     assert _callback_called
 
     _callback_called = False
@@ -73,14 +86,19 @@ def test_stop_recording_with_callback():
     nidaq.start_recording()
     nidaq.stop_recording()
     assert not _callback_called
+    assert nidaq._timer is not None
+
+    nidaq.disconnect()
+    assert nidaq._timer is None
 
     nidaq.dispose()
 
 
 def test_start_recording_twice():
     nidaq = NiDaqLokomatMock()
+    nidaq.connect()
     nidaq.start_recording()
-    with pytest.raises(RuntimeError, match="Already recording"):
+    with pytest.raises(RuntimeError, match="Cannot start recording while already recording"):
         nidaq.start_recording()
     nidaq.dispose()
 
@@ -134,6 +152,7 @@ def test_start_recording_records_data():
 
     nidaq = NiDaqLokomatMock()
     nidaq.register_to_data_ready(data_ready_callback)
+    nidaq.connect()
     nidaq.start_recording()
     time.sleep(2 * nidaq._time_between_samples)  # Wait for long enough so we get at least 1 sample
     nidaq.stop_recording()
@@ -145,6 +164,8 @@ def test_start_recording_records_data():
 
 def test_resuming_recording():
     nidaq = NiDaqLokomatMock()
+
+    nidaq.connect()
 
     nidaq.start_recording()
     nidaq.stop_recording()

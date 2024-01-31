@@ -1,6 +1,8 @@
+import json
 import os
-import time
+import pickle
 import pytest
+import time
 
 from lokomat_fes.rehastim.data import RehastimData, Channel
 import numpy as np
@@ -79,8 +81,8 @@ def test_data_time():
     t, _, _ = rehastim_data.sample_block(index=0)
 
     # Check that the data is correct
-    assert t.timestamp() >= now
-    assert t.timestamp() <= then
+    assert t >= now
+    assert t <= then
 
 
 def test_must_have_channels_on_first_call():
@@ -181,6 +183,39 @@ def test_copy_rehastim_data():
     rehastim_data_copy._data[1] = (0, 0, 0)
     np.testing.assert_almost_equal(rehastim_data_copy._data[1][1:][0], 0)
     np.testing.assert_almost_equal(rehastim_data._data[1][1:][0], 4)
+
+
+def test_serialize_rehastim_data():
+    rehastim_data = RehastimData()
+
+    # Add data
+    _generate_data(rehastim_data)
+    _generate_data(rehastim_data)
+
+    # Serialize the data for pickle
+    serialized_data = rehastim_data.serialize()
+    assert pickle.dumps(serialized_data)
+
+    # Check that the data is correct
+    assert serialized_data["t0"] == rehastim_data.t0.timestamp()
+    assert len(serialized_data["data"]) == len(rehastim_data)
+    for index in range(len(rehastim_data)):
+        assert serialized_data["data"][index] == rehastim_data.sample_block(index=index)
+
+    # Serialize the data for json
+    serialized_data = rehastim_data.serialize(to_json=True)
+    assert json.dumps(serialized_data)
+
+    # Check that the data is correct
+    assert serialized_data["t0"] == rehastim_data.t0.timestamp()
+    assert len(serialized_data["data"]) == len(rehastim_data)
+    for index in range(len(rehastim_data)):
+        sample = rehastim_data.sample_block(index=index)
+        assert serialized_data["data"][index][0] == sample[0]
+        assert serialized_data["data"][index][1] == sample[1]
+        for channel1, channel2 in zip(serialized_data["data"][index][2], sample[2]):
+            assert channel1["channel_index"] == channel2.channel_index
+            assert channel1["amplitude"] == channel2.amplitude
 
 
 def test_save_and_load():

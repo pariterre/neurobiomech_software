@@ -187,7 +187,7 @@ class RunnerTcp(RunnerConsole):
 
     @override
     def _fetch_continuous_data(self, from_top: bool = False) -> Data:
-        data = super()._fetch_continuous_data(from_top).serialize()
+        data = super()._fetch_continuous_data(from_top)
 
         # Prepare the json message
         message = json.dumps(data.serialize(to_json=True))

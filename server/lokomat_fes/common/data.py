@@ -102,6 +102,7 @@ class Data:
         """
 
         return {
+            "t0": self.t0.timestamp(),
             "nidaq": self.nidaq.serialize(to_json=to_json),
             "rehastim": self.rehastim.serialize(to_json=to_json),
         }
@@ -124,6 +125,7 @@ class Data:
         out = cls()
         out.nidaq = NiDaqData.deserialize(data["nidaq"])
         out.rehastim = RehastimData.deserialize(data["rehastim"])
+        out.set_t0(new_t0=datetime.fromtimestamp(data["t0"]))
         return out
 
     def plot(self, show: bool = True) -> None:
@@ -156,7 +158,7 @@ class Data:
         """
 
         with open(path, "wb") as f:
-            pickle.dump(self.serialize, f)
+            pickle.dump(self.serialize(), f)
 
     @classmethod
     def load(cls, path: str) -> "Data":
