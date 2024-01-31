@@ -12,11 +12,9 @@ def setup_logger(devices_logging_level: int = logging.DEBUG, show_scheduler_logs
         "datefmt": "%Y-%m-%d %H:%M:%S",
         "handlers": {
             "console": {"class": "logging.StreamHandler", "formatter": "simple", "stream": "ext://sys.stdout"},
-            "runner": {"class": "logging.StreamHandler", "formatter": "simple", "stream": "ext://sys.stdout"},
         },
         "loggers": {
-            "runner": {"handlers": ["runner"], "level": logging.INFO if show_scheduler_logs else logging.WARNING},
-            "lokomat_fes": {"handlers": ["console"], "level": devices_logging_level},
+            "lokomat_fes": {"handlers": ["console"], "level": logging.INFO if show_scheduler_logs else logging.WARNING},
             "pyScienceMode": {"handlers": ["console"], "level": devices_logging_level},
         },
     }

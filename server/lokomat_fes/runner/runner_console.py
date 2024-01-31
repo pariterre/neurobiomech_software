@@ -1,14 +1,11 @@
 import logging
 from typing import override
 
-import matplotlib.pyplot as plt
-
 from .runner_generic import RunnerGeneric
 from ..common.data import Data
 from ..scheduler.stimulation import Side, StrideBasedStimulation
 
-logger = logging.getLogger("lokomat_fes")
-logger_runner = logging.getLogger("runner")
+_logger = logging.getLogger("lokomat_fes")
 
 
 _available_schedules = {
@@ -31,7 +28,7 @@ class RunnerConsole(RunnerGeneric):
     @override
     def _exec(self):
         """Start the runner."""
-        logger.info("Starting console runner.")
+        _logger.info("Starting console runner.")
 
         print("Type your command and press enter, use 'list' the print the commands:")
         while True:
@@ -39,6 +36,12 @@ class RunnerConsole(RunnerGeneric):
 
             if command == "list":
                 self._list_commands(parameters)
+
+            elif command == "start_nidaq":
+                self._start_nidaq_command(parameters)
+
+            elif command == "stop_nidaq":
+                self._stop_nidaq_command(parameters)
 
             elif command == "start":
                 self._start_recording_command(parameters)
@@ -61,6 +64,9 @@ class RunnerConsole(RunnerGeneric):
             elif command == "stim":
                 self._stimulate_command(parameters)
 
+            elif command == "fetch_data":
+                self._fetch_continuous_data_command(parameters)
+
             elif command == "plot":
                 self._plot_data_command(parameters)
 
@@ -71,17 +77,18 @@ class RunnerConsole(RunnerGeneric):
                 break
 
             else:
-                logger_runner.error(f"Unknown command {command}.")
+                _logger.error(f"Unknown command {command}.")
 
-        logger.info("Runner Console exited.")
+        _logger.info("Runner Console exited.")
 
     def _list_commands(self, parameters: list[str]):
-        success = _check_number_parameters("list", parameters, expected=None)
-        if not success:
+        if not _check_number_parameters("list", parameters, expected=None):
             return
 
         print("List of commands:")
         print("\tlist: list all the commands")
+        print("\tstart_nidaq: start the nidaq")
+        print("\tstop_nidaq: stop the nidaq")
         print("\tstart: start recording")
         print("\tstop: stop recording")
         print("\tavailable_stim: list all the available stimulations")
@@ -91,39 +98,39 @@ class RunnerConsole(RunnerGeneric):
         print(
             "\tstim X [Y] [Z]: stimulate for X seconds, at amplitude Y mA, with a width Z ms (default for Y and Z are previously set values, or 0 if not set yet)"
         )
+        print("\tfetch_data [X]: fetch the data from the last fetch (default) or from the top of the data")
         print(
             "\tplot: plot the last trial, if available. This method is blocking (no other commands can be used while the plot is shown)"
         )
         print("\tsave X: save the last trial to file X as a pickle file")
         print("\tquit: quit")
 
+    def _start_nidaq_command(self, parameters: list[str]) -> bool:
+        if not _check_number_parameters("start_nidaq", parameters, expected=None):
+            return False
+
+        return _try_command(self.start_nidaq)
+
     def _start_recording_command(self, parameters: list[str]) -> bool:
-        success = _check_number_parameters("start", parameters, expected=None)
-        if not success:
+        if not _check_number_parameters("start", parameters, expected=None):
             return False
 
-        success = _try_command(self.start_recording)
-        if not success:
+        return _try_command(self.start_recording)
+
+    def _stop_nidaq_command(self, parameters: list[str]) -> bool:
+        if not _check_number_parameters("stop_nidaq", parameters, expected=None):
             return False
 
-        logger_runner.info("Recording started.")
-        return True
+        return _try_command(self.stop_nidaq)
 
     def _stop_recording_command(self, parameters: list[str]) -> bool:
-        success = _check_number_parameters("stop", parameters, expected=None)
-        if not success:
+        if not _check_number_parameters("stop", parameters, expected=None):
             return False
 
-        success = _try_command(self.stop_recording)
-        if not success:
-            return False
-
-        logger_runner.info("Recording stopped.")
-        return True
+        return _try_command(self.stop_recording)
 
     def _list_available_schedules_command(self, parameters: list[str]) -> bool:
-        success = _check_number_parameters("available_stim", parameters, expected=None)
-        if not success:
+        if not _check_number_parameters("available_stim", parameters, expected=None):
             return False
 
         print("List of available schedules:")
@@ -133,15 +140,14 @@ class RunnerConsole(RunnerGeneric):
         return True
 
     def _schedule_stimulation_command(self, parameters: list[str]) -> bool:
-        success = _check_number_parameters("schedule_stim", parameters, expected={"index": True, "side": False})
-        if not success:
+        if not _check_number_parameters("schedule_stim", parameters, expected={"index": True, "side": False}):
             return False
 
         index = _parse_int("index", parameters[0])
         if index is None:
             return False
         if index >= len(_available_schedules):
-            logger_runner.error(f"Invalid index, there are only {len(_available_schedules)} available schedules.")
+            _logger.error(f"Invalid index, there are only {len(_available_schedules)} available schedules.")
             return False
         key = list(_available_schedules.keys())[index]
 
@@ -152,13 +158,10 @@ class RunnerConsole(RunnerGeneric):
                 return False
             side = Side(side_index)
 
-        self.schedule_stimulation(_available_schedules[key]["func"](side))
-        logger_runner.info(f"Scheduled stimulation {key} on side {side}.")
-        return True
+        return _try_command(self.schedule_stimulation, _available_schedules[key]["func"](side))
 
     def _unschedule_stimulation_command(self, parameters: list[str]) -> bool:
-        success = _check_number_parameters("unschedule_stim", parameters, expected={"index": True})
-        if not success:
+        if not _check_number_parameters("unschedule_stim", parameters, expected={"index": True}):
             return False
 
         index = _parse_int("index", parameters[0])
@@ -167,16 +170,13 @@ class RunnerConsole(RunnerGeneric):
 
         stimulations = self.get_scheduled_stimulations()
         if index >= len(stimulations):
-            logger_runner.error(f"Invalid index, there are only {len(stimulations)} stimulations scheduled.")
+            _logger.error(f"Invalid index, there are only {len(stimulations)} stimulations scheduled.")
             return False
 
-        self.remove_scheduled_stimulation(index)
-        logger_runner.info(f"Unscheduled stimulation {index}.")
-        return True
+        return _try_command(self.remove_scheduled_stimulation, index)
 
     def _print_scheduled_stimulations(self, parameters: list[str]) -> bool:
-        success = _check_number_parameters("scheduled_stim", parameters, expected=None)
-        if not success:
+        if not _check_number_parameters("scheduled_stim", parameters, expected=None):
             return False
 
         for i, stim in enumerate(self._scheduler.get_stimulations()):
@@ -185,10 +185,9 @@ class RunnerConsole(RunnerGeneric):
         return True
 
     def _stimulate_command(self, parameters: list[str]) -> bool:
-        success = _check_number_parameters(
+        if not _check_number_parameters(
             "stim", parameters, expected={"duration": True, "amplitude": False, "width": False}
-        )
-        if not success:
+        ):
             return False
 
         if len(parameters) >= 2:
@@ -213,76 +212,33 @@ class RunnerConsole(RunnerGeneric):
         if duration is None:
             return False
 
-        success = _try_command(self.start_stimulation, duration)
-        if not success:
+        return _try_command(self.start_stimulation, duration)
+
+    def _fetch_continuous_data_command(self, parameters: list[str]) -> bool:
+        if not _check_number_parameters("fetch_data", parameters, expected={"from_top": False}):
             return False
 
-        amplitude = self._rehastim.get_pulse_amplitude()[0]
-        width = self._rehastim.get_pulse_width()[0]
-        logger_runner.info(f"Simulating for {duration}s at {amplitude}mA and {width}ms.")
-        return True
+        from_top = False  # Restart from the top of the data (t0)
+        if len(parameters) >= 1:
+            from_top = _parse_int("time_index", parameters[0])
+            if from_top is None:
+                return False
+            from_top = bool(from_top)
 
-    def _fetch_data_command(self, parameters: list[str]) -> bool:
-        success = _check_number_parameters("fetch_data", parameters, expected=None)
-        if not success:
-            return False
-
-        raise NotImplementedError("fetch_data is not implemented yet.")  # Does this make sense for console?
-        return True
-
-    @staticmethod
-    def plot_data(data: Data) -> None:
-        nidaq_data = data.nidaq
-        rehastim_data = data.rehastim
-
-        plt.figure("Data against time")
-
-        # On left-hand side axes, plot nidaq data
-        color = "blue"
-        ax1 = plt.axes()
-        ax1.set_xlabel(f"Time [s] (first sample at {nidaq_data.t0})")
-        ax1.set_ylabel("Data [mV]", color=color)
-        ax1.tick_params(axis="y", labelcolor=color)
-        plt.plot(nidaq_data.time, nidaq_data.as_array.T, color=color)
-
-        # On right-hand side axes, plot rehastim data as stair data (from t0 to duration at height of amplitude)
-        color = "red"
-        ax2 = ax1.twinx()
-        ax2.set_ylabel("Amplitude [mA]", color=color)
-        ax2.tick_params(axis="y", labelcolor=color)
-        all_time = rehastim_data.time
-        all_duration = rehastim_data.duration_as_array
-        all_amplitude = rehastim_data.amplitude_as_array.T
-        for time, duration, amplitude in zip(all_time, all_duration, all_amplitude):
-            channel_index = 0  # Only show the first channel as they are all the same (currently)
-            plt.plot([time, time + duration], amplitude[[channel_index, channel_index]], color=color)
-
-        plt.show()
+        return _try_command(self._fetch_continuous_data, from_top)
 
     def _plot_data_command(self, parameters: list[str]) -> bool:
-        success = _check_number_parameters("plot", parameters, expected=None)
-        if not success:
+        if not _check_number_parameters("plot", parameters, expected=None):
             return False
 
-        data = self.last_trial
-        if data is None:
-            logger_runner.error("No data to plot.")
-            return False
-
-        self.plot_data(data)
-        return True
+        return self.plot_data()
 
     def _save_command(self, parameters: list[str]) -> None:
-        success = _check_number_parameters("save", parameters, expected={"filename": True})
-        if not success:
+        if not _check_number_parameters("save", parameters, expected={"filename": True}):
             return False
 
         filename = parameters[0]
-        if not _try_command(self.save_trial, filename):
-            return False
-
-        logger_runner.info(f"Trial saved to {filename}")
-        return True
+        return _try_command(self.save_trial, filename)
 
 
 def _check_number_parameters(command: str, parameters: list[str], expected: dict[str, bool] | None) -> bool:
@@ -321,7 +277,7 @@ def _check_number_parameters(command: str, parameters: list[str], expected: dict
         error_msg += f"Parameters are: {', '.join(parameters_names)}"
 
     if len(parameters) < expected_min or len(parameters) > expected_max:
-        logger.exception(error_msg)
+        _logger.exception(error_msg)
         return False
     return True
 
@@ -330,7 +286,7 @@ def _parse_float(name: str, value: str) -> float:
     try:
         return float(value)
     except:
-        logger.exception(f"Invalid {name}, it must be a float.")
+        _logger.exception(f"Invalid {name}, it must be a float.")
         return None
 
 
@@ -338,14 +294,13 @@ def _parse_int(name: str, value: str) -> int:
     try:
         return int(value)
     except:
-        logger.exception(f"Invalid {name}, it must be an integer.")
+        _logger.exception(f"Invalid {name}, it must be an integer.")
         return None
 
 
 def _try_command(command: str, *args, **kwargs) -> bool:
     try:
-        command(*args, **kwargs)
-        return True
+        return command(*args, **kwargs) or True
     except:
-        logger.exception(f"Error while executing command {command.__name__}.")
+        _logger.exception(f"Error while executing command {command.__name__}.")
         return False

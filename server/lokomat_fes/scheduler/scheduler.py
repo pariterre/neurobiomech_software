@@ -6,7 +6,7 @@ import time
 from .stimulation import StimulationAbstract
 from ..common.data import Data
 
-logger = logging.getLogger("runner")
+logger = logging.getLogger("lokomat_fes")
 _mutex = threading.Lock()
 
 
@@ -25,6 +25,10 @@ class Scheduler:
         self._exit_flag = False
         self._thread = threading.Thread(target=self._run)
         self._thread.start()
+
+    def __len__(self) -> int:
+        """Get the number of stimulations in the scheduler."""
+        return len(self._schedules)
 
     def add(self, stimulation: StimulationAbstract) -> None:
         """Add a stimulation to the scheduler."""
@@ -68,7 +72,7 @@ class Scheduler:
                 time.sleep(0)
                 continue
 
-            t = (self._data.t0 - datetime.now()).microseconds / 1e6
+            t = datetime.now().timestamp() - self._data.t0.timestamp()
 
             _mutex.acquire()
             for stimulation in self._schedules.values():

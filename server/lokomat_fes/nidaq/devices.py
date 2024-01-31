@@ -37,6 +37,7 @@ class NiDaqGeneric(ABC):
         self._on_stop_recording_callback: dict[Any, Callable[[NiDaqData], None]] = {}
 
         # Setup the NiDaq task
+        self._is_connected = False
         self._task = None
         self._setup_task()
 
@@ -98,8 +99,24 @@ class NiDaqGeneric(ABC):
             del self._on_stop_recording_callback[hash(callback)]
             _mutex.release()
 
+    @property
+    def is_connected(self) -> bool:
+        """Whether the NiDaq is connected"""
+        return self._is_connected
+
+    def connect(self) -> None:
+        """Connect the NiDaq"""
+        self._start_task()
+
+    def disconnect(self) -> None:
+        """Disconnect the NiDaq"""
+        self._stop_task()
+
     def start_recording(self) -> None:
         """Start recording"""
+        if not self._is_connected:
+            raise RuntimeError("Not connected")
+
         if self._is_recording:
             raise RuntimeError("Already recording")
 
@@ -109,7 +126,6 @@ class NiDaqGeneric(ABC):
         _mutex.release()
 
         self._reset_data()
-        self._start_task()
         self._is_recording = True
 
     def stop_recording(self) -> None:
@@ -123,7 +139,6 @@ class NiDaqGeneric(ABC):
             self._on_stop_recording_callback[key](self._data)
         _mutex.release()
 
-        self._stop_task()
         self._is_recording = False
 
     @property
@@ -135,6 +150,7 @@ class NiDaqGeneric(ABC):
         """Dispose the NiDaq class"""
         self.stop_recording()
         if self._task is not None:
+            self._stop_task()
             self._task.close()
             self._task = None
 
@@ -196,6 +212,8 @@ class NiDaqGeneric(ABC):
     def _start_task(self) -> None:
         """Start the NiDaq task"""
         self._task.start()
+        self._is_connected = True
 
     def _stop_task(self) -> None:
         self._task.stop()
+        self._is_connected = False

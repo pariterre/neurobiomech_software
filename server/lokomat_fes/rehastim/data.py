@@ -2,12 +2,13 @@ from copy import deepcopy
 from datetime import datetime
 import logging
 import pickle
+from typing import Any
 
 from pyScienceMode import Channel as pyScienceModeChannel
 import numpy as np
 
 
-logger = logging.getLogger("lokomat_fes")
+_logger = logging.getLogger("lokomat_fes")
 
 
 class Channel:
@@ -41,8 +42,20 @@ class Channel:
         """
         return cls(channel.get_no_channel(), channel.get_amplitude())
 
-    @property
-    def serialized(self):
+    def serialize(self, to_json: bool = False) -> dict:
+        """Serialize the channel.
+
+        Parameters
+        ----------
+        to_json : bool
+            Whether to convert the data to json or not. In both cases, the returned dictionary will be the same. We keep
+            this parameter to match the other serialize methods, in case this becomes useful in the future.
+
+        Returns
+        -------
+        out : dict
+            Serialized channel.
+        """
         return {"channel_index": self.channel_index, "amplitude": self.amplitude}
 
     @classmethod
@@ -63,9 +76,19 @@ class RehastimData:
         Each vector is a tuple of (time [datetime], duration [float] ms, tuple of channels configuration).
     """
 
-    def __init__(self) -> None:
-        self._t0: datetime = datetime.now()
-        self._data: list[tuple[datetime, float, tuple[Channel, ...]]] = []
+    def __init__(self, t0: datetime = None, data: list[tuple[float, float, tuple[Channel, ...]]] = None) -> None:
+        """Initialize the data.
+
+        Parameters
+        ----------
+        t0 : datetime | None
+            Starting time of the recording. If None, the starting time is set to the current time.
+        data : list[tuple[float, float, float]] | None
+            List of data vectors.
+            Each vector is a tuple of (time [float], duration [float] ms, tuple of channels configuration).
+        """
+        self._t0: datetime = datetime.now() if t0 is None else t0
+        self._data: list[tuple[float, float, tuple[Channel, ...]]] = [] if data is None else data
 
     def __len__(self) -> int:
         """Get the number of samples.
@@ -87,6 +110,35 @@ class RehastimData:
             True if the data has been initialized.
         """
         return bool(self._data)
+
+    def plot(self, ax=None, show: bool = True) -> None | Any:
+        """Plot the data.
+
+        Parameters
+        ----------
+        ax : plt.Axes | None
+            Axes to plot the data to. If None, a new figure is created.
+        show : bool
+            Whether to show the plot or not.
+        """
+        import matplotlib.pyplot as plt
+
+        ax = plt.axes() if ax is None else ax
+
+        color = "red"
+        ax.set_ylabel("Amplitude [mA]", color=color)
+        ax.tick_params(axis="y", labelcolor=color)
+        all_time = self.time
+        all_duration = self.duration_as_array[: all_time.shape[0]]
+        all_amplitude = self.amplitude_as_array.T[: all_time.shape[0], :]
+        for time, duration, amplitude in zip(all_time, all_duration, all_amplitude):
+            channel_index = 0  # Only show the first channel as they are all the same (currently)
+            plt.plot([time, time + duration], amplitude[[channel_index, channel_index]], color=color)
+
+        if show:
+            plt.show()
+        else:
+            return ax
 
     @property
     def t0(self) -> datetime:
@@ -133,19 +185,19 @@ class RehastimData:
                 Channel.from_pysciencemode(channel) if isinstance(channel, pyScienceModeChannel) else deepcopy(channel)
                 for channel in channels
             )
-        self._data.append((datetime.now(), duration, channels))
+        self._data.append((datetime.now().timestamp(), duration, channels))
 
     def stop_undefined_stimulation_duration(self):
         """Stop the stimulation duration that is set to None."""
         if not self._data:
-            logger.warning("No data to stop")
+            _logger.warning("No data to stop")
             return
 
         if self._data[-1][1] is not None:
             return
 
         stimulation_started_at = self._data[-1][0]
-        stimulation_lasted = (datetime.now() - stimulation_started_at).total_seconds()
+        stimulation_lasted = datetime.now().timestamp() - stimulation_started_at
         channels = self._data[-1][2]
         self._data[-1] = (stimulation_started_at, stimulation_lasted, channels)
 
@@ -185,8 +237,8 @@ class RehastimData:
         if not self._data:
             return np.array([])
 
-        t0 = self._t0
-        return np.array([(t - t0).total_seconds() for t, duration, _ in self._data if duration is not None])
+        t0 = self._t0.timestamp()
+        return np.array([t - t0 for t, duration, _ in self._data if duration is not None])
 
     @property
     def duration_as_array(self) -> np.ndarray:
@@ -253,7 +305,7 @@ class RehastimData:
         """
 
         with open(path, "wb") as f:
-            pickle.dump(self.serialized, f)
+            pickle.dump(self.serialize, f)
 
     @classmethod
     def load(cls, path: str) -> "RehastimData":
@@ -274,16 +326,26 @@ class RehastimData:
             data = pickle.load(f)
         return cls.deserialize(data)
 
-    @property
-    def serialized(self) -> dict:
+    def serialize(self, to_json: bool = False) -> dict:
         """Serialize the data.
+
+        Parameters
+        ----------
+        to_json : bool
+            Whether to convert the data to json or not. If False, the numpy arrays are kept as numpy arrays. If True,
+            they are converted to lists. Default is False. Note that this is only useful if you want to save the data
+            to a json file. The resulting dictionary will not be able to be deserialized using the deserialize method.
 
         Returns
         -------
         out : dict
             Serialized data.
         """
-        return {"t0": self._t0, "data": self._data}
+        if to_json:
+            data = [list(d) for d in self._data]
+        else:
+            data = self._data
+        return {"t0": self._t0.timestamp(), "data": data}
 
     @classmethod
     def deserialize(cls, data: dict) -> "RehastimData":
@@ -300,6 +362,6 @@ class RehastimData:
             Deserialized data.
         """
         out = cls()
-        out._t0 = data["t0"]
+        out._t0 = datetime.fromtimestamp(data["t0"])
         out._data = data["data"]
         return out

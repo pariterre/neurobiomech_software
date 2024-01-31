@@ -1,8 +1,10 @@
 from copy import deepcopy
 from datetime import datetime
 import pickle
+from typing import Any
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class NiDaqData:
@@ -24,11 +26,33 @@ class NiDaqData:
         List of data vectors.
     """
 
-    def __init__(self) -> None:
-        self._t0: datetime = datetime.now()
-        self._t0_offset: float = None  # Offset to add to the time to get the real time. It is the difference between the t0 and actual first data received.
-        self._t: list[np.ndarray] = []
-        self._data: list[np.ndarray] = []
+    def __init__(
+        self,
+        t0: datetime | None = None,
+        t0_offset: float | None = None,
+        t: list[np.ndarray] | None = None,
+        data: list[np.ndarray] | None = None,
+    ) -> None:
+        """
+        Parameters
+        ----------
+        t0 : datetime | None
+            Starting time of the recording (set at the moment of the declaration of the class or that the
+            time [set_t0] is called).
+        t0_offset : float | None
+            Offset to add to the time to get the real time (in seconds). It is the difference between the t0 and actual first data.
+            This is to account for the fact that the NI DAQ device takes time to launch, but the first data are still
+            considered to be at time=0. The offset makes sure the _t0 (in datetime) actually corresponds to the first data
+            so it can be synchronized with other devices. This value should correspond to the first time of the first data block.
+        t : list[np.ndarray] | None
+            List of time vectors.
+        data : list[np.ndarray] | None
+            List of data vectors.
+        """
+        self._t0: datetime = datetime.now() if t0 is None else t0
+        self._t0_offset: float = None if t0_offset is None else t0_offset
+        self._t: list[np.ndarray] = [] if t is None else t
+        self._data: list[np.ndarray] = [] if data is None else data
 
     def set_t0(self, new_t0: datetime | None = None) -> None:
         """Reset the starting time of the recording.
@@ -49,7 +73,7 @@ class NiDaqData:
             New starting time offset of the recording. If None, the starting time offset is set to the current time.
         """
         if new_t0_offset is None:
-            self._t0_offset = (datetime.now() - self._t0).microseconds / 1e6  # seconds
+            self._t0_offset = datetime.now().timestamp() - self._t0.timestamp()  # seconds
         else:
             self._t0_offset = new_t0_offset
 
@@ -146,6 +170,41 @@ class NiDaqData:
         else:
             return deepcopy(self._t[index]), deepcopy(self._data[index])
 
+    def plot(self, ax=None, show: bool = True) -> None | Any:
+        """Plot the data.
+
+        Parameters
+        ----------
+        ax : Any
+            Axes of the plot if show is False, None otherwise.
+        show : bool
+            Whether to show (blocking) the plot or not.
+
+        Returns
+        -------
+        ax1 : Any
+            Axes of the plot if show is False, None otherwise.
+        """
+
+        plt.figure("Data against time")
+
+        # On left-hand side axes, plot nidaq data
+        color = "blue"
+        ax = plt.axes() if ax is None else ax
+        ax.set_xlabel(f"Time [s] (first sample at {self.t0})")
+        ax.set_ylabel("Data [mV]", color=color)
+        ax.tick_params(axis="y", labelcolor=color)
+
+        # We have to make sure the time and data have the same shape because new data can be added at any time
+        t = self.time
+        data = self.as_array.T[: t.shape[0], :]
+        ax.plot(t, data, color=color)
+
+        if show:
+            plt.show(block=True)
+        else:
+            return ax
+
     @property
     def t0(self) -> datetime:
         """Get the starting time of the recording (without t0 offset).
@@ -215,7 +274,7 @@ class NiDaqData:
         """
 
         with open(path, "wb") as f:
-            pickle.dump(self.serialized, f)
+            pickle.dump(self.serialize, f)
 
     @classmethod
     def load(cls, path: str) -> "NiDaqData":
@@ -236,21 +295,29 @@ class NiDaqData:
             data = pickle.load(f)
         return cls.deserialize(data)
 
-    @property
-    def serialized(self) -> dict:
+    def serialize(self, to_json: bool = False) -> dict:
         """Serialize the data.
+
+        Parameters
+        ----------
+        to_json : bool
+            Whether to convert numpy arrays to lists or not. If True, the data can be saved to a json file, but it
+            will be slower and will not be able to be loaded back using the deserialize method.
 
         Returns
         -------
         out : dict
             Serialized data.
         """
-        return {
-            "t0": self._t0,
-            "t0_offset": self._t0_offset,
-            "t": self._t,
-            "data": self._data,
-        }
+
+        if to_json:
+            t = [t.tolist() for t in self._t]
+            data = [data.tolist() for data in self._data]
+        else:
+            t = self._t
+            data = self._data
+
+        return {"t0": self._t0.timestamp(), "t0_offset": self._t0_offset, "t": t, "data": data}
 
     @classmethod
     def deserialize(cls, data: dict) -> "NiDaqData":
@@ -267,7 +334,7 @@ class NiDaqData:
             Deserialized data.
         """
         out = cls()
-        out._t0 = data["t0"]
+        out._t0 = datetime.fromtimestamp(data["t0"])
         out._t0_offset = data["t0_offset"]
         out._t = data["t"]
         out._data = data["data"]

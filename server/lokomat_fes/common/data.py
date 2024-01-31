@@ -1,16 +1,18 @@
 from datetime import datetime
 import pickle
 
+import matplotlib.pyplot as plt
+
 from ..nidaq.data import NiDaqData
 from ..rehastim.data import RehastimData
 
 
 class Data:
-    def __init__(self) -> None:
+    def __init__(self, nidaq: NiDaqData = None, rehastim: RehastimData = None, t0: datetime = None) -> None:
         """Initialize the data."""
-        self.nidaq = NiDaqData()
-        self.rehastim = RehastimData()
-        self._t0: datetime = datetime.now()
+        self.nidaq = NiDaqData() if nidaq is None else nidaq
+        self.rehastim = RehastimData() if rehastim is None else rehastim
+        self._t0: datetime = datetime.now() if t0 is None else t0
         self.set_t0(new_t0=self._t0)  # Just make sure t0 is the exact same for both devices
 
     @property
@@ -83,9 +85,15 @@ class Data:
         out.rehastim = self.rehastim.copy
         return out
 
-    @property
-    def serialized(self) -> dict:
+    def serialize(self, to_json: bool = False) -> dict:
         """Serialize the data to a dictionary.
+
+        Parameters
+        ----------
+        to_json : bool
+            Whether to convert the data to json or not. If False, the numpy arrays are kept as numpy arrays. If True,
+            they are converted to lists. Default is False. Note that this is only useful if you want to save the data
+            to a json file. The resulting dictionary will not be able to be deserialized using the deserialize method.
 
         Returns
         -------
@@ -94,8 +102,8 @@ class Data:
         """
 
         return {
-            "nidaq": self.nidaq.serialized,
-            "rehastim": self.rehastim.serialized,
+            "nidaq": self.nidaq.serialize(to_json=to_json),
+            "rehastim": self.rehastim.serialize(to_json=to_json),
         }
 
     @classmethod
@@ -118,6 +126,26 @@ class Data:
         out.rehastim = RehastimData.deserialize(data["rehastim"])
         return out
 
+    def plot(self, show: bool = True) -> None:
+        """Plot the data.
+
+        Parameters
+        ----------
+        show : bool
+            Whether to show (blocking) the plot or not.
+        """
+
+        plt.figure("Data against time")
+
+        # On left-hand side axes, plot nidaq data
+        ax1 = self.nidaq.plot(show=False)
+
+        # On right-hand side axes, plot rehastim data as stair data (from t0 to duration at height of amplitude)
+        self.rehastim.plot(ax=ax1.twinx(), show=False)
+
+        if show:
+            plt.show()
+
     def save(self, path: str) -> None:
         """Save the data to a file.
 
@@ -128,7 +156,7 @@ class Data:
         """
 
         with open(path, "wb") as f:
-            pickle.dump(self.serialized, f)
+            pickle.dump(self.serialize, f)
 
     @classmethod
     def load(cls, path: str) -> "Data":

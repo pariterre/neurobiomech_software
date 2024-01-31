@@ -1,13 +1,16 @@
 from enum import Enum
+import json
 import logging
 import socket
+from struct import pack
 import time
 from typing import override
 
+from lokomat_fes.common.data import Data
+
 from .runner_console import RunnerConsole
 
-logger = logging.getLogger("lokomat_fes")
-logger_runner = logging.getLogger("runner")
+_logger = logging.getLogger("lokomat_fes")
 
 
 class _Command(Enum):
@@ -69,26 +72,26 @@ class RunnerTcp(RunnerConsole):
                 self._server.bind((self._ip_address, self._port))
                 break
             except OSError:
-                logger_runner.error(f"Could not bind to {self._ip_address}:{self._port}. Retrying...")
+                _logger.error(f"Could not bind to {self._ip_address}:{self._port}. Retrying...")
                 time.sleep(1)
                 continue
 
         self._server.listen()
-        logger_runner.info(f"Waiting for connection on {self._ip_address}:{self._port}...")
+        _logger.info(f"Waiting for connection on {self._ip_address}:{self._port}...")
         self._connexion, addr = self._server.accept()
-        logger_runner.info(f"Connected to {addr}")
+        _logger.info(f"Connected to {addr}")
 
     @override
     def _receive_command(self) -> tuple[str | None, list[str]]:
         """Receive an acquisition command and int value from the external software."""
-        logger_runner.info("Waiting for command...")
+        _logger.info("Waiting for command...")
         try:
             data = self._connexion.recv(1024).decode()
         except Exception:
             data = None
 
         if not data:
-            logger_runner.info("The client has abruptly closed the connection.")
+            _logger.info("The client has abruptly closed the connection.")
             return None, []
 
         command_str, parameters_str = data.split(":")
@@ -98,7 +101,7 @@ class RunnerTcp(RunnerConsole):
         message = f"Received command: {command}"
         if parameters:
             message += f", parameters: {parameters}"
-        logger_runner.info(message)
+        _logger.info(message)
 
         return str(command), parameters
 
@@ -108,10 +111,10 @@ class RunnerTcp(RunnerConsole):
         try:
             self._connexion.sendall(acknowledgment.encode())
         except ...:
-            logger_runner.error(f"Connection closed by the client.")
+            _logger.error(f"Connection closed by the client.")
             return False
 
-        logger_runner.info(f"Sent acknowledgment: {acknowledgment}")
+        _logger.info(f"Sent acknowledgment: {acknowledgment}")
         return True
 
     def _close_connection(self):
@@ -121,7 +124,7 @@ class RunnerTcp(RunnerConsole):
 
         self._connexion.close()
         self._server.close()
-        logger_runner.info("Connection closed")
+        _logger.info("Connection closed")
 
     @override
     def _exec(self) -> None:
@@ -149,7 +152,7 @@ class RunnerTcp(RunnerConsole):
                     success = self._stimulate_command(parameters)
 
                 elif command == str(_Command.FETCH_DATA):
-                    success = self._fetch_data_command(parameters)
+                    success = self._fetch_continuous_data_command(parameters)
 
                 elif command == str(_Command.PLOT_DATA):
                     success = self._plot_data_command(parameters)
@@ -162,7 +165,7 @@ class RunnerTcp(RunnerConsole):
                     break
 
                 else:
-                    logger_runner.error(f"Unknown command {command}")
+                    _logger.error(f"Unknown command {command}")
                     success = False
 
                 # Send acknowledgment back
@@ -180,4 +183,18 @@ class RunnerTcp(RunnerConsole):
                 # Trickle down the quit command
                 break
 
-        logger_runner.info("Runner tcp exited.")
+        _logger.info("Runner tcp exited.")
+
+    @override
+    def _fetch_continuous_data(self, from_top: bool = False) -> Data:
+        data = super()._fetch_continuous_data(from_top).serialize()
+
+        # Prepare the json message
+        message = json.dumps(data.serialize(to_json=True))
+        len_prefix = pack(">I", len(message))
+        final_message = len_prefix + message.encode()
+
+        # Send the message
+        self._connexion.sendall(final_message)
+
+        return data

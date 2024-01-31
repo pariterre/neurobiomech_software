@@ -24,11 +24,13 @@ class NiDaqLokomatMock(NiDaqLokomat):
         self._timer = PerpetualTimer(self._time_between_samples, self._generate_fake_data)
         self._timer_counter = 0
         self._timer.start()
+        self._is_connected = True
 
     @override
     def _stop_task(self):
         self._timer.cancel()
         self._timer = None
+        self._is_connected = False
 
     def _generate_fake_data(self):
         """Generate fake data and call the callback function, emulating the [_data_has_arrived] method"""

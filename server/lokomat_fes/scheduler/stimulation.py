@@ -39,9 +39,13 @@ class StimulationAbstract(ABC):
             Whether to stimulate or not.
         """
 
+    @abstractmethod
+    def __str__(self) -> str:
+        """Get a string representation of the stimulation."""
+
 
 class StrideBasedStimulation(StimulationAbstract):
-    def __init__(self, name: str, condition_function: Callable[[float, float], tuple[bool, ...]]) -> None:
+    def __init__(self, name: str, condition_function: Callable[[float, float], tuple[bool, ...]], side: Side) -> None:
         """
         Parameters
         ----------
@@ -50,11 +54,17 @@ class StrideBasedStimulation(StimulationAbstract):
         condition_function: Callable[[float, float], tuple[bool, ...]]
             A function that takes the current stride position on left and right [0; 1]
             and returns a tuple of stimulation for each channels.
+        side : Side
+            The side to stimulate.
         """
         super(StrideBasedStimulation, self).__init__(name=name)
         self._condition = condition_function
+        self._side = side
 
         self._are_stimulating: list[bool] = []  # One per channel
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self._side})"
 
     @override
     def stimulation_duration(self, current_time: float, data: Data) -> list[int | None]:
@@ -104,6 +114,7 @@ class StrideBasedStimulation(StimulationAbstract):
         return cls(
             name=f"stimulate_in_swing_phase on {side}",
             condition_function=lambda left, right: cls._stimulate_in_swing_phase(left, right, side=side),
+            side=side,
         )
 
     @staticmethod
