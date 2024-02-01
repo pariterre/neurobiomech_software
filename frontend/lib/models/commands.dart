@@ -10,6 +10,8 @@ enum Command {
   quit,
   shutdown;
 
+  ///
+  /// Value that corresponds to the command on the server
   int toInt() {
     switch (this) {
       case Command.startNidaq:
@@ -32,6 +34,25 @@ enum Command {
         return 8;
       case Command.shutdown:
         return 9;
+    }
+  }
+
+  ///
+  /// Command that should not be called by the user (not part of the API)
+  bool get isReserved {
+    switch (this) {
+      case Command.startNidaq:
+      case Command.stopNidaq:
+      case Command.startRecording:
+      case Command.stopRecording:
+      case Command.stimulate:
+      case Command.plotData:
+      case Command.saveData:
+      case Command.quit:
+      case Command.shutdown:
+        return false;
+      case Command.fetchData:
+        return true;
     }
   }
 }

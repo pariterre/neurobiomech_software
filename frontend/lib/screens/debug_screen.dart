@@ -29,6 +29,7 @@ class _DebugScreenState extends State<DebugScreen> {
       canSendOfflineCommand &&
       LokomatFesServerInterface.instance.hasRecorded &&
       !LokomatFesServerInterface.instance.isRecording;
+  bool _showingGraph = false;
   bool get canSave => _saveTextController.text.isNotEmpty && canManipulateData;
 
   Future<void> _connectServer() async {
@@ -86,7 +87,7 @@ class _DebugScreenState extends State<DebugScreen> {
 
     setState(() => _isBusy = true);
     final connexion = LokomatFesServerInterface.instance;
-    await connexion.send(Command.stimulate, [duration.toString()]);
+    await connexion.send(Command.stimulate, parameters: [duration.toString()]);
     setState(() => _isBusy = false);
 
     // Notify the user that the data is being saved
@@ -107,7 +108,7 @@ class _DebugScreenState extends State<DebugScreen> {
     if (!path.endsWith('.pkl')) path += '.pkl';
 
     final connexion = LokomatFesServerInterface.instance;
-    await connexion.send(Command.saveData, [path]);
+    await connexion.send(Command.saveData, parameters: [path]);
     setState(() => _isBusy = false);
 
     // Notify the user that the data is being saved
@@ -121,11 +122,16 @@ class _DebugScreenState extends State<DebugScreen> {
     );
   }
 
-  Future<void> _fetchData() async {
-    setState(() => _isBusy = true);
+  Future<void> _showOnlineGraph() async {
     final connexion = LokomatFesServerInterface.instance;
-    await connexion.send(Command.fetchData);
-    setState(() => _isBusy = false);
+    connexion.startAutomaticDataFetch();
+    setState(() => _showingGraph = true);
+  }
+
+  Future<void> _hideOnlineGraph() async {
+    final connexion = LokomatFesServerInterface.instance;
+    connexion.stopAutomaticDataFetch();
+    setState(() => _showingGraph = false);
   }
 
   Future<void> _plotData() async {
@@ -170,12 +176,14 @@ class _DebugScreenState extends State<DebugScreen> {
                           ? _disconnectNidaq
                           : _connectNidaq)
                       : null,
-                  child: Text(canSendOnlineCommand && connexion.isNidaqConnected
+                  child: Text(connexion.isNidaqConnected
                       ? 'Disconnect Nidaq'
                       : 'Connect Nidaq')),
               const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: canSendOnlineCommand ? _shutdown : null,
+                onPressed: LokomatFesServerInterface.instance.isInitialized
+                    ? _shutdown
+                    : null,
                 child: const Text('Shutdown'),
               ),
               const SizedBox(height: 20),
@@ -217,12 +225,17 @@ class _DebugScreenState extends State<DebugScreen> {
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: canSendOnlineCommand ? _fetchData : null,
-                child: const Text('Fetch latest data'),
+                onPressed: canSendOnlineCommand
+                    ? _showingGraph
+                        ? _hideOnlineGraph
+                        : _showOnlineGraph
+                    : null,
+                child: Text(
+                    _showingGraph ? 'Hide online graph' : 'Show online graph'),
               ),
               const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: canManipulateData ? _plotData : null,
+                onPressed: canManipulateData ? (_plotData) : null,
                 child: const Text('Plot on server'),
               ),
               const SizedBox(height: 12),

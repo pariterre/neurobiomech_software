@@ -53,46 +53,41 @@ class _Command(Enum):
 class RunnerTcp(RunnerConsole):
     """Runner that connects to an external software (e.g. GUI) by TCP/IP."""
 
-    def __init__(self, ip_address: str = "localhost", port: int = 4042, *args, **kwargs) -> None:
+    def __init__(
+        self, ip_address: str = "localhost", commandPort: int = 4042, dataPort: int = 4043, *args, **kwargs
+    ) -> None:
         """Initialize the Runner.
 
         Parameters
         ----------
         ip_address : str, optional
             IP address to connect to, by default "localhost"
-        port : int, optional
-            Port to connect to, by default 4042
+        commandPort : int, optional
+            Port to connect to command channel, by default 4042
+        dataPort : int, optional
+            Port to connect to data channel, by default 4043
         """
         super().__init__(*args, **kwargs)
 
         self._ip_address = ip_address
-        self._port = port
-        self._server = None
-        self._connexion = None
+        self._commandPort = commandPort
+        self._dataPort = dataPort
+        self._commandServer = None
+        self._commandConnexion = None
+        self._dataServer = None
+        self._dataConnexion = None
 
     def _start_connection(self):
         """Start the TCP/IP connection."""
-        self._server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        while True:
-            try:
-                self._server.bind((self._ip_address, self._port))
-                break
-            except OSError:
-                _logger.error(f"Could not bind to {self._ip_address}:{self._port}. Retrying...")
-                time.sleep(1)
-                continue
-
-        self._server.listen()
-        _logger.info(f"Waiting for connection on {self._ip_address}:{self._port}...")
-        self._connexion, addr = self._server.accept()
-        _logger.info(f"Connected to {addr}")
+        self._commandServer, self._commandConnexion = _declare_socket(self._ip_address, self._commandPort)
+        self._dataServer, self._dataConnexion = _declare_socket(self._ip_address, self._dataPort)
 
     @override
     def _receive_command(self) -> tuple[str | None, list[str]]:
         """Receive an acquisition command and int value from the external software."""
         _logger.info("Waiting for command...")
         try:
-            data = self._connexion.recv(1024).decode()
+            data = self._commandConnexion.recv(1024).decode()
         except Exception:
             data = None
 
@@ -115,7 +110,7 @@ class RunnerTcp(RunnerConsole):
         """Send an acknowledgment back to the external software."""
         acknowledgment = "OK" if response else "ERROR"
         try:
-            self._connexion.sendall(acknowledgment.encode())
+            self._commandConnexion.sendall(acknowledgment.encode())
         except ...:
             _logger.error(f"Connection closed by the client.")
             return False
@@ -128,8 +123,10 @@ class RunnerTcp(RunnerConsole):
         # Give some time to the external software to close the connection
         time.sleep(1)
 
-        self._connexion.close()
-        self._server.close()
+        self._commandConnexion.close()
+        self._commandServer.close()
+        self._dataConnexion.close()
+        self._dataServer.close()
         _logger.info("Connection closed")
 
     @override
@@ -201,10 +198,52 @@ class RunnerTcp(RunnerConsole):
         _logger.info("Runner tcp exited.")
 
     @override
+    def _start_nidaq_command(self, parameters: list[str]) -> bool:
+        out = super()._start_nidaq_command(parameters)
+        if not out:
+            return out
+
+        while self._continuous_data.nidaq.t0_offset is None:
+            time.sleep(0)  # This requires at least one data point to be received
+
+        self._dataConnexion.sendall(
+            json.dumps(
+                {
+                    "t0": self._continuous_data.t0.timestamp(),
+                    "nidaqT0Offset": self._continuous_data.nidaq.t0_offset,
+                    "nidaqNbChannels": self._nidaq.num_channels,
+                    "rehastimNbChannels": self._rehastim.nb_channels,
+                }
+            ).encode()
+        )
+
+        return True
+
+    @override
     def _fetch_continuous_data(self, from_top: bool = False) -> Data:
         data = super()._fetch_continuous_data(from_top)
 
         # Send the message
-        self._connexion.sendall(json.dumps(data.serialize(to_json=True)).encode())
+        self._dataConnexion.sendall(json.dumps(data.serialize(to_json=True)).encode())
 
         return data
+
+
+def _declare_socket(ip_address: str, port: int):
+    """Declare the socket to be used for the connection."""
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    while True:
+        try:
+            server.bind((ip_address, port))
+            break
+        except OSError:
+            _logger.error(f"Could not bind to {ip_address}:{port}. Retrying...")
+            time.sleep(1)
+            continue
+
+    server.listen()
+    _logger.info(f"Waiting for connection on {ip_address}:{port}...")
+    connexion, addr = server.accept()
+    _logger.info(f"Connected to {addr}")
+
+    return server, connexion

@@ -3,9 +3,34 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:frontend/models/commands.dart';
+import 'package:frontend/models/data.dart';
 import 'package:logging/logging.dart';
 
+List<Command> _commandsThatRequireDataResponse = [
+  Command.startNidaq,
+  Command.fetchData,
+];
+
 class LokomatFesServerInterface {
+  Socket? _socketCommand;
+  Socket? _socketData;
+  String? _commandAnswer;
+  String? _dataAnswer;
+
+  bool _isNidaqConnected = false;
+  bool _isRecording = false;
+  bool _hasRecorded = false;
+
+  bool _isContinousDataActive = false;
+  bool get isContinousDataActive => _isContinousDataActive;
+  Data? _continousData;
+  Data get continousData => _continousData!;
+
+  bool _isSendingCommand = false;
+  bool _isReceingData = false;
+
+  final _log = Logger('TcpCommunication');
+
   /// PUBLIC API ///
 
   ///
@@ -14,7 +39,7 @@ class LokomatFesServerInterface {
 
   ///
   /// If the communication initialized.
-  bool get isInitialized => _socket != null;
+  bool get isInitialized => _socketCommand != null;
   bool get isNidaqConnected => _isNidaqConnected;
   bool get isRecording => _isRecording;
   bool get hasRecorded => _hasRecorded;
@@ -25,24 +50,22 @@ class LokomatFesServerInterface {
   /// reached.
   Future<void> initialize({
     String serverIp = 'localhost',
-    int serverPort = 4042,
+    int commandPort = 4042,
+    int dataPort = 4043,
     int? nbOfRetries,
   }) async {
     if (isInitialized) return;
 
-    while (nbOfRetries == null || nbOfRetries > 0) {
-      try {
-        _socket = await Socket.connect(serverIp, serverPort);
-        _socket!.listen(_listenToServerAnswer);
-
-        return;
-      } on SocketException {
-        final log = Logger('TcpCommunication');
-        log.info('Connection failed, retrying...');
-        await Future.delayed(const Duration(seconds: 1));
-        nbOfRetries = nbOfRetries == null ? null : nbOfRetries - 1;
-      }
-    }
+    _socketCommand = await _connectToServer(
+        ipAddress: serverIp,
+        port: commandPort,
+        nbOfRetries: nbOfRetries,
+        hasDataCallback: _listenToCommunicationAnswer);
+    _socketData = await _connectToServer(
+        ipAddress: serverIp,
+        port: dataPort,
+        nbOfRetries: nbOfRetries,
+        hasDataCallback: _listenToDataAnswer);
   }
 
   ///
@@ -52,120 +75,233 @@ class LokomatFesServerInterface {
   /// the server is still alive, false otherwise.
   /// If the command was "shutdown" or "quit", the connection is closed. By its
   /// nature, the "shutdown" or "quit" commands will always return false.
-  Future<bool> send(Command command, [List<String>? parameters]) async {
-    await _sendCommon(command, parameters);
-
-    if (command == Command.shutdown || command == Command.quit) {
-      _dispose();
+  Future<bool> send(Command command, {List<String>? parameters}) async {
+    // Check if the command is reserved
+    if (command.isReserved) {
+      _log.severe('Command $command is reserved and should not be called');
       return false;
     }
-
-    // Receive acknowledgment from the server
-    String answer = await _waitForAnswer();
-
-    if (command == Command.startNidaq) {
-      answer = _finalizeStartNidaqCommand(answer);
-    } else if (command == Command.stopNidaq) {
-      answer = _finalizeStopNidaqCommand(answer);
-    } else if (command == Command.startRecording) {
-      answer = _finalizeStartCommand(answer);
-    } else if (command == Command.stopRecording) {
-      answer = _finalizeStopCommand(answer);
-    } else if (command == Command.fetchData) {
-      answer = _finalizeFetchCommand(answer);
-    }
-
-    return answer == "OK";
+    return _send(command, parameters);
   }
 
-  Future<void> _sendCommon(Command command, [List<String>? parameters]) async {
+  Future<bool> _send(Command command, List<String>? parameters) async {
+    await _preSendCommand(command, parameters);
+
+    // Send the command to the server
+    await _sendCommand(command, parameters);
+
+    // Manage the response from the server
+    return await _postSendCommand(command);
+  }
+
+  Future<void> _preSendCommand(
+      Command command, List<String>? parameters) async {
+    // Wait for the server to be ready to receive data in case data are expected
+    if (_commandsThatRequireDataResponse.contains(command)) {
+      while (_isReceingData) {
+        await Future.delayed(const Duration(milliseconds: 50));
+      }
+      _isReceingData = true;
+    }
+
+    // Wait for the server to be ready to receive a new command
+    while (_isSendingCommand) {
+      await Future.delayed(const Duration(milliseconds: 50));
+    }
+    _isSendingCommand = true;
+  }
+
+  Future<void> _sendCommand(Command command, [List<String>? parameters]) async {
     if (!isInitialized) {
-      log.severe('Communication not initialized');
+      _log.severe('Communication not initialized');
       return;
     }
 
     // Construct and send the command
-    _lastAnswer = null;
+    _commandAnswer = null;
 
     String message = "${command.toInt()}:";
     if (parameters != null) {
       message += parameters.join(',');
     }
-    _socket!.write(message);
+    _socketCommand!.write(message);
     try {
-      await _socket!.flush();
+      await _socketCommand!.flush();
     } on SocketException {
-      log.info('Connexion was closed by the server');
+      _log.info('Connexion was closed by the server');
       return;
     }
-    log.info('Sent command: $command');
+    _log.info('Sent command: $command');
   }
 
-  Future<String> _waitForAnswer() async {
-    while (_lastAnswer == null) {
+  Future<bool> _postSendCommand(Command command) async {
+    switch (command) {
+      case Command.quit:
+      case Command.shutdown:
+        _dispose();
+        // Quick exit as the connection now closed
+        return false;
+
+      case Command.startNidaq:
+        _isNidaqConnected = true;
+        _prepareAutomaticDataFetch();
+        break;
+
+      case Command.stopNidaq:
+        _isNidaqConnected = false;
+        _isRecording = false;
+        break;
+
+      case Command.startRecording:
+        _isRecording = true;
+        _hasRecorded = true;
+        break;
+
+      case Command.stopRecording:
+        _isRecording = false;
+        break;
+
+      case Command.fetchData:
+        _manageFetchedData();
+        break;
+
+      case Command.stimulate:
+      case Command.plotData:
+      case Command.saveData:
+        break;
+    }
+
+    // Receive acknowledgment from the server
+    final answer = await _waitForCommandAnswer();
+    _isSendingCommand = false;
+    return answer == "OK";
+  }
+
+  Future<String> _waitForCommandAnswer() async {
+    while (_commandAnswer == null) {
       await Future.delayed(const Duration(milliseconds: 100));
     }
-    return _lastAnswer!;
+    final message = _commandAnswer!;
+    _commandAnswer = null;
+    return message;
   }
 
-  String _finalizeStartNidaqCommand(String answer) {
-    _isNidaqConnected = true;
-    return answer;
+  Future<String> _waitForDataAnswer() async {
+    while (_dataAnswer == null) {
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+    final message = _dataAnswer!;
+    _dataAnswer = null;
+    _isReceingData = false;
+    return message;
   }
 
-  String _finalizeStopNidaqCommand(String answer) {
-    _isNidaqConnected = false;
-    _isRecording = false;
-    return answer;
+  Future<void> _prepareAutomaticDataFetch() async {
+    final answer = jsonDecode(await _waitForDataAnswer());
+
+    _continousData = Data(
+        t0: answer['t0'],
+        nidaqT0Offset: answer["nidaqT0Offset"],
+        nbNidaqChannels: answer["nidaqNbChannels"],
+        nbRehastimChannels: answer["rehastimNbChannels"]);
   }
 
-  String _finalizeStartCommand(String answer) {
-    _isRecording = true;
-    _hasRecorded = true;
-    return answer;
+  void startAutomaticDataFetch() {
+    if (_continousData == null) {
+      _log.severe('Data not initialized');
+      return;
+    }
+
+    _isContinousDataActive = true;
+    Timer.periodic(const Duration(milliseconds: 1000), (timer) async {
+      if (_isNidaqConnected && _isContinousDataActive) {
+        await _send(Command.fetchData, []);
+      } else {
+        timer.cancel();
+      }
+    });
   }
 
-  String _finalizeStopCommand(String answer) {
-    _isRecording = false;
-    return answer;
+  void stopAutomaticDataFetch() {
+    _isContinousDataActive = false;
   }
 
-  String _finalizeFetchCommand(String answer) {
-    return "OK";
+  Future<void> _manageFetchedData() async {
+    /// This is for online data fetching. We do not mind missing data so just
+    /// disregard the error if the data is not received properly
+    try {
+      final dataRaw = await _waitForDataAnswer();
+      _isSendingCommand = false;
+      _isReceingData = false;
+      final data = jsonDecode(dataRaw);
+      _continousData!.appendFromJson(data);
+    } catch (e) {
+      _log.severe('Error while decoding data: $e');
+    }
+    _log.info('Revieved data');
   }
 
   ///
   /// Close the connection to the server.
   void _dispose() {
-    _socket?.close();
-    _socket = null;
+    _socketCommand?.close();
+    _socketCommand = null;
 
-    _lastAnswer = null;
+    _socketData?.close();
+    _socketData = null;
+
+    _isSendingCommand = false;
+    _isReceingData = false;
+
+    _continousData = null;
+    _isContinousDataActive = false;
+
+    _commandAnswer = null;
     _isNidaqConnected = false;
     _isRecording = false;
     _hasRecorded = false;
 
-    log.info('Connection closed');
+    _log.info('Connection closed');
   }
 
   /// PRIVATE API ///
-  Socket? _socket;
-  String? _lastAnswer;
-
-  bool _isNidaqConnected = false;
-  bool _isRecording = false;
-  bool _hasRecorded = false;
-
-  final log = Logger('TcpCommunication');
 
   ///
   /// Listen to the server's acknowledgment.
-  void _listenToServerAnswer(List<int> data) {
-    _lastAnswer = utf8.decode(data);
+  void _listenToCommunicationAnswer(List<int> data) {
+    _commandAnswer = utf8.decode(data);
+    _log.info('Received command answer: $_commandAnswer');
+  }
+
+  void _listenToDataAnswer(List<int> data) {
+    final message = utf8.decode(data);
+    _dataAnswer = message;
   }
 
   // Prepare the singleton
   static final LokomatFesServerInterface _instance =
       LokomatFesServerInterface._();
   LokomatFesServerInterface._();
+}
+
+Future<Socket?> _connectToServer({
+  required String ipAddress,
+  required int port,
+  required int? nbOfRetries,
+  required Function(List<int>) hasDataCallback,
+}) async {
+  while (nbOfRetries == null || nbOfRetries > 0) {
+    try {
+      final socket = await Socket.connect(ipAddress, port);
+      socket.listen(hasDataCallback);
+
+      return socket;
+    } on SocketException {
+      final log = Logger('TcpCommunication');
+      log.info('Connection failed, retrying...');
+      await Future.delayed(const Duration(seconds: 1));
+      nbOfRetries = nbOfRetries == null ? null : nbOfRetries - 1;
+    }
+  }
+  return null;
 }
