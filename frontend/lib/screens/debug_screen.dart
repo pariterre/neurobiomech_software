@@ -15,7 +15,8 @@ class DebugScreen extends StatefulWidget {
 
 class _DebugScreenState extends State<DebugScreen> {
   final _onlineGraphKey = GlobalKey<_OnlineGraphState>();
-  final _stimulationTextController = TextEditingController();
+  final _stimulationDurationTextController = TextEditingController();
+  final _stimulationAmplitudeTextController = TextEditingController();
   final _saveTextController = TextEditingController();
 
   bool _isBusy = false;
@@ -49,7 +50,8 @@ class _DebugScreenState extends State<DebugScreen> {
   }
 
   void _resetInternalStates() {
-    _stimulationTextController.clear();
+    _stimulationDurationTextController.clear();
+    _stimulationAmplitudeTextController.clear();
     _saveTextController.clear();
 
     setState(() {
@@ -93,24 +95,30 @@ class _DebugScreenState extends State<DebugScreen> {
     setState(() => _isBusy = false);
   }
 
-  Future<void> _stimulate(String durationAsString) async {
+  Future<void> _stimulate(
+      String durationAsString, String amplitudeAsString) async {
     final duration = double.tryParse(durationAsString);
     if (duration == null) return;
+    final parameters = [duration.toString()];
+    String snackbarText = 'Stimulating for $duration seconds';
+
+    final amplitude = double.tryParse(amplitudeAsString);
+    if (amplitude != null) {
+      parameters.add(amplitude.toString());
+      snackbarText += ' with $amplitude mV';
+    } else {
+      snackbarText += ' with default amplitude';
+    }
 
     setState(() => _isBusy = true);
     final connexion = LokomatFesServerInterface.instance;
-    await connexion.send(Command.stimulate, parameters: [duration.toString()]);
+    await connexion.send(Command.stimulate, parameters: parameters);
     setState(() => _isBusy = false);
 
     // Notify the user that the data is being saved
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Stimulating for $duration seconds...',
-        ),
-      ),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(snackbarText)));
   }
 
   Future<void> _saveData(String path) async {
@@ -153,6 +161,59 @@ class _DebugScreenState extends State<DebugScreen> {
     final connexion = LokomatFesServerInterface.instance;
     await connexion.send(Command.plotData);
     setState(() => _isBusy = false);
+  }
+
+  Widget _buildStimulation() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text('Stimulation'),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 150,
+              child: TextFormField(
+                controller: _stimulationDurationTextController,
+                enabled: canSendOnlineCommand,
+                decoration: const InputDecoration(
+                  labelText: 'Duration (s)',
+                  border: OutlineInputBorder(),
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'(^\d*\.?\d{0,2})'))
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            SizedBox(
+              width: 150,
+              child: TextFormField(
+                controller: _stimulationAmplitudeTextController,
+                enabled: canSendOnlineCommand,
+                decoration: const InputDecoration(
+                  labelText: 'Amplitude (mV)',
+                  border: OutlineInputBorder(),
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'(^\d*)'))
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            IconButton(
+                onPressed: canSendOnlineCommand
+                    ? () => _stimulate(
+                          _stimulationDurationTextController.text,
+                          _stimulationAmplitudeTextController.text,
+                        )
+                    : null,
+                icon: const Icon(Icons.flash_on)),
+          ],
+        ),
+      ],
+    );
   }
 
   Widget _buildGraph() {
@@ -224,27 +285,7 @@ class _DebugScreenState extends State<DebugScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              SizedBox(
-                width: 300,
-                child: TextFormField(
-                  controller: _stimulationTextController,
-                  enabled: canSendOnlineCommand,
-                  decoration: InputDecoration(
-                    suffixIcon: IconButton(
-                        onPressed: canSendOnlineCommand
-                            ? () => _stimulate(_stimulationTextController.text)
-                            : null,
-                        icon: const Icon(Icons.flash_on)),
-                    labelText: 'Stimulation duration (s)',
-                    hintText: 'Enter a duration in seconds',
-                    border: const OutlineInputBorder(),
-                  ),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                        RegExp(r'(^\d*\.?\d{0,2})'))
-                  ],
-                ),
-              ),
+              _buildStimulation(),
               const SizedBox(height: 20),
               Text('Data related commands',
                   style: Theme.of(context).textTheme.titleMedium),
@@ -314,6 +355,8 @@ class _OnlineGraphState extends State<_OnlineGraph> {
     final nidaq = LokomatFesServerInterface.instance.continousData!.nidaq;
     final rehastim = LokomatFesServerInterface.instance.continousData!.rehastim;
 
+    final minTime = nidaq.t.isEmpty ? 0 : nidaq.t.last - 10;
+
     return SizedBox(
       width: 300,
       height: 200,
@@ -322,16 +365,24 @@ class _OnlineGraphState extends State<_OnlineGraph> {
           lineBarsData: [
             LineChartBarData(
                 spots: nidaq.t.asMap().entries.map((index) {
+              if (nidaq.t[index.key] < minTime) return FlSpot.nullSpot;
+
               final t = nidaq.t[index.key] - nidaq.t0;
               final y = nidaq.data[0][index.key];
               return FlSpot(t, y);
             }).toList()),
-            LineChartBarData(
-                spots: rehastim.data.map((data) {
-              final t = data.t - rehastim.t0;
-              final y = data.channels[0].amplitude;
-              return FlSpot(t, y);
-            }).toList())
+            ...rehastim.data.map((data) {
+              if (data.t + data.duration < minTime) return LineChartBarData();
+
+              return LineChartBarData(
+                color: Colors.red,
+                spots: [
+                  FlSpot(data.t - rehastim.t0, data.channels[0].amplitude),
+                  FlSpot(data.t - rehastim.t0 + data.duration,
+                      data.channels[0].amplitude),
+                ],
+              );
+            }).toList(),
           ],
         ),
       ),

@@ -11,7 +11,7 @@ void main() async {
     }
   });
 
-  // TODO: Added a ping-pong test to check if the server is running
+  // TODO: Add the schedule communication (get the available schedules, the selected schedules, set a schedule and unset a schedule)
 
   runApp(const MyApp());
 }
