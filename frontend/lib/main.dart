@@ -6,7 +6,9 @@ import 'package:logging/logging.dart';
 void main() async {
   // Configure logging
   Logger.root.onRecord.listen((record) {
-    debugPrint('${record.level.name}: ${record.time}: ${record.message}');
+    if (record.level > Level.INFO) {
+      debugPrint('${record.level.name}: ${record.time}: ${record.message}');
+    }
   });
 
   // TODO: Added a ping-pong test to check if the server is running

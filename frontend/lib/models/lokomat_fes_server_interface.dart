@@ -223,7 +223,7 @@ class LokomatFesServerInterface {
     await _send(Command.startFetchingData, []);
     _log.info('Automatic data fetch started');
 
-    Timer.periodic(const Duration(milliseconds: 100), (timer) async {
+    Timer.periodic(const Duration(milliseconds: 200), (timer) async {
       if (_isNidaqConnected && _isContinousDataActive) {
         await _send(Command.fetchData, []);
       } else {

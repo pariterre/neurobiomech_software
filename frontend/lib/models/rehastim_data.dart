@@ -10,7 +10,7 @@ class Channel {
 
 class Stimulation {
   final double t;
-  final int duration;
+  final double duration;
   final List<Channel> channels;
 
   Stimulation({

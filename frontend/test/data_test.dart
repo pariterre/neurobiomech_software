@@ -72,7 +72,7 @@ void main() {
       "data": [
         [
           0.2,
-          2,
+          2.0,
           [
             {"channel_index": 1, "amplitude": 2},
             {"channel_index": 2, "amplitude": 4}
@@ -80,7 +80,7 @@ void main() {
         ],
         [
           1.0,
-          3,
+          3.0,
           [
             {"channel_index": 1, "amplitude": 2},
             {"channel_index": 2, "amplitude": 4}
