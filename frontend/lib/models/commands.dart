@@ -4,6 +4,7 @@ enum Command {
   startRecording,
   stopRecording,
   stimulate,
+  startFetchingData,
   fetchData,
   plotData,
   saveData,
@@ -24,16 +25,18 @@ enum Command {
         return 3;
       case Command.stimulate:
         return 4;
-      case Command.fetchData:
+      case Command.startFetchingData:
         return 5;
-      case Command.plotData:
+      case Command.fetchData:
         return 6;
-      case Command.saveData:
+      case Command.plotData:
         return 7;
-      case Command.quit:
+      case Command.saveData:
         return 8;
-      case Command.shutdown:
+      case Command.quit:
         return 9;
+      case Command.shutdown:
+        return 10;
     }
   }
 
@@ -51,6 +54,7 @@ enum Command {
       case Command.quit:
       case Command.shutdown:
         return false;
+      case Command.startFetchingData:
       case Command.fetchData:
         return true;
     }

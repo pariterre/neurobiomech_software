@@ -15,6 +15,17 @@ class Data:
         self._t0: datetime = datetime.now() if t0 is None else t0
         self.set_t0(new_t0=self._t0)  # Just make sure t0 is the exact same for both devices
 
+    def __len__(self) -> int:
+        """Get the length of the data.
+
+        Returns
+        -------
+        out : int
+            Length of the data.
+        """
+
+        return len(self.nidaq)
+
     @property
     def t0(self) -> datetime:
         """Get the starting time of the recording.

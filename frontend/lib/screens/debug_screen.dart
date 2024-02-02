@@ -43,7 +43,17 @@ class _DebugScreenState extends State<DebugScreen> {
     setState(() => _isBusy = true);
     final connexion = LokomatFesServerInterface.instance;
     await connexion.send(Command.quit);
-    setState(() => _isBusy = false);
+    _resetInternalStates();
+  }
+
+  void _resetInternalStates() {
+    _stimulationTextController.clear();
+    _saveTextController.clear();
+
+    setState(() {
+      _isBusy = false;
+      _showingGraph = false;
+    });
   }
 
   Future<void> _connectNidaq() async {
@@ -57,7 +67,7 @@ class _DebugScreenState extends State<DebugScreen> {
     setState(() => _isBusy = true);
     final connexion = LokomatFesServerInterface.instance;
     await connexion.send(Command.stopNidaq);
-    setState(() => _isBusy = false);
+    _resetInternalStates();
   }
 
   Future<void> _shutdown() async {
@@ -171,7 +181,8 @@ class _DebugScreenState extends State<DebugScreen> {
               ),
               const SizedBox(height: 12),
               ElevatedButton(
-                  onPressed: LokomatFesServerInterface.instance.isInitialized
+                  onPressed: !_isBusy &&
+                          LokomatFesServerInterface.instance.isInitialized
                       ? (connexion.isNidaqConnected
                           ? _disconnectNidaq
                           : _connectNidaq)
@@ -181,9 +192,10 @@ class _DebugScreenState extends State<DebugScreen> {
                       : 'Connect Nidaq')),
               const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: LokomatFesServerInterface.instance.isInitialized
-                    ? _shutdown
-                    : null,
+                onPressed:
+                    !_isBusy && LokomatFesServerInterface.instance.isInitialized
+                        ? _shutdown
+                        : null,
                 child: const Text('Shutdown'),
               ),
               const SizedBox(height: 20),

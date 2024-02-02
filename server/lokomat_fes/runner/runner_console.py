@@ -214,6 +214,12 @@ class RunnerConsole(RunnerGeneric):
 
         return _try_command(self.start_stimulation, duration)
 
+    def _start_fetch_continuous_data_command(self, parameters: list[str]) -> bool:
+        if not _check_number_parameters("start_fetch_data", parameters, expected=None):
+            return False
+
+        return _try_command(self._start_fetch_continuous_data)
+
     def _fetch_continuous_data_command(self, parameters: list[str]) -> bool:
         if not _check_number_parameters("fetch_data", parameters, expected={"from_top": False}):
             return False

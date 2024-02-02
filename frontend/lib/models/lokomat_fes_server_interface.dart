@@ -165,6 +165,7 @@ class LokomatFesServerInterface {
         _manageFetchedData();
         break;
 
+      case Command.startFetchingData:
       case Command.stimulate:
       case Command.plotData:
       case Command.saveData:
@@ -180,7 +181,9 @@ class LokomatFesServerInterface {
       await Future.delayed(const Duration(milliseconds: 100));
     }
     final message = _commandAnswer!;
+    _log.info('Received command answer: $_commandAnswer');
     _commandAnswer = null;
+    _isSendingCommand = false;
     return message == 'OK';
   }
 
@@ -189,7 +192,9 @@ class LokomatFesServerInterface {
       await Future.delayed(const Duration(milliseconds: 100));
     }
     final message = _dataAnswer!;
+    _log.info('Received data answer');
     _dataAnswer = null;
+    _isReceivingData = false;
     return message;
   }
 
@@ -203,14 +208,22 @@ class LokomatFesServerInterface {
         nbRehastimChannels: answer["rehastimNbChannels"]);
   }
 
-  void startAutomaticDataFetch() {
+  void startAutomaticDataFetch() async {
     if (_continousData == null) {
       _log.severe('Data not initialized');
       return;
     }
 
+    if (_isContinousDataActive) {
+      _log.warning('Automatic data fetch already active');
+      return;
+    }
+
     _isContinousDataActive = true;
-    Timer.periodic(const Duration(milliseconds: 1000), (timer) async {
+    await _send(Command.startFetchingData, []);
+    _log.info('Automatic data fetch started');
+
+    Timer.periodic(const Duration(milliseconds: 100), (timer) async {
       if (_isNidaqConnected && _isContinousDataActive) {
         await _send(Command.fetchData, []);
       } else {
@@ -272,14 +285,11 @@ class LokomatFesServerInterface {
   /// Listen to the server's acknowledgment.
   void _listenToCommandAnswer(List<int> data) {
     _commandAnswer = utf8.decode(data);
-    _log.info('Received command answer: $_commandAnswer');
-    _isSendingCommand = false;
   }
 
   void _listenToDataAnswer(List<int> data) {
     final message = utf8.decode(data);
     _dataAnswer = message;
-    _isReceivingData = false;
   }
 
   // Prepare the singleton

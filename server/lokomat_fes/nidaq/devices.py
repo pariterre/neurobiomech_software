@@ -106,10 +106,14 @@ class NiDaqGeneric(ABC):
 
     def connect(self) -> None:
         """Connect the NiDaq"""
+        if self._is_connected:
+            raise RuntimeError("Cannot connect the device while it is already connected")
         self._start_task()
 
     def disconnect(self) -> None:
         """Disconnect the NiDaq"""
+        if not self._is_connected:
+            raise RuntimeError("Cannot disconnect the device while it is not connected")
         self._stop_task()
 
     def start_recording(self) -> None:

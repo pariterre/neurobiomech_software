@@ -88,6 +88,15 @@ class RunnerGeneric(ABC):
         """
         return self._trial_data
 
+    def _start_fetch_continuous_data(self) -> None:
+        """Start fetching the continuous data."""
+        _logger.info("Starting to fetch the continuous data")
+
+        if self._continuous_data is None:
+            _logger.error("Cannot fetch continuous data while no data is recorded")
+            raise RuntimeError("Cannot fetch continuous data while no data is recorded")
+        self._last_fetch_continuous_data_index = len(self._continuous_data)
+
     def _fetch_continuous_data(self, from_top: bool = False) -> Data:
         """Fetch the last recorded trial.
 

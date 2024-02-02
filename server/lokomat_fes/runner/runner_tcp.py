@@ -19,11 +19,12 @@ class _Command(Enum):
     START_RECORDING = 2
     STOP_RECORDING = 3
     STIMULATE = 4
-    FETCH_DATA = 5
-    PLOT_DATA = 6
-    SAVE_DATA = 7
-    QUIT = 8
-    SHUTDOWN = 9
+    START_FETCH_DATA = 5
+    FETCH_DATA = 6
+    PLOT_DATA = 7
+    SAVE_DATA = 8
+    QUIT = 9
+    SHUTDOWN = 10
 
     def __str__(self) -> str:
         if self.name == "START_NIDAQ":
@@ -36,6 +37,8 @@ class _Command(Enum):
             return "stop"
         elif self.name == "STIMULATE":
             return "stim"
+        elif self.name == "START_FETCH_DATA":
+            return "start_fetch"
         elif self.name == "FETCH_DATA":
             return "fetch"
         elif self.name == "PLOT_DATA":
@@ -145,7 +148,6 @@ class RunnerTcp(RunnerConsole):
                 if command is None:
                     break
 
-                skipAcknowledgment = False
                 if command == str(_Command.START_NIDAQ):
                     success = self._start_nidaq_command(parameters)
 
@@ -160,6 +162,9 @@ class RunnerTcp(RunnerConsole):
 
                 elif command == str(_Command.STIMULATE):
                     success = self._stimulate_command(parameters)
+
+                elif command == str(_Command.START_FETCH_DATA):
+                    success = self._start_fetch_continuous_data_command(parameters)
 
                 elif command == str(_Command.FETCH_DATA):
                     success = self._fetch_continuous_data_command(parameters)
@@ -179,13 +184,15 @@ class RunnerTcp(RunnerConsole):
                     success = False
 
                 # Send acknowledgment back
-                if not skipAcknowledgment:
-                    if not self._send_acknowledgment(success):
-                        break
+                if not self._send_acknowledgment(success):
+                    break
 
             # Make sure the devices are stopped
             if self._is_recording:
                 self.stop_recording()
+
+            if self._nidaq.is_connected:
+                self.stop_nidaq()
 
             # Close the connection when done
             self._close_connection()
