@@ -209,14 +209,10 @@ class RunnerTcp(RunnerConsole):
         if not out:
             return out
 
-        while self._continuous_data.nidaq.t0_offset is None:
-            time.sleep(0)  # This requires at least one data point to be received
-
         self._dataConnexion.sendall(
             json.dumps(
                 {
                     "t0": self._continuous_data.t0.timestamp(),
-                    "nidaqT0Offset": self._continuous_data.nidaq.t0_offset,
                     "nidaqNbChannels": self._nidaq.num_channels,
                     "rehastimNbChannels": self._rehastim.nb_channels,
                 }

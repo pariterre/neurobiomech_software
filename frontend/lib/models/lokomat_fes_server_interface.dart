@@ -24,7 +24,7 @@ class LokomatFesServerInterface {
   bool _isContinousDataActive = false;
   bool get isContinousDataActive => _isContinousDataActive;
   Data? _continousData;
-  Data get continousData => _continousData!;
+  Data? get continousData => _continousData;
 
   bool _isSendingCommand = false;
   bool _isReceivingData = false;
@@ -150,6 +150,7 @@ class LokomatFesServerInterface {
       case Command.stopNidaq:
         _isNidaqConnected = false;
         _isRecording = false;
+        stopAutomaticDataFetch();
         break;
 
       case Command.startRecording:
@@ -203,12 +204,12 @@ class LokomatFesServerInterface {
 
     _continousData = Data(
         t0: answer['t0'],
-        nidaqT0Offset: answer["nidaqT0Offset"],
         nbNidaqChannels: answer["nidaqNbChannels"],
         nbRehastimChannels: answer["rehastimNbChannels"]);
   }
 
-  void startAutomaticDataFetch() async {
+  void startAutomaticDataFetch(
+      {required Function() onContinousDataReady}) async {
     if (_continousData == null) {
       _log.severe('Data not initialized');
       return;
@@ -219,6 +220,7 @@ class LokomatFesServerInterface {
       return;
     }
 
+    _continousData!.clear();
     _isContinousDataActive = true;
     await _send(Command.startFetchingData, []);
     _log.info('Automatic data fetch started');
@@ -226,6 +228,7 @@ class LokomatFesServerInterface {
     Timer.periodic(const Duration(milliseconds: 200), (timer) async {
       if (_isNidaqConnected && _isContinousDataActive) {
         await _send(Command.fetchData, []);
+        onContinousDataReady();
       } else {
         timer.cancel();
       }

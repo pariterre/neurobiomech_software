@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 import threading
 from typing import Callable, Any
 
@@ -28,7 +29,7 @@ class NiDaqGeneric(ABC):
         self._n_samples_per_block = int(self._time_between_samples * self._frame_rate)  # Number of samples per block
 
         # Data releated variables
-        self._data: NiDaqData = NiDaqData()
+        self._data: NiDaqData = None
 
         # Callback function that is called when new data are added
         self._is_recording: bool = False
@@ -108,13 +109,16 @@ class NiDaqGeneric(ABC):
         """Connect the NiDaq"""
         if self._is_connected:
             raise RuntimeError("Cannot connect the device while it is already connected")
+        self._data = NiDaqData()
         self._start_task()
+        self._is_connected = True
 
     def disconnect(self) -> None:
         """Disconnect the NiDaq"""
         if not self._is_connected:
             raise RuntimeError("Cannot disconnect the device while it is not connected")
         self._stop_task()
+        self._is_connected = False
 
     def start_recording(self) -> None:
         """Start recording"""
@@ -181,7 +185,7 @@ class NiDaqGeneric(ABC):
         dt = self.dt  # This is so we finish the time vector one dt before the next sample
 
         prev_t, _ = self._data.sample_block(index=-1, unsafe=True)
-        t0 = 0 if prev_t is None else (prev_t[-1] + dt - self._data.t0_offset)
+        t0 = datetime.now().timestamp() if prev_t is None else (prev_t[-1] + dt)
         t = np.linspace(t0, t0 + self._time_between_samples - dt, n_frames)
 
         self._data.add(t, data)
@@ -216,8 +220,6 @@ class NiDaqGeneric(ABC):
     def _start_task(self) -> None:
         """Start the NiDaq task"""
         self._task.start()
-        self._is_connected = True
 
     def _stop_task(self) -> None:
         self._task.stop()
-        self._is_connected = False

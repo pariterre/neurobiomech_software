@@ -24,6 +24,14 @@ class RehastimData {
   final double t0;
   final List<Stimulation> data;
 
+  void clear() {
+    data.clear();
+  }
+
+  int get length => data.length;
+  bool get isEmpty => data.isEmpty;
+  bool get isNotEmpty => data.isNotEmpty;
+
   RehastimData({required int nbChannels, required this.t0}) : data = [];
 
   void appendFromJson(Map<String, dynamic> json) {

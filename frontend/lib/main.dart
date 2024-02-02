@@ -12,8 +12,6 @@ void main() async {
   });
 
   // TODO: Added a ping-pong test to check if the server is running
-  // TODO: Add button to fetch data from the server
-  // TODO: Add graph to display the data (offline and online)
 
   runApp(const MyApp());
 }

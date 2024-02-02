@@ -87,7 +87,8 @@ class RehastimData:
             List of data vectors.
             Each vector is a tuple of (time [float], duration [float] ms, tuple of channels configuration).
         """
-        self._t0: datetime = datetime.now() if t0 is None else t0
+        self._t0: float = None
+        self.set_t0(new_t0=t0)
         self._data: list[tuple[float, float, tuple[Channel, ...]]] = [] if data is None else data
 
     def __len__(self) -> int:
@@ -111,6 +112,10 @@ class RehastimData:
         """
         return bool(self._data)
 
+    def clear(self) -> None:
+        """Clear the data."""
+        self._data = []
+
     def plot(self, ax=None, show: bool = True) -> None | Any:
         """Plot the data.
 
@@ -128,7 +133,7 @@ class RehastimData:
         color = "red"
         ax.set_ylabel("Amplitude [mA]", color=color)
         ax.tick_params(axis="y", labelcolor=color)
-        all_time = self.time
+        all_time = self.time - self._t0
         all_duration = self.duration_as_array[: all_time.shape[0]]
         all_amplitude = self.amplitude_as_array.T[: all_time.shape[0], :]
         for time, duration, amplitude in zip(all_time, all_duration, all_amplitude):
@@ -149,7 +154,7 @@ class RehastimData:
         out : datetime
             Starting time of the recording.
         """
-        return self._t0
+        return datetime.fromtimestamp(self._t0)
 
     def set_t0(self, new_t0: datetime | None = None) -> None:
         """Reset the starting time of the recording.
@@ -159,7 +164,7 @@ class RehastimData:
         new_t0 : datetime | None
             New starting time of the recording. If None, the starting time is set to the current time.
         """
-        self._t0 = new_t0 if new_t0 is not None else datetime.now()
+        self._t0 = (new_t0 if new_t0 is not None else datetime.now()).timestamp()
 
     def add(self, duration: float, channels: tuple[Channel | pyScienceModeChannel, ...] | None) -> None:
         """Add data from a Rehastim device to the data.
@@ -246,11 +251,13 @@ class RehastimData:
 
         time = self.time
 
-        first_index = 0
+        first_index = None
         for i in range(len(time)):
             if time[i] >= t0:
                 first_index = i
                 break
+        else:
+            return []
 
         last_index = 0
         for i in reversed(range(len(time))):
@@ -272,8 +279,7 @@ class RehastimData:
         if not self._data:
             return np.array([])
 
-        t0 = self._t0.timestamp()
-        return np.array([t - t0 for t, duration, _ in self._data if duration is not None])
+        return np.array([t for t, duration, _ in self._data if duration is not None])
 
     @property
     def duration_as_array(self) -> np.ndarray:
@@ -326,7 +332,7 @@ class RehastimData:
         """
 
         out = RehastimData()
-        out._t0 = deepcopy(self._t0)
+        out._t0 = self._t0
         out._data = deepcopy(self._data)
         return out
 
@@ -380,7 +386,7 @@ class RehastimData:
             data = [list((d[0], d[1], tuple(channel.serialize(to_json=True) for channel in d[2]))) for d in self._data]
         else:
             data = self._data
-        return {"t0": self._t0.timestamp(), "data": data}
+        return {"t0": self._t0, "data": data}
 
     @classmethod
     def deserialize(cls, data: dict) -> "RehastimData":
@@ -397,6 +403,6 @@ class RehastimData:
             Deserialized data.
         """
         out = cls()
-        out._t0 = datetime.fromtimestamp(data["t0"])
+        out._t0 = data["t0"]
         out._data = data["data"]
         return out

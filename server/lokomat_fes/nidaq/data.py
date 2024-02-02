@@ -15,11 +15,6 @@ class NiDaqData:
     _t0 : datetime | None
         Starting time of the recording (set at the moment of the declaration of the class or that the
         time [set_t0] is called).
-    _t0_offset : float
-        Offset to add to the time to get the real time (in seconds). It is the difference between the t0 and actual first data.
-        This is to account for the fact that the NI DAQ device takes time to launch, but the first data are still
-        considered to be at time=0. The offset makes sure the _t0 (in datetime) actually corresponds to the first data
-        so it can be synchronized with other devices. This value should correspond to the first time of the first data block.
     _t : list[np.ndarray]
         List of time vectors.
     _data : list[np.ndarray]
@@ -29,28 +24,22 @@ class NiDaqData:
     def __init__(
         self,
         t0: datetime | None = None,
-        t0_offset: float | None = None,
         t: list[np.ndarray] | None = None,
         data: list[np.ndarray] | None = None,
     ) -> None:
         """
         Parameters
         ----------
-        t0 : datetime | None
-            Starting time of the recording (set at the moment of the declaration of the class or that the
-            time [set_t0] is called).
-        t0_offset : float | None
-            Offset to add to the time to get the real time (in seconds). It is the difference between the t0 and actual first data.
-            This is to account for the fact that the NI DAQ device takes time to launch, but the first data are still
-            considered to be at time=0. The offset makes sure the _t0 (in datetime) actually corresponds to the first data
-            so it can be synchronized with other devices. This value should correspond to the first time of the first data block.
+        t0 : float | None
+            Starting time (in datime.timestamps()) of the recording ([default] is the time the first values come in).
         t : list[np.ndarray] | None
             List of time vectors.
         data : list[np.ndarray] | None
             List of data vectors.
         """
-        self._t0: datetime = datetime.now() if t0 is None else t0
-        self._t0_offset: float = None if t0_offset is None else t0_offset
+        self._t0: float = None
+        self.set_t0(new_t0=t0)
+
         self._t: list[np.ndarray] = [] if t is None else t
         self._data: list[np.ndarray] = [] if data is None else data
 
@@ -62,31 +51,7 @@ class NiDaqData:
         new_t0 : datetime | None
             New starting time of the recording. If None, the starting time is set to the current time.
         """
-        self._t0 = new_t0 if new_t0 is not None else datetime.now()
-
-    def set_t0_offset(self, new_t0_offset: datetime | None = None) -> None:
-        """Reset the starting time offset of the recording.
-
-        Parameters
-        ----------
-        new_t0_offset : datetime | None
-            New starting time offset of the recording. If None, the starting time offset is set to the current time.
-        """
-        if new_t0_offset is None:
-            self._t0_offset = datetime.now().timestamp() - self._t0.timestamp()  # seconds
-        else:
-            self._t0_offset = new_t0_offset
-
-    @property
-    def t0_offset(self) -> float:
-        """Get the starting time offset of the recording.
-
-        Returns
-        -------
-        t : float
-            Starting time offset of the recording.
-        """
-        return self._t0_offset
+        self._t0 = (new_t0 if new_t0 is not None else datetime.now()).timestamp()
 
     def add(self, t: np.ndarray, data: np.ndarray) -> None:
         """Add data from a NI DAQ device to the data.
@@ -99,10 +64,10 @@ class NiDaqData:
         data : np.ndarray
             Data vector
         """
-        if self._t0_offset is None:
-            self.set_t0_offset()
+        if self._t0 is None:
+            self.set_t0()
 
-        self._t.append(t + self._t0_offset)
+        self._t.append(t)
         self._data.append(data)
 
     def add_sample_block(self, t: np.ndarray, data: np.ndarray) -> None:
@@ -116,10 +81,7 @@ class NiDaqData:
         data : np.ndarray
             Data vector
         """
-        if self._t0_offset is None:
-            self.set_t0_offset()
-
-        self._t.append(t + self._t0_offset)
+        self._t.append(t)
         self._data.append(data)
 
     def __len__(self) -> int:
@@ -142,6 +104,11 @@ class NiDaqData:
             True if the data contains data, False otherwise.
         """
         return len(self._t) > 0
+
+    def clear(self) -> None:
+        """Clear the data."""
+        self._t = []
+        self._data = []
 
     def sample_block(self, index: int | slice, unsafe: bool = False) -> tuple[np.ndarray | None, np.ndarray | None]:
         """Get a block of data.
@@ -196,7 +163,7 @@ class NiDaqData:
         ax.tick_params(axis="y", labelcolor=color)
 
         # We have to make sure the time and data have the same shape because new data can be added at any time
-        t = self.time
+        t = self.time - self._t0
         data = self.as_array.T[: t.shape[0], :]
         ax.plot(t, data, color=color)
 
@@ -214,7 +181,7 @@ class NiDaqData:
         t : datetime
             Starting time of the recording.
         """
-        return deepcopy(self._t0)
+        return datetime.fromtimestamp(self._t0)
 
     @property
     def time(self) -> np.ndarray:
@@ -259,7 +226,6 @@ class NiDaqData:
 
         out = NiDaqData()
         out._t0 = deepcopy(self._t0)
-        out._t0_offset = deepcopy(self._t0_offset)
         out._t = deepcopy(self._t)
         out._data = deepcopy(self._data)
         return out
@@ -317,7 +283,7 @@ class NiDaqData:
             t = self._t
             data = self._data
 
-        return {"t0": self._t0.timestamp(), "t0_offset": self._t0_offset, "t": t, "data": data}
+        return {"t0": self._t0, "t": t, "data": data}
 
     @classmethod
     def deserialize(cls, data: dict) -> "NiDaqData":
@@ -334,8 +300,7 @@ class NiDaqData:
             Deserialized data.
         """
         out = cls()
-        out._t0 = datetime.fromtimestamp(data["t0"])
-        out._t0_offset = data["t0_offset"]
+        out._t0 = data["t0"]
         out._t = data["t"]
         out._data = data["data"]
         return out

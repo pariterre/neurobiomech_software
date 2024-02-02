@@ -11,7 +11,7 @@ import 'package:frontend/models/rehastim_data.dart';
 
 void main() {
   test('NidaqData', () {
-    final data = NiDaqData(nbChannels: 2, t0: 1000.0, t0Offset: 0.01);
+    final data = NiDaqData(nbChannels: 2, t0: 1000.0);
     data.appendFromJson({
       "t": [
         [0.01, 0.26, 0.51, 0.76],
@@ -56,7 +56,6 @@ void main() {
     });
 
     expect(data.t0, 1000.0);
-    expect(data.t0Offset, 0.01);
     expect(data.t, Iterable.generate(24, (i) => 0.01 + i * 0.25).toList());
     expect(
         data.data[0],

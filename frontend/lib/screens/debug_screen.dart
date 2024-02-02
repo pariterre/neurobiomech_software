@@ -1,3 +1,4 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:frontend/models/commands.dart';
@@ -13,6 +14,7 @@ class DebugScreen extends StatefulWidget {
 }
 
 class _DebugScreenState extends State<DebugScreen> {
+  final _onlineGraphKey = GlobalKey<_OnlineGraphState>();
   final _stimulationTextController = TextEditingController();
   final _saveTextController = TextEditingController();
 
@@ -74,7 +76,7 @@ class _DebugScreenState extends State<DebugScreen> {
     setState(() => _isBusy = true);
     final connexion = LokomatFesServerInterface.instance;
     await connexion.send(Command.shutdown);
-    setState(() => _isBusy = false);
+    _resetInternalStates();
   }
 
   Future<void> _startRecording() async {
@@ -134,7 +136,9 @@ class _DebugScreenState extends State<DebugScreen> {
 
   Future<void> _showOnlineGraph() async {
     final connexion = LokomatFesServerInterface.instance;
-    connexion.startAutomaticDataFetch();
+    connexion.startAutomaticDataFetch(
+        onContinousDataReady: () =>
+            _onlineGraphKey.currentState?.setState(() {}));
     setState(() => _showingGraph = true);
   }
 
@@ -149,6 +153,15 @@ class _DebugScreenState extends State<DebugScreen> {
     final connexion = LokomatFesServerInterface.instance;
     await connexion.send(Command.plotData);
     setState(() => _isBusy = false);
+  }
+
+  Widget _buildGraph() {
+    final nidaq = LokomatFesServerInterface.instance.continousData?.nidaq;
+    if (nidaq == null || !_showingGraph) {
+      return const SizedBox();
+    }
+
+    return _OnlineGraph(key: _onlineGraphKey);
   }
 
   @override
@@ -215,7 +228,7 @@ class _DebugScreenState extends State<DebugScreen> {
                 width: 300,
                 child: TextFormField(
                   controller: _stimulationTextController,
-                  enabled: LokomatFesServerInterface.instance.isRecording,
+                  enabled: canSendOnlineCommand,
                   decoration: InputDecoration(
                     suffixIcon: IconButton(
                         onPressed: canSendOnlineCommand
@@ -246,6 +259,15 @@ class _DebugScreenState extends State<DebugScreen> {
                     _showingGraph ? 'Hide online graph' : 'Show online graph'),
               ),
               const SizedBox(height: 12),
+              _buildGraph(),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: _showingGraph
+                    ? LokomatFesServerInterface.instance.continousData?.clear
+                    : null,
+                child: const Text('Clear data'),
+              ),
+              const SizedBox(height: 12),
               ElevatedButton(
                 onPressed:
                     canManipulateData && !_showingGraph ? (_plotData) : null,
@@ -273,6 +295,44 @@ class _DebugScreenState extends State<DebugScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OnlineGraph extends StatefulWidget {
+  const _OnlineGraph({super.key});
+
+  @override
+  State<_OnlineGraph> createState() => _OnlineGraphState();
+}
+
+class _OnlineGraphState extends State<_OnlineGraph> {
+  @override
+  Widget build(BuildContext context) {
+    final nidaq = LokomatFesServerInterface.instance.continousData!.nidaq;
+    final rehastim = LokomatFesServerInterface.instance.continousData!.rehastim;
+
+    return SizedBox(
+      width: 300,
+      height: 200,
+      child: LineChart(
+        LineChartData(
+          lineBarsData: [
+            LineChartBarData(
+                spots: nidaq.t.asMap().entries.map((index) {
+              final t = nidaq.t[index.key] - nidaq.t0;
+              final y = nidaq.data[0][index.key];
+              return FlSpot(t, y);
+            }).toList()),
+            LineChartBarData(
+                spots: rehastim.data.map((data) {
+              final t = data.t - rehastim.t0;
+              final y = data.channels[0].amplitude;
+              return FlSpot(t, y);
+            }).toList())
+          ],
         ),
       ),
     );

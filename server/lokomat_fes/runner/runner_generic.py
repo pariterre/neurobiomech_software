@@ -95,6 +95,7 @@ class RunnerGeneric(ABC):
         if self._continuous_data is None:
             _logger.error("Cannot fetch continuous data while no data is recorded")
             raise RuntimeError("Cannot fetch continuous data while no data is recorded")
+        self._continuous_data.clear()
         self._last_fetch_continuous_data_index = len(self._continuous_data)
 
     def _fetch_continuous_data(self, from_top: bool = False) -> Data:
@@ -132,7 +133,7 @@ class RunnerGeneric(ABC):
 
         # Return a new Data object with the fetched data (t0 is still the real t0 though)
         t0 = self._continuous_data.t0
-        nidaq_data = NiDaqData(t0=t0, t0_offset=self._continuous_data.nidaq.t0_offset, t=nidaq[0], data=nidaq[1])
+        nidaq_data = NiDaqData(t0=t0, t=nidaq[0], data=nidaq[1])
         rehastim_data = RehastimData(t0=t0, data=rehastim)
         return Data(nidaq=nidaq_data, rehastim=rehastim_data, t0=self._continuous_data.t0)
 
@@ -167,6 +168,7 @@ class RunnerGeneric(ABC):
         """Start the NiDaq."""
         _logger.info("Starting NiDaq")
         self._nidaq.connect()
+        self._start_fetch_continuous_data()
 
     def stop_nidaq(self):
         """Stop the NiDaq."""

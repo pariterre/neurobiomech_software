@@ -12,8 +12,8 @@ class Data:
         """Initialize the data."""
         self.nidaq = NiDaqData() if nidaq is None else nidaq
         self.rehastim = RehastimData() if rehastim is None else rehastim
-        self._t0: datetime = datetime.now() if t0 is None else t0
-        self.set_t0(new_t0=self._t0)  # Just make sure t0 is the exact same for both devices
+        self._t0: float = None
+        self.set_t0(new_t0=t0)  # Make sure all the time corresponds
 
     def __len__(self) -> int:
         """Get the length of the data.
@@ -36,7 +36,7 @@ class Data:
             Starting time of the recording.
         """
 
-        return self._t0
+        return datetime.fromtimestamp(self._t0)
 
     def set_t0(self, new_t0: datetime | None = None) -> None:
         """Reset the time.
@@ -49,9 +49,9 @@ class Data:
         if new_t0 is None:
             new_t0 = datetime.now()
 
-        self._t0 = new_t0
-        self.nidaq.set_t0(new_t0=self._t0)
-        self.rehastim.set_t0(new_t0=self._t0)
+        self._t0 = new_t0.timestamp()
+        self.nidaq.set_t0(new_t0=new_t0)
+        self.rehastim.set_t0(new_t0=new_t0)
 
     def add_nidaq_data(self, t: float, data: float) -> None:
         """Add data to the NiDaq data.
@@ -80,6 +80,12 @@ class Data:
             raise ValueError("Synchronising rehastim data with nidaq requires that nidaq has data first")
 
         self.rehastim.add(duration, amplitude)
+
+    def clear(self) -> None:
+        """Clear the data."""
+        self.nidaq.clear()
+        self.rehastim.clear()
+        self.set_t0()
 
     @property
     def copy(self) -> "Data":
@@ -113,7 +119,7 @@ class Data:
         """
 
         return {
-            "t0": self.t0.timestamp(),
+            "t0": self._t0,
             "nidaq": self.nidaq.serialize(to_json=to_json),
             "rehastim": self.rehastim.serialize(to_json=to_json),
         }
@@ -136,7 +142,7 @@ class Data:
         out = cls()
         out.nidaq = NiDaqData.deserialize(data["nidaq"])
         out.rehastim = RehastimData.deserialize(data["rehastim"])
-        out.set_t0(new_t0=datetime.fromtimestamp(data["t0"]))
+        out.set_t0(new_t0=datetime.fromtimestamp(datetime.fromtimestamp(data["t0"])))
         return out
 
     def plot(self, show: bool = True) -> None:
