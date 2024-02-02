@@ -27,7 +27,7 @@ class LokomatFesServerInterface {
   Data get continousData => _continousData!;
 
   bool _isSendingCommand = false;
-  bool _isReceingData = false;
+  bool _isReceivingData = false;
 
   final _log = Logger('TcpCommunication');
 
@@ -60,7 +60,7 @@ class LokomatFesServerInterface {
         ipAddress: serverIp,
         port: commandPort,
         nbOfRetries: nbOfRetries,
-        hasDataCallback: _listenToCommunicationAnswer);
+        hasDataCallback: _listenToCommandAnswer);
     _socketData = await _connectToServer(
         ipAddress: serverIp,
         port: dataPort,
@@ -98,10 +98,10 @@ class LokomatFesServerInterface {
       Command command, List<String>? parameters) async {
     // Wait for the server to be ready to receive data in case data are expected
     if (_commandsThatRequireDataResponse.contains(command)) {
-      while (_isReceingData) {
+      while (_isReceivingData) {
         await Future.delayed(const Duration(milliseconds: 50));
       }
-      _isReceingData = true;
+      _isReceivingData = true;
     }
 
     // Wait for the server to be ready to receive a new command
@@ -172,18 +172,16 @@ class LokomatFesServerInterface {
     }
 
     // Receive acknowledgment from the server
-    final answer = await _waitForCommandAnswer();
-    _isSendingCommand = false;
-    return answer == "OK";
+    return await _waitForCommandAnswer();
   }
 
-  Future<String> _waitForCommandAnswer() async {
+  Future<bool> _waitForCommandAnswer() async {
     while (_commandAnswer == null) {
       await Future.delayed(const Duration(milliseconds: 100));
     }
     final message = _commandAnswer!;
     _commandAnswer = null;
-    return message;
+    return message == 'OK';
   }
 
   Future<String> _waitForDataAnswer() async {
@@ -192,7 +190,6 @@ class LokomatFesServerInterface {
     }
     final message = _dataAnswer!;
     _dataAnswer = null;
-    _isReceingData = false;
     return message;
   }
 
@@ -229,16 +226,21 @@ class LokomatFesServerInterface {
   Future<void> _manageFetchedData() async {
     /// This is for online data fetching. We do not mind missing data so just
     /// disregard the error if the data is not received properly
+
+    late final String dataRaw;
     try {
-      final dataRaw = await _waitForDataAnswer();
-      _isSendingCommand = false;
-      _isReceingData = false;
-      final data = jsonDecode(dataRaw);
-      _continousData!.appendFromJson(data);
+      dataRaw = await _waitForDataAnswer();
+    } catch (e) {
+      _log.severe('Error while receiving data: $e');
+    }
+
+    try {
+      _continousData!.appendFromJson(jsonDecode(dataRaw));
     } catch (e) {
       _log.severe('Error while decoding data: $e');
     }
-    _log.info('Revieved data');
+
+    _log.info('Data received');
   }
 
   ///
@@ -251,7 +253,7 @@ class LokomatFesServerInterface {
     _socketData = null;
 
     _isSendingCommand = false;
-    _isReceingData = false;
+    _isReceivingData = false;
 
     _continousData = null;
     _isContinousDataActive = false;
@@ -268,14 +270,16 @@ class LokomatFesServerInterface {
 
   ///
   /// Listen to the server's acknowledgment.
-  void _listenToCommunicationAnswer(List<int> data) {
+  void _listenToCommandAnswer(List<int> data) {
     _commandAnswer = utf8.decode(data);
     _log.info('Received command answer: $_commandAnswer');
+    _isSendingCommand = false;
   }
 
   void _listenToDataAnswer(List<int> data) {
     final message = utf8.decode(data);
     _dataAnswer = message;
+    _isReceivingData = false;
   }
 
   // Prepare the singleton

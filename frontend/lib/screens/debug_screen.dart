@@ -235,7 +235,8 @@ class _DebugScreenState extends State<DebugScreen> {
               ),
               const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: canManipulateData ? (_plotData) : null,
+                onPressed:
+                    canManipulateData && !_showingGraph ? (_plotData) : null,
                 child: const Text('Plot on server'),
               ),
               const SizedBox(height: 12),

@@ -163,7 +163,6 @@ class RunnerTcp(RunnerConsole):
 
                 elif command == str(_Command.FETCH_DATA):
                     success = self._fetch_continuous_data_command(parameters)
-                    skipAcknowledgment = True
 
                 elif command == str(_Command.PLOT_DATA):
                     success = self._plot_data_command(parameters)
