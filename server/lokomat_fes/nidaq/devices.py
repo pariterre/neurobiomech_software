@@ -185,7 +185,7 @@ class NiDaqGeneric(ABC):
         dt = self.dt  # This is so we finish the time vector one dt before the next sample
 
         prev_t, _ = self._data.sample_block(index=-1, unsafe=True)
-        t0 = datetime.now().timestamp() if prev_t is None else (prev_t[-1] + dt)
+        t0 = datetime.now().timestamp() - self._time_between_samples if prev_t is None else (prev_t[-1] + dt)
         t = np.linspace(t0, t0 + self._time_between_samples - dt, n_frames)
 
         self._data.add(t, data)
