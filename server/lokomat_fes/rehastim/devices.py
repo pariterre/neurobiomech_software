@@ -216,8 +216,9 @@ class Rehastim2(RehastimGeneric):
             amplitudes = [amplitudes] * self.nb_channels
 
         for channel in self._channels:
-            channel.set_amplitude(amplitudes[channel.get_no_channel() - 1])
-        self._channels_has_changed = True
+            if channel is not None and channel.get_amplitude() != amplitudes[channel.get_no_channel() - 1]:
+                channel.set_amplitude(amplitudes[channel.get_no_channel() - 1])
+                self._channels_has_changed = True
 
     def get_pulse_amplitude(self) -> list[float]:
         return [channel.get_amplitude() for channel in self._channels]

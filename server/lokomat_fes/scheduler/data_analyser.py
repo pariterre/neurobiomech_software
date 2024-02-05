@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, auto
 
 import numpy as np
 
@@ -6,20 +6,25 @@ from ..common.data import Data
 
 
 class Side(Enum):
-    LEFT = 0
-    RIGHT = 1
-    BOTH = 2
+    LEFT = auto()
+    RIGHT = auto()
+    BOTH = auto()
+
+
+class GaitEvent(Enum):
+    """Gait events."""
+
+    HEEL_STRIKE = 0.0
+    TOE_OFF = 0.6
 
 
 class DataAnalyser:
     @staticmethod
-    def percentage_of_stride(t: float, data: Data, side: Side) -> float:
+    def percentage_of_stride(data: Data, side: Side) -> float:
         """Get the percentage of the stride cycle.
 
         Parameters
         ----------
-        t : float
-            The current time in seconds since t0
         data : Data
             The data to use.
         side : Side

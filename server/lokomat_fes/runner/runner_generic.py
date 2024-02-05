@@ -5,7 +5,7 @@ from ..common.data import Data
 from ..nidaq import NiDaqGeneric, NiDaqData
 from ..rehastim import RehastimGeneric, RehastimData
 from ..scheduler.scheduler import Scheduler
-from ..scheduler.stimulation import StimulationAbstract
+from ..scheduler.automatic_stimulation_rule import AutomaticStimulationRule
 
 _logger = logging.getLogger("lokomat_fes")
 
@@ -204,7 +204,22 @@ class RunnerGeneric(ABC):
         self._is_recording = False
 
     ### STIMULATION DEVICE (REHASTIM) RELATED METHODS ###
-    def schedule_stimulation(self, stimulation: StimulationAbstract):
+    @property
+    def available_schedules(self) -> list[AutomaticStimulationRule]:
+        return self._scheduler.available_schedules
+
+    @property
+    def nb_channels_rehastim(self) -> int:
+        """Get the number of channels of the Rehastim.
+
+        Returns
+        -------
+        int
+            The number of channels of the Rehastim.
+        """
+        return self._rehastim.nb_channels
+
+    def schedule_stimulation(self, stimulation: AutomaticStimulationRule):
         """Schedule a stimulation.
 
         Parameters
@@ -217,7 +232,7 @@ class RunnerGeneric(ABC):
         _logger.info(f"Scheduling (index={len(self._scheduler)}) the stimulation {stimulation} ")
         self._scheduler.add(stimulation=stimulation)
 
-    def get_scheduled_stimulations(self) -> list[StimulationAbstract]:
+    def get_scheduled_stimulations(self) -> list[AutomaticStimulationRule]:
         """Get the scheduled stimulations.
 
         Returns
@@ -239,7 +254,7 @@ class RunnerGeneric(ABC):
         _logger.info(f"Removing the scheduled stimulation at index={index}")
         self._scheduler.remove(stimulation=self._scheduler.get_stimulations()[index])
 
-    def start_stimulation(self, duration: float):
+    def start_stimulation(self, duration: float | None):
         """Start the Rehastim stimulation."""
         amplitude = self._rehastim.get_pulse_amplitude()[0]
         width = self._rehastim.get_pulse_width()[0]

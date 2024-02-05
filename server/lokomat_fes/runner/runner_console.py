@@ -3,17 +3,9 @@ from typing import override
 
 from .runner_generic import RunnerGeneric
 from ..common.data import Data
-from ..scheduler.stimulation import Side, StrideBasedStimulation
+from ..scheduler.automatic_stimulation_rule import Side, AutomaticStimulationRule
 
 _logger = logging.getLogger("lokomat_fes")
-
-
-_available_schedules = {
-    "hip_at_swing_phase": {
-        "func": StrideBasedStimulation.stimulate_in_swing_phase,
-        "description": "Stimulate when the leg (27% to 56% of the stride) is in swing phase. Second argument is the side (0: left, 1: right, 2: both).",
-    },
-}
 
 
 class RunnerConsole(RunnerGeneric):
@@ -134,8 +126,9 @@ class RunnerConsole(RunnerGeneric):
             return False
 
         print("List of available schedules:")
-        for i, key in enumerate(_available_schedules):
-            print(f"\t{i} - {key}: {_available_schedules[key]['description']}")
+        available_schedules = self._scheduler.available_schedules
+        for i, key in enumerate(available_schedules):
+            print(f"\t{i} - {key}: {available_schedules[key]}")
 
         return True
 
@@ -146,10 +139,11 @@ class RunnerConsole(RunnerGeneric):
         index = _parse_int("index", parameters[0])
         if index is None:
             return False
-        if index >= len(_available_schedules):
-            _logger.error(f"Invalid index, there are only {len(_available_schedules)} available schedules.")
+
+        available_schedules = self._scheduler.available_schedules
+        if index >= len(available_schedules):
+            _logger.error(f"Invalid index, there are only {len(available_schedules)} available schedules.")
             return False
-        key = list(_available_schedules.keys())[index]
 
         side = Side.BOTH
         if len(parameters) >= 2:
