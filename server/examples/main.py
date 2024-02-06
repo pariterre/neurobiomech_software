@@ -30,7 +30,7 @@ def __main__() -> None:
     # runner = RunnerTcp(rehastim=rehastim, nidaq=nidaq)
 
     # Load the stimulation rules
-    runner.schedule_stimulation(runner.available_schedules[0])
+    # runner.schedule_stimulation(runner.available_schedules[0])
 
     # Plan some stimulations based on where we are in the stride cycle
     # runner.schedule_stimulation(StrideBasedStimulation.stimulate_in_swing_phase(side=Side.LEFT))

@@ -258,7 +258,6 @@ class RunnerGeneric(ABC):
         width = self._rehastim.get_pulse_width()[0]
         _logger.info(f"Starting Rehastim stimulation for {duration}s at {amplitude}mA and {width}ms.")
 
-        print(f"Starting Rehastim stimulation for {duration}s at {amplitude}mA and {width}ms.")
         self._rehastim.start_stimulation(duration)
 
     def stop_stimulation(self):

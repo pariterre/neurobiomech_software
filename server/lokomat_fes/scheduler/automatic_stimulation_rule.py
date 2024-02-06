@@ -83,7 +83,7 @@ class AutomaticStimulationRule:
         )
         start = self._start_stimulating_rule(time_since_last_stim, stride_left, stride_right)
         if self._continue_stimulating_rule is not None:
-            stop = not self._continue_stimulating_rule(time_since_last_stim, stride_left, stride_right)
+            stop = not start or not self._continue_stimulating_rule(time_since_last_stim, stride_left, stride_right)
         else:
             stop = self._end_stimulating_rule(time_since_last_stim, stride_left, stride_right)
 
