@@ -1,3 +1,4 @@
+from datetime import datetime
 from threading import Timer
 from typing import override, Any, Callable
 from abc import ABC, abstractproperty, abstractmethod
@@ -16,8 +17,7 @@ class RehastimGeneric(ABC):
         self.show_log = show_log
 
         self._device = self._get_initialized_device()
-        self._on_stimulation_started_callback: dict[Any, Callable[[], None]] = {}
-        self._on_stimulation_stopped_callback: dict[Any, Callable[[], None]] = {}
+        self._on_stimulation_changed_callback: dict[Any, Callable[[], None]] = {}
         self._is_stimulation_initialized = False
 
     @abstractproperty
@@ -28,30 +28,21 @@ class RehastimGeneric(ABC):
     def nb_channels(self) -> int:
         """Get the number of channels of the device."""
 
-    def register_to_on_stimulation_started(self, callback: Callable[[float, tuple[Channel, ...] | None], None]) -> None:
+    def register_to_on_stimulation_changed(self, callback: Callable[[float, tuple[Channel, ...] | None], None]) -> None:
         """Register a callback function that is called when the stimulation starts
         The callback function takes two arguments:
         - duration: the duration of the stimulation in seconds
         - channels: the channels that are stimulated. If None is sent for the channels, it means that the channels have
         not changed since the last stimulation (so the user can assume that the channels are the same as the last)
         """
-        self._on_stimulation_started_callback[hash(callback)] = callback
+        self._on_stimulation_changed_callback[hash(callback)] = callback
 
-    def unregister_to_on_stimulation_started(
+    def unregister_to_on_stimulation_changed(
         self, callback: Callable[[float, tuple[Channel, ...] | None], None]
     ) -> None:
         """Unregister a callback function that is called when the stimulation starts"""
-        if hash(callback) in self._on_stimulation_started_callback:
-            del self._on_stimulation_started_callback[hash(callback)]
-
-    def register_to_on_stimulation_stopped(self, callback: Callable[[], None]) -> None:
-        """Register a callback function that is called when the stimulation stops"""
-        self._on_stimulation_stopped_callback[hash(callback)] = callback
-
-    def unregister_to_on_stimulation_stopped(self, callback: Callable[[], None]) -> None:
-        """Unregister a callback function that is called when the stimulation stops"""
-        if hash(callback) in self._on_stimulation_stopped_callback:
-            del self._on_stimulation_stopped_callback[hash(callback)]
+        if hash(callback) in self._on_stimulation_changed_callback:
+            del self._on_stimulation_changed_callback[hash(callback)]
 
     def start_stimulation(self, duration: float = None) -> None:
         """Perform a stimulation.
@@ -68,8 +59,9 @@ class RehastimGeneric(ABC):
 
         # Notify the listeners that the stimulation is starting
         channels = self._get_channels()
-        for callback in self._on_stimulation_started_callback.values():
-            callback(duration, channels)
+        now = datetime.now().timestamp()
+        for callback in self._on_stimulation_changed_callback.values():
+            callback(now, duration, channels)
 
         if duration is not None:
             Timer(duration, self.stop_stimulation).start()
@@ -128,8 +120,10 @@ class RehastimGeneric(ABC):
         self._device.pause_stimulation()
 
         # Notify the listeners that the stimulation is stopping
-        for callback in self._on_stimulation_stopped_callback.values():
-            callback()
+        now = datetime.now().timestamp()
+        channels = self._get_channels()
+        for callback in self._on_stimulation_changed_callback.values():
+            callback(now, 0, channels)
 
     def dispose(self) -> None:
         """Dispose the device."""
@@ -216,8 +210,13 @@ class Rehastim2(RehastimGeneric):
             amplitudes = [amplitudes] * self.nb_channels
 
         for channel in self._channels:
-            if channel is not None and channel.get_amplitude() != amplitudes[channel.get_no_channel() - 1]:
-                channel.set_amplitude(amplitudes[channel.get_no_channel() - 1])
+            channel_idx = channel.get_no_channel() - 1
+            if (
+                channel is not None
+                and channel.get_amplitude() != amplitudes[channel_idx]
+                and amplitudes[channel_idx] is not None
+            ):
+                channel.set_amplitude(amplitudes[channel_idx])
                 self._channels_has_changed = True
 
     def get_pulse_amplitude(self) -> list[float]:

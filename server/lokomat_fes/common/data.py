@@ -53,34 +53,6 @@ class Data:
         self.nidaq.set_t0(new_t0=new_t0)
         self.rehastim.set_t0(new_t0=new_t0)
 
-    def add_nidaq_data(self, t: float, data: float) -> None:
-        """Add data to the NiDaq data.
-
-        Parameters
-        ----------
-        t : float
-            Time.
-        data : float
-            Data.
-        """
-
-        self.nidaq.add(t, data)
-
-    def add_rehastim_data(self, duration: float, amplitude: float) -> None:
-        """Add data to the Rehastim data.
-
-        Parameters
-        ----------
-        duration : float
-            Duration of the stimulation.
-        amplitude : float
-            Amplitude of the stimulation.
-        """
-        if not self.nidaq.has_data:
-            raise ValueError("Synchronising rehastim data with nidaq requires that nidaq has data first")
-
-        self.rehastim.add(duration, amplitude)
-
     def clear(self) -> None:
         """Clear the data."""
         self.nidaq.clear()

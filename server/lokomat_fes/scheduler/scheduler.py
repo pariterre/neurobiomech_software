@@ -87,8 +87,8 @@ class Scheduler:
             for stimulation in self._schedules.values():
                 stimulation.stimulation_amplitudes(t, self._data, amplitudes)
 
-            self._runner.set_stimulation_pulse_amplitude(amplitudes=amplitudes)
-            if any(amplitudes) is not None:
+            if any(e is not None for e in amplitudes):
+                self._runner.set_stimulation_pulse_amplitude(amplitudes=amplitudes)
                 logger.info(f"Starting or modifying a stimulation (amplitude 0 acting as stopping the stimulation)")
                 self._runner.start_stimulation()
 

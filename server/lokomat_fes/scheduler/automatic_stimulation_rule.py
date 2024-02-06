@@ -30,7 +30,7 @@ class AutomaticStimulationRule:
         self._name = name
         self._channels = channels
         self._amplitudes = amplitudes
-        self._are_stimulating: list[bool] = []  # One per channel
+        self._started_stimulating_at: float | None = None
 
         if start_stimulating_rule is None:
             raise ValueError("start_stimulating_rule cannot be None")
@@ -75,19 +75,26 @@ class AutomaticStimulationRule:
         # Get where we are in a stride cycle and whether we should stimulate or not channels
         stride_left = DataAnalyser.percentage_of_stride(data, Side.LEFT)
         stride_right = DataAnalyser.percentage_of_stride(data, Side.RIGHT)
+        if stride_left < 0 or stride_right < 0:
+            return
 
-        start = self._start_stimulating_rule(current_time, stride_left, stride_right)
+        time_since_last_stim = (
+            current_time - self._started_stimulating_at if self._started_stimulating_at is not None else None
+        )
+        start = self._start_stimulating_rule(time_since_last_stim, stride_left, stride_right)
         if self._continue_stimulating_rule is not None:
-            stop = not self._continue_stimulating_rule(current_time, stride_left, stride_right)
+            stop = not self._continue_stimulating_rule(time_since_last_stim, stride_left, stride_right)
         else:
-            stop = self._end_stimulating_rule(current_time, stride_left, stride_right)
+            stop = self._end_stimulating_rule(time_since_last_stim, stride_left, stride_right)
 
-        if stop:
+        if self._started_stimulating_at is not None and stop:
             # We don't mind if start is set as if we get to stop we will stop anyway
+            self._started_stimulating_at = None
             for index in range(len(amplitude_out)):
                 amplitude_out[index] = 0
             return
-        elif start:
+        elif self._started_stimulating_at is None and start:
+            self._started_stimulating_at = current_time
             for amplitude_index, i in enumerate(self._channels):
                 amplitude_out[i] = self._amplitudes[amplitude_index]
             return
@@ -143,12 +150,14 @@ def _condition_from_json(data: dict) -> Callable[[float, float, float], bool]:
     gait_percentage = None
     duration = None
     if "gait_event" in data:
-        if data["gait_event"] == "heel_strike":
-            gait_percentage = GaitEvent.HEEL_STRIKE.value
+        if data["gait_event"] == "heel_strike_0":
+            gait_percentage = GaitEvent.HEEL_STRIKE_0.value
         elif data["gait_event"] == "toe_off":
             gait_percentage = GaitEvent.TOE_OFF.value
+        elif data["gait_event"] == "heel_strike_100":
+            gait_percentage = GaitEvent.HEEL_STRIKE_100.value
         else:
-            raise ValueError("gait_event must be either 'heel_strike' or 'toe_off'")
+            raise ValueError("gait_event must be either 'heel_strike_0', 'heel_strike_100' or 'toe_off'")
     elif "gait_percentage" in data:
         gait_percentage = data["gait_percentage"]
 
@@ -174,11 +183,11 @@ def _condition_from_json(data: dict) -> Callable[[float, float, float], bool]:
 
     if data["comparison"] in ("greater_or_equal", ">=", "from"):
         comparison = ge
-    elif data["comparison"] in ("greater", ">", "after"):
+    elif data["comparison"] in ("greater_than", ">", "after"):
         comparison = gt
     elif data["comparison"] in ("less_or_equal", "<=", "to"):
         comparison = le
-    elif data["comparison"] in ("less", "<", "before"):
+    elif data["comparison"] in ("less_than", "<", "before"):
         comparison = lt
     else:
         raise ValueError(
@@ -199,7 +208,7 @@ def _condition_from_json(data: dict) -> Callable[[float, float, float], bool]:
 
 
 def _should_stimulate(
-    current_time: float,
+    current_time: float | None,
     current_left_gait_percentage: float,
     current_right_gait_percentage: float,
     side: Side,
@@ -218,6 +227,6 @@ def _should_stimulate(
         else:
             raise ValueError("side must be either 'left' or 'right'")
     elif duration is not None:
-        return current_time < duration
+        return current_time < duration if current_time is not None else False
     else:
         raise ValueError("gait_percentage or duration must be defined")

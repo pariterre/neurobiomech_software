@@ -14,8 +14,9 @@ class Side(Enum):
 class GaitEvent(Enum):
     """Gait events."""
 
-    HEEL_STRIKE = 0.0
+    HEEL_STRIKE_0 = 0.0
     TOE_OFF = 0.6
+    HEEL_STRIKE_100 = 1.0
 
 
 class DataAnalyser:

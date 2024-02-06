@@ -134,6 +134,8 @@ class RehastimData:
         ax.set_ylabel("Amplitude [mA]", color=color)
         ax.tick_params(axis="y", labelcolor=color)
         all_time = self.time - self._t0
+        if not all_time.any():
+            return
         all_duration = self.duration_as_array[: all_time.shape[0]]
         all_amplitude = self.amplitude_as_array.T[: all_time.shape[0], :]
         for time, duration, amplitude in zip(all_time, all_duration, all_amplitude):
@@ -166,18 +168,20 @@ class RehastimData:
         """
         self._t0 = (new_t0 if new_t0 is not None else datetime.now()).timestamp()
 
-    def add(self, duration: float, channels: tuple[Channel | pyScienceModeChannel, ...] | None) -> None:
+    def add(
+        self, now: float, duration: float | None, channels: tuple[Channel | pyScienceModeChannel, ...] | None
+    ) -> None:
         """Add data from a Rehastim device to the data.
 
         Parameters
         ----------
+        now : float
+            Timestamp of the data.
         duration : float
-            Duration of the stimulation. If duration is set to None, the user must call stop_undefined_stimulation_duration
-            to compute the duration of the stimulation.
+            Duration of the stimulation. If duration is set to None, the value is changed on the next start.
         amplitude : float
             Amplitude of the stimulation.
         """
-
         if channels is None:
             # Copy the previous values
             if not self.has_data:
@@ -190,21 +194,11 @@ class RehastimData:
                 Channel.from_pysciencemode(channel) if isinstance(channel, pyScienceModeChannel) else deepcopy(channel)
                 for channel in channels
             )
-        self._data.append((datetime.now().timestamp(), duration, channels))
+        if len(self._data) > 0 and self._data[-1][1] is None:
+            # If the previous duration was None, we set it to the current time
+            self._data[-1] = (self._data[-1][0], now - self._data[-1][0], self._data[-1][2])
 
-    def stop_undefined_stimulation_duration(self):
-        """Stop the stimulation duration that is set to None."""
-        if not self._data:
-            _logger.warning("No data to stop")
-            return
-
-        if self._data[-1][1] is not None:
-            return
-
-        stimulation_started_at = self._data[-1][0]
-        stimulation_lasted = datetime.now().timestamp() - stimulation_started_at
-        channels = self._data[-1][2]
-        self._data[-1] = (stimulation_started_at, stimulation_lasted, channels)
+        self._data.append((now, duration, channels))
 
     def sample_block(
         self, index: int | slice

@@ -59,14 +59,14 @@ def test_stimulating_with_callback():
         assert channels is not None
 
     rehastim = RehastimLokomatMock()
-    rehastim.register_to_on_stimulation_started(stimulation_callback)
+    rehastim.register_to_on_stimulation_changed(stimulation_callback)
 
     rehastim.start_stimulation()
     assert _callback_called
     rehastim.start_stimulation()  # Second time, channels should not be empty again
 
     _callback_called = False
-    rehastim.unregister_to_on_stimulation_started(stimulation_callback)
+    rehastim.unregister_to_on_stimulation_changed(stimulation_callback)
     rehastim.start_stimulation()
     assert not _callback_called
 

@@ -148,14 +148,12 @@ class RunnerGeneric(ABC):
     def _register_data_to_callbacks(self, data: Data):
         """Register the data to the callbacks."""
         self._nidaq.register_to_data_ready(data.nidaq.add_sample_block)
-        self._rehastim.register_to_on_stimulation_started(data.rehastim.add)
-        self._rehastim.register_to_on_stimulation_stopped(data.rehastim.stop_undefined_stimulation_duration)
+        self._rehastim.register_to_on_stimulation_changed(data.rehastim.add)
 
     def _unregister_data_to_callbacks(self, data: Data):
         """Unregister the data to the callbacks."""
         self._nidaq.unregister_to_data_ready(data.nidaq.add_sample_block)
-        self._rehastim.unregister_to_on_stimulation_started(data.rehastim.add)
-        self._rehastim.unregister_to_on_stimulation_stopped(data.rehastim.stop_undefined_stimulation_duration)
+        self._rehastim.unregister_to_on_stimulation_changed(data.rehastim.add)
 
     def _finalize_trial(self):
         """Finalize the data."""
@@ -254,12 +252,13 @@ class RunnerGeneric(ABC):
         _logger.info(f"Removing the scheduled stimulation at index={index}")
         self._scheduler.remove(stimulation=self._scheduler.get_stimulations()[index])
 
-    def start_stimulation(self, duration: float | None):
+    def start_stimulation(self, duration: float | None = None):
         """Start the Rehastim stimulation."""
         amplitude = self._rehastim.get_pulse_amplitude()[0]
         width = self._rehastim.get_pulse_width()[0]
         _logger.info(f"Starting Rehastim stimulation for {duration}s at {amplitude}mA and {width}ms.")
 
+        print(f"Starting Rehastim stimulation for {duration}s at {amplitude}mA and {width}ms.")
         self._rehastim.start_stimulation(duration)
 
     def stop_stimulation(self):

@@ -127,13 +127,13 @@ class RunnerConsole(RunnerGeneric):
 
         print("List of available schedules:")
         available_schedules = self._scheduler.available_schedules
-        for i, key in enumerate(available_schedules):
-            print(f"\t{i} - {key}: {available_schedules[key]}")
+        for i, schedule in enumerate(available_schedules):
+            print(f"\t{i} - {schedule}")
 
         return True
 
     def _schedule_stimulation_command(self, parameters: list[str]) -> bool:
-        if not _check_number_parameters("schedule_stim", parameters, expected={"index": True, "side": False}):
+        if not _check_number_parameters("schedule_stim", parameters, expected={"index": True}):
             return False
 
         index = _parse_int("index", parameters[0])
@@ -145,14 +145,7 @@ class RunnerConsole(RunnerGeneric):
             _logger.error(f"Invalid index, there are only {len(available_schedules)} available schedules.")
             return False
 
-        side = Side.BOTH
-        if len(parameters) >= 2:
-            side_index = _parse_int("side", parameters[1])
-            if side_index is None:
-                return False
-            side = Side(side_index)
-
-        return _try_command(self.schedule_stimulation, _available_schedules[key]["func"](side))
+        return _try_command(self.schedule_stimulation, available_schedules[index])
 
     def _unschedule_stimulation_command(self, parameters: list[str]) -> bool:
         if not _check_number_parameters("unschedule_stim", parameters, expected={"index": True}):
