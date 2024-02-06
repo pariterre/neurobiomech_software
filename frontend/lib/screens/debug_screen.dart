@@ -49,6 +49,8 @@ class _DebugScreenState extends State<DebugScreen> {
 
     _availableSchedules = await connexion.fetchScheduledStimulation(
         command: Command.availableSchedules);
+    _scheduledStimulations = await connexion.fetchScheduledStimulation(
+        command: Command.getScheduled);
 
     setState(() => _isBusy = false);
   }
@@ -232,63 +234,64 @@ class _DebugScreenState extends State<DebugScreen> {
   }
 
   Widget _buildAvailableScheduledStimulation() {
-    if (_availableSchedules.isEmpty) return const SizedBox();
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         const Text('Available scheduled stimulations'),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButton<ScheduledStimulation>(
-              value: _selectedAvailableSchedule,
-              icon: const Icon(Icons.arrow_downward),
-              elevation: 16,
-              style: const TextStyle(color: Colors.deepPurple),
-              underline: Container(
-                height: 2,
-                color: Colors.deepPurpleAccent,
+        if (_availableSchedules.isEmpty)
+          const Text('No available stimulations'),
+        if (_availableSchedules.isNotEmpty)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButton<ScheduledStimulation>(
+                value: _selectedAvailableSchedule,
+                icon: const Icon(Icons.arrow_downward),
+                elevation: 16,
+                style: const TextStyle(color: Colors.deepPurple),
+                underline: Container(
+                  height: 2,
+                  color: Colors.deepPurpleAccent,
+                ),
+                onChanged: (ScheduledStimulation? value) =>
+                    setState(() => _selectedAvailableSchedule = value),
+                items: _availableSchedules
+                    .map<DropdownMenuItem<ScheduledStimulation>>(
+                        (ScheduledStimulation value) {
+                  return DropdownMenuItem<ScheduledStimulation>(
+                    value: value,
+                    child: Text(value.toString()),
+                  );
+                }).toList(),
               ),
-              onChanged: (ScheduledStimulation? value) =>
-                  setState(() => _selectedAvailableSchedule = value),
-              items: _availableSchedules
-                  .map<DropdownMenuItem<ScheduledStimulation>>(
-                      (ScheduledStimulation value) {
-                return DropdownMenuItem<ScheduledStimulation>(
-                  value: value,
-                  child: Text(value.toString()),
-                );
-              }).toList(),
-            ),
-            const SizedBox(width: 12),
-            ElevatedButton(
-              onPressed:
-                  canSendOfflineCommand && _selectedAvailableSchedule != null
-                      ? () async {
-                          LokomatFesServerInterface.instance.send(
-                            Command.addSchedule,
-                            parameters: [
-                              _availableSchedules
-                                  .indexOf(_selectedAvailableSchedule!)
-                                  .toString()
-                            ],
-                          );
-                          setState(() {
-                            _scheduledStimulations = [];
-                            _selectedAvailableSchedule = null;
-                          });
-                          final connexion = LokomatFesServerInterface.instance;
-                          _scheduledStimulations =
-                              await connexion.fetchScheduledStimulation(
-                                  command: Command.getScheduled);
-                          setState(() {});
-                        }
-                      : null,
-              child: const Text('Add'),
-            ),
-          ],
-        ),
+              const SizedBox(width: 12),
+              ElevatedButton(
+                onPressed: canSendOfflineCommand &&
+                        _selectedAvailableSchedule != null
+                    ? () async {
+                        LokomatFesServerInterface.instance.send(
+                          Command.addSchedule,
+                          parameters: [
+                            _availableSchedules
+                                .indexOf(_selectedAvailableSchedule!)
+                                .toString()
+                          ],
+                        );
+                        setState(() {
+                          _scheduledStimulations = [];
+                          _selectedAvailableSchedule = null;
+                        });
+                        final connexion = LokomatFesServerInterface.instance;
+                        _scheduledStimulations =
+                            await connexion.fetchScheduledStimulation(
+                                command: Command.getScheduled);
+                        setState(() {});
+                      }
+                    : null,
+                child: const Text('Add'),
+              ),
+            ],
+          ),
       ],
     );
   }
