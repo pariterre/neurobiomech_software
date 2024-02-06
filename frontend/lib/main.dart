@@ -11,8 +11,6 @@ void main() async {
     }
   });
 
-  // TODO: Add the schedule communication (get the available schedules, the selected schedules, set a schedule and unset a schedule)
-
   runApp(const MyApp());
 }
 

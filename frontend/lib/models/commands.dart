@@ -4,6 +4,10 @@ enum Command {
   startRecording,
   stopRecording,
   stimulate,
+  availableSchedules,
+  addSchedule,
+  getScheduled,
+  removeScheduled,
   startFetchingData,
   fetchData,
   plotData,
@@ -25,18 +29,26 @@ enum Command {
         return 3;
       case Command.stimulate:
         return 4;
-      case Command.startFetchingData:
+      case Command.availableSchedules:
         return 5;
-      case Command.fetchData:
+      case Command.addSchedule:
         return 6;
-      case Command.plotData:
+      case Command.getScheduled:
         return 7;
-      case Command.saveData:
+      case Command.removeScheduled:
         return 8;
-      case Command.quit:
+      case Command.startFetchingData:
         return 9;
-      case Command.shutdown:
+      case Command.fetchData:
         return 10;
+      case Command.plotData:
+        return 11;
+      case Command.saveData:
+        return 12;
+      case Command.quit:
+        return 13;
+      case Command.shutdown:
+        return 14;
     }
   }
 
@@ -49,11 +61,15 @@ enum Command {
       case Command.startRecording:
       case Command.stopRecording:
       case Command.stimulate:
+      case Command.addSchedule:
+      case Command.removeScheduled:
       case Command.plotData:
       case Command.saveData:
       case Command.quit:
       case Command.shutdown:
         return false;
+      case Command.getScheduled:
+      case Command.availableSchedules:
       case Command.startFetchingData:
       case Command.fetchData:
         return true;

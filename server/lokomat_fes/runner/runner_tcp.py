@@ -19,12 +19,16 @@ class _Command(Enum):
     START_RECORDING = 2
     STOP_RECORDING = 3
     STIMULATE = 4
-    START_FETCH_DATA = 5
-    FETCH_DATA = 6
-    PLOT_DATA = 7
-    SAVE_DATA = 8
-    QUIT = 9
-    SHUTDOWN = 10
+    AVAILABLE_SCHEDULES = 5
+    ADD_SCHEDULE = 6
+    GET_SCHEDULE = 7
+    REMOVE_SCHEDULED = 8
+    START_FETCH_DATA = 9
+    FETCH_DATA = 10
+    PLOT_DATA = 11
+    SAVE_DATA = 12
+    QUIT = 13
+    SHUTDOWN = 14
 
     def __str__(self) -> str:
         if self.name == "START_NIDAQ":
@@ -37,6 +41,14 @@ class _Command(Enum):
             return "stop"
         elif self.name == "STIMULATE":
             return "stim"
+        elif self.name == "AVAILABLE_SCHEDULES":
+            return "available_schedules"
+        elif self.name == "ADD_SCHEDULE":
+            return "add_schedule"
+        elif self.name == "GET_SCHEDULE":
+            return "get_schedule"
+        elif self.name == "REMOVE_SCHEDULED":
+            return "remove_scheduled"
         elif self.name == "START_FETCH_DATA":
             return "start_fetch"
         elif self.name == "FETCH_DATA":
@@ -163,6 +175,18 @@ class RunnerTcp(RunnerConsole):
                 elif command == str(_Command.STIMULATE):
                     success = self._stimulate_command(parameters)
 
+                elif command == str(_Command.AVAILABLE_SCHEDULES):
+                    success = self._list_available_schedules_command(parameters)
+
+                elif command == str(_Command.ADD_SCHEDULE):
+                    success = self._schedule_stimulation_command(parameters)
+
+                elif command == str(_Command.GET_SCHEDULE):
+                    success = self._get_scheduled_stimulations_command(parameters)
+
+                elif command == str(_Command.REMOVE_SCHEDULED):
+                    success = self._unschedule_stimulation_command(parameters)
+
                 elif command == str(_Command.START_FETCH_DATA):
                     success = self._start_fetch_continuous_data_command(parameters)
 
@@ -219,6 +243,25 @@ class RunnerTcp(RunnerConsole):
             ).encode()
         )
 
+        return True
+
+    @override
+    def _list_available_schedules_command(self, parameters: list[str]) -> bool:
+        if not self._check_number_parameters("scheduled_stim", parameters, expected=None):
+            return False
+
+        available_schedules = [schedule.serialize() for schedule in self._scheduler.available_schedules]
+
+        self._dataConnexion.sendall(json.dumps(available_schedules).encode())
+        return True
+
+    @override
+    def _get_scheduled_stimulations_command(self, parameters: list[str]) -> bool:
+        if not self._check_number_parameters("scheduled_stim", parameters, expected=None):
+            return False
+
+        scheduled_stimulations = [stim.serialize() for stim in self._scheduler.get_stimulations()]
+        self._dataConnexion.sendall(json.dumps(scheduled_stimulations).encode())
         return True
 
     @override

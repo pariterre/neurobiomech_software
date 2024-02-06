@@ -1,7 +1,7 @@
 import logging
 
 import numpy as np
-from lokomat_fes import setup_logger, RunnerConsole, Side
+from lokomat_fes import setup_logger, RunnerTcp, Side
 from lokomat_fes.lokomat import NiDaqLokomat, RehastimLokomat
 
 # If you want to use the real devices, comment the following lines
@@ -26,8 +26,8 @@ def __main__() -> None:
     # Define the devices and the runner
     rehastim = RehastimLokomat()
     nidaq = NiDaqLokomat(time_between_samples=0.1, frame_rate=1000)
-    runner = RunnerConsole(rehastim, nidaq)
-    # runner = RunnerTcp(rehastim=rehastim, nidaq=nidaq)
+    # runner = RunnerConsole(rehastim, nidaq)
+    runner = RunnerTcp(rehastim=rehastim, nidaq=nidaq)
 
     # Load the stimulation rules
     # runner.schedule_stimulation(runner.available_schedules[0])

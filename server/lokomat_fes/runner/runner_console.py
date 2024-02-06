@@ -45,7 +45,7 @@ class RunnerConsole(RunnerGeneric):
                 self._list_available_schedules_command(parameters)
 
             elif command == "scheduled_stim":
-                self._print_scheduled_stimulations(parameters)
+                self._get_scheduled_stimulations_command(parameters)
 
             elif command == "schedule_stim":
                 self._schedule_stimulation_command(parameters)
@@ -74,7 +74,7 @@ class RunnerConsole(RunnerGeneric):
         _logger.info("Runner Console exited.")
 
     def _list_commands(self, parameters: list[str]):
-        if not _check_number_parameters("list", parameters, expected=None):
+        if not self._check_number_parameters("list", parameters, expected=None):
             return
 
         print("List of commands:")
@@ -98,31 +98,31 @@ class RunnerConsole(RunnerGeneric):
         print("\tquit: quit")
 
     def _start_nidaq_command(self, parameters: list[str]) -> bool:
-        if not _check_number_parameters("start_nidaq", parameters, expected=None):
+        if not self._check_number_parameters("start_nidaq", parameters, expected=None):
             return False
 
         return _try_command(self.start_nidaq)
 
     def _start_recording_command(self, parameters: list[str]) -> bool:
-        if not _check_number_parameters("start", parameters, expected=None):
+        if not self._check_number_parameters("start", parameters, expected=None):
             return False
 
         return _try_command(self.start_recording)
 
     def _stop_nidaq_command(self, parameters: list[str]) -> bool:
-        if not _check_number_parameters("stop_nidaq", parameters, expected=None):
+        if not self._check_number_parameters("stop_nidaq", parameters, expected=None):
             return False
 
         return _try_command(self.stop_nidaq)
 
     def _stop_recording_command(self, parameters: list[str]) -> bool:
-        if not _check_number_parameters("stop", parameters, expected=None):
+        if not self._check_number_parameters("stop", parameters, expected=None):
             return False
 
         return _try_command(self.stop_recording)
 
     def _list_available_schedules_command(self, parameters: list[str]) -> bool:
-        if not _check_number_parameters("available_stim", parameters, expected=None):
+        if not self._check_number_parameters("available_stim", parameters, expected=None):
             return False
 
         print("List of available schedules:")
@@ -133,7 +133,7 @@ class RunnerConsole(RunnerGeneric):
         return True
 
     def _schedule_stimulation_command(self, parameters: list[str]) -> bool:
-        if not _check_number_parameters("schedule_stim", parameters, expected={"index": True}):
+        if not self._check_number_parameters("schedule_stim", parameters, expected={"index": True}):
             return False
 
         index = _parse_int("index", parameters[0])
@@ -148,7 +148,7 @@ class RunnerConsole(RunnerGeneric):
         return _try_command(self.schedule_stimulation, available_schedules[index])
 
     def _unschedule_stimulation_command(self, parameters: list[str]) -> bool:
-        if not _check_number_parameters("unschedule_stim", parameters, expected={"index": True}):
+        if not self._check_number_parameters("unschedule_stim", parameters, expected={"index": True}):
             return False
 
         index = _parse_int("index", parameters[0])
@@ -162,8 +162,8 @@ class RunnerConsole(RunnerGeneric):
 
         return _try_command(self.remove_scheduled_stimulation, index)
 
-    def _print_scheduled_stimulations(self, parameters: list[str]) -> bool:
-        if not _check_number_parameters("scheduled_stim", parameters, expected=None):
+    def _get_scheduled_stimulations_command(self, parameters: list[str]) -> bool:
+        if not self._check_number_parameters("scheduled_stim", parameters, expected=None):
             return False
 
         for i, stim in enumerate(self._scheduler.get_stimulations()):
@@ -172,7 +172,7 @@ class RunnerConsole(RunnerGeneric):
         return True
 
     def _stimulate_command(self, parameters: list[str]) -> bool:
-        if not _check_number_parameters(
+        if not self._check_number_parameters(
             "stim", parameters, expected={"duration": True, "amplitude": False, "width": False}
         ):
             return False
@@ -202,13 +202,13 @@ class RunnerConsole(RunnerGeneric):
         return _try_command(self.start_stimulation, duration)
 
     def _start_fetch_continuous_data_command(self, parameters: list[str]) -> bool:
-        if not _check_number_parameters("start_fetch_data", parameters, expected=None):
+        if not self._check_number_parameters("start_fetch_data", parameters, expected=None):
             return False
 
         return _try_command(self._start_fetch_continuous_data)
 
     def _fetch_continuous_data_command(self, parameters: list[str]) -> bool:
-        if not _check_number_parameters("fetch_data", parameters, expected={"from_top": False}):
+        if not self._check_number_parameters("fetch_data", parameters, expected={"from_top": False}):
             return False
 
         from_top = False  # Restart from the top of the data (t0)
@@ -221,58 +221,58 @@ class RunnerConsole(RunnerGeneric):
         return _try_command(self._fetch_continuous_data, from_top)
 
     def _plot_data_command(self, parameters: list[str]) -> bool:
-        if not _check_number_parameters("plot", parameters, expected=None):
+        if not self._check_number_parameters("plot", parameters, expected=None):
             return False
 
         return self.plot_data()
 
     def _save_command(self, parameters: list[str]) -> None:
-        if not _check_number_parameters("save", parameters, expected={"filename": True}):
+        if not self.check_number_parameters("save", parameters, expected={"filename": True}):
             return False
 
         filename = parameters[0]
         return _try_command(self.save_trial, filename)
 
+    @staticmethod
+    def _check_number_parameters(command: str, parameters: list[str], expected: dict[str, bool] | None) -> bool:
+        """Check if the number of parameters is correct.
 
-def _check_number_parameters(command: str, parameters: list[str], expected: dict[str, bool] | None) -> bool:
-    """Check if the number of parameters is correct.
+        Parameters
+        ----------
+        parameters : list[str]
+            The parameters to check.
+        expected : dict[str, bool]
+            The expected parameters, with the key being the name and the value being if it is required or not.
+        """
+        if expected is None:
+            expected = {}
 
-    Parameters
-    ----------
-    parameters : list[str]
-        The parameters to check.
-    expected : dict[str, bool]
-        The expected parameters, with the key being the name and the value being if it is required or not.
-    """
-    if expected is None:
-        expected = {}
+        parameters_names = []
+        for key in expected:
+            if expected[key]:  # If required
+                parameters_names.append(f"{key}")
+            else:
+                parameters_names.append(f"[{key}]")
 
-    parameters_names = []
-    for key in expected:
-        if expected[key]:  # If required
-            parameters_names.append(f"{key}")
+        is_required = [required for required in expected.values() if required]
+        expected_min = len(is_required)
+        expected_max = len(parameters_names)
+
+        if expected_min == expected_max:
+            if expected_min == 0:
+                error_msg = f"{command} takes no parameters. "
+            else:
+                error_msg = f"{command} requires {expected_min} parameters. "
         else:
-            parameters_names.append(f"[{key}]")
+            error_msg = f"{command} requires {expected_min} to {expected_max} parameters. "
 
-    is_required = [required for required in expected.values() if required]
-    expected_min = len(is_required)
-    expected_max = len(parameters_names)
+        if expected_max > 0:
+            error_msg += f"Parameters are: {', '.join(parameters_names)}"
 
-    if expected_min == expected_max:
-        if expected_min == 0:
-            error_msg = f"{command} takes no parameters. "
-        else:
-            error_msg = f"{command} requires {expected_min} parameters. "
-    else:
-        error_msg = f"{command} requires {expected_min} to {expected_max} parameters. "
-
-    if expected_max > 0:
-        error_msg += f"Parameters are: {', '.join(parameters_names)}"
-
-    if len(parameters) < expected_min or len(parameters) > expected_max:
-        _logger.exception(error_msg)
-        return False
-    return True
+        if len(parameters) < expected_min or len(parameters) > expected_max:
+            _logger.exception(error_msg)
+            return False
+        return True
 
 
 def _parse_float(name: str, value: str) -> float:

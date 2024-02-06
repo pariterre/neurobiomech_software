@@ -139,8 +139,11 @@ class RehastimData:
         all_duration = self.duration_as_array[: all_time.shape[0]]
         all_amplitude = self.amplitude_as_array.T[: all_time.shape[0], :]
         for time, duration, amplitude in zip(all_time, all_duration, all_amplitude):
-            channel_index = 0  # Only show the first channel as they are all the same (currently)
-            plt.plot([time, time + duration], amplitude[[channel_index, channel_index]], color=color)
+            plt.plot(
+                [time, time + duration],
+                np.concatenate((amplitude[np.newaxis, :], amplitude[np.newaxis, :])),
+                color=color,
+            )
 
         if show:
             plt.show()

@@ -141,6 +141,28 @@ class AutomaticStimulationRule:
             end_stimulating_rule=end_stimulating_rule,
         )
 
+    def serialize(self) -> dict:
+        """Create a json dictionary from the StimulationCondition."""
+
+        data = {
+            "name": self._name,
+            "pulse": {
+                "channels": self._channels,
+                "amplitudes": self._amplitudes,
+            },
+        }
+
+        if self._start_stimulating_rule is not None:
+            data["start_stimulating_rule"] = _condition_to_json(self._start_stimulating_rule)
+
+        if self._continue_stimulating_rule is not None:
+            data["continue_stimulating_rule"] = _condition_to_json(self._continue_stimulating_rule)
+
+        if self._end_stimulating_rule is not None:
+            data["end_stimulating_rule"] = _condition_to_json(self._end_stimulating_rule)
+
+        return data
+
 
 def _condition_from_json(data: dict) -> Callable[[float, float, float], bool]:
     """
@@ -205,6 +227,51 @@ def _condition_from_json(data: dict) -> Callable[[float, float, float], bool]:
         gait_percentage=gait_percentage,
         comparison=comparison,
     )
+
+
+def _condition_to_json(condition: partial) -> dict:
+    """
+    TODO
+    """
+
+    data = {}
+
+    if condition.keywords["comparison"] is ge:
+        data["comparison"] = ">="
+    elif condition.keywords["comparison"] is gt:
+        data["comparison"] = ">"
+    elif condition.keywords["comparison"] is le:
+        data["comparison"] = "<="
+    elif condition.keywords["comparison"] is lt:
+        data["comparison"] = "<"
+    else:
+        raise ValueError("comparison must be either ge, gt, le or lt")
+
+    if condition.keywords["side"] is not None:
+        if condition.keywords["side"] is Side.LEFT:
+            data["side"] = "left"
+        elif condition.keywords["side"] is Side.RIGHT:
+            data["side"] = "right"
+        else:
+            raise ValueError("side must be either 'left' or 'right")
+
+    if condition.keywords["duration"] is not None:
+        data["duration"] = condition.keywords["duration"]
+
+    elif condition.keywords["gait_percentage"] is not None:
+
+        for event in GaitEvent:
+            if condition.keywords["gait_percentage"] == event.value:
+                data["gait_event"] = event.name.lower()
+                break
+
+        if "gait_event" not in data:
+            data["gait_percentage"] = condition.keywords["gait_percentage"]
+
+    else:
+        raise ValueError("gait_percentage or duration must be defined")
+
+    return data
 
 
 def _should_stimulate(

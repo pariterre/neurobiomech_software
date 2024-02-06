@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:frontend/models/commands.dart';
 import 'package:frontend/models/lokomat_fes_server_interface.dart';
+import 'package:frontend/models/scheduled_stimulation.dart';
 
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
@@ -18,6 +19,12 @@ class _DebugScreenState extends State<DebugScreen> {
   final _stimulationDurationTextController = TextEditingController();
   final _stimulationAmplitudeTextController = TextEditingController();
   final _saveTextController = TextEditingController();
+
+  List<ScheduledStimulation> _availableSchedules = [];
+  ScheduledStimulation? _selectedAvailableSchedule;
+
+  List<ScheduledStimulation> _scheduledStimulations = [];
+  ScheduledStimulation? _selectedScheduledStimulation;
 
   bool _isBusy = false;
   bool get isServerConnected =>
@@ -39,6 +46,10 @@ class _DebugScreenState extends State<DebugScreen> {
     setState(() => _isBusy = true);
     final connexion = LokomatFesServerInterface.instance;
     await connexion.initialize();
+
+    _availableSchedules = await connexion.fetchScheduledStimulation(
+        command: Command.availableSchedules);
+
     setState(() => _isBusy = false);
   }
 
@@ -47,6 +58,10 @@ class _DebugScreenState extends State<DebugScreen> {
     final connexion = LokomatFesServerInterface.instance;
     await connexion.send(Command.quit);
     _resetInternalStates();
+    _availableSchedules.clear();
+    _selectedAvailableSchedule = null;
+    _scheduledStimulations.clear();
+    _selectedScheduledStimulation = null;
   }
 
   void _resetInternalStates() {
@@ -216,6 +231,131 @@ class _DebugScreenState extends State<DebugScreen> {
     );
   }
 
+  Widget _buildAvailableScheduledStimulation() {
+    if (_availableSchedules.isEmpty) return const SizedBox();
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text('Available scheduled stimulations'),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DropdownButton<ScheduledStimulation>(
+              value: _selectedAvailableSchedule,
+              icon: const Icon(Icons.arrow_downward),
+              elevation: 16,
+              style: const TextStyle(color: Colors.deepPurple),
+              underline: Container(
+                height: 2,
+                color: Colors.deepPurpleAccent,
+              ),
+              onChanged: (ScheduledStimulation? value) =>
+                  setState(() => _selectedAvailableSchedule = value),
+              items: _availableSchedules
+                  .map<DropdownMenuItem<ScheduledStimulation>>(
+                      (ScheduledStimulation value) {
+                return DropdownMenuItem<ScheduledStimulation>(
+                  value: value,
+                  child: Text(value.toString()),
+                );
+              }).toList(),
+            ),
+            const SizedBox(width: 12),
+            ElevatedButton(
+              onPressed:
+                  canSendOfflineCommand && _selectedAvailableSchedule != null
+                      ? () async {
+                          LokomatFesServerInterface.instance.send(
+                            Command.addSchedule,
+                            parameters: [
+                              _availableSchedules
+                                  .indexOf(_selectedAvailableSchedule!)
+                                  .toString()
+                            ],
+                          );
+                          setState(() {
+                            _scheduledStimulations = [];
+                            _selectedAvailableSchedule = null;
+                          });
+                          final connexion = LokomatFesServerInterface.instance;
+                          _scheduledStimulations =
+                              await connexion.fetchScheduledStimulation(
+                                  command: Command.getScheduled);
+                          setState(() {});
+                        }
+                      : null,
+              child: const Text('Add'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildScheduledStimulation() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text('Currently scheduled stimulations'),
+        if (_scheduledStimulations.isEmpty)
+          const Text('No scheduled stimulations'),
+        if (_scheduledStimulations.isNotEmpty)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButton<ScheduledStimulation>(
+                value: _selectedScheduledStimulation,
+                icon: const Icon(Icons.arrow_downward),
+                elevation: 16,
+                style: const TextStyle(color: Colors.deepPurple),
+                underline: Container(
+                  height: 2,
+                  color: Colors.deepPurpleAccent,
+                ),
+                onChanged: (ScheduledStimulation? value) =>
+                    setState(() => _selectedScheduledStimulation = value),
+                items: _scheduledStimulations
+                    .map<DropdownMenuItem<ScheduledStimulation>>(
+                        (ScheduledStimulation value) {
+                  return DropdownMenuItem<ScheduledStimulation>(
+                    value: value,
+                    child: Text(value.toString()),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton(
+                onPressed: canSendOfflineCommand &&
+                        _selectedScheduledStimulation != null
+                    ? () async {
+                        LokomatFesServerInterface.instance.send(
+                          Command.removeScheduled,
+                          parameters: [
+                            _scheduledStimulations
+                                .indexOf(_selectedScheduledStimulation!)
+                                .toString()
+                          ],
+                        );
+                        setState(() {
+                          _scheduledStimulations = [];
+                          _selectedScheduledStimulation = null;
+                        });
+                        final connexion = LokomatFesServerInterface.instance;
+                        _scheduledStimulations =
+                            await connexion.fetchScheduledStimulation(
+                                command: Command.getScheduled);
+                        setState(() {});
+                      }
+                    : null,
+                child: const Text('Remove'),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
   Widget _buildGraph() {
     final nidaq = LokomatFesServerInterface.instance.continousData?.nidaq;
     if (nidaq == null || !_showingGraph) {
@@ -286,6 +426,10 @@ class _DebugScreenState extends State<DebugScreen> {
               ),
               const SizedBox(height: 12),
               _buildStimulation(),
+              const SizedBox(height: 12),
+              _buildAvailableScheduledStimulation(),
+              const SizedBox(height: 12),
+              _buildScheduledStimulation(),
               const SizedBox(height: 20),
               Text('Data related commands',
                   style: Theme.of(context).textTheme.titleMedium),
@@ -357,6 +501,21 @@ class _OnlineGraphState extends State<_OnlineGraph> {
 
     final minTime = nidaq.t.isEmpty ? 0 : nidaq.t.last - 10;
 
+    final List<LineChartBarData> rehastimData = [];
+    for (final data in rehastim.data) {
+      if (data.t + data.duration < minTime) continue;
+
+      for (final channel in data.channels) {
+        rehastimData.add(LineChartBarData(
+          color: Colors.red,
+          spots: [
+            FlSpot(data.t - rehastim.t0, channel.amplitude),
+            FlSpot(data.t - rehastim.t0 + data.duration, channel.amplitude),
+          ],
+        ));
+      }
+    }
+
     return SizedBox(
       width: 300,
       height: 200,
@@ -371,18 +530,7 @@ class _OnlineGraphState extends State<_OnlineGraph> {
               final y = nidaq.data[0][index.key];
               return FlSpot(t, y);
             }).toList()),
-            ...rehastim.data.map((data) {
-              if (data.t + data.duration < minTime) return LineChartBarData();
-
-              return LineChartBarData(
-                color: Colors.red,
-                spots: [
-                  FlSpot(data.t - rehastim.t0, data.channels[0].amplitude),
-                  FlSpot(data.t - rehastim.t0 + data.duration,
-                      data.channels[0].amplitude),
-                ],
-              );
-            }).toList(),
+            ...rehastimData,
           ],
         ),
       ),

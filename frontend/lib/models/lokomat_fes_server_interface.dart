@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:frontend/models/commands.dart';
 import 'package:frontend/models/data.dart';
+import 'package:frontend/models/scheduled_stimulation.dart';
 import 'package:logging/logging.dart';
 
 List<Command> _commandsThatRequireDataResponse = [
@@ -25,6 +26,8 @@ class LokomatFesServerInterface {
   bool get isContinousDataActive => _isContinousDataActive;
   Data? _continousData;
   Data? get continousData => _continousData;
+
+  List<dynamic> _schedules = [];
 
   bool _isSendingCommand = false;
   bool _isReceivingData = false;
@@ -162,10 +165,17 @@ class LokomatFesServerInterface {
         _isRecording = false;
         break;
 
+      case Command.availableSchedules:
+      case Command.getScheduled:
+        _manageFetchedSchedules(command);
+        break;
+
       case Command.fetchData:
         _manageFetchedData();
         break;
 
+      case Command.addSchedule:
+      case Command.removeScheduled:
       case Command.startFetchingData:
       case Command.stimulate:
       case Command.plotData:
@@ -239,6 +249,25 @@ class LokomatFesServerInterface {
     _isContinousDataActive = false;
   }
 
+  Future<List<ScheduledStimulation>> fetchScheduledStimulation(
+      {required Command command}) async {
+    if (command != Command.getScheduled &&
+        command != Command.availableSchedules) {
+      _log.severe(
+          'Command $command should be getScheduled or availableSchedules');
+      return [];
+    }
+    await _send(command, []);
+    while (_schedules.isEmpty) {
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+    final schedules = _schedules;
+    _schedules = [];
+    return [
+      for (final schedule in schedules) ScheduledStimulation.fromJson(schedule)
+    ];
+  }
+
   Future<void> _manageFetchedData() async {
     /// This is for online data fetching. We do not mind missing data so just
     /// disregard the error if the data is not received properly
@@ -257,6 +286,18 @@ class LokomatFesServerInterface {
     }
 
     _log.info('Data received');
+  }
+
+  Future<void> _manageFetchedSchedules(Command command) async {
+    late final String schedulesRaw;
+    try {
+      schedulesRaw = await _waitForDataAnswer();
+    } catch (e) {
+      _log.severe('Error while receiving data: $e');
+    }
+
+    _schedules = jsonDecode(schedulesRaw);
+    _log.info('Received schedules: $schedulesRaw');
   }
 
   ///
