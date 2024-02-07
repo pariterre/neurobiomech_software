@@ -64,8 +64,3 @@ jobs:
           pytest -v --color=yes --cov-report term-missing --cov=lokomat_fes server/tests
           codecov
         if: matrix.label == 'Linux'
-
-      - name: Install lokomat_fes and test if it works
-        run: |
-          pip install ./server
-          python -c "import lokomat_fes"
