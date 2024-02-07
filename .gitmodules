@@ -1,0 +1,3 @@
+[submodule "server/external/pyScienceMode"]
+	path = server/external/pyScienceMode
+	url = https://github.com/pariterre/pyScienceMode.git

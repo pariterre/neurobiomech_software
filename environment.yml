@@ -1,6 +1,0 @@
-# create a dev conda environment with: `conda env create -f environment.yml`
-name: lokomat_fes
-channels:
-- conda-forge
-dependencies:
-- python ==3.12
