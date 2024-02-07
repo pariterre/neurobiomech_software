@@ -27,7 +27,7 @@ class LokomatFesServerInterface {
   Data? _continousData;
   Data? get continousData => _continousData;
 
-  List<dynamic> _schedules = [];
+  List<dynamic>? _schedules;
 
   bool _isSendingCommand = false;
   bool _isReceivingData = false;
@@ -258,13 +258,13 @@ class LokomatFesServerInterface {
       return [];
     }
     await _send(command, []);
-    while (_schedules.isEmpty) {
+    while (_schedules == null) {
       await Future.delayed(const Duration(milliseconds: 100));
     }
     final schedules = _schedules;
-    _schedules = [];
+    _schedules = null;
     return [
-      for (final schedule in schedules) ScheduledStimulation.fromJson(schedule)
+      for (final schedule in schedules!) ScheduledStimulation.fromJson(schedule)
     ];
   }
 
