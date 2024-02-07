@@ -3,7 +3,7 @@ name: Run server tests
 on: [pull_request]
 
 env:
-  PYTHONPATH: ./server/external/pyScienceMode 
+  PYTHONPATH: ./server/external/pyScienceMode
 
 jobs:
   build:
@@ -68,5 +68,4 @@ jobs:
       - name: Install lokomat_fes and test if it works
         run: |
           pip install ./server
-          cd
           python -c "import lokomat_fes"
