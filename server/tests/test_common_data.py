@@ -1,17 +1,11 @@
 import json
 import os
 import pickle
-
 import numpy as np
 
 from lokomat_fes import Data
 from lokomat_fes.nidaq.data import NiDaqData
 from lokomat_fes.rehastim.data import RehastimData, Channel
-
-# Print current working directory to the console
-print("coucou")
-print(os.getcwd())
-print("coucou")
 
 
 def test_data_creation():

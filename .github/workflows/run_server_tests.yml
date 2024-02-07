@@ -3,7 +3,7 @@ name: Run server tests
 on: [pull_request]
 
 env:
-  PYTHON_PATH: ../external/pyScienceMode/
+  PYTHONPATH: ./server/external/pyScienceMode 
 
 jobs:
   build:
@@ -30,6 +30,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Pull & update submodules recursively
+        run: |
+          git submodule update --init --recursive
+          git submodule update --recursive --remote
+
       - name: Setup environment
         uses: conda-incubator/setup-miniconda@v2
         with:
@@ -46,7 +51,9 @@ jobs:
           mamba list
 
       - name: Install extra dependencies
-        run: mamba install black pytest pytest-cov codecov packaging -cconda-forge
+        run: | 
+          mamba install black pytest pytest-cov codecov packaging -cconda-forge
+
 
       - name: Run tests without coverage
         run: pytest -v --color=yes server/tests
