@@ -1,0 +1,52 @@
+[
+    {
+        "name": "Stimulate during swing phase (stride based)",
+        "pulse": {
+            "amplitudes": [50],
+            "channels": [1]
+        },
+        "start_stimulating_rule": {
+            "comparison": "from",
+            "side": "left",
+            "gait_event": "toe_off"
+        },
+        "continue_stimulating_rule": {
+            "comparison": "to",
+            "side": "left",
+            "gait_event": "heel_strike"
+        }
+    }, 
+    {
+        "name": "Stimulate during swing phase (percentage based)",
+        "pulse": {
+            "amplitudes": [50],
+            "channels": [2]
+        },
+        "start_stimulating_rule": {
+            "comparison": ">=",
+            "side": "left",
+            "gait_percentage": 0.6
+        },
+        "continue_stimulating_rule": {
+            "comparison": "greater",
+            "side": "left",
+            "gait_percentage": 0
+        }
+    }, 
+    {
+        "name": "Stimulate during swing phase (duration based)",
+        "pulse": {
+            "amplitudes": [30],
+            "channels": [3]
+        },
+        "start_stimulating_rule": {
+            "comparison": "from",
+            "side": "right",
+            "gait_percentage": 0.6
+        },
+        "continue_stimulating_rule": {
+            "comparison": "to",
+            "duration": 0.5
+        }
+    }
+]

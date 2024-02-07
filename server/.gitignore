@@ -86,29 +86,11 @@ venv.bak/
 # pycharm
 .idea
 
-# Personnal stuff
-Misc/
-
-# Remove other development artifacts
-examples/sandbox
-*/examples/sandbox
-*.npy
-*.bo
-*.bob
-*.ogv
-
-# Remove ACADOS and ipopt compilation folder
-c_generated_code
-*.c
-*.o
-*.json
-
-# Remove graphviz files
-*.gv
-*.gv.pdf
-
 # Mac dev
 *.DS_store
+
+# vscode
+.vscode/
 
 # Lokomat FES files
 sandbox/
