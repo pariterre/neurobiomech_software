@@ -6,10 +6,71 @@
 // tree, read text, and verify that the values of widget properties are correct.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:frontend/models/data.dart';
 import 'package:frontend/models/nidaq_data.dart';
 import 'package:frontend/models/rehastim_data.dart';
 
 void main() {
+  test('Data', () {
+    final data = Data(t0: 0.1, nbNidaqChannels: 2, nbRehastimChannels: 2);
+
+    data.appendFromJson({
+      "nidaq": {
+        "t": [
+          [0.01, 0.26, 0.51, 0.76],
+          [1.01, 1.26, 1.51, 1.76],
+          [2.01, 2.26, 2.51, 2.76]
+        ],
+        "data": [
+          [
+            [1.0, 1.1, 1.2, 1.3],
+            [-1.0, -1.1, -1.2, -1.3]
+          ],
+          [
+            [1.4, 1.5, 1.6, 1.7],
+            [-1.4, -1.5, -1.6, -1.7]
+          ],
+          [
+            [1.8, 1.9, 2.0, 2.1],
+            [-1.8, -1.9, -2.0, -2.1]
+          ]
+        ]
+      },
+      "rehastim": {
+        "data": [
+          [
+            0.2,
+            2.0,
+            [
+              {"channel_index": 1, "amplitude": 2},
+              {"channel_index": 2, "amplitude": 4}
+            ]
+          ],
+          [
+            1.0,
+            3.0,
+            [
+              {"channel_index": 1, "amplitude": 2},
+              {"channel_index": 2, "amplitude": 4}
+            ]
+          ]
+        ]
+      }
+    });
+
+    expect(data.t0, 0.1);
+    expect(data.length, 12);
+    expect(data.nidaq.length, 12);
+    expect(data.rehastim.length, 2);
+    expect(data.lastBlockAddedIndex, (0, 12));
+
+    data.clear();
+    expect(data.length, 0);
+    expect(data.nidaq.length, 0);
+    expect(data.rehastim.length, 0);
+    expect(data.lastBlockAddedIndex, null);
+  });
+
   test('NidaqData', () {
     final data = NiDaqData(nbChannels: 2, t0: 1000.0);
     data.appendFromJson({
@@ -67,7 +128,6 @@ void main() {
   test('RehastimData', () {
     final data = RehastimData(nbChannels: 2, t0: 0.1);
     data.appendFromJson({
-      "t0": 0.1,
       "data": [
         [
           0.2,

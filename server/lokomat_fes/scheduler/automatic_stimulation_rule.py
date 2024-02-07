@@ -207,7 +207,7 @@ def _condition_from_json(data: dict) -> Callable[[float, float, float], bool]:
         comparison = ge
     elif data["comparison"] in ("greater_than", ">", "after"):
         comparison = gt
-    elif data["comparison"] in ("less_or_equal", "<=", "to"):
+    elif data["comparison"] in ("less_or_equal", "<=", "up_to"):
         comparison = le
     elif data["comparison"] in ("less_than", "<", "before"):
         comparison = lt

@@ -88,10 +88,20 @@ class LokomatFesServerInterface {
   }
 
   Future<bool> _send(Command command, List<String>? parameters) async {
+    if (!isInitialized) {
+      _log.severe('Communication not initialized');
+      return false;
+    }
+
     await _preSendCommand(command, parameters);
 
-    // Send the command to the server
-    await _sendCommand(command, parameters);
+    // Format the command and send the messsage to the server
+    String message = "${command.toInt()}:";
+    if (parameters != null) {
+      message += parameters.join(',');
+    }
+    await _sendCommand(message);
+    _log.info('Sent command: $command');
 
     // Manage the response from the server
     return await _postSendCommand(command);
@@ -114,19 +124,9 @@ class LokomatFesServerInterface {
     _isSendingCommand = true;
   }
 
-  Future<void> _sendCommand(Command command, [List<String>? parameters]) async {
-    if (!isInitialized) {
-      _log.severe('Communication not initialized');
-      return;
-    }
-
+  Future<void> _sendCommand(String message) async {
     // Construct and send the command
     _commandAnswer = null;
-
-    String message = "${command.toInt()}:";
-    if (parameters != null) {
-      message += parameters.join(',');
-    }
     _socketCommand!.write(message);
     try {
       await _socketCommand!.flush();
@@ -134,7 +134,6 @@ class LokomatFesServerInterface {
       _log.info('Connexion was closed by the server');
       return;
     }
-    _log.info('Sent command: $command');
   }
 
   Future<bool> _postSendCommand(Command command) async {
@@ -218,16 +217,16 @@ class LokomatFesServerInterface {
         nbRehastimChannels: answer["rehastimNbChannels"]);
   }
 
-  void startAutomaticDataFetch(
+  Future<bool> startAutomaticDataFetch(
       {required Function() onContinousDataReady}) async {
     if (_continousData == null) {
       _log.severe('Data not initialized');
-      return;
+      return false;
     }
 
     if (_isContinousDataActive) {
       _log.warning('Automatic data fetch already active');
-      return;
+      return false;
     }
 
     _continousData!.clear();
@@ -243,6 +242,7 @@ class LokomatFesServerInterface {
         timer.cancel();
       }
     });
+    return true;
   }
 
   void stopAutomaticDataFetch() {
@@ -340,26 +340,148 @@ class LokomatFesServerInterface {
   static final LokomatFesServerInterface _instance =
       LokomatFesServerInterface._();
   LokomatFesServerInterface._();
+
+  Future<Socket?> _connectToServer({
+    required String ipAddress,
+    required int port,
+    required int? nbOfRetries,
+    required Function(List<int>) hasDataCallback,
+  }) async {
+    while (nbOfRetries == null || nbOfRetries > 0) {
+      try {
+        final socket = await Socket.connect(ipAddress, port);
+        socket.listen(hasDataCallback);
+
+        return socket;
+      } on SocketException {
+        final log = Logger('TcpCommunication');
+        log.info('Connection failed, retrying...');
+        await Future.delayed(const Duration(seconds: 1));
+        nbOfRetries = nbOfRetries == null ? null : nbOfRetries - 1;
+      }
+    }
+    return null;
+  }
 }
 
-Future<Socket?> _connectToServer({
-  required String ipAddress,
-  required int port,
-  required int? nbOfRetries,
-  required Function(List<int>) hasDataCallback,
-}) async {
-  while (nbOfRetries == null || nbOfRetries > 0) {
-    try {
-      final socket = await Socket.connect(ipAddress, port);
-      socket.listen(hasDataCallback);
+class LokomatFesServerInterfaceMock extends LokomatFesServerInterface {
+  static LokomatFesServerInterface get newInstance =>
+      LokomatFesServerInterfaceMock._();
 
-      return socket;
-    } on SocketException {
-      final log = Logger('TcpCommunication');
-      log.info('Connection failed, retrying...');
-      await Future.delayed(const Duration(seconds: 1));
-      nbOfRetries = nbOfRetries == null ? null : nbOfRetries - 1;
-    }
+  static LokomatFesServerInterface get instance => _instance;
+  // Prepare the singleton
+  static final LokomatFesServerInterface _instance =
+      LokomatFesServerInterfaceMock._();
+  LokomatFesServerInterfaceMock._() : super._();
+
+  double _mockedT = 0.0;
+  bool _isMockInitialized = false;
+  @override
+  bool get isInitialized => _isMockInitialized;
+
+  @override
+  Future<void> initialize(
+      {String serverIp = 'localhost',
+      int commandPort = 4042,
+      int dataPort = 4043,
+      int? nbOfRetries}) {
+    _isMockInitialized = true;
+    return super.initialize(
+        serverIp: serverIp,
+        commandPort: commandPort,
+        dataPort: dataPort,
+        nbOfRetries: nbOfRetries);
   }
-  return null;
+
+  @override
+  Future<Socket?> _connectToServer({
+    required String ipAddress,
+    required int port,
+    required int? nbOfRetries,
+    required Function(List<int>) hasDataCallback,
+  }) async {
+    return null;
+  }
+
+  @override
+  Future<void> _sendCommand(String message) async {
+    _commandAnswer = 'OK';
+    return;
+  }
+
+  @override
+  Future<void> _prepareAutomaticDataFetch() {
+    _mockedT = 0.01;
+    _dataAnswer = jsonEncode({
+      "t0": 0.1,
+      "nidaqNbChannels": 2,
+      "rehastimNbChannels": 2,
+    });
+    return super._prepareAutomaticDataFetch();
+  }
+
+  @override
+  Future<void> _manageFetchedData() {
+    _dataAnswer = jsonEncode({
+      "nidaq": {
+        "t": [
+          [0 + _mockedT, 0.25 + _mockedT, 0.50 + _mockedT, 0.75 + _mockedT],
+          [1 + _mockedT, 1.25 + _mockedT, 1.50 + _mockedT, 1.75 + _mockedT],
+          [2 + _mockedT, 2.25 + _mockedT, 2.50 + _mockedT, 2.75 + _mockedT]
+        ],
+        "data": [
+          [
+            [1.0, 1.1, 1.2, 1.3],
+            [-1.0, -1.1, -1.2, -1.3]
+          ],
+          [
+            [1.4, 1.5, 1.6, 1.7],
+            [-1.4, -1.5, -1.6, -1.7]
+          ],
+          [
+            [1.8, 1.9, 2.0, 2.1],
+            [-1.8, -1.9, -2.0, -2.1]
+          ]
+        ]
+      },
+      "rehastim": {
+        "data": [
+          [
+            0.2 + _mockedT,
+            2.0,
+            [
+              {"channel_index": 1, "amplitude": 2},
+              {"channel_index": 2, "amplitude": 4}
+            ]
+          ],
+          [
+            1.0 + _mockedT,
+            3.0,
+            [
+              {"channel_index": 1, "amplitude": 2},
+              {"channel_index": 2, "amplitude": 4}
+            ]
+          ]
+        ]
+      },
+    });
+
+    _mockedT += 3;
+    return super._manageFetchedData();
+  }
+
+  @override
+  Future<void> _manageFetchedSchedules(Command command) async {
+    _schedules = [
+      {"name": "schedule1"},
+      {"name": "schedule2"},
+      {"name": "schedule3"},
+    ];
+  }
+
+  @override
+  void _dispose() {
+    _isMockInitialized = false;
+    super._dispose();
+  }
 }

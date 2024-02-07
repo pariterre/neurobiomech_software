@@ -5,6 +5,8 @@ import 'package:frontend/models/commands.dart';
 import 'package:frontend/models/lokomat_fes_server_interface.dart';
 import 'package:frontend/models/scheduled_stimulation.dart';
 
+LokomatFesServerInterface get _connexion => LokomatFesServerInterface.instance;
+
 class DebugScreen extends StatefulWidget {
   const DebugScreen({super.key});
 
@@ -27,29 +29,25 @@ class _DebugScreenState extends State<DebugScreen> {
   ScheduledStimulation? _selectedScheduledStimulation;
 
   bool _isBusy = false;
-  bool get isServerConnected =>
-      LokomatFesServerInterface.instance.isInitialized;
+  bool get isServerConnected => _connexion.isInitialized;
   bool get canSendOfflineCommand => !_isBusy && isServerConnected;
 
   bool get canSendOnlineCommand =>
-      !_isBusy &&
-      isServerConnected &&
-      LokomatFesServerInterface.instance.isNidaqConnected;
+      !_isBusy && isServerConnected && _connexion.isNidaqConnected;
   bool get canManipulateData =>
       canSendOfflineCommand &&
-      LokomatFesServerInterface.instance.hasRecorded &&
-      !LokomatFesServerInterface.instance.isRecording;
+      _connexion.hasRecorded &&
+      !_connexion.isRecording;
   bool _showingGraph = false;
   bool get canSave => _saveTextController.text.isNotEmpty && canManipulateData;
 
   Future<void> _connectServer() async {
     setState(() => _isBusy = true);
-    final connexion = LokomatFesServerInterface.instance;
-    await connexion.initialize();
+    await _connexion.initialize();
 
-    _availableSchedules = await connexion.fetchScheduledStimulation(
+    _availableSchedules = await _connexion.fetchScheduledStimulation(
         command: Command.availableSchedules);
-    _scheduledStimulations = await connexion.fetchScheduledStimulation(
+    _scheduledStimulations = await _connexion.fetchScheduledStimulation(
         command: Command.getScheduled);
 
     setState(() => _isBusy = false);
@@ -57,8 +55,7 @@ class _DebugScreenState extends State<DebugScreen> {
 
   Future<void> _disconnectServer() async {
     setState(() => _isBusy = true);
-    final connexion = LokomatFesServerInterface.instance;
-    await connexion.send(Command.quit);
+    await _connexion.send(Command.quit);
     _resetInternalStates();
     _availableSchedules.clear();
     _selectedAvailableSchedule = null;
@@ -79,36 +76,31 @@ class _DebugScreenState extends State<DebugScreen> {
 
   Future<void> _connectNidaq() async {
     setState(() => _isBusy = true);
-    final connexion = LokomatFesServerInterface.instance;
-    await connexion.send(Command.startNidaq);
+    await _connexion.send(Command.startNidaq);
     setState(() => _isBusy = false);
   }
 
   Future<void> _disconnectNidaq() async {
     setState(() => _isBusy = true);
-    final connexion = LokomatFesServerInterface.instance;
-    await connexion.send(Command.stopNidaq);
+    await _connexion.send(Command.stopNidaq);
     _resetInternalStates();
   }
 
   Future<void> _shutdown() async {
     setState(() => _isBusy = true);
-    final connexion = LokomatFesServerInterface.instance;
-    await connexion.send(Command.shutdown);
+    await _connexion.send(Command.shutdown);
     _resetInternalStates();
   }
 
   Future<void> _startRecording() async {
     setState(() => _isBusy = true);
-    final connexion = LokomatFesServerInterface.instance;
-    await connexion.send(Command.startRecording);
+    await _connexion.send(Command.startRecording);
     setState(() => _isBusy = false);
   }
 
   Future<void> _stopRecording() async {
     setState(() => _isBusy = true);
-    final connexion = LokomatFesServerInterface.instance;
-    await connexion.send(Command.stopRecording);
+    await _connexion.send(Command.stopRecording);
     setState(() => _isBusy = false);
   }
 
@@ -128,8 +120,7 @@ class _DebugScreenState extends State<DebugScreen> {
     }
 
     setState(() => _isBusy = true);
-    final connexion = LokomatFesServerInterface.instance;
-    await connexion.send(Command.stimulate, parameters: parameters);
+    await _connexion.send(Command.stimulate, parameters: parameters);
     setState(() => _isBusy = false);
 
     // Notify the user that the data is being saved
@@ -144,8 +135,7 @@ class _DebugScreenState extends State<DebugScreen> {
     // add .pkl extension if not present
     if (!path.endsWith('.pkl')) path += '.pkl';
 
-    final connexion = LokomatFesServerInterface.instance;
-    await connexion.send(Command.saveData, parameters: [path]);
+    await _connexion.send(Command.saveData, parameters: [path]);
     setState(() => _isBusy = false);
 
     // Notify the user that the data is being saved
@@ -160,23 +150,20 @@ class _DebugScreenState extends State<DebugScreen> {
   }
 
   Future<void> _showOnlineGraph() async {
-    final connexion = LokomatFesServerInterface.instance;
-    connexion.startAutomaticDataFetch(
+    _connexion.startAutomaticDataFetch(
         onContinousDataReady: () =>
             _onlineGraphKey.currentState?.setState(() {}));
     setState(() => _showingGraph = true);
   }
 
   Future<void> _hideOnlineGraph() async {
-    final connexion = LokomatFesServerInterface.instance;
-    connexion.stopAutomaticDataFetch();
+    _connexion.stopAutomaticDataFetch();
     setState(() => _showingGraph = false);
   }
 
   Future<void> _plotData() async {
     setState(() => _isBusy = true);
-    final connexion = LokomatFesServerInterface.instance;
-    await connexion.send(Command.plotData);
+    await _connexion.send(Command.plotData);
     setState(() => _isBusy = false);
   }
 
@@ -266,28 +253,27 @@ class _DebugScreenState extends State<DebugScreen> {
               ),
               const SizedBox(width: 12),
               ElevatedButton(
-                onPressed: canSendOfflineCommand &&
-                        _selectedAvailableSchedule != null
-                    ? () async {
-                        LokomatFesServerInterface.instance.send(
-                          Command.addSchedule,
-                          parameters: [
-                            _availableSchedules
-                                .indexOf(_selectedAvailableSchedule!)
-                                .toString()
-                          ],
-                        );
-                        setState(() {
-                          _scheduledStimulations = [];
-                          _selectedAvailableSchedule = null;
-                        });
-                        final connexion = LokomatFesServerInterface.instance;
-                        _scheduledStimulations =
-                            await connexion.fetchScheduledStimulation(
-                                command: Command.getScheduled);
-                        setState(() {});
-                      }
-                    : null,
+                onPressed:
+                    canSendOfflineCommand && _selectedAvailableSchedule != null
+                        ? () async {
+                            _connexion.send(
+                              Command.addSchedule,
+                              parameters: [
+                                _availableSchedules
+                                    .indexOf(_selectedAvailableSchedule!)
+                                    .toString()
+                              ],
+                            );
+                            setState(() {
+                              _scheduledStimulations = [];
+                              _selectedAvailableSchedule = null;
+                            });
+                            _scheduledStimulations =
+                                await _connexion.fetchScheduledStimulation(
+                                    command: Command.getScheduled);
+                            setState(() {});
+                          }
+                        : null,
                 child: const Text('Add'),
               ),
             ],
@@ -332,7 +318,7 @@ class _DebugScreenState extends State<DebugScreen> {
                 onPressed: canSendOfflineCommand &&
                         _selectedScheduledStimulation != null
                     ? () async {
-                        LokomatFesServerInterface.instance.send(
+                        _connexion.send(
                           Command.removeScheduled,
                           parameters: [
                             _scheduledStimulations
@@ -344,9 +330,8 @@ class _DebugScreenState extends State<DebugScreen> {
                           _scheduledStimulations = [];
                           _selectedScheduledStimulation = null;
                         });
-                        final connexion = LokomatFesServerInterface.instance;
                         _scheduledStimulations =
-                            await connexion.fetchScheduledStimulation(
+                            await _connexion.fetchScheduledStimulation(
                                 command: Command.getScheduled);
                         setState(() {});
                       }
@@ -360,7 +345,7 @@ class _DebugScreenState extends State<DebugScreen> {
   }
 
   Widget _buildGraph() {
-    final nidaq = LokomatFesServerInterface.instance.continousData?.nidaq;
+    final nidaq = _connexion.continousData?.nidaq;
     if (nidaq == null || !_showingGraph) {
       return const SizedBox();
     }
@@ -370,8 +355,6 @@ class _DebugScreenState extends State<DebugScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final connexion = LokomatFesServerInterface.instance;
-
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
@@ -389,30 +372,27 @@ class _DebugScreenState extends State<DebugScreen> {
               ElevatedButton(
                 onPressed: _isBusy
                     ? null
-                    : (connexion.isInitialized
+                    : (_connexion.isInitialized
                         ? _disconnectServer
                         : _connectServer),
                 child: Text(
-                  connexion.isInitialized ? 'Disconnect' : 'Connect',
+                  _connexion.isInitialized ? 'Disconnect' : 'Connect',
                 ),
               ),
               const SizedBox(height: 12),
               ElevatedButton(
-                  onPressed: !_isBusy &&
-                          LokomatFesServerInterface.instance.isInitialized
-                      ? (connexion.isNidaqConnected
+                  onPressed: !_isBusy && _connexion.isInitialized
+                      ? (_connexion.isNidaqConnected
                           ? _disconnectNidaq
                           : _connectNidaq)
                       : null,
-                  child: Text(connexion.isNidaqConnected
+                  child: Text(_connexion.isNidaqConnected
                       ? 'Disconnect Nidaq'
                       : 'Connect Nidaq')),
               const SizedBox(height: 12),
               ElevatedButton(
                 onPressed:
-                    !_isBusy && LokomatFesServerInterface.instance.isInitialized
-                        ? _shutdown
-                        : null,
+                    !_isBusy && _connexion.isInitialized ? _shutdown : null,
                 child: const Text('Shutdown'),
               ),
               const SizedBox(height: 20),
@@ -421,10 +401,12 @@ class _DebugScreenState extends State<DebugScreen> {
               const SizedBox(height: 12),
               ElevatedButton(
                 onPressed: canSendOnlineCommand
-                    ? (connexion.isRecording ? _stopRecording : _startRecording)
+                    ? (_connexion.isRecording
+                        ? _stopRecording
+                        : _startRecording)
                     : null,
                 child: Text(
-                  connexion.isRecording ? 'Stop recording' : 'Start recording',
+                  _connexion.isRecording ? 'Stop recording' : 'Start recording',
                 ),
               ),
               const SizedBox(height: 12),
@@ -450,9 +432,8 @@ class _DebugScreenState extends State<DebugScreen> {
               _buildGraph(),
               const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: _showingGraph
-                    ? LokomatFesServerInterface.instance.continousData?.clear
-                    : null,
+                onPressed:
+                    _showingGraph ? _connexion.continousData?.clear : null,
                 child: const Text('Clear data'),
               ),
               const SizedBox(height: 12),
@@ -499,8 +480,8 @@ class _OnlineGraph extends StatefulWidget {
 class _OnlineGraphState extends State<_OnlineGraph> {
   @override
   Widget build(BuildContext context) {
-    final nidaq = LokomatFesServerInterface.instance.continousData!.nidaq;
-    final rehastim = LokomatFesServerInterface.instance.continousData!.rehastim;
+    final nidaq = _connexion.continousData!.nidaq;
+    final rehastim = _connexion.continousData!.rehastim;
 
     final minTime = nidaq.t.isEmpty ? 0 : nidaq.t.last - 10;
 

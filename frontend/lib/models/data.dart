@@ -7,13 +7,15 @@ class Data {
   final RehastimData rehastim;
 
   int _previousLastIndex = -1;
-  (int, int) get lastBlockAddedIndex => (_previousLastIndex, length);
+  (int, int)? get lastBlockAddedIndex =>
+      _previousLastIndex < 0 ? null : (_previousLastIndex, length);
 
   int get length => nidaq.t.length;
 
   void clear() {
     nidaq.clear();
     rehastim.clear();
+    _previousLastIndex = -1;
   }
 
   Data({

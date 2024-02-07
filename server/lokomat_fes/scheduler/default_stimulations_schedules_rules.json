@@ -6,14 +6,14 @@
             "channels": [1]
         },
         "start_stimulating_rule": {
-            "comparison": "from",
             "side": "left",
+            "comparison": "from",
             "gait_event": "toe_off"
         },
         "continue_stimulating_rule": {
-            "comparison": "to",
             "side": "left",
-            "gait_event": "heel_strike"
+            "comparison": "up_to",
+            "gait_event": "heel_strike_100"
         }
     }, 
     {
@@ -23,14 +23,14 @@
             "channels": [2]
         },
         "start_stimulating_rule": {
-            "comparison": ">=",
             "side": "left",
+            "comparison": ">=",
             "gait_percentage": 0.6
         },
         "continue_stimulating_rule": {
-            "comparison": "greater",
             "side": "left",
-            "gait_percentage": 0
+            "comparison": "less_than",
+            "gait_percentage": 1.0
         }
     }, 
     {
@@ -40,13 +40,13 @@
             "channels": [3]
         },
         "start_stimulating_rule": {
-            "comparison": "from",
             "side": "right",
+            "comparison": "from",
             "gait_percentage": 0.6
         },
         "continue_stimulating_rule": {
-            "comparison": "to",
-            "duration": 0.5
+            "comparison": "up_to",
+            "duration": 0.1
         }
     }
 ]

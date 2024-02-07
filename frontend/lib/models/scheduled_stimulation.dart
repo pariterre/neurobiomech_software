@@ -5,7 +5,5 @@ class ScheduledStimulation {
       : name = json['name'];
 
   @override
-  String toString() {
-    return name;
-  }
+  String toString() => name;
 }
