@@ -34,7 +34,7 @@ jobs:
           miniforge-version: latest
           use-mamba: true
           activate-environment: lokomat_fes
-          environment-file: environment.yml
+          environment-file: server/environment.yml
 
       - name: Print mamba info
         run: |
@@ -46,17 +46,17 @@ jobs:
         run: mamba install black pytest pytest-cov codecov packaging -cconda-forge
 
       - name: Run tests without coverage
-        run: pytest -v --color=yes tests
+        run: pytest -v --color=yes server/tests
         if: matrix.label != 'Linux'
 
       - name: Run tests with coverage
         run: |
-          pytest -v --color=yes --cov-report term-missing --cov=lokomat_fes tests
+          pytest -v --color=yes --cov-report term-missing --cov=lokomat_fes server/tests
           codecov
         if: matrix.label == 'Linux'
 
       - name: Install lokomat_fes and test if it works
         run: |
-          pip install .
+          pip install ./server
           cd
           python -c "import lokomat_fes"
