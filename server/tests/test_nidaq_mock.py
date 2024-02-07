@@ -105,6 +105,7 @@ def test_start_recording_twice():
 
 def test_generate_fake_data():
     nidaq = NiDaqLokomatMock()
+    nidaq.connect()
 
     nidaq._generate_fake_data()
     assert len(nidaq._data._t) == 1
@@ -129,6 +130,7 @@ def test_on_data_ready_callback():
         _callback_called = True
 
     nidaq = NiDaqLokomatMock()
+    nidaq.connect()
     nidaq.register_to_data_ready(data_ready_callback)
     nidaq._generate_fake_data()
     assert len(nidaq._data._t) == 1

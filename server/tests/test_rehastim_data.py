@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import os
 import pickle
@@ -11,14 +12,16 @@ from pyScienceMode import Channel as pyScienceModeChannel, Modes, Device
 
 def _generate_data(rehastim_data: RehastimData):
     rehastim_data.add(
+        now=1,
         duration=2,
         channels=(
             pyScienceModeChannel(mode=Modes.SINGLE, no_channel=1, amplitude=2, device_type=Device.Rehastim2),
             pyScienceModeChannel(mode=Modes.SINGLE, no_channel=2, amplitude=4, device_type=Device.Rehastim2),
         ),
     )
-    rehastim_data.add(duration=4, channels=None)
+    rehastim_data.add(now=11, duration=4, channels=None)
     rehastim_data.add(
+        now=21,
         duration=6,
         channels=(
             Channel(channel_index=1, amplitude=8),
@@ -68,6 +71,7 @@ def test_data_time():
     now = time.time()
     time.sleep(0.01)  # Make sure that the time is different
     rehastim_data.add(
+        now=datetime.now().timestamp(),
         duration=2,
         channels=(
             pyScienceModeChannel(mode=Modes.SINGLE, no_channel=1, amplitude=2, device_type=Device.Rehastim2),
@@ -90,25 +94,20 @@ def test_must_have_channels_on_first_call():
 
     # Add data
     with pytest.raises(RuntimeError, match="The first time you add data, you must specify the channels."):
-        rehastim_data.add(duration=2, channels=None)
+        rehastim_data.add(now=1, duration=2, channels=None)
 
 
 def test_time_accessor():
     rehastim_data = RehastimData()
 
     # Add data
-    now = time.time()
     _generate_data(rehastim_data)
-    then = time.time() - now
-    time.sleep(0.01)  # Make sure that the time is different
     _generate_data(rehastim_data)
 
     # Get the data back by index
     t = rehastim_data.time
     assert t.shape == (6,)
-    assert t[0] >= 0
-    assert t[0] <= then
-    assert t[-1] >= then
+    np.testing.assert_almost_equal(t, [1, 11, 21, 1, 11, 21])
 
 
 def test_duration_accessor():

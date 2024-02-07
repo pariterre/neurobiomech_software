@@ -25,7 +25,6 @@ def test_add_nidaq_data():
 
     # Check that the data exists
     assert data.nidaq.t0.timestamp() is not None
-    assert data.nidaq.t0_offset is not None
     assert data.nidaq.time is not None
     assert data.nidaq.as_array is not None
 
@@ -35,12 +34,16 @@ def test_add_rehastim_data():
 
     # Add data
     data.rehastim.add(
-        duration=1, channels=(Channel(channel_index=1, amplitude=2), Channel(channel_index=2, amplitude=4))
+        now=1, duration=1, channels=(Channel(channel_index=1, amplitude=2), Channel(channel_index=2, amplitude=4))
     )
 
     # Check that the data exists
     assert data.rehastim.time is not None
+    np.testing.assert_almost_equal(data.rehastim.duration_as_array, np.array([1]))
+    assert data.rehastim.duration_as_array is not None
+    np.testing.assert_almost_equal(data.rehastim.duration_as_array, np.array([1]))
     assert data.rehastim.amplitude_as_array is not None
+    np.testing.assert_almost_equal(data.rehastim.amplitude_as_array, np.array([[2, 4]]).T)
 
 
 def test_copy_data():
@@ -49,7 +52,7 @@ def test_copy_data():
     # Add data
     data.nidaq.add(np.array([1]), np.array([[2]]))
     data.rehastim.add(
-        duration=1, channels=(Channel(channel_index=1, amplitude=2), Channel(channel_index=2, amplitude=4))
+        now=1, duration=1, channels=(Channel(channel_index=1, amplitude=2), Channel(channel_index=2, amplitude=4))
     )
 
     # Copy the data
@@ -57,7 +60,6 @@ def test_copy_data():
 
     # Check that the data is correct
     assert data_copy.nidaq.t0 == data.nidaq.t0
-    assert data_copy.nidaq.t0_offset == data.nidaq.t0_offset
     np.testing.assert_almost_equal(data_copy.nidaq.time, data.nidaq.time)
     np.testing.assert_almost_equal(data_copy.nidaq.as_array, data.nidaq.as_array)
     np.testing.assert_almost_equal(data_copy.rehastim.time, data.rehastim.time)
@@ -83,7 +85,7 @@ def test_serialize_data():
     # Add data
     data.nidaq.add(np.array([1]), np.array([[2]]))
     data.rehastim.add(
-        duration=1, channels=(Channel(channel_index=1, amplitude=2), Channel(channel_index=2, amplitude=4))
+        now=1, duration=1, channels=(Channel(channel_index=1, amplitude=2), Channel(channel_index=2, amplitude=4))
     )
 
     # Serialize the data for pickle
@@ -111,7 +113,7 @@ def test_save_and_load():
     # Add data
     data.nidaq.add(np.array([1]), np.array([[2]]))
     data.rehastim.add(
-        duration=1, channels=(Channel(channel_index=1, amplitude=2), Channel(channel_index=2, amplitude=4))
+        now=1, duration=1, channels=(Channel(channel_index=1, amplitude=2), Channel(channel_index=2, amplitude=4))
     )
 
     # Save the data
@@ -123,7 +125,6 @@ def test_save_and_load():
 
     # Check that the data is correct
     assert data_loaded.nidaq.t0 == data.nidaq.t0
-    assert data_loaded.nidaq.t0_offset == data.nidaq.t0_offset
     np.testing.assert_almost_equal(data_loaded.nidaq.time, data.nidaq.time)
     np.testing.assert_almost_equal(data_loaded.nidaq.as_array, data.nidaq.as_array)
     np.testing.assert_almost_equal(data_loaded.rehastim.time, data.rehastim.time)

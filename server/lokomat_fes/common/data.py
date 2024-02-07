@@ -114,7 +114,7 @@ class Data:
         out = cls()
         out.nidaq = NiDaqData.deserialize(data["nidaq"])
         out.rehastim = RehastimData.deserialize(data["rehastim"])
-        out.set_t0(new_t0=datetime.fromtimestamp(datetime.fromtimestamp(data["t0"])))
+        out.set_t0(new_t0=datetime.fromtimestamp(data["t0"]))
         return out
 
     def plot(self, show: bool = True) -> None:

@@ -53,7 +53,7 @@ def test_stop_stimulation():
 def test_stimulating_with_callback():
     _callback_called = False
 
-    def stimulation_callback(duration, channels):
+    def stimulation_callback(current_time, duration, channels):
         nonlocal _callback_called
         _callback_called = True
         assert channels is not None
