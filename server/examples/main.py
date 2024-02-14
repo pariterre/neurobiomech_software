@@ -10,18 +10,6 @@ from lokomat_fes.lokomat import RehastimLokomatMock as RehastimLokomat
 
 _logger = logging.getLogger("lokomat_fes")
 
-import os
-
-print("coucou")
-print(os.getcwd())
-# print(os.environ["PYTHON_PATH"])
-print(os.listdir("./"))
-print(os.listdir("./server/"))
-print(os.listdir("./server/external/"))
-print(os.listdir("./server/external/pyScienceMode"))
-print("coucou")
-exit()
-
 
 def _received_data(t: np.ndarray, data: np.ndarray) -> None:
     """Callback function that is called when new nidaq data are received"""

@@ -227,7 +227,7 @@ class RunnerConsole(RunnerGeneric):
         return self.plot_data()
 
     def _save_command(self, parameters: list[str]) -> None:
-        if not self.check_number_parameters("save", parameters, expected={"filename": True}):
+        if not self._check_number_parameters("save", parameters, expected={"filename": True}):
             return False
 
         filename = parameters[0]
