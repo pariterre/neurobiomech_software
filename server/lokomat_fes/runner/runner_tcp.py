@@ -126,7 +126,7 @@ class RunnerTcp(RunnerConsole):
         acknowledgment = "OK" if response else "ERROR"
         try:
             self._commandConnexion.sendall(acknowledgment.encode())
-        except ...:
+        except Exception:
             _logger.error(f"Connection closed by the client.")
             return False
 
