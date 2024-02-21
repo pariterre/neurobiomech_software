@@ -28,7 +28,7 @@ class pyScienceModeRehastim2Mock(pyScienceModeRehastim2):
 
 class RehastimLokomatMock(RehastimLokomat):
     def __init__(self, *args, **kwargs):
-        super().__init__(port="NoPort", *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     @override
     def _get_initialized_device(self) -> pyScienceModeRehastimGeneric:

@@ -24,7 +24,7 @@ def __main__() -> None:
     setup_logger(devices_logging_level=logging.WARNING, show_scheduler_logs=False)  # logging.INFO to see more logs
 
     # Define the devices and the runner
-    rehastim = RehastimLokomat()
+    rehastim = RehastimLokomat(port="NoPort")
     nidaq = NiDaqLokomat(time_between_samples=0.1, frame_rate=1000)
     # runner = RunnerConsole(rehastim, nidaq)
     runner = RunnerTcp(rehastim=rehastim, nidaq=nidaq)

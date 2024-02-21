@@ -126,6 +126,8 @@ class RunnerGeneric(ABC):
         nidaq = self._continuous_data.nidaq.sample_block(slice(starting_index, last_data_index + 1), unsafe=True)
 
         # Fetch the corresponding Rehastim data (comprised between the first and last NiDaq data)
+        if nidaq is None or nidaq[0] is None or nidaq[0][0] is None or nidaq[0][0][0] is None:
+            return Data()
         rehastim = self._continuous_data.rehastim.sample_block_between(t0=nidaq[0][0][0], tf=nidaq[0][-1][-1])
 
         # Update the last fetched data index
