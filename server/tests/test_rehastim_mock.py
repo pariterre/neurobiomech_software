@@ -5,7 +5,7 @@ from lokomat_fes.rehastim.mocks import RehastimLokomatMock, pyScienceModeRehasti
 
 
 def test_initialize():
-    rehastim = RehastimLokomatMock()
+    rehastim = RehastimLokomatMock(port="NoPort")
 
     assert rehastim.show_log is False
     assert rehastim.port == "NoPort"
@@ -23,7 +23,7 @@ def test_initialize():
 
 
 def test_initialize_by_starting_stimulation():
-    rehastim = RehastimLokomatMock()
+    rehastim = RehastimLokomatMock(port="NoPort")
 
     device: pyScienceModeRehastim2Mock = rehastim._device
     assert device.list_channels is None
@@ -34,7 +34,7 @@ def test_initialize_by_starting_stimulation():
 
 
 def test_stop_stimulation():
-    rehastim = RehastimLokomatMock()
+    rehastim = RehastimLokomatMock(port="NoPort")
 
     device: pyScienceModeRehastim2Mock = rehastim._device
     assert device.stimulation_active
@@ -58,7 +58,7 @@ def test_stimulating_with_callback():
         _callback_called = True
         assert channels is not None
 
-    rehastim = RehastimLokomatMock()
+    rehastim = RehastimLokomatMock(port="NoPort")
     rehastim.register_to_on_stimulation_changed(stimulation_callback)
 
     rehastim.start_stimulation()
@@ -74,7 +74,7 @@ def test_stimulating_with_callback():
 
 
 def test_stimulate_for_a_specific_duration():
-    rehastim = RehastimLokomatMock()
+    rehastim = RehastimLokomatMock(port="NoPort")
 
     device: pyScienceModeRehastim2Mock = rehastim._device
     assert device.stimulation_active
@@ -97,7 +97,7 @@ def test_stimulate_for_a_specific_duration():
 
 
 def test_resuming_stimulation():
-    rehastim = RehastimLokomatMock()
+    rehastim = RehastimLokomatMock(port="NoPort")
 
     rehastim.start_stimulation()
     rehastim.stop_stimulation()
@@ -109,7 +109,7 @@ def test_resuming_stimulation():
 
 
 def test_stop_twice():
-    rehastim = RehastimLokomatMock()
+    rehastim = RehastimLokomatMock(port="NoPort")
 
     rehastim.start_stimulation()
     rehastim.stop_stimulation()
@@ -119,7 +119,7 @@ def test_stop_twice():
 
 
 def test_changing_pulse_amplitude():
-    rehastim = RehastimLokomatMock()
+    rehastim = RehastimLokomatMock(port="NoPort")
     rehastim.initialize_stimulation()
 
     assert rehastim.get_pulse_amplitude() == [50] * 8  # Default amplitude
@@ -131,7 +131,7 @@ def test_changing_pulse_amplitude():
 
 
 def test_changing_pulse_width():
-    rehastim = RehastimLokomatMock()
+    rehastim = RehastimLokomatMock(port="NoPort")
     rehastim.initialize_stimulation()
 
     assert rehastim.get_pulse_width() == [100] * 8  # Default width
@@ -143,7 +143,7 @@ def test_changing_pulse_width():
 
 
 def test_changing_pulse_interval():
-    rehastim = RehastimLokomatMock()
+    rehastim = RehastimLokomatMock(port="NoPort")
     rehastim.initialize_stimulation()
 
     device: pyScienceModeRehastim2Mock = rehastim._device
@@ -159,7 +159,7 @@ def test_changing_pulse_interval():
 
 
 def test_changing_low_frequency_factor():
-    rehastim = RehastimLokomatMock()
+    rehastim = RehastimLokomatMock(port="NoPort")
     rehastim.initialize_stimulation()
 
     device: pyScienceModeRehastim2Mock = rehastim._device
@@ -175,7 +175,7 @@ def test_changing_low_frequency_factor():
 
 
 def test_reset_pulse_to_default():
-    rehastim = RehastimLokomatMock()
+    rehastim = RehastimLokomatMock(port="NoPort")
     rehastim.initialize_stimulation()
 
     device: pyScienceModeRehastim2Mock = rehastim._device
