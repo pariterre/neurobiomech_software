@@ -1,7 +1,8 @@
 import logging
+from time import sleep
 
 import numpy as np
-from lokomat_fes import setup_logger, RunnerTcp, Side
+from lokomat_fes import setup_logger, RunnerTcp, Side, Data
 from lokomat_fes.lokomat import NiDaqLokomat, RehastimLokomat
 
 # If you want to use the real devices, comment the following lines
@@ -16,12 +17,13 @@ def _received_data(t: np.ndarray, data: np.ndarray) -> None:
 
     t_index = 0
     hip_index = 0
-    _logger.debug(f"Received data, at {t[t_index]}, initial hip angle: {data[hip_index, t_index]}")
+    _logger.info(f"Received data, at {t[t_index]}, initial hip angle: {data[hip_index, t_index]}")
 
 
 def __main__() -> None:
     """Main function"""
-    setup_logger(devices_logging_level=logging.WARNING, show_scheduler_logs=False)  # logging.INFO to see more logs
+    # Interesting levels for logging are: INFO, WARN
+    setup_logger(lokomat_fes_logging_level=logging.INFO, pyscience_logging_level=logging.WARN)
 
     # Define the devices and the runner
     rehastim = RehastimLokomat(port="NoPort")
@@ -40,16 +42,18 @@ def __main__() -> None:
 
     # Start the runner (blocking)
     runner.exec()
-    # # Alternatively, you can use a blocking sleep to manually manage the devices
-    # nidaq.start_recording()  # Start the devices (only necessary if you use the manual mode)
+    # Alternatively, you can use a blocking sleep to manually manage the devices
+    # runner.start_nidaq()  # Start the devices (only necessary if you use the manual mode)
+    # runner.start_recording()
     # sleep(2)
-    # rehastim.start_stimulation(duration=None)  # Start a stimulation
+    # runner.start_stimulation(duration=None)  # Start a stimulation
     # sleep(1)
-    # rehastim.stop_stimulation()  # Stop the stimulation
+    # runner.stop_stimulation()  # Stop the stimulation
     # sleep(2)
-    # nidaq.stop_recording()  # Stop the devices (only necessary if you use the manual mode)
+    # runner.stop_recording()  # Stop the devices (only necessary if you use the manual mode)
+    # runner.stop_nidaq()
 
-    # # You can manipulate the last trial like so (includes Nidaq and Rehastim data)
+    # You can manipulate the last trial like so (includes Nidaq and Rehastim data)
     # data = runner.last_trial
     # if data is not None:
     #     # You can save and reload them
@@ -57,9 +61,10 @@ def __main__() -> None:
     #     data_loaded = Data.load("data.pkl")
 
     #     # And you can plot them (or do whatever you want with them)
+    #     data_loaded.plot()
     #     # Note that [data_loaded] is a valid instance of the data class (you can either use the one you saved or the
     #     # one you got from the runner, they are virtually the same)
-    #     runner.plot_data(data_loaded)
+    #     runner.plot_data()
 
     #     # That said, you can plot the data using the plot method of the ConsoleRunner.
 

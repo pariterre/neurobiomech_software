@@ -157,8 +157,12 @@ class NiDaqGeneric(ABC):
     def dispose(self) -> None:
         """Dispose the NiDaq class"""
         self.stop_recording()
-        if self._task is not None:
+        try:
             self.disconnect()
+        except RuntimeError:
+            pass
+
+        if self._task is not None:
             self._task.close()
             self._task = None
 

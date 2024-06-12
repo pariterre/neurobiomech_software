@@ -2,7 +2,7 @@ import logging
 import logging.config
 
 
-def setup_logger(devices_logging_level: int = logging.DEBUG, show_scheduler_logs: bool = True):
+def setup_logger(lokomat_fes_logging_level: int = logging.WARNING, pyscience_logging_level: int = logging.DEBUG):
     logging_config = {
         "version": 1,
         "disable_existing_loggers": False,
@@ -14,8 +14,8 @@ def setup_logger(devices_logging_level: int = logging.DEBUG, show_scheduler_logs
             "console": {"class": "logging.StreamHandler", "formatter": "simple", "stream": "ext://sys.stdout"},
         },
         "loggers": {
-            "lokomat_fes": {"handlers": ["console"], "level": logging.INFO if show_scheduler_logs else logging.WARNING},
-            "pyScienceMode": {"handlers": ["console"], "level": devices_logging_level},
+            "lokomat_fes": {"handlers": ["console"], "level": lokomat_fes_logging_level},
+            "pyScienceMode": {"handlers": ["console"], "level": pyscience_logging_level},
         },
     }
     logging.config.dictConfig(logging_config)
