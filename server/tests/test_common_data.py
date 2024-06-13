@@ -3,9 +3,9 @@ import os
 import pickle
 import numpy as np
 
-from lokomat_fes import Data
-from lokomat_fes.nidaq.data import NiDaqData
-from lokomat_fes.rehastim.data import RehastimData, Channel
+from stimwalker import Data
+from stimwalker.nidaq.data import NiDaqData
+from stimwalker.rehastim.data import RehastimData, Channel
 
 
 def test_data_creation():

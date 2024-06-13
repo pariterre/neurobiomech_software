@@ -6,7 +6,7 @@ from struct import pack
 import time
 from typing import override
 
-from lokomat_fes.common.data import Data
+from stimwalker.common.data import Data
 
 from .runner_console import RunnerConsole
 

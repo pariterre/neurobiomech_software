@@ -2,7 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:frontend/models/commands.dart';
-import 'package:frontend/models/lokomat_fes_server_interface.dart';
+import 'package:frontend/models/stimwalker_server_interface.dart';
 import 'package:frontend/models/scheduled_stimulation.dart';
 
 LokomatFesServerInterface get _connexion => LokomatFesServerInterface.instance;

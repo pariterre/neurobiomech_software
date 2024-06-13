@@ -1,7 +1,7 @@
 [run]
 # Include the directories where your source files reside.
 source =
-    lokomat_fes
+    stimwalker
 # Omit files/directories you don't want to include.
 omit =
     tests/*

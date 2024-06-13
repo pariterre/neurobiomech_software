@@ -1,7 +1,7 @@
 import pytest
 import time
 
-from lokomat_fes.rehastim.mocks import RehastimLokomatMock, pyScienceModeRehastim2Mock
+from stimwalker.rehastim.mocks import RehastimLokomatMock, pyScienceModeRehastim2Mock
 
 
 def test_initialize():

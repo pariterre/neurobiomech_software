@@ -7,7 +7,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/models/commands.dart';
-import 'package:frontend/models/lokomat_fes_server_interface.dart';
+import 'package:frontend/models/stimwalker_server_interface.dart';
 
 void main() {
   test('Initialize server connexion', () async {

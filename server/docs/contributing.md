@@ -1,30 +1,30 @@
-# Contributing to `lokomat_fes`
+# Contributing to `stimwalker`
 All contributions, bug reports, bug fixes, documentation improvements, enhancements, and ideas are welcome.
-We recommend going through the list of [`issues`](https://github.com/cr-crme/lokomat_fes) to find issues that interest you, preferable those tagged with `good first issue`.
+We recommend going through the list of [`issues`](https://github.com/cr-crme/stimwalker) to find issues that interest you, preferable those tagged with `good first issue`.
 You can then get your development environment setup with the following instructions.
 
-## Forking `lokomat_fes`
+## Forking `stimwalker`
 
 You will need your own fork to work on the code.
-Go to the [lokomat_fes project page](https://github.com/cr-crme/lokomat_fes) and hit the `Fork` button.
+Go to the [stimwalker project page](https://github.com/cr-crme/stimwalker) and hit the `Fork` button.
 You will want to clone your fork to your machine:
 
 ```bash
-git clone https://github.com/your-user-name/lokomat_fes.git
+git clone https://github.com/your-user-name/stimwalker.git
 ```
 
 ## Creating and activating conda environment
 
 Before starting any development, we recommend that you create an isolated development environment. 
-The easiest and most efficient way (due to the numerous dependencies of `lokomat_fes`) is to use an anaconda virtual environment and to create it based on the `environment.yml` file. 
+The easiest and most efficient way (due to the numerous dependencies of `stimwalker`) is to use an anaconda virtual environment and to create it based on the `environment.yml` file. 
 
 - Install [miniconda](https://conda.io/miniconda.html)
-- `cd` to the `lokomat_fes` source directory
-- Install `lokomat_fes` dependencies with:
+- `cd` to the `stimwalker` source directory
+- Install `stimwalker` dependencies with:
 
 ```bash
 conda env create -f environment.yml
-conda activate lokomat_fes
+conda activate stimwalker
 ```
 
 ## Implementing new features
@@ -58,7 +58,7 @@ Be aware that sometimes the maintainer can push modifications directly to your b
 
 Adding tests are required to get your development merged to the master branch. 
 Therefore, it is very good practice to get the habit of writing tests ahead of time so this is never an issue.
-The `lokomat_fes` test suite runs automatically on GitHub every time a commit is submitted.
+The `stimwalker` test suite runs automatically on GitHub every time a commit is submitted.
 However, we strongly encourage running tests locally prior to submitting the pull-request.
 To do so, simply run the tests folder in pytest (`pytest tests`).
 
@@ -70,14 +70,14 @@ Moreover, if your new features is available to the lay user (i.e., it changes th
 
 ## Convention of coding
 
-`lokomat_fes` tries to follow as much as possible the PEP recommendations (https://www.python.org/dev/peps/). 
+`stimwalker` tries to follow as much as possible the PEP recommendations (https://www.python.org/dev/peps/). 
 Unless you have good reasons to disregard them, your pull-request is required to follow these recommendations. 
 I won't get into details here, if you haven't yet, you should read them :) 
 
 All variable names that could be plural should be written as such.
 
 Black is used to enforce the code spacing. 
-`lokomat_fes` is linted with the 120-character max per line's option. 
+`stimwalker` is linted with the 120-character max per line's option. 
 This means that your pull-request tests on GitHub will appear to fail if black fails. 
 The easiest way to make sure black is happy is to locally run this command:
 ```bash

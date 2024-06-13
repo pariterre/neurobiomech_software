@@ -1,7 +1,7 @@
 import pytest
 import time
 
-from lokomat_fes.nidaq.mocks import NiDaqLokomatMock
+from stimwalker.nidaq.mocks import NiDaqLokomatMock
 
 
 def test_nidaq_initialize():

@@ -5,7 +5,7 @@ import pickle
 import pytest
 import time
 
-from lokomat_fes.rehastim.data import RehastimData, Channel
+from stimwalker.rehastim.data import RehastimData, Channel
 import numpy as np
 from pyScienceMode import Channel as pyScienceModeChannel, Modes, Device
 

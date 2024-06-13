@@ -2,14 +2,14 @@ import logging
 from time import sleep
 
 import numpy as np
-from lokomat_fes import setup_logger, RunnerTcp, Side, Data
-from lokomat_fes.lokomat import NiDaqLokomat, RehastimLokomat
+from stimwalker import setup_logger, RunnerTcp, Side, Data
+from stimwalker.lokomat import NiDaqLokomat, RehastimLokomat
 
 # If you want to use the real devices, comment the following lines
-from lokomat_fes.lokomat import NiDaqLokomatMock as NiDaqLokomat
-from lokomat_fes.lokomat import RehastimLokomatMock as RehastimLokomat
+from stimwalker.lokomat import NiDaqLokomatMock as NiDaqLokomat
+from stimwalker.lokomat import RehastimLokomatMock as RehastimLokomat
 
-_logger = logging.getLogger("lokomat_fes")
+_logger = logging.getLogger("stimwalker")
 
 
 def _received_data(t: np.ndarray, data: np.ndarray) -> None:
@@ -23,7 +23,7 @@ def _received_data(t: np.ndarray, data: np.ndarray) -> None:
 def __main__() -> None:
     """Main function"""
     # Interesting levels for logging are: INFO, WARN
-    setup_logger(lokomat_fes_logging_level=logging.INFO, pyscience_logging_level=logging.WARN)
+    setup_logger(stimwalker_logging_level=logging.INFO, pyscience_logging_level=logging.WARN)
 
     # Define the devices and the runner
     rehastim = RehastimLokomat(port="NoPort")

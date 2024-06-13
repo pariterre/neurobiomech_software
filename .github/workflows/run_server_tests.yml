@@ -13,13 +13,13 @@ jobs:
         include:
           - os: ubuntu-latest
             label: Linux
-            prefix: /usr/share/miniconda3/envs/lokomat_fes
+            prefix: /usr/share/miniconda3/envs/stimwalker
           - os: macos-latest
             label: Macos
-            prefix: /Users/runner/miniconda3/envs/lokomat_fes
+            prefix: /Users/runner/miniconda3/envs/stimwalker
           - os: windows-latest
             label: Windows
-            prefix: C:\Miniconda3\envs\lokomat_fes
+            prefix: C:\Miniconda3\envs\stimwalker
     name: Tests on ${{ matrix.label }}
     runs-on: ${{ matrix.os }}
     defaults:
@@ -41,7 +41,7 @@ jobs:
           miniforge-variant: Mambaforge
           miniforge-version: latest
           use-mamba: true
-          activate-environment: lokomat_fes
+          activate-environment: stimwalker
           environment-file: server/environment.yml
 
       - name: Print mamba info
@@ -61,6 +61,6 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          pytest -v --color=yes --cov-report term-missing --cov=lokomat_fes server/tests
+          pytest -v --color=yes --cov-report term-missing --cov=stimwalker server/tests
           codecov
         if: matrix.label == 'Linux'

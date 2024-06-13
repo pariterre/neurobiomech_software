@@ -5,7 +5,7 @@ import pickle
 
 import numpy as np
 
-from lokomat_fes.nidaq import NiDaqData
+from stimwalker.nidaq import NiDaqData
 
 
 def test_data_creation():
