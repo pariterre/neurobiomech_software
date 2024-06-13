@@ -60,9 +60,12 @@ set_target_properties(${STIMWALKER_NAME} PROPERTIES
 # Add the different modules of stimwalker
 set(STIMWALKER_MODULE_NAMES)
 
-# Utils
 add_subdirectory("src/Utils")
 list(APPEND STIMWALKER_MODULE_NAMES "${UTILS_MODULE_NAME}")
+
+add_subdirectory("src/Devices")
+list(APPEND STIMWALKER_MODULE_NAMES "${DEVICES_MODULE_NAME}")
+
 
 # Add linker
 target_link_libraries(${STIMWALKER_NAME}
