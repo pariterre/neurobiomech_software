@@ -1,0 +1,25 @@
+#ifndef STIMWALKER_CONFIG_H
+#define STIMWALKER_CONFIG_H
+
+#define STIMWALKER_API // We kept this so if we want to convert to a shared library, we can do it easily
+#ifdef _WIN32
+#define _ENABLE_EXTENDED_ALIGNED_STORAGE
+#endif
+
+// Define some skip if ones doesn't want to compile them
+#cmakedefine SKIP_ASSERT
+
+#define STIMWALKER_NAMESPACE stimwalker
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+#ifndef _WIN32
+#ifndef NAN
+    //static const unsigned long __nan[2] = {0xffffffff, 0x7fffffff};
+    #define NAN (*(const float *) __nan)
+#endif // NAN
+#endif // _WIN32
+
+#endif  // STIMWALKER_CONFIG_H

@@ -1,0 +1,23 @@
+OUTPUT_DIRECTORY       = @CMAKE_CURRENT_BINARY_DIR@/
+INPUT                  += @CMAKE_SOURCE_DIR@/include/
+INPUT                  += @CMAKE_SOURCE_DIR@/include/Utils
+INPUT                  += @CMAKE_SOURCE_DIR@/src/ 
+INPUT                  += @CMAKE_SOURCE_DIR@/src/Utils
+INPUT                  += @CMAKE_SOURCE_DIR@/doc
+
+# Remove dll_export that confuses Doxygen
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = YES
+PREDEFINED             = STIMWALKER_API=
+
+# Other options
+PROJECT_NAME           = Stimwalker
+FULL_PATH_NAMES        = NO
+SOURCE_BROWSER         = YES
+
+# Latex package
+EXTRA_PACKAGES         = amsmath
+
+# Add the Readme file
+INPUT                  += @CMAKE_SOURCE_DIR@/README.md

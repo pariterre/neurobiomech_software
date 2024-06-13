@@ -1,0 +1,8 @@
+# create a conda environment using `conda env create -f environment.yml`
+name: stimwalker
+channels:
+- conda-forge
+dependencies:
+- eigen
+- cmake
+- doxygen
