@@ -1,7 +1,7 @@
 #include "Devices/NidaqDevice.h"
 
 #include "Devices/Generic/Exceptions.h"
-#include "Devices/Generic/CollectorData.h"
+#include "Devices/Data/CollectorData.h"
 
 #include <iostream>
 using namespace STIMWALKER_NAMESPACE::devices;

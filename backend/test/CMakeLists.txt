@@ -49,8 +49,10 @@ add_subdirectory(
 enable_testing()
 
 set(TEST_SRC_FILES
-    "${CMAKE_SOURCE_DIR}/test/test_utils.cpp"
-    "${CMAKE_SOURCE_DIR}/test/test_devices.cpp"
+"${CMAKE_SOURCE_DIR}/test/test_data.cpp"
+"${CMAKE_SOURCE_DIR}/test/test_devices.cpp"
+"${CMAKE_SOURCE_DIR}/test/test_lokomat.cpp"
+"${CMAKE_SOURCE_DIR}/test/test_utils.cpp"
 )
 add_executable(${PROJECT_NAME} "${TEST_SRC_FILES}")
 add_dependencies(${PROJECT_NAME} ${STIMWALKER_NAME})
@@ -60,6 +62,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     "${CMAKE_SOURCE_DIR}/include"
     "${${STIMWALKER_NAME}_BINARY_DIR}/include"
     "${EIGEN3_INCLUDE_DIR}"
+    "${JSON_SOURCE_DIR}/single_include"
 )
 
 # Standard linking to gtest stuff.

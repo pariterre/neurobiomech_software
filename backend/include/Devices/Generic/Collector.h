@@ -4,10 +4,10 @@
 #include "stimwalkerConfig.h"
 #include <functional>
 #include <vector>
-#include "Devices/Generic/CollectorData.h"
 
 namespace STIMWALKER_NAMESPACE::devices
 {
+    class CollectorData;
 
     /// @brief Abstract class for data collectors
     class Collector

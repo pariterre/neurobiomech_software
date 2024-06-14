@@ -39,6 +39,13 @@ namespace STIMWALKER_NAMESPACE::utils
             const std::basic_string<char> &text);
 
         ///
+        /// \brief Construct string
+        /// \param value The value in int format
+        ///
+        String(
+            int value);
+
+        ///
         /// \brief Allow to use operator=
         /// \param other The other string
         ///

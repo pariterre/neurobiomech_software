@@ -33,6 +33,12 @@ String::String(
 {
 }
 
+String::String(
+    int value)
+    : std::string(std::to_string(value))
+{
+}
+
 String &String::operator=(
     const String &other)
 {

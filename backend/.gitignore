@@ -134,3 +134,6 @@ sandbox
 
 # Qt creator autosave
 *.autosave
+
+# Autodownloaded folders
+external/json

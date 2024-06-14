@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.14)
 
 project(stimwalker VERSION 1.11.2)
 set(STIMWALKER_ROOT_FOLDER ${PROJECT_SOURCE_DIR})
@@ -22,7 +22,19 @@ endif()
 
 # Prepare linkings
 set (STIMWALKER_NAME ${PROJECT_NAME})
+
 find_package(Eigen3 REQUIRED)
+
+set(JSON_SOURCE_DIR "${STIMWALKER_ROOT_FOLDER}/external/json")
+include(FetchContent)
+FetchContent_Declare(
+  json
+  GIT_REPOSITORY https://github.com/cr-crme/json.git
+  GIT_TAG develop
+  SOURCE_DIR ${JSON_SOURCE_DIR}
+)
+FetchContent_MakeAvailable(json)
+
 
 # Manage options
 option(SKIP_ASSERT
@@ -48,6 +60,7 @@ target_include_directories(${STIMWALKER_NAME} PRIVATE
     "${CMAKE_SOURCE_DIR}/include"
     "${${STIMWALKER_NAME}_BINARY_DIR}/include"
     "${EIGEN3_INCLUDE_DIR}"
+    "${JSON_SOURCE_DIR}/single_include"
 )
 
 # Installation directories
@@ -69,6 +82,7 @@ list(APPEND STIMWALKER_MODULE_NAMES "${DEVICES_MODULE_NAME}")
 # Add linker
 target_link_libraries(${STIMWALKER_NAME}
     "${STIMWALKER_MODULE_NAMES}"
+    nlohmann_json::nlohmann_json
 )
 
 # install target

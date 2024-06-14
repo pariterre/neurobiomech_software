@@ -5,25 +5,25 @@
 #include <ctime>
 #include <vector>
 
+#include "Devices/Data/Data.h"
+
 namespace STIMWALKER_NAMESPACE::devices
 {
     /// @brief Data collected by a Collector device
-    class CollectorData
+    class CollectorData : public Data
     {
     public:
         /// @brief Constructor
         /// @param timestamp The timestamp of the data
         /// @param data The data
         CollectorData(
-            double timestamp,
+            time_t timestamp,
             const std::vector<double> &data);
 
         /// @brief Destructor
         virtual ~CollectorData() = default;
 
-        /// @brief Get the timestamp
-        /// @return The timestamp
-        double getTimestamp() const;
+        time_t getTimestamp() const override;
 
         /// @brief Get the data
         /// @return The data
@@ -37,6 +37,12 @@ namespace STIMWALKER_NAMESPACE::devices
         /// @brief Get the number of channels
         /// @return The number of channels
         int getNbChannels() const;
+
+        nlohmann::json serialize() const override;
+
+        void deserialize(const nlohmann::json &json) override;
+
+        std::unique_ptr<Data> clone() const override;
 
     protected:
         std::time_t m_timestamp;    ///< Timestamp of the data

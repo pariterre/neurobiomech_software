@@ -2,21 +2,10 @@
 
 using namespace STIMWALKER_NAMESPACE;
 
-void printDevice(const devices::Device &device)
-{
-    std::cout << "Is connected: " << device.getIsConnected() << std::endl;
-}
-
-void printCollector(const devices::Collector &collector)
-{
-    std::cout << "Nb channels: " << collector.getNbChannels() << std::endl;
-    std::cout << "Frame rate: " << collector.getFrameRate() << std::endl;
-    std::cout << "Is recording: " << collector.isRecording() << std::endl;
-}
-
-void onNewData(const devices::CollectorData &newData)
+void onNewData(const devices::CollectorData &newData, int dataId, devices::DataCollection &dataCollection)
 {
     std::cout << "New data collected, yeah!" << std::endl;
+    dataCollection.addData(dataId, newData);
 }
 
 int main(int argc, char **argv)
@@ -26,19 +15,22 @@ int main(int argc, char **argv)
     auto lokomatPtr = devices::makeLokomatDevice(isMock);
     devices::NidaqDevice &lokomat = *lokomatPtr;
 
-    printDevice(lokomat);
-    printCollector(lokomat);
+    devices::DataCollection dataCollection;
+    int dataId = dataCollection.registerNewDataId();
 
     lokomat.connect();
-    int id = lokomat.onNewData(onNewData);
+    int id = lokomat.onNewData([&dataCollection, dataId](const devices::CollectorData &newData)
+                               { onNewData(newData, dataId, dataCollection); });
+
     lokomat.startRecording();
-
-    std::this_thread::sleep_for(std::chrono::seconds(1)); // Let it run for 5 seconds
-    lokomat.removeListener(id);
-    std::this_thread::sleep_for(std::chrono::seconds(1)); // Let it run for 5 seconds
-
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
     lokomat.stopRecording();
+
     lokomat.disconnect();
+
+    nlohmann::json json = dataCollection.serialize();
+    int timeIndex = 0;
+    std::cout << json[utils::String(id)][timeIndex].dump(2) << std::endl;
 
     return 0;
 }
