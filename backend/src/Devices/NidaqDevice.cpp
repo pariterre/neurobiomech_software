@@ -140,12 +140,12 @@ void NidaqDevice::stopRecordingInternal()
     // TODO: Implement this method
 }
 
-int NidaqDevice::onNewData(std::function<void(const CollectorData &newData)> onDataCollected)
+int NidaqDevice::onNewData(std::function<void(const CollectorData &newData)> callback)
 {
     static int listenerId = 0;
 
     std::lock_guard<std::mutex> lock(m_recordingMutex);
-    m_listeners[listenerId] = std::function<void(const CollectorData &)>(onDataCollected);
+    m_listeners[listenerId] = std::function<void(const CollectorData &)>(callback);
 
     return listenerId++;
 }

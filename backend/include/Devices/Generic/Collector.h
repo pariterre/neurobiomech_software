@@ -34,10 +34,10 @@ namespace STIMWALKER_NAMESPACE::devices
         virtual void stopRecording() = 0;
 
         /// @brief Set the callback function to call when data is collected
-        /// @param onDataCollected The callback function
+        /// @param callback The callback function
         /// @return A unique identifier for the listener so it can be removed later
         virtual int onNewData(
-            std::function<void(const CollectorData &newData)> onDataCollected) = 0;
+            std::function<void(const CollectorData &newData)> callback) = 0;
 
         /// @brief Remove a listener
         /// @param listenerId The unique identifier of the listener

@@ -61,7 +61,7 @@ namespace STIMWALKER_NAMESPACE::devices
         /// @brief Stop recording the data, this method is called by stopRecording and can be overriden by a mock
         virtual void stopRecordingInternal();
 
-        int onNewData(std::function<void(const CollectorData &newData)> onDataCollected) override;
+        int onNewData(std::function<void(const CollectorData &newData)> callback) override;
 
         void removeListener(int listenerId) override;
 

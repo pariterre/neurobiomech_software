@@ -14,7 +14,7 @@ void printCollector(const devices::Collector &collector)
     std::cout << "Is recording: " << collector.isRecording() << std::endl;
 }
 
-void onDataCollected(const devices::CollectorData &newData)
+void onNewData(const devices::CollectorData &newData)
 {
     std::cout << "New data collected, yeah!" << std::endl;
 }
@@ -30,7 +30,7 @@ int main(int argc, char **argv)
     printCollector(lokomat);
 
     lokomat.connect();
-    int id = lokomat.onNewData(onDataCollected);
+    int id = lokomat.onNewData(onNewData);
     lokomat.startRecording();
 
     std::this_thread::sleep_for(std::chrono::seconds(1)); // Let it run for 5 seconds
