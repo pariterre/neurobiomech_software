@@ -10,40 +10,48 @@ using namespace STIMWALKER_NAMESPACE;
 
 // Start the tests
 
+TEST(Nidaq, channels){
+    auto nidaq = devices::NidaqDeviceMock(4, 1000);
+    
+    ASSERT_EQ(nidaq.getNbChannels(), 4);
+    ASSERT_EQ(nidaq.getFrameRate(), 1000);
+
+}
+
 TEST(Nidaq, connect){
-    auto lokomat = devices::NidaqDeviceMock(4, 1000);
+    auto nidaq = devices::NidaqDeviceMock(4, 1000);
     
-    ASSERT_EQ(lokomat.getIsConnected(), false);
+    ASSERT_EQ(nidaq.getIsConnected(), false);
     
-    lokomat.connect();
-    ASSERT_EQ(lokomat.getIsConnected(), true);
+    nidaq.connect();
+    ASSERT_EQ(nidaq.getIsConnected(), true);
     
-    EXPECT_THROW(lokomat.connect(), devices::DeviceIsConnectedException);
+    EXPECT_THROW(nidaq.connect(), devices::DeviceIsConnectedException);
 
-    lokomat.startRecording();
-    EXPECT_THROW(lokomat.disconnect(), devices::DeviceIsRecordingException);
-    lokomat.stopRecording();
+    nidaq.startRecording();
+    EXPECT_THROW(nidaq.disconnect(), devices::DeviceIsRecordingException);
+    nidaq.stopRecording();
 
-    lokomat.disconnect();
-    ASSERT_EQ(lokomat.getIsConnected(), false);
+    nidaq.disconnect();
+    ASSERT_EQ(nidaq.getIsConnected(), false);
 
-    EXPECT_THROW(lokomat.disconnect(), devices::DeviceIsNotConnectedException);
+    EXPECT_THROW(nidaq.disconnect(), devices::DeviceIsNotConnectedException);
 }
 
 TEST(Nidaq, recording){
-    auto lokomat = devices::NidaqDeviceMock(4, 1000);
-    ASSERT_EQ(lokomat.isRecording(), false);
+    auto nidaq = devices::NidaqDeviceMock(4, 1000);
+    ASSERT_EQ(nidaq.isRecording(), false);
     
-    EXPECT_THROW(lokomat.startRecording(), devices::DeviceIsNotConnectedException);
+    EXPECT_THROW(nidaq.startRecording(), devices::DeviceIsNotConnectedException);
 
-    lokomat.connect();
-    lokomat.startRecording();
-    ASSERT_EQ(lokomat.isRecording(), true);
+    nidaq.connect();
+    nidaq.startRecording();
+    ASSERT_EQ(nidaq.isRecording(), true);
 
-    EXPECT_THROW(lokomat.startRecording(), devices::DeviceIsRecordingException);
+    EXPECT_THROW(nidaq.startRecording(), devices::DeviceIsRecordingException);
     
-    lokomat.stopRecording();
-    ASSERT_EQ(lokomat.isRecording(), false);
+    nidaq.stopRecording();
+    ASSERT_EQ(nidaq.isRecording(), false);
 
-    EXPECT_THROW(lokomat.stopRecording(), devices::DeviceIsNotRecordingException);
+    EXPECT_THROW(nidaq.stopRecording(), devices::DeviceIsNotRecordingException);
 }

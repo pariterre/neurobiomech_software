@@ -14,7 +14,8 @@ void printCollector(const devices::Collector& collector){
 
 int main(int argc, char** argv) {
     // Exit the application
-    auto lokomat = devices::NidaqDeviceMock(4, 1000);
+    bool isMock = true;
+    auto lokomat = devices::makeLokomat(isMock);
     printDevice(lokomat);
     printCollector(lokomat);
     return 0;

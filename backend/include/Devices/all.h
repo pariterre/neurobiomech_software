@@ -8,5 +8,6 @@
 #include "Devices/Generic/StimulatorData.h"
 #include "Devices/Generic/Exceptions.h"
 #include "Devices/NidaqDevice.h"
+#include "Devices/Lokomat.h"
 
 #endif // STIMWALKER_DEVICES_ALL_H
