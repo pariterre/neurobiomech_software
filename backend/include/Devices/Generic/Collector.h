@@ -10,8 +10,11 @@ namespace STIMWALKER_NAMESPACE{
 namespace devices {
 
 /// @brief Abstract class for data collectors
-class CollectorDeviceAbstract {
+class Collector {
 public:
+    /// @brief Destructor
+    virtual ~Collector() = default;
+
     /// @brief Get the number of channels
     /// @return The number of channels
     virtual int getNbChannels() const = 0;

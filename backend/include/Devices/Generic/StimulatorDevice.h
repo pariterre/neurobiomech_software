@@ -8,8 +8,11 @@ namespace STIMWALKER_NAMESPACE{ namespace devices {
 
 class StimulatorData;
 
-class StimulatorDeviceAbstract{
+class StimulatorDevice {
 public:
+    /// @brief Destructor
+    virtual ~StimulatorDevice() = default;
+
     /// @brief Get the number of channels
     /// @return The number of channels
     virtual int getNbChannels() const = 0;

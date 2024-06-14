@@ -5,7 +5,8 @@
 #include <map>
 #include <algorithm>
 #include <vector>
-#include "Utils/Error.h"
+
+#include "Utils/Exceptions.h"
 
 using namespace STIMWALKER_NAMESPACE;
 
@@ -66,8 +67,10 @@ utils::String utils::String::operator+(
 
 utils::String utils::String::operator()(
     size_t idx) const {
-    utils::Error::check(idx<this->length(),
-                                "Index for string out of range");
+    if (idx >= this->length()) {
+        throw utils::OutOfBoundsException("Index for string out of range");
+    }
+    
     char out[2];
     out[0] = (*this)[idx];
     out[1] = '\0';
@@ -77,10 +80,13 @@ utils::String utils::String::operator()(
 utils::String utils::String::operator()(
     size_t startIdx,
     size_t lastIdx) const {
-    utils::Error::check((startIdx<this->length()
-                                 || lastIdx<this->length()), "Index for string out of range");
-    utils::Error::check(lastIdx>startIdx,
-                                "Second argument should be higher than first!");
+    if (startIdx >= this->length() || lastIdx >= this->length()){
+        throw utils::OutOfBoundsException("Index for string out of range");
+    }
+    if (lastIdx <= startIdx){
+        throw utils::OutOfBoundsException("Second argument should be higher than first!");
+    }
+
     char *out = static_cast<char*>(malloc(lastIdx-startIdx+2*sizeof(char)));
     for (size_t k=0; k<lastIdx-startIdx+1; ++k) {
         out[k] = (*this)[startIdx+k];
@@ -136,8 +142,9 @@ utils::String utils::String::to_string(
 utils::String utils::String::removeTrailing(
     const utils::String &origin,
     const utils::String &trailTag){
-    utils::Error::check(trailTag.length() == 1,
-                                "Tag should be of length 1");
+    if (trailTag.length() != 1) {
+        throw WrongDimensionsException("Tag should be of length 1");
+    }
     utils::String out(origin);
 
     while(out.length() > 0 && out.back() == trailTag[0]) {

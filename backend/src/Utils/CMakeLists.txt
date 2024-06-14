@@ -4,7 +4,6 @@ set(UTILS_MODULE_NAME ${STIMWALKER_NAME}_utils PARENT_SCOPE)
 # Add the relevant files
 set(SRC_LIST_MODULE
     "${CMAKE_CURRENT_SOURCE_DIR}/Benchmark.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Error.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Path.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/String.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Timer.cpp"

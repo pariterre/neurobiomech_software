@@ -5,8 +5,8 @@
 #include <fstream>
 #include <regex>
 
+#include "Utils/Exceptions.h"
 #include "Utils/String.h"
-#include "Utils/Error.h"
 
 #ifdef _WIN32
     #include <direct.h>
@@ -350,11 +350,13 @@ void utils::Path::setIsFolderAbsolute(){
 utils::String utils::Path::currentDir(){
     char buff[FILENAME_MAX];
 #ifdef _WIN32
-    utils::Error::check(_getcwd(buff, FILENAME_MAX),
-                                "Could not find the current directory");
+    if(!buff, FILENAME_MAX){
+        throw utils::FileNotFoundException("Could not find the current directory");
+    }
 #else
-    utils::Error::check(getcwd(buff, FILENAME_MAX),
-                                "Could not find the current directory");
+    if(!getcwd(buff, FILENAME_MAX)){
+        throw utils::FileNotFoundException("Could not find the current directory");
+    }
 #endif
     return toUnixFormat(buff) + "/";
 }

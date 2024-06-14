@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 
 project(stimwalker VERSION 1.11.2)
 set(STIMWALKER_ROOT_FOLDER ${PROJECT_SOURCE_DIR})
-set (CMAKE_CXX_STANDARD 11)
+set (CMAKE_CXX_STANDARD 17)
 
 # Set all the compile options
 option(BUILD_DOC 

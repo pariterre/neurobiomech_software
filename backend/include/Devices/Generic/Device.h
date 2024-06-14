@@ -6,8 +6,11 @@
 namespace STIMWALKER_NAMESPACE{ namespace devices {
 
 /// @brief Abstract class for devices
-class DeviceAbstract {
+class Device {
 public:
+    /// @brief Destructor
+    virtual ~Device() = default;
+
     /// @brief Get the number of channels
     virtual bool getIsConnected() const = 0;
 
