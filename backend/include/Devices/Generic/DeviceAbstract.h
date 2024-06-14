@@ -1,7 +1,9 @@
 #ifndef DEVICE_ABSTRACT_H
 #define DEVICE_ABSTRACT_H
 
-namespace STIMWALKER_NAMESPACE{ namespace Devices {
+#include "stimwalkerConfig.h"
+
+namespace STIMWALKER_NAMESPACE{ namespace devices {
 
 /// @brief Abstract class for devices
 class DeviceAbstract {

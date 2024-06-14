@@ -1,7 +1,6 @@
 #include "Devices/NidaqDevice.h"
-#include "Devices/CollectorData.h"
 
-namespace STIMWALKER_NAMESPACE{ namespace Devices {
+namespace STIMWALKER_NAMESPACE{ namespace devices {
 
 int NidaqDevice::getNbChannels() const {
     return m_nbChannels;

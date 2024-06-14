@@ -8,36 +8,31 @@ utils::Timer::Timer(bool startNow) :
     m_isPaused(false),
     m_start(),
     m_pauseTime(),
-    m_totalPauseTime(0.0)
-{
+    m_totalPauseTime(0.0){
     if (startNow) {
         start();
     }
 }
 
-void utils::Timer::start()
-{
+void utils::Timer::start(){
     m_start = std::clock();
     m_totalPauseTime = 0;
     m_isPaused = false;
     m_isStarted = true;
 } // Start a timer
 
-bool utils::Timer::isStarted()
-{
+bool utils::Timer::isStarted(){
     return m_isStarted;
 }
 
-void utils::Timer::pause()
-{
+void utils::Timer::pause(){
     if (!m_isPaused) {
         m_isPaused = true;
         m_pauseTime = std::clock();
     }
 }
 
-void utils::Timer::resume()
-{
+void utils::Timer::resume(){
     if (!m_isStarted) {
         start();
     }
@@ -48,8 +43,7 @@ void utils::Timer::resume()
     }
 }
 
-double utils::Timer::getLap()
-{
+double utils::Timer::getLap(){
     addPauseTime();
 
     if (m_isStarted) {
@@ -59,8 +53,7 @@ double utils::Timer::getLap()
     }
 }
 
-double utils::Timer::stop()
-{
+double utils::Timer::stop(){
     if (m_isStarted) {
         m_isStarted = false;
         return getLap();
@@ -69,15 +62,13 @@ double utils::Timer::stop()
     }
 }
 
-void utils::Timer::addPauseTime()
-{
+void utils::Timer::addPauseTime(){
     if (m_isPaused) {
         m_totalPauseTime += getTime(m_pauseTime);
         m_pauseTime = std::clock();
     }
 }
 
-double utils::Timer::getTime(const std::clock_t& timer)
-{
+double utils::Timer::getTime(const std::clock_t& timer){
     return static_cast<double>(std::clock() - timer) / CLOCKS_PER_SEC;
 }

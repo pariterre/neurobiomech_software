@@ -9,7 +9,7 @@
 // Define some skip if ones doesn't want to compile them
 #cmakedefine SKIP_ASSERT
 
-#define STIMWALKER_NAMESPACE Stimwalker
+#define STIMWALKER_NAMESPACE stimwalker
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846

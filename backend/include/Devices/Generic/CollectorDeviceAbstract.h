@@ -1,12 +1,13 @@
 #ifndef COLLECTOR_DEVICE_ABSTRACT_H
 #define COLLECTOR_DEVICE_ABSTRACT_H
 
+#include "stimwalkerConfig.h"
+#include "Devices/Generic/CollectorData.h"
 #include <vector>
 
 namespace STIMWALKER_NAMESPACE{ 
 
-namespace Devices {
-class CollectorData;
+namespace devices {
 
 /// @brief Abstract class for data collectors
 class CollectorDeviceAbstract {

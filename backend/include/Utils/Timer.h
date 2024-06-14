@@ -1,14 +1,11 @@
 #ifndef STIMWALKER_UTILS_TIMER_H
 #define STIMWALKER_UTILS_TIMER_H
 
+#include "stimwalkerConfig.h"
 #include <memory>
 #include <ctime>
-#include "stimwalkerConfig.h"
 
-namespace STIMWALKER_NAMESPACE
-{
-namespace utils
-{
+namespace STIMWALKER_NAMESPACE { namespace utils {
 
 ///
 /// \brief Wrapper around timer function in C++
@@ -77,7 +74,6 @@ protected:
 
 };
 
-}
-}
+}}
 
 #endif // STIMWALKER_UTILS_TIMER_H

@@ -1,11 +1,11 @@
 #ifndef STIMWALKER_DEVICES_ALL_H
 #define STIMWALKER_DEVICES_ALL_H
 
-#include "Devices/CollectorData.h"
-#include "Devices/CollectorDeviceAbstract.h"
-#include "Devices/DeviceAbstract.h"
+#include "Devices/Generic/DeviceAbstract.h"
+#include "Devices/Generic/CollectorDeviceAbstract.h"
+#include "Devices/Generic/CollectorData.h"
+#include "Devices/Generic/StimulatorDeviceAbstract.h"
+#include "Devices/Generic/StimulatorData.h"
 #include "Devices/NidaqDevice.h"
-#include "Devices/StimulatorData.h"
-#include "Devices/StimulatorDeviceAbstract.h"
 
 #endif // STIMWALKER_DEVICES_ALL_H

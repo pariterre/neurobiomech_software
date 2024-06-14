@@ -1,7 +1,9 @@
 #ifndef COLLECTOR_DATA_H
 #define COLLECTOR_DATA_H
 
-namespace STIMWALKER_NAMESPACE{ namespace Devices {
+#include "stimwalkerConfig.h"
+
+namespace STIMWALKER_NAMESPACE{ namespace devices {
 
 /// @brief Abstract class for data
 class CollectorData {

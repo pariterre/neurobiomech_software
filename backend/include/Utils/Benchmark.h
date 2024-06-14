@@ -1,14 +1,12 @@
 #ifndef STIMWALKER_UTILS_BENCHMARK_H
+
 #define STIMWALKER_UTILS_BENCHMARK_H
 
+#include "stimwalkerConfig.h"
 #include <memory>
 #include <map>
-#include "stimwalkerConfig.h"
 
-namespace STIMWALKER_NAMESPACE
-{
-namespace utils
-{
+namespace STIMWALKER_NAMESPACE { namespace utils {
 class String;
 class Timer;
 
@@ -92,7 +90,6 @@ protected:
 
 };
 
-}
-}
+}}
 
 #endif // STIMWALKER_UTILS_BENCHMARK_H

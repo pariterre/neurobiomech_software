@@ -1,11 +1,11 @@
 #ifndef NI_DAQ_DEVICE_H
 #define NI_DAQ_DEVICE_H
 
-#include "DeviceAbstract.h"
-#include "CollectorDeviceAbstract.h"
+#include "stimwalkerConfig.h"
+#include "Devices/Generic/DeviceAbstract.h"
+#include "Devices/Generic/CollectorDeviceAbstract.h"
 
-
-namespace STIMWALKER_NAMESPACE{ namespace Devices {
+namespace STIMWALKER_NAMESPACE{ namespace devices {
 
 /// @brief Abstract class for devices
 class NidaqDevice : public DeviceAbstract, public CollectorDeviceAbstract {

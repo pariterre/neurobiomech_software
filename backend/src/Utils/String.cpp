@@ -10,35 +10,30 @@
 using namespace STIMWALKER_NAMESPACE;
 
 utils::String::String()
-    : std::string("")
-{
+    : std::string(""){
 
 }
 
 utils::String::String(
     const char *text)
-    : std::string(text)
-{
+    : std::string(text){
 
 }
 
 utils::String::String(
     const String &text)
-    : std::string(text)
-{
+    : std::string(text){
 
 }
 
 utils::String::String(
     const std::basic_string<char> &text)
-    : std::string(text)
-{
+    : std::string(text){
 
 }
 
 utils::String &utils::String::operator=(
-    const utils::String &other)
-{
+    const utils::String &other){
     if (this==&other) { // check for self-assigment
         return *this;
     }
@@ -48,34 +43,29 @@ utils::String &utils::String::operator=(
 }
 
 utils::String utils::String::operator+(
-    const char *text)
-{
+    const char *text){
     String tp = *this;
     tp.append(text);
     return tp;
 }
 
 utils::String utils::String::operator+(
-    double val)
-{
+    double val){
     return *this + to_string(val);
 }
 
 utils::String utils::String::operator+(
-    size_t val)
-{
+    size_t val){
     return *this + std::to_string(val);
 }
 
 utils::String utils::String::operator+(
-    int val)
-{
+    int val){
     return *this + std::to_string(val);
 }
 
 utils::String utils::String::operator()(
-    size_t idx) const
-{
+    size_t idx) const {
     utils::Error::check(idx<this->length(),
                                 "Index for string out of range");
     char out[2];
@@ -86,8 +76,7 @@ utils::String utils::String::operator()(
 
 utils::String utils::String::operator()(
     size_t startIdx,
-    size_t lastIdx) const
-{
+    size_t lastIdx) const {
     utils::Error::check((startIdx<this->length()
                                  || lastIdx<this->length()), "Index for string out of range");
     utils::Error::check(lastIdx>startIdx,
@@ -102,40 +91,34 @@ utils::String utils::String::operator()(
     return Out;
 }
 
-utils::String::~String()
-{
+utils::String::~String(){
 
 }
 
-utils::String utils::String::tolower(const utils::String
-        &str)
-{
+utils::String utils::String::tolower(
+    const utils::String &str){
     utils::String new_str = str;
     std::transform(new_str.begin(), new_str.end(), new_str.begin(), ::tolower);
     return new_str;
 }
 
-utils::String utils::String::tolower() const
-{
+utils::String utils::String::tolower() const {
     return tolower(*this);
 }
 
-utils::String utils::String::toupper(const utils::String
-        &str)
-{
+utils::String utils::String::toupper(
+    const utils::String &str){
     utils::String new_str = str;
     std::transform(new_str.begin(), new_str.end(), new_str.begin(), ::toupper);
     return new_str;
 }
 
-utils::String utils::String::toupper() const
-{
+utils::String utils::String::toupper() const {
     return toupper(*this);
 }
 
 utils::String utils::String::to_string(
-    double val)
-{
+    double val){
     std::ostringstream out;
     out.precision(20);
     out << std::fixed << val;
@@ -143,8 +126,7 @@ utils::String utils::String::to_string(
 }
 
 utils::String utils::String::to_string(
-    float val)
-{
+    float val){
     std::ostringstream out;
     out.precision(20);
     out << std::fixed << val;
@@ -153,8 +135,7 @@ utils::String utils::String::to_string(
 
 utils::String utils::String::removeTrailing(
     const utils::String &origin,
-    const utils::String &trailTag)
-{
+    const utils::String &trailTag){
     utils::Error::check(trailTag.length() == 1,
                                 "Tag should be of length 1");
     utils::String out(origin);
@@ -165,8 +146,7 @@ utils::String utils::String::removeTrailing(
     return out;
 }
 
-std::ostream &operator<<(std::ostream &os, const utils::String &a)
-{
+std::ostream &operator<<(std::ostream &os, const utils::String &a){
     os << a.c_str();
     return os;
 }

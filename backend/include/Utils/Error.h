@@ -4,10 +4,7 @@
 #include "stimwalkerConfig.h"
 #include "Utils/String.h"
 
-namespace STIMWALKER_NAMESPACE
-{
-namespace utils
-{
+namespace STIMWALKER_NAMESPACE { namespace utils {
 class String;
 
 ///
@@ -42,8 +39,7 @@ public:
         const String &message);
 };
 
-}
-}
+}}
 
 #endif // STIMWALKER_UTILS_ERROR_H
 

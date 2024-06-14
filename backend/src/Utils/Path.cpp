@@ -24,8 +24,7 @@ utils::Path::Path() :
     m_folder(utils::String()),
     m_isFolderAbsolute(false),
     m_filename(utils::String()),
-    m_extension(utils::String())
-{
+    m_extension(utils::String()){
 
 }
 
@@ -35,8 +34,7 @@ utils::Path::Path(
     m_folder(utils::String()),
     m_isFolderAbsolute(false),
     m_filename(utils::String()),
-    m_extension(utils::String())
-{
+    m_extension(utils::String()){
     parseFileName(m_originalPath, m_folder, m_filename, m_extension);
     setIsFolderAbsolute();
 }
@@ -47,8 +45,7 @@ utils::Path::Path(
     m_folder(utils::String()),
     m_isFolderAbsolute(std::make_shared<bool>()),
     m_filename(utils::String()),
-    m_extension(utils::String())
-{
+    m_extension(utils::String()){
     parseFileName(m_originalPath, m_folder, m_filename, m_extension);
     setIsFolderAbsolute();
 }
@@ -59,24 +56,22 @@ utils::Path::Path(
     m_folder(utils::String()),
     m_isFolderAbsolute(std::make_shared<bool>()),
     m_filename(utils::String()),
-    m_extension(utils::String())
-{
+    m_extension(utils::String()){
     parseFileName(m_originalPath, m_folder, m_filename, m_extension);
     setIsFolderAbsolute();
 }
 
-bool utils::Path::isFileExist() const
-{
+bool utils::Path::isFileExist() const {
     return isFileExist(absolutePath());
 }
+
 bool utils::Path::isFileExist(
-    const Path& path)
-{
+    const Path& path){
     return isFileExist(path.absolutePath());
 }
+
 bool utils::Path::isFileExist(
-    const utils::String& path)
-{
+    const utils::String& path){
 #ifdef _WIN32
     const char* pathChar = toWindowsFormat(path).c_str();
 #else
@@ -91,12 +86,11 @@ bool utils::Path::isFileExist(
     }
 }
 
-bool utils::Path::isFileReadable() const
-{
+bool utils::Path::isFileReadable() const {
 #ifdef _WIN32
     const char* pathChar = toWindowsFormat(absolutePath()).c_str();
 #else
-    const char* pathChar = path.c_str();
+    const char* pathChar = absolutePath().c_str();
 #endif
 
     std::ifstream fichier(pathChar);
@@ -105,20 +99,17 @@ bool utils::Path::isFileReadable() const
     return isOpen;
 }
 
-bool utils::Path::isFolderExist() const
-{
+bool utils::Path::isFolderExist() const {
     return isFolderExist(*this);
 }
 
 bool utils::Path::isFolderExist(
-    const Path &path)
-{
+    const Path &path){
     return isFolderExist(path.folder());
 }
 
 bool utils::Path::isFolderExist(
-    const utils::String & path)
-{
+    const utils::String & path){
 #ifdef _WIN32
     if (GetFileAttributesA(toWindowsFormat(path).c_str())
             == INVALID_FILE_ATTRIBUTES) {
@@ -139,15 +130,13 @@ bool utils::Path::isFolderExist(
         return false;
     }
 #endif
-
 }
 
 void utils::Path::parseFileName(
     const utils::String &path,
     utils::String &folder,
     utils::String &filename,
-    utils::String &extension)
-{
+    utils::String &extension){
     utils::String pathSep(toUnixFormat(path));
 
     size_t sepPos(pathSep.rfind("/"));
@@ -178,21 +167,18 @@ void utils::Path::parseFileName(
     filename = pathSep.substr(sepPos+1, ext- sepPos-1);
 }
 
-utils::String utils::Path::relativePath()  const
-{
+utils::String utils::Path::relativePath() const {
     return relativePath(*this, currentDir());
 }
 
 utils::String utils::Path::relativePath(
-    const utils::String& relativeTo) const
-{
+    const utils::String& relativeTo) const {
     return relativePath(*this, relativeTo);
 }
 
 utils::String utils::Path::relativePath(
     const utils::Path &path,
-    const utils::String &relativeTo)
-{
+    const utils::String &relativeTo){
     utils::String me(path.absolutePath());
     utils::String currentDir(relativeTo);
 
@@ -249,8 +235,7 @@ utils::String utils::Path::relativePath(
 }
 
 utils::String utils::Path::absoluteFolder(
-    const utils::Path &path)
-{
+    const utils::Path &path){
     if (path.m_isFolderAbsolute) {
         return path.folder();
     }
@@ -271,8 +256,7 @@ utils::String utils::Path::absoluteFolder(
     return base + relativePath(path, base);
 }
 
-utils::String utils::Path::absoluteFolder() const
-{
+utils::String utils::Path::absoluteFolder() const {
     if (m_isFolderAbsolute) {
         return m_folder;
     } else {
@@ -280,8 +264,7 @@ utils::String utils::Path::absoluteFolder() const
     }
 }
 
-utils::String utils::Path::absolutePath() const
-{
+utils::String utils::Path::absolutePath() const {
     if (m_filename.compare("")) {
         if (m_extension.compare("")) {
             return absoluteFolder() + m_filename + "." + m_extension;
@@ -294,8 +277,7 @@ utils::String utils::Path::absolutePath() const
 }
 
 utils::String utils::Path::toUnixFormat(
-    const utils::String& path)
-{
+    const utils::String& path){
     utils::String pathOut(path);
 
     // Depending on the string origin, "\\" is either the character "\"
@@ -317,8 +299,7 @@ utils::String utils::Path::toUnixFormat(
 }
 
 utils::String utils::Path::toWindowsFormat(
-    const utils::String &path)
-{
+    const utils::String &path){
     utils::String pathOut(path);
     size_t pos(pathOut.rfind("/"));
     while (pos != std::string::npos) {
@@ -328,63 +309,45 @@ utils::String utils::Path::toWindowsFormat(
     return pathOut;
 }
 
-utils::String utils::Path::originalPath() const
-{
+utils::String utils::Path::originalPath() const {
     return m_originalPath;
 }
 
-utils::String utils::Path::folder() const
-{
+utils::String utils::Path::folder() const {
     return m_folder;
 }
 
 void utils::Path::setFilename(
-    const utils::String& name)
-{
+    const utils::String& name){
     m_filename = name;
 }
 
-utils::String utils::Path::filename() const
-{
+utils::String utils::Path::filename() const{
     return m_filename;
 }
 
 void utils::Path::setExtension(
-    const utils::String &ext)
-{
+    const utils::String &ext){
     m_extension = ext;
 }
 
-utils::String utils::Path::extension() const
-{
+utils::String utils::Path::extension() const {
     return m_extension;
 }
 
-void utils::Path::setIsFolderAbsolute()
-{
+void utils::Path::setIsFolderAbsolute(){
     utils::String base;
 #ifdef _WIN32
     utils::String current(m_folder);
     std::smatch matches;
-
-    if (std::regex_search(current, matches, std::regex("^([A-Z]):[\\/].*$"))) {
-        m_isFolderAbsolute = true;
-    } else {
-        m_isFolderAbsolute = false;
-    }
+    m_isFolderAbsolute = std::regex_search(current, matches, std::regex("^([A-Z]):[\\/].*$"));
 #else
     base = "/";
-    size_t pos(m_folder->find(base.c_str()));
-    if (pos == 0) {
-        *m_isFolderAbsolute = true;
-    } else {
-        *m_isFolderAbsolute = false;
-    }
+    m_isFolderAbsolute = m_folder.find(base.c_str()) == 0;
 #endif
 }
 
-utils::String utils::Path::currentDir()
-{
+utils::String utils::Path::currentDir(){
     char buff[FILENAME_MAX];
 #ifdef _WIN32
     utils::Error::check(_getcwd(buff, FILENAME_MAX),
@@ -396,8 +359,7 @@ utils::String utils::Path::currentDir()
     return toUnixFormat(buff) + "/";
 }
 
-void utils::Path::createFolder() const
-{
+void utils::Path::createFolder() const {
     const utils::String& tp(folder());
     utils::String tp2(tp);
 

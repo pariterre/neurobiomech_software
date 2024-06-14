@@ -1,13 +1,10 @@
 #ifndef STIMWALKER_UTILS_STRING_H
 #define STIMWALKER_UTILS_STRING_H
 
-#include <iostream>
 #include "stimwalkerConfig.h"
+#include <iostream>
 
-namespace STIMWALKER_NAMESPACE
-{
-namespace utils
-{
+namespace STIMWALKER_NAMESPACE { namespace utils {
 ///
 /// \brief Wrapper around the std::string class with augmented functionality
 ///
@@ -151,8 +148,7 @@ public:
         const String& trailTag);
 };
 
-}
-}
+}}
 
     ///
     /// \brief To use operator<<

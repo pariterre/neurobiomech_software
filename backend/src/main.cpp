@@ -2,7 +2,7 @@
 
 int main(int argc, char** argv) {
     // Exit the application
-    auto lokomat = Stimwalker::Devices::NidaqDevice();
+    auto lokomat = stimwalker::devices::NidaqDevice();
 
     lokomat.connect();
     std::cout << "Connected: " << lokomat.getIsConnected() << std::endl;

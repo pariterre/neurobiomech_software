@@ -1,9 +1,10 @@
 #ifndef STIMULATOR_DATA_H
 #define STIMULATOR_DATA_H
 
+#include "stimwalkerConfig.h"
 #include <vector>
 
-namespace STIMWALKER_NAMESPACE{ namespace Devices {
+namespace STIMWALKER_NAMESPACE{ namespace devices {
 
 /// @brief Abstract class for data
 class StimulatorData {

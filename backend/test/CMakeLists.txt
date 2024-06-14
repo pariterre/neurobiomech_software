@@ -50,6 +50,7 @@ enable_testing()
 
 set(TEST_SRC_FILES
     "${CMAKE_SOURCE_DIR}/test/test_utils.cpp"
+    "${CMAKE_SOURCE_DIR}/test/test_devices.cpp"
 )
 add_executable(${PROJECT_NAME} "${TEST_SRC_FILES}")
 add_dependencies(${PROJECT_NAME} ${STIMWALKER_NAME})

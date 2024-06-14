@@ -66,7 +66,6 @@ list(APPEND STIMWALKER_MODULE_NAMES "${UTILS_MODULE_NAME}")
 add_subdirectory("src/Devices")
 list(APPEND STIMWALKER_MODULE_NAMES "${DEVICES_MODULE_NAME}")
 
-
 # Add linker
 target_link_libraries(${STIMWALKER_NAME}
     "${STIMWALKER_MODULE_NAMES}"
