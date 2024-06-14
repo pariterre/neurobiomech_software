@@ -16,6 +16,7 @@ TEST(Nidaq, channels){
     ASSERT_EQ(nidaq.getNbChannels(), 4);
     ASSERT_EQ(nidaq.getFrameRate(), 1000);
 
+    nidaq.dispose();
 }
 
 TEST(Nidaq, connect){
@@ -36,6 +37,8 @@ TEST(Nidaq, connect){
     ASSERT_EQ(nidaq.getIsConnected(), false);
 
     EXPECT_THROW(nidaq.disconnect(), devices::DeviceIsNotConnectedException);
+
+    nidaq.dispose();
 }
 
 TEST(Nidaq, recording){
@@ -54,4 +57,24 @@ TEST(Nidaq, recording){
     ASSERT_EQ(nidaq.isRecording(), false);
 
     EXPECT_THROW(nidaq.stopRecording(), devices::DeviceIsNotRecordingException);
+
+    nidaq.dispose();
+}
+
+TEST(Nidaq, callback){
+    auto nidaq = devices::NidaqDeviceMock(4, 1000);
+    nidaq.connect();
+    nidaq.startRecording();
+    
+    bool callbackCalled = false;
+    auto callback = [&callbackCalled](const devices::CollectorData& newData){
+        callbackCalled = true;
+    };
+    nidaq.onNewData(callback);
+
+    ASSERT_EQ(callbackCalled, false);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    ASSERT_EQ(callbackCalled, true);
+
+    nidaq.dispose();
 }

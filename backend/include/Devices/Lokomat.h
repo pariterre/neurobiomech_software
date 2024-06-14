@@ -6,11 +6,13 @@
 
 namespace STIMWALKER_NAMESPACE{ namespace devices {
 
-    NidaqDevice makeLokomat(bool isMock){
+    std::unique_ptr<NidaqDevice> makeLokomatDevice(bool isMock){
         int nbChannels = 25;
         int frameRate = 1000;
 
-        return isMock ? NidaqDeviceMock(nbChannels, frameRate) : NidaqDevice(nbChannels, frameRate);
+        return isMock 
+            ? std::make_unique<NidaqDeviceMock>(nbChannels, frameRate) 
+            : std::make_unique<NidaqDevice>(nbChannels, frameRate);
     }
 
 }}

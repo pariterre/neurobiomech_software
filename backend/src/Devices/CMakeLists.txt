@@ -4,6 +4,7 @@ set(DEVICES_MODULE_NAME ${STIMWALKER_NAME}_devices PARENT_SCOPE)
 # Add the relevant files
 set(SRC_LIST_MODULE
     "${CMAKE_CURRENT_SOURCE_DIR}/NidaqDevice.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Generic/CollectorData.cpp"
 )
 
 # Create the library

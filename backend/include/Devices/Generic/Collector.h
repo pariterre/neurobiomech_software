@@ -2,8 +2,9 @@
 #define COLLECTOR_DEVICE_ABSTRACT_H
 
 #include "stimwalkerConfig.h"
-#include "Devices/Generic/CollectorData.h"
+#include <functional>
 #include <vector>
+#include "Devices/Generic/CollectorData.h"
 
 namespace STIMWALKER_NAMESPACE{ 
 
@@ -34,7 +35,13 @@ public:
 
     /// @brief Set the callback function to call when data is collected
     /// @param onDataCollected The callback function
-    virtual void listenToOnDataCollected(void* onDataCollected(const CollectorData& newData)) = 0;
+    /// @return A unique identifier for the listener so it can be removed later
+    virtual int onNewData(
+        std::function<void(const CollectorData& newData)> onDataCollected) = 0;
+
+    /// @brief Remove a listener
+    /// @param listenerId The unique identifier of the listener
+    virtual void removeListener(int listenerId) = 0;
 
     /// @brief Get the data
     /// @return The data

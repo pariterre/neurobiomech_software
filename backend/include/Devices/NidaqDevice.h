@@ -3,6 +3,10 @@
 
 #include "stimwalkerConfig.h"
 #include <memory>
+#include <mutex>
+#include <thread>
+#include <map>
+
 #include "Devices/Generic/Device.h"
 #include "Devices/Generic/Collector.h"
 
@@ -19,6 +23,12 @@ public:
         int nbChannels,
         int frameRate
     );
+    
+    // Delete copy constructor and assignment operator, this class cannot be copied because of the mutex member
+    NidaqDevice(const NidaqDevice&) = delete;
+    NidaqDevice& operator=(const NidaqDevice&) = delete;
+
+    virtual ~NidaqDevice();
 
     int getNbChannels() const override;
 
@@ -28,7 +38,13 @@ public:
 
     void connect() override;
 
+    /// @brief Connect the device, this method is called by connect and can be overriden by a mock
+    virtual void connectInternal();
+
     void disconnect() override;
+
+    /// @brief Disconnect the device, this method is called by disconnect and can be overriden by a mock
+    virtual void disconnectInternal();
 
     void dispose() override;
 
@@ -36,37 +52,40 @@ public:
 
     void startRecording() override;
 
+    /// @brief Start recording the data, this method is called by startRecording and can be overriden by a mock
+    virtual void startRecordingInternal();
+
     void stopRecording() override;
 
-    void listenToOnDataCollected(void* onDataCollected(const CollectorData& newData));
+    /// @brief Stop recording the data, this method is called by stopRecording and can be overriden by a mock
+    virtual void stopRecordingInternal();
+
+    int onNewData(std::function<void(const CollectorData& newData)> onDataCollected) override;
+
+    void removeListener(int listenerId) override;
 
     std::vector<CollectorData> getData() const override;
 
     CollectorData getData(int index) const override;
 
 protected:
+    /// @brief Notify the listeners that new data has been collected
+    void notifyListeners(const CollectorData& newData);
+
     bool m_isConnected; ///< Is the device connected
-    bool m_isRecording; ///< Is the device currently recording
+    bool m_isRecording = false; ///< Is the device currently recording (thread safe)
 
     int m_nbChannels; ///< Number of channels of the device
     int m_frameRate; ///< Frame rate of the device
 
     std::vector<CollectorData> m_data; ///< Data collected by the device
-
-    /// @brief Throw an exception if the device can't connect
-    void throwIfCantConnect() const;
-
-    /// @brief Throw an exception if the device can't disconnect
-    void throwIfCantDisconnect() const;
-
-    /// @brief Throw an exception if the device can't start recording
-    void throwIfCantStartRecording() const;
-
-    /// @brief Throw an exception if the device can't stop recording
-    void throwIfCantStopRecording() const;
-
-
+    std::map<int, std::function<void(const CollectorData& newData)>> m_listeners; ///< Listeners for the data collected
+    
+    // Thread safe information while recording
+    std::thread m_recordingThread; ///< Thread to simulate the recording
+    std::mutex m_recordingMutex; ///< Mutex to protect the recording state
 };
+
 
 class NidaqDeviceMock : public NidaqDevice {    
 public:
@@ -75,13 +94,18 @@ public:
         int frameRate
     );
 
-    void connect() override;
+    // Delete copy constructor and assignment operator, this class cannot be copied because of the mutex member
+    NidaqDeviceMock(const NidaqDeviceMock&) = delete;
+    NidaqDeviceMock& operator=(const NidaqDeviceMock&) = delete;
 
-    void disconnect() override;
+    void startRecordingInternal() override;
 
-    void startRecording() override;
+    void stopRecordingInternal() override;
 
-    void stopRecording() override;
+protected:
+    /// @brief Simulate the recording
+    void generateData();
+    bool m_generateData = false; ///< Should the mock continue generating data (thread safe)
 };
 
 }}
