@@ -63,6 +63,7 @@ You can thereafter run the test by running the binary `stimwalker_tests` (the fi
 `stimwalker` tries to follow as much as possible a coherent standard, that is essentially:
   - camelCase;
   - 120 characters per line max;
+  - The linting (in vscode) should be set to `ms-vscode.cpptools` (ideally on save)
   - `using namespace` can only be used in the `.cpp` files;
   - `#include` should be sorted alphabetically;
   - attributes shoulde be protected and prefixed by `m_`;

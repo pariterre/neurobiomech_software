@@ -2,21 +2,25 @@
 
 using namespace STIMWALKER_NAMESPACE;
 
-void printDevice(const devices::Device& device){
+void printDevice(const devices::Device &device)
+{
     std::cout << "Is connected: " << device.getIsConnected() << std::endl;
 }
 
-void printCollector(const devices::Collector& collector){
+void printCollector(const devices::Collector &collector)
+{
     std::cout << "Nb channels: " << collector.getNbChannels() << std::endl;
     std::cout << "Frame rate: " << collector.getFrameRate() << std::endl;
     std::cout << "Is recording: " << collector.isRecording() << std::endl;
 }
 
-void onDataCollected(const devices::CollectorData& newData){
+void onDataCollected(const devices::CollectorData &newData)
+{
     std::cout << "New data collected, yeah!" << std::endl;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv)
+{
     // Exit the application
     bool isMock = true;
     auto lokomatPtr = devices::makeLokomatDevice(isMock);

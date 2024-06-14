@@ -1,74 +1,93 @@
 #define STIMWALKER_API_EXPORTS
 #include "Utils/Timer.h"
 
-using namespace STIMWALKER_NAMESPACE;
+using namespace STIMWALKER_NAMESPACE::utils;
 
-utils::Timer::Timer(bool startNow) :
-    m_isStarted(false),
-    m_isPaused(false),
-    m_start(),
-    m_pauseTime(),
-    m_totalPauseTime(0.0){
-    if (startNow) {
+Timer::Timer(bool startNow) : m_isStarted(false),
+                              m_isPaused(false),
+                              m_start(),
+                              m_pauseTime(),
+                              m_totalPauseTime(0.0)
+{
+    if (startNow)
+    {
         start();
     }
 }
 
-void utils::Timer::start(){
+void Timer::start()
+{
     m_start = std::clock();
     m_totalPauseTime = 0;
     m_isPaused = false;
     m_isStarted = true;
 } // Start a timer
 
-bool utils::Timer::isStarted(){
+bool Timer::isStarted()
+{
     return m_isStarted;
 }
 
-void utils::Timer::pause(){
-    if (!m_isPaused) {
+void Timer::pause()
+{
+    if (!m_isPaused)
+    {
         m_isPaused = true;
         m_pauseTime = std::clock();
     }
 }
 
-void utils::Timer::resume(){
-    if (!m_isStarted) {
+void Timer::resume()
+{
+    if (!m_isStarted)
+    {
         start();
     }
 
-    else if (m_isPaused) {
+    else if (m_isPaused)
+    {
         addPauseTime();
         m_isPaused = false;
     }
 }
 
-double utils::Timer::getLap(){
+double Timer::getLap()
+{
     addPauseTime();
 
-    if (m_isStarted) {
+    if (m_isStarted)
+    {
         return getTime(m_start) - m_totalPauseTime;
-    } else {
+    }
+    else
+    {
         return 0;
     }
 }
 
-double utils::Timer::stop(){
-    if (m_isStarted) {
+double Timer::stop()
+{
+    if (m_isStarted)
+    {
         m_isStarted = false;
         return getLap();
-    } else {
+    }
+    else
+    {
         return 0;
     }
 }
 
-void utils::Timer::addPauseTime(){
-    if (m_isPaused) {
+void Timer::addPauseTime()
+{
+    if (m_isPaused)
+    {
         m_totalPauseTime += getTime(m_pauseTime);
         m_pauseTime = std::clock();
     }
 }
 
-double utils::Timer::getTime(const std::clock_t& timer){
+double Timer::getTime(const std::clock_t &timer)
+{
     return static_cast<double>(std::clock() - timer) / CLOCKS_PER_SEC;
 }

@@ -9,88 +9,94 @@
 #include "Utils/String.h"
 
 #ifdef _WIN32
-    #include <direct.h>
-    #include <Windows.h>
-    #undef max
+#include <direct.h>
+#include <Windows.h>
+#undef max
 #else
-    #include <sys/stat.h>
-    #include <unistd.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #endif
 
-using namespace STIMWALKER_NAMESPACE;
+using namespace STIMWALKER_NAMESPACE::utils;
 
-utils::Path::Path() :
-    m_originalPath(utils::String()),
-    m_folder(utils::String()),
-    m_isFolderAbsolute(false),
-    m_filename(utils::String()),
-    m_extension(utils::String()){
-
+Path::Path() : m_originalPath(String()),
+               m_folder(String()),
+               m_isFolderAbsolute(false),
+               m_filename(String()),
+               m_extension(String())
+{
 }
 
-utils::Path::Path(
-    const char *path) :
-    m_originalPath(path),
-    m_folder(utils::String()),
-    m_isFolderAbsolute(false),
-    m_filename(utils::String()),
-    m_extension(utils::String()){
+Path::Path(
+    const char *path) : m_originalPath(path),
+                        m_folder(String()),
+                        m_isFolderAbsolute(false),
+                        m_filename(String()),
+                        m_extension(String())
+{
     parseFileName(m_originalPath, m_folder, m_filename, m_extension);
     setIsFolderAbsolute();
 }
 
-utils::Path::Path(
-    const utils::String &path) :
-    m_originalPath(path),
-    m_folder(utils::String()),
-    m_isFolderAbsolute(std::make_shared<bool>()),
-    m_filename(utils::String()),
-    m_extension(utils::String()){
+Path::Path(
+    const String &path) : m_originalPath(path),
+                          m_folder(String()),
+                          m_isFolderAbsolute(std::make_shared<bool>()),
+                          m_filename(String()),
+                          m_extension(String())
+{
     parseFileName(m_originalPath, m_folder, m_filename, m_extension);
     setIsFolderAbsolute();
 }
 
-utils::Path::Path(
-    const std::basic_string<char> &path) :
-    m_originalPath(path),
-    m_folder(utils::String()),
-    m_isFolderAbsolute(std::make_shared<bool>()),
-    m_filename(utils::String()),
-    m_extension(utils::String()){
+Path::Path(
+    const std::basic_string<char> &path) : m_originalPath(path),
+                                           m_folder(String()),
+                                           m_isFolderAbsolute(std::make_shared<bool>()),
+                                           m_filename(String()),
+                                           m_extension(String())
+{
     parseFileName(m_originalPath, m_folder, m_filename, m_extension);
     setIsFolderAbsolute();
 }
 
-bool utils::Path::isFileExist() const {
+bool Path::isFileExist() const
+{
     return isFileExist(absolutePath());
 }
 
-bool utils::Path::isFileExist(
-    const Path& path){
+bool Path::isFileExist(
+    const Path &path)
+{
     return isFileExist(path.absolutePath());
 }
 
-bool utils::Path::isFileExist(
-    const utils::String& path){
+bool Path::isFileExist(
+    const String &path)
+{
 #ifdef _WIN32
-    const char* pathChar = toWindowsFormat(path).c_str();
+    const char *pathChar = toWindowsFormat(path).c_str();
 #else
-    const char* pathChar = path.c_str();
+    const char *pathChar = path.c_str();
 #endif
-    
-    if (FILE *file = fopen(pathChar, "r")) {
+
+    if (FILE *file = fopen(pathChar, "r"))
+    {
         fclose(file);
         return true;
-    } else {
+    }
+    else
+    {
         return false;
     }
 }
 
-bool utils::Path::isFileReadable() const {
+bool Path::isFileReadable() const
+{
 #ifdef _WIN32
-    const char* pathChar = toWindowsFormat(absolutePath()).c_str();
+    const char *pathChar = toWindowsFormat(absolutePath()).c_str();
 #else
-    const char* pathChar = absolutePath().c_str();
+    const char *pathChar = absolutePath().c_str();
 #endif
 
     std::ifstream fichier(pathChar);
@@ -99,99 +105,120 @@ bool utils::Path::isFileReadable() const {
     return isOpen;
 }
 
-bool utils::Path::isFolderExist() const {
+bool Path::isFolderExist() const
+{
     return isFolderExist(*this);
 }
 
-bool utils::Path::isFolderExist(
-    const Path &path){
+bool Path::isFolderExist(
+    const Path &path)
+{
     return isFolderExist(path.folder());
 }
 
-bool utils::Path::isFolderExist(
-    const utils::String & path){
+bool Path::isFolderExist(
+    const String &path)
+{
 #ifdef _WIN32
-    if (GetFileAttributesA(toWindowsFormat(path).c_str())
-            == INVALID_FILE_ATTRIBUTES) {
-        return false;    // Le path est invalide
-    } else
+    if (GetFileAttributesA(toWindowsFormat(path).c_str()) == INVALID_FILE_ATTRIBUTES)
+    {
+        return false; // Le path est invalide
+    }
+    else
         // Si on est ici, c'est que quelque chose existe,
         // s'assurer que ça ne soit pas un fichier
-        if (isFileExist(path)) {
+        if (isFileExist(path))
+        {
             return false;
-        } else {
+        }
+        else
+        {
             return true;
         }
 #else
     struct stat statbuf;
-    if (stat(path.c_str(), &statbuf) != -1) {
+    if (stat(path.c_str(), &statbuf) != -1)
+    {
         return true;
-    } else {
+    }
+    else
+    {
         return false;
     }
 #endif
 }
 
-void utils::Path::parseFileName(
-    const utils::String &path,
-    utils::String &folder,
-    utils::String &filename,
-    utils::String &extension){
-    utils::String pathSep(toUnixFormat(path));
+void Path::parseFileName(
+    const String &path,
+    String &folder,
+    String &filename,
+    String &extension)
+{
+    String pathSep(toUnixFormat(path));
 
     size_t sepPos(pathSep.rfind("/"));
 
     // Stocker le folder
     if (sepPos == std::string::npos)
-        // If no separator is found, then there is no separator
-        // and therefore the path is ./
+    // If no separator is found, then there is no separator
+    // and therefore the path is ./
     {
         folder = "";
-    } else {
+    }
+    else
+    {
         folder = pathSep.substr(0, sepPos) + "/";
     }
 
-    if (folder.find("./") == 0) { // Remove the leading ./ if necessary
+    if (folder.find("./") == 0)
+    { // Remove the leading ./ if necessary
         folder = folder.substr(2);
     }
 
     // Stocker l'extension
     size_t ext(pathSep.rfind("."));
-    if (ext != SIZE_MAX) {
-        extension = pathSep.substr(ext+1);
-    } else {
+    if (ext != SIZE_MAX)
+    {
+        extension = pathSep.substr(ext + 1);
+    }
+    else
+    {
         extension = "";
     }
 
     // Stocker le nom de fichier
-    filename = pathSep.substr(sepPos+1, ext- sepPos-1);
+    filename = pathSep.substr(sepPos + 1, ext - sepPos - 1);
 }
 
-utils::String utils::Path::relativePath() const {
+String Path::relativePath() const
+{
     return relativePath(*this, currentDir());
 }
 
-utils::String utils::Path::relativePath(
-    const utils::String& relativeTo) const {
+String Path::relativePath(
+    const String &relativeTo) const
+{
     return relativePath(*this, relativeTo);
 }
 
-utils::String utils::Path::relativePath(
-    const utils::Path &path,
-    const utils::String &relativeTo){
-    utils::String me(path.absolutePath());
-    utils::String currentDir(relativeTo);
+String Path::relativePath(
+    const Path &path,
+    const String &relativeTo)
+{
+    String me(path.absolutePath());
+    String currentDir(relativeTo);
 
-    utils::String meFirstPart("");
-    utils::String currentDirFirstPart("");
+    String meFirstPart("");
+    String currentDirFirstPart("");
 
     // Set the separator to the 0 position
     size_t sepMe = std::string::npos;
     size_t sepCurrentDir = std::string::npos;
-    do {
+    do
+    {
         // cut according to previous separator
-        me = me.substr(sepMe+1);
-        currentDir = currentDir.substr(sepCurrentDir+1);
+        me = me.substr(sepMe + 1);
+        currentDir = currentDir.substr(sepCurrentDir + 1);
 
         // Find the next separator
         sepMe = me.find("/"); // UNIX formalism
@@ -203,21 +230,25 @@ utils::String utils::Path::relativePath(
 
         // While the first part are equal,
         // we still can advance to find de closest relative part
-    } while(!meFirstPart.compare(currentDirFirstPart));
+    } while (!meFirstPart.compare(currentDirFirstPart));
 
-    utils::String outPath;
-    while (currentDir.compare("")) {
+    String outPath;
+    while (currentDir.compare(""))
+    {
         // Tant que currentDir n'est pas vide, reculer
         // Trouver le prochain séparateur
         sepCurrentDir = currentDir.find("/");
 
         // Séparer la première et la dernière partie
-        if (sepCurrentDir != std::string::npos) {
+        if (sepCurrentDir != std::string::npos)
+        {
             // -1 Si on est au dernier dossier
             // et que celui-ci ne se termine pas par "/"
             currentDirFirstPart = currentDir.substr(0, sepCurrentDir);
-            currentDir = currentDir.substr(sepCurrentDir+1);
-        } else {
+            currentDir = currentDir.substr(sepCurrentDir + 1);
+        }
+        else
+        {
             currentDir = "";
         }
 
@@ -225,7 +256,8 @@ utils::String utils::Path::relativePath(
         // Tant que les premières parties sont égales,
         // continuer à avancer dans le path
     };
-    if (!outPath.compare("") && me.find("../") != 0) {
+    if (!outPath.compare("") && me.find("../") != 0)
+    {
         outPath += "./";
     }
 
@@ -234,21 +266,26 @@ utils::String utils::Path::relativePath(
     return outPath;
 }
 
-utils::String utils::Path::absoluteFolder(
-    const utils::Path &path){
-    if (path.m_isFolderAbsolute) {
+String Path::absoluteFolder(
+    const Path &path)
+{
+    if (path.m_isFolderAbsolute)
+    {
         return path.folder();
     }
 
-    utils::String base;
+    String base;
 #ifdef _WIN32
-    utils::String current(currentDir());
+    String current(currentDir());
     std::smatch matches;
 
-    if (std::regex_search(current, matches, std::regex("^([A-Z]):[\\/].*$"))) {
+    if (std::regex_search(current, matches, std::regex("^([A-Z]):[\\/].*$")))
+    {
         base = matches[1].str() + ":/";
-    } else {
-        utils::Error::raise("I could not find the current drive to estimate the path");
+    }
+    else
+    {
+        Error::raise("I could not find the current drive to estimate the path");
     }
 #else
     base = "/";
@@ -256,34 +293,47 @@ utils::String utils::Path::absoluteFolder(
     return base + relativePath(path, base);
 }
 
-utils::String utils::Path::absoluteFolder() const {
-    if (m_isFolderAbsolute) {
+String Path::absoluteFolder() const
+{
+    if (m_isFolderAbsolute)
+    {
         return m_folder;
-    } else {
+    }
+    else
+    {
         return currentDir() + m_folder;
     }
 }
 
-utils::String utils::Path::absolutePath() const {
-    if (m_filename.compare("")) {
-        if (m_extension.compare("")) {
+String Path::absolutePath() const
+{
+    if (m_filename.compare(""))
+    {
+        if (m_extension.compare(""))
+        {
             return absoluteFolder() + m_filename + "." + m_extension;
-        } else {
+        }
+        else
+        {
             return absoluteFolder() + m_filename;
         }
-    } else {
+    }
+    else
+    {
         return absoluteFolder();
     }
 }
 
-utils::String utils::Path::toUnixFormat(
-    const utils::String& path){
-    utils::String pathOut(path);
+String Path::toUnixFormat(
+    const String &path)
+{
+    String pathOut(path);
 
     // Depending on the string origin, "\\" is either the character "\"
     // escaped or the character "\" written twice. Test for both
     size_t pos(pathOut.rfind("\\\\"));
-    while (pos != std::string::npos) {
+    while (pos != std::string::npos)
+    {
         pathOut.replace(pos, 2, "/");
         pos = pathOut.rfind("\\\\");
     }
@@ -291,54 +341,64 @@ utils::String utils::Path::toUnixFormat(
     // However, this next hunk can create false positive each time a
     // legitimate escape character is used (should not happen in a path?)
     pos = pathOut.rfind("\\");
-    while (pos != std::string::npos) {
+    while (pos != std::string::npos)
+    {
         pathOut.replace(pos, 1, "/");
         pos = pathOut.rfind("\\");
     }
     return pathOut;
 }
 
-utils::String utils::Path::toWindowsFormat(
-    const utils::String &path){
-    utils::String pathOut(path);
+String Path::toWindowsFormat(
+    const String &path)
+{
+    String pathOut(path);
     size_t pos(pathOut.rfind("/"));
-    while (pos != std::string::npos) {
+    while (pos != std::string::npos)
+    {
         pathOut.replace(pos, 1, "\\\\");
         pos = pathOut.rfind("/");
     }
     return pathOut;
 }
 
-utils::String utils::Path::originalPath() const {
+String Path::originalPath() const
+{
     return m_originalPath;
 }
 
-utils::String utils::Path::folder() const {
+String Path::folder() const
+{
     return m_folder;
 }
 
-void utils::Path::setFilename(
-    const utils::String& name){
+void Path::setFilename(
+    const String &name)
+{
     m_filename = name;
 }
 
-utils::String utils::Path::filename() const{
+String Path::filename() const
+{
     return m_filename;
 }
 
-void utils::Path::setExtension(
-    const utils::String &ext){
+void Path::setExtension(
+    const String &ext)
+{
     m_extension = ext;
 }
 
-utils::String utils::Path::extension() const {
+String Path::extension() const
+{
     return m_extension;
 }
 
-void utils::Path::setIsFolderAbsolute(){
-    utils::String base;
+void Path::setIsFolderAbsolute()
+{
+    String base;
 #ifdef _WIN32
-    utils::String current(m_folder);
+    String current(m_folder);
     std::smatch matches;
     m_isFolderAbsolute = std::regex_search(current, matches, std::regex("^([A-Z]):[\\/].*$"));
 #else
@@ -347,39 +407,46 @@ void utils::Path::setIsFolderAbsolute(){
 #endif
 }
 
-utils::String utils::Path::currentDir(){
+String Path::currentDir()
+{
     char buff[FILENAME_MAX];
 #ifdef _WIN32
-    if(!buff, FILENAME_MAX){
-        throw utils::FileNotFoundException("Could not find the current directory");
+    if (!buff, FILENAME_MAX)
+    {
+        throw FileNotFoundException("Could not find the current directory");
     }
 #else
-    if(!getcwd(buff, FILENAME_MAX)){
-        throw utils::FileNotFoundException("Could not find the current directory");
+    if (!getcwd(buff, FILENAME_MAX))
+    {
+        throw FileNotFoundException("Could not find the current directory");
     }
 #endif
     return toUnixFormat(buff) + "/";
 }
 
-void utils::Path::createFolder() const {
-    const utils::String& tp(folder());
-    utils::String tp2(tp);
+void Path::createFolder() const
+{
+    const String &tp(folder());
+    String tp2(tp);
 
     size_t sep = std::string::npos;
     size_t sepTrack = 0;
-    do {
+    do
+    {
         // Découper en fonction de la position précédente du séparateur
-        tp2 = tp2.substr(sep+1);
+        tp2 = tp2.substr(sep + 1);
 
         // Trouver le prochain séparateur
         sep = tp2.find("/"); // Path are stored in UNIX formalism
-        if (sep != std::string::npos) {
-            sepTrack += sep + 1 ;
+        if (sep != std::string::npos)
+        {
+            sepTrack += sep + 1;
 
             // Séparer la première et la dernière partie
             if (!isFolderExist(
-                        static_cast<utils::String>(
-                            tp.substr(0, sepTrack)))) {
+                    static_cast<String>(
+                        tp.substr(0, sepTrack))))
+            {
 #ifdef _WIN32
                 _mkdir(toWindowsFormat(tp.substr(0, sepTrack)).c_str());
 #else

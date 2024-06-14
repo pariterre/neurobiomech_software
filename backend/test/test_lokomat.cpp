@@ -10,10 +10,11 @@ using namespace STIMWALKER_NAMESPACE;
 
 // Start the tests
 
-TEST(Lokomat, factory){
+TEST(Lokomat, factory)
+{
     bool isMock = true;
-    auto lokomat = devices::makeLokomat(isMock);
-    
-    ASSERT_EQ(lokomat.getNbChannels(), 25);
-    ASSERT_EQ(lokomat.getFrameRate(), 1000);
+    auto lokomat = devices::makeLokomatDevice(isMock);
+
+    ASSERT_EQ(lokomat->getNbChannels(), 25);
+    ASSERT_EQ(lokomat->getFrameRate(), 1000);
 }

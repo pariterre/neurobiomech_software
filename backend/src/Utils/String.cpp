@@ -8,34 +8,36 @@
 
 #include "Utils/Exceptions.h"
 
-using namespace STIMWALKER_NAMESPACE;
+using namespace STIMWALKER_NAMESPACE::utils;
 
-utils::String::String()
-    : std::string(""){
-
+String::String()
+    : std::string("")
+{
 }
 
-utils::String::String(
+String::String(
     const char *text)
-    : std::string(text){
-
+    : std::string(text)
+{
 }
 
-utils::String::String(
+String::String(
     const String &text)
-    : std::string(text){
-
+    : std::string(text)
+{
 }
 
-utils::String::String(
+String::String(
     const std::basic_string<char> &text)
-    : std::string(text){
-
+    : std::string(text)
+{
 }
 
-utils::String &utils::String::operator=(
-    const utils::String &other){
-    if (this==&other) { // check for self-assigment
+String &String::operator=(
+    const String &other)
+{
+    if (this == &other)
+    { // check for self-assigment
         return *this;
     }
 
@@ -43,117 +45,137 @@ utils::String &utils::String::operator=(
     return *this;
 }
 
-utils::String utils::String::operator+(
-    const char *text){
+String String::operator+(
+    const char *text)
+{
     String tp = *this;
     tp.append(text);
     return tp;
 }
 
-utils::String utils::String::operator+(
-    double val){
+String String::operator+(
+    double val)
+{
     return *this + to_string(val);
 }
 
-utils::String utils::String::operator+(
-    size_t val){
+String String::operator+(
+    size_t val)
+{
     return *this + std::to_string(val);
 }
 
-utils::String utils::String::operator+(
-    int val){
+String String::operator+(
+    int val)
+{
     return *this + std::to_string(val);
 }
 
-utils::String utils::String::operator()(
-    size_t idx) const {
-    if (idx >= this->length()) {
-        throw utils::OutOfBoundsException("Index for string out of range");
+String String::operator()(
+    size_t idx) const
+{
+    if (idx >= this->length())
+    {
+        throw OutOfBoundsException("Index for string out of range");
     }
-    
+
     char out[2];
     out[0] = (*this)[idx];
     out[1] = '\0';
     return out;
 }
 
-utils::String utils::String::operator()(
+String String::operator()(
     size_t startIdx,
-    size_t lastIdx) const {
-    if (startIdx >= this->length() || lastIdx >= this->length()){
-        throw utils::OutOfBoundsException("Index for string out of range");
+    size_t lastIdx) const
+{
+    if (startIdx >= this->length() || lastIdx >= this->length())
+    {
+        throw OutOfBoundsException("Index for string out of range");
     }
-    if (lastIdx <= startIdx){
-        throw utils::OutOfBoundsException("Second argument should be higher than first!");
+    if (lastIdx <= startIdx)
+    {
+        throw OutOfBoundsException("Second argument should be higher than first!");
     }
 
-    char *out = static_cast<char*>(malloc(lastIdx-startIdx+2*sizeof(char)));
-    for (size_t k=0; k<lastIdx-startIdx+1; ++k) {
-        out[k] = (*this)[startIdx+k];
+    char *out = static_cast<char *>(malloc(lastIdx - startIdx + 2 * sizeof(char)));
+    for (size_t k = 0; k < lastIdx - startIdx + 1; ++k)
+    {
+        out[k] = (*this)[startIdx + k];
     }
-    out[lastIdx-startIdx+1] = '\0';
-    utils::String Out(out);
+    out[lastIdx - startIdx + 1] = '\0';
+    String Out(out);
     free(out);
     return Out;
 }
 
-utils::String::~String(){
-
+String::~String()
+{
 }
 
-utils::String utils::String::tolower(
-    const utils::String &str){
-    utils::String new_str = str;
+String String::tolower(
+    const String &str)
+{
+    String new_str = str;
     std::transform(new_str.begin(), new_str.end(), new_str.begin(), ::tolower);
     return new_str;
 }
 
-utils::String utils::String::tolower() const {
+String String::tolower() const
+{
     return tolower(*this);
 }
 
-utils::String utils::String::toupper(
-    const utils::String &str){
-    utils::String new_str = str;
+String String::toupper(
+    const String &str)
+{
+    String new_str = str;
     std::transform(new_str.begin(), new_str.end(), new_str.begin(), ::toupper);
     return new_str;
 }
 
-utils::String utils::String::toupper() const {
+String String::toupper() const
+{
     return toupper(*this);
 }
 
-utils::String utils::String::to_string(
-    double val){
+String String::to_string(
+    double val)
+{
     std::ostringstream out;
     out.precision(20);
     out << std::fixed << val;
     return removeTrailing(out.str(), "0");
 }
 
-utils::String utils::String::to_string(
-    float val){
+String String::to_string(
+    float val)
+{
     std::ostringstream out;
     out.precision(20);
     out << std::fixed << val;
     return removeTrailing(out.str(), "0");
 }
 
-utils::String utils::String::removeTrailing(
-    const utils::String &origin,
-    const utils::String &trailTag){
-    if (trailTag.length() != 1) {
+String String::removeTrailing(
+    const String &origin,
+    const String &trailTag)
+{
+    if (trailTag.length() != 1)
+    {
         throw WrongDimensionsException("Tag should be of length 1");
     }
-    utils::String out(origin);
+    String out(origin);
 
-    while(out.length() > 0 && out.back() == trailTag[0]) {
+    while (out.length() > 0 && out.back() == trailTag[0])
+    {
         out.pop_back();
     }
     return out;
 }
 
-std::ostream &operator<<(std::ostream &os, const utils::String &a){
+std::ostream &operator<<(std::ostream &os, const String &a)
+{
     os << a.c_str();
     return os;
 }

@@ -8,4 +8,3 @@
 #include "Utils/Timer.h"
 
 #endif // STIMWALKER_UTILS_ALL_H
-

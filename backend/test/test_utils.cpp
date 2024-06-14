@@ -31,11 +31,11 @@ TEST(Path, Create)
     {
         EXPECT_STREQ(
             utils::Path::toUnixFormat("MyUgly\\\\WindowsPath\\\\ToMyFile.txt").c_str(),
-            utils::String ("MyUgly/WindowsPath/ToMyFile.txt").c_str());
+            utils::String("MyUgly/WindowsPath/ToMyFile.txt").c_str());
 
         EXPECT_STREQ(
             utils::Path::toWindowsFormat("MyCute/UnixPath/ToMyFile.txt").c_str(),
-            utils::String ("MyCute\\\\UnixPath\\\\ToMyFile.txt").c_str());
+            utils::String("MyCute\\\\UnixPath\\\\ToMyFile.txt").c_str());
     }
 
     {
@@ -71,7 +71,7 @@ TEST(Path, Create)
     {
         utils::Path relativePath("MyLovely/RelativePath/ToMyLovelyFile.txt");
         EXPECT_STREQ(
-            relativePath.absolutePath().c_str(), 
+            relativePath.absolutePath().c_str(),
             (utils::Path::currentDir() + "MyLovely/RelativePath/ToMyLovelyFile.txt").c_str());
         EXPECT_STREQ(
             relativePath.absoluteFolder().c_str(), (utils::Path::currentDir() + "MyLovely/RelativePath/").c_str());
@@ -83,7 +83,7 @@ TEST(Path, Create)
 
     {
         utils::Path
-        weirdRelativePath("./MyLovely/RelativePath/ToMyLovelyFile.txt");
+            weirdRelativePath("./MyLovely/RelativePath/ToMyLovelyFile.txt");
         EXPECT_STREQ(
             weirdRelativePath.absolutePath().c_str(),
             (utils::Path::currentDir() + "MyLovely/RelativePath/ToMyLovelyFile.txt").c_str());
@@ -97,12 +97,12 @@ TEST(Path, Create)
 
     {
         utils::Path
-        parentRelativePath("../MyLovely/ParentPath/ToMyLovelyFile.txt");
+            parentRelativePath("../MyLovely/ParentPath/ToMyLovelyFile.txt");
         EXPECT_STREQ(
-            parentRelativePath.absolutePath().c_str(), 
+            parentRelativePath.absolutePath().c_str(),
             (utils::Path::currentDir() + "../MyLovely/ParentPath/ToMyLovelyFile.txt").c_str());
         EXPECT_STREQ(
-            parentRelativePath.absoluteFolder().c_str(), 
+            parentRelativePath.absoluteFolder().c_str(),
             (utils::Path::currentDir() + "../MyLovely/ParentPath/").c_str());
         EXPECT_STREQ(parentRelativePath.filename().c_str(), "ToMyLovelyFile");
         EXPECT_STREQ(parentRelativePath.extension().c_str(), "txt");

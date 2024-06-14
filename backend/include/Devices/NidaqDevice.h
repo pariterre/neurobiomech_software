@@ -10,104 +10,104 @@
 #include "Devices/Generic/Device.h"
 #include "Devices/Generic/Collector.h"
 
-namespace STIMWALKER_NAMESPACE{ namespace devices {
+namespace STIMWALKER_NAMESPACE::devices
+{
 
-/// @brief Abstract class for devices
-class NidaqDevice : public Device, public Collector {
+    /// @brief Abstract class for devices
+    class NidaqDevice : public Device, public Collector
+    {
 
-public:
-    /// @brief Constructor
-    /// @param nbChannels The number of channels
-    /// @param frameRate The frame rate
-    NidaqDevice(
-        int nbChannels,
-        int frameRate
-    );
-    
-    // Delete copy constructor and assignment operator, this class cannot be copied because of the mutex member
-    NidaqDevice(const NidaqDevice&) = delete;
-    NidaqDevice& operator=(const NidaqDevice&) = delete;
+    public:
+        /// @brief Constructor
+        /// @param nbChannels The number of channels
+        /// @param frameRate The frame rate
+        NidaqDevice(
+            int nbChannels,
+            int frameRate);
 
-    virtual ~NidaqDevice();
+        // Delete copy constructor and assignment operator, this class cannot be copied because of the mutex member
+        NidaqDevice(const NidaqDevice &) = delete;
+        NidaqDevice &operator=(const NidaqDevice &) = delete;
 
-    int getNbChannels() const override;
+        virtual ~NidaqDevice();
 
-    int getFrameRate() const override;
+        int getNbChannels() const override;
 
-    bool getIsConnected() const override;
+        int getFrameRate() const override;
 
-    void connect() override;
+        bool getIsConnected() const override;
 
-    /// @brief Connect the device, this method is called by connect and can be overriden by a mock
-    virtual void connectInternal();
+        void connect() override;
 
-    void disconnect() override;
+        /// @brief Connect the device, this method is called by connect and can be overriden by a mock
+        virtual void connectInternal();
 
-    /// @brief Disconnect the device, this method is called by disconnect and can be overriden by a mock
-    virtual void disconnectInternal();
+        void disconnect() override;
 
-    void dispose() override;
+        /// @brief Disconnect the device, this method is called by disconnect and can be overriden by a mock
+        virtual void disconnectInternal();
 
-    bool isRecording() const override;
+        void dispose() override;
 
-    void startRecording() override;
+        bool isRecording() const override;
 
-    /// @brief Start recording the data, this method is called by startRecording and can be overriden by a mock
-    virtual void startRecordingInternal();
+        void startRecording() override;
 
-    void stopRecording() override;
+        /// @brief Start recording the data, this method is called by startRecording and can be overriden by a mock
+        virtual void startRecordingInternal();
 
-    /// @brief Stop recording the data, this method is called by stopRecording and can be overriden by a mock
-    virtual void stopRecordingInternal();
+        void stopRecording() override;
 
-    int onNewData(std::function<void(const CollectorData& newData)> onDataCollected) override;
+        /// @brief Stop recording the data, this method is called by stopRecording and can be overriden by a mock
+        virtual void stopRecordingInternal();
 
-    void removeListener(int listenerId) override;
+        int onNewData(std::function<void(const CollectorData &newData)> onDataCollected) override;
 
-    std::vector<CollectorData> getData() const override;
+        void removeListener(int listenerId) override;
 
-    CollectorData getData(int index) const override;
+        std::vector<CollectorData> getData() const override;
 
-protected:
-    /// @brief Notify the listeners that new data has been collected
-    void notifyListeners(const CollectorData& newData);
+        CollectorData getData(int index) const override;
 
-    bool m_isConnected; ///< Is the device connected
-    bool m_isRecording = false; ///< Is the device currently recording (thread safe)
+    protected:
+        /// @brief Notify the listeners that new data has been collected
+        void notifyListeners(const CollectorData &newData);
 
-    int m_nbChannels; ///< Number of channels of the device
-    int m_frameRate; ///< Frame rate of the device
+        bool m_isConnected;         ///< Is the device connected
+        bool m_isRecording = false; ///< Is the device currently recording (thread safe)
 
-    std::vector<CollectorData> m_data; ///< Data collected by the device
-    std::map<int, std::function<void(const CollectorData& newData)>> m_listeners; ///< Listeners for the data collected
-    
-    // Thread safe information while recording
-    std::thread m_recordingThread; ///< Thread to simulate the recording
-    std::mutex m_recordingMutex; ///< Mutex to protect the recording state
-};
+        int m_nbChannels; ///< Number of channels of the device
+        int m_frameRate;  ///< Frame rate of the device
 
+        std::vector<CollectorData> m_data;                                            ///< Data collected by the device
+        std::map<int, std::function<void(const CollectorData &newData)>> m_listeners; ///< Listeners for the data collected
 
-class NidaqDeviceMock : public NidaqDevice {    
-public:
-    NidaqDeviceMock(
-        int nbChannels,
-        int frameRate
-    );
+        // Thread safe information while recording
+        std::thread m_recordingThread; ///< Thread to simulate the recording
+        std::mutex m_recordingMutex;   ///< Mutex to protect the recording state
+    };
 
-    // Delete copy constructor and assignment operator, this class cannot be copied because of the mutex member
-    NidaqDeviceMock(const NidaqDeviceMock&) = delete;
-    NidaqDeviceMock& operator=(const NidaqDeviceMock&) = delete;
+    class NidaqDeviceMock : public NidaqDevice
+    {
+    public:
+        NidaqDeviceMock(
+            int nbChannels,
+            int frameRate);
 
-    void startRecordingInternal() override;
+        // Delete copy constructor and assignment operator, this class cannot be copied because of the mutex member
+        NidaqDeviceMock(const NidaqDeviceMock &) = delete;
+        NidaqDeviceMock &operator=(const NidaqDeviceMock &) = delete;
 
-    void stopRecordingInternal() override;
+        void startRecordingInternal() override;
 
-protected:
-    /// @brief Simulate the recording
-    void generateData();
-    bool m_generateData = false; ///< Should the mock continue generating data (thread safe)
-};
+        void stopRecordingInternal() override;
 
-}}
+    protected:
+        /// @brief Simulate the recording
+        void generateData();
+        bool m_generateData = false; ///< Should the mock continue generating data (thread safe)
+    };
+
+}
 
 #endif // NI_DAQ_DEVICE_H

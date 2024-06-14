@@ -103,7 +103,7 @@ Pipfile.lock
 .mypy_cache/
 
 # Visual code
-.vscode
+.vscode/*.json
 
 # Visual studio
 .vs
