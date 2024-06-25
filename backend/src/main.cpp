@@ -29,6 +29,7 @@ int main(int argc, char **argv)
     lokomat.disconnect();
 
     nlohmann::json json = dataCollection.serialize();
+    dataCollection = dataCollection.deserialize(json);
     int timeIndex = 0;
     std::cout << json[utils::String(id)][timeIndex].dump(2) << std::endl;
 

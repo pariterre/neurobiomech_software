@@ -2,6 +2,7 @@
 
 #include "Devices/Data/Data.h"
 #include "Utils/String.h"
+#include "Devices/Data/CollectorData.h"
 
 using namespace STIMWALKER_NAMESPACE::devices;
 
@@ -42,7 +43,22 @@ nlohmann::json DataCollection::serialize() const
     return json;
 }
 
-void DataCollection::deserialize(const nlohmann::json &json)
+DataCollection DataCollection::deserialize(const nlohmann::json &json)
 {
-    // TODO
+    DataCollection dataCollection;
+    int dataId = 0;
+
+    for (const auto &dataIdString : json)
+    {
+        for (const auto &data : dataIdString)
+        {
+            std::vector<double> dataValue = data["data"];
+            time_t timestamp = data["timestamp"];
+            devices::CollectorData donnees(timestamp, dataValue);
+            dataCollection.addData(dataId, donnees);
+        }
+        dataId++;
+    }
+
+    return dataCollection;
 }

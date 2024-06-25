@@ -38,7 +38,7 @@ namespace STIMWALKER_NAMESPACE::devices
 
         /// @brief Deserialize the data
         /// @param json The data in serialized form
-        void deserialize(const nlohmann::json &json);
+        DataCollection deserialize(const nlohmann::json &json);
 
     protected:
         std::map<int, std::vector<std::unique_ptr<Data>>> m_data; ///< Data of the collection, indexed by id of the device
