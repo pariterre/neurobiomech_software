@@ -4,7 +4,8 @@ using namespace STIMWALKER_NAMESPACE;
 
 void onNewData(const devices::CollectorData &newData, int dataId, devices::DataCollection &dataCollection)
 {
-    std::cout << "New data collected, yeah!" << std::endl;
+    utils::Timestamp timestamp;
+    std::cout << "New data collected at " << timestamp.timeSinceEpochMillisec() << std::endl;
     dataCollection.addData(dataId, newData);
 }
 

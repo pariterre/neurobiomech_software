@@ -6,5 +6,6 @@
 #include "Utils/Path.h"
 #include "Utils/String.h"
 #include "Utils/Timer.h"
+#include "Utils/Timestamp.h"
 
 #endif // STIMWALKER_UTILS_ALL_H
