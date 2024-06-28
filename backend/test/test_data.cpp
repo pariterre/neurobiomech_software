@@ -50,7 +50,39 @@ TEST(Data, serialize)
 
 TEST(Data, deserialize)
 {
-    // TODO
+    // Create a JSON string representing the data
+    std::string jsonData = R"({
+            "0": [
+                {
+                    "data": [4.0, 5.0, 6.0],
+                    "timestamp": 2001
+                },
+                {
+                    "data": [7.0, 8.0, 9.0],
+                    "timestamp": 2002
+                }
+            ]
+        })";
+
+    // Deserialize the JSON string
+    devices::DataCollection dataCollection = dataCollection.deserialize(jsonData);
+
+    // Verify the deserialized data
+    ASSERT_EQ(dataCollection.getNbDataId(), 1);
+    const auto &deserializedData = dataCollection.getData(0);
+    ASSERT_EQ(deserializedData.size(), 2);
+
+    ASSERT_EQ(deserializedData[0]->getTimestamp(), 2001);
+    ASSERT_EQ(deserializedData[0]->getData().size(), 3);
+    ASSERT_NEAR(deserializedData[0]->getData()[0], 4.0, requiredPrecision);
+    ASSERT_NEAR(deserializedData[0]->getData()[1], 5.0, requiredPrecision);
+    ASSERT_NEAR(deserializedData[0]->getData()[2], 6.0, requiredPrecision);
+
+    ASSERT_EQ(deserializedData[1]->getTimestamp(), 2002);
+    ASSERT_EQ(deserializedData[1]->getData().size(), 3);
+    ASSERT_NEAR(deserializedData[1]->getData()[0], 7.0, requiredPrecision);
+    ASSERT_NEAR(deserializedData[1]->getData()[1], 8.0, requiredPrecision);
+    ASSERT_NEAR(deserializedData[1]->getData()[2], 9.0, requiredPrecision);
 }
 
 TEST(Data, acquire)

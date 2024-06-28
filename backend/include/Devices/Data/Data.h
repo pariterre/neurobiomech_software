@@ -20,6 +20,10 @@ namespace STIMWALKER_NAMESPACE::devices
         /// @return The timestamp
         virtual time_t getTimestamp() const = 0;
 
+        // @brief Get the data
+        /// @return The data
+        virtual const std::vector<double> &getData() const = 0;
+
         /// @brief Convert the object to JSON
         /// @return The JSON object
         virtual nlohmann::json serialize() const = 0;
