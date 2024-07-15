@@ -34,7 +34,6 @@ namespace STIMWALKER_NAMESPACE::utils
 
         ///
         /// \brief Return if the timer is paused
-        /// \return If the timer is paused
         ///
         void pause();
 
