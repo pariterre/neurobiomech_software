@@ -9,9 +9,17 @@ void onNewData(const devices::CollectorData &newData, int dataId, devices::DataC
     dataCollection.addData(dataId, newData);
 }
 
+std::string generateFilename()
+{
+    std::time_t now = std::time(nullptr);
+    std::tm *localTime = std::localtime(&now);
+    std::ostringstream oss;
+    oss << std::put_time(localTime, "%Y-%m-%d-%H-%M-%S");
+    return oss.str() + ".csv";
+}
+
 int main(int argc, char **argv)
 {
-    // Exit the application
     bool isMock = true;
     auto lokomatPtr = devices::makeLokomatDevice(isMock);
     devices::NidaqDevice &lokomat = *lokomatPtr;
@@ -33,6 +41,29 @@ int main(int argc, char **argv)
     dataCollection = dataCollection.deserialize(json);
     int timeIndex = 0;
     std::cout << json[utils::String(id)][timeIndex].dump(2) << std::endl;
+
+    try
+    {
+        const std::string filename = "emg_data.csv";
+        const std::string ip = "127.0.0.1";
+        TrignoEMG emg({0, 15}, 2000, "mV", ip);
+        emg.start_recording(generateFilename());
+        emg.start();
+
+        for (int i = 0; i < 10; ++i)
+        {
+            auto data = emg.read();
+        }
+
+        emg.stop();
+        emg.stop_recording();
+
+        std::cout << "Data logging complete. Check " << filename << " for results." << std::endl;
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "Exception: " << e.what() << std::endl;
+    }
 
     return 0;
 }

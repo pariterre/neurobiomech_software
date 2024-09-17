@@ -1,0 +1,21 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "command": "g++ -o delsys_connector main.cpp -I/usr/include/asio && ./delsys_connector",
+            "name": "delsys compile + run",
+            "request": "launch",
+            "type": "f5anything"
+        },
+        {
+            "command": "g++ -std=c++11 -I/usr/include -L/usr/lib64 -lboost_system -lboost_thread -lpthread main_rehastim.cpp -o rehastim_connector && sudo ./rehastim_connector",
+            "name": "rehastim compile + run",
+            "request": "launch",
+            "type": "f5anything"
+        }
+
+    ]
+}

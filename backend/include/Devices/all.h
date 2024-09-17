@@ -10,6 +10,7 @@
 #include "Devices/Generic/StimulatorDevice.h"
 #include "Devices/Generic/Exceptions.h"
 #include "Devices/NidaqDevice.h"
+#include "Devices/DelsysEmgDevice.h"
 #include "Devices/Lokomat.h"
 
 #endif // STIMWALKER_DEVICES_ALL_H

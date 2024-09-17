@@ -6,6 +6,7 @@ set(SRC_LIST_MODULE
     "${CMAKE_CURRENT_SOURCE_DIR}/Data/DataCollection.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Data/CollectorData.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/NidaqDevice.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/DelsysEmgDevice.cpp"
 )
 
 # Create the library

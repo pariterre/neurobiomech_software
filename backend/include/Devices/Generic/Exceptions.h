@@ -48,6 +48,11 @@ namespace STIMWALKER_NAMESPACE ::devices
     public:
         DeviceIsNotRecordingException(const std::string &message) : DeviceException(message) {}
     };
+    class DeviceDisconnectedException : public DeviceException
+    {
+    public:
+        DeviceDisconnectedException(const std::string &message) : DeviceException(message) {}
+    };
 
 }
 
