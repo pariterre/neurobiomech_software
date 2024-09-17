@@ -9,7 +9,7 @@ Timestamp::Timestamp()
 {
 }
 
-uint64_t Timestamp::timeSinceEpochMillisec()
+uint64_t Timestamp::timeSinceEpoch()
 {
     using namespace std::chrono;
     return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();

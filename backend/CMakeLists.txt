@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.14)
 project(stimwalker VERSION 1.11.2)
 set(STIMWALKER_ROOT_FOLDER ${PROJECT_SOURCE_DIR})
 set (CMAKE_CXX_STANDARD 17)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 
 # Set all the compile options
 option(BUILD_DOC 
@@ -22,24 +23,8 @@ endif()
 
 # Prepare linkings
 set (STIMWALKER_NAME ${PROJECT_NAME})
-
-find_package(Eigen3 REQUIRED)
-
-set(JSON_SOURCE_DIR "${STIMWALKER_ROOT_FOLDER}/external/json")
-include(FetchContent)
-FetchContent_Declare(
-  json
-  GIT_REPOSITORY https://github.com/cr-crme/json.git
-  GIT_TAG develop
-  SOURCE_DIR ${JSON_SOURCE_DIR}
-)
-FetchContent_MakeAvailable(json)
-
-
-# Manage options
-option(SKIP_ASSERT
-    "Some checks slow the code down at run-time, but provide more robust
-    code. By default, it is ON faster but less secure" ON)
+find_package(nlohmann_json 3.2.0 CONFIG REQUIRED)
+find_package(Asio REQUIRED)
 
 # Prepare add library
 set(SRC_LIST "src/main.cpp")
@@ -49,46 +34,33 @@ set_target_properties(${STIMWALKER_NAME} PROPERTIES DEBUG_POSTFIX "_debug")
 # Compilation directories
 set(${STIMWALKER_NAME}_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
 
-# Create the configuration header file associated with the asked options
-configure_file(${CMAKE_SOURCE_DIR}/include/stimwalkerConfig.h.in
-"${${STIMWALKER_NAME}_BINARY_DIR}/include/stimwalkerConfig.h"
-)
-
 # Add headers
 # Include directories when building the library:
-target_include_directories(${STIMWALKER_NAME} PRIVATE
-    "${CMAKE_SOURCE_DIR}/include"
-    "${${STIMWALKER_NAME}_BINARY_DIR}/include"
-    "${EIGEN3_INCLUDE_DIR}"
-    "${JSON_SOURCE_DIR}/single_include"
+target_include_directories(${STIMWALKER_NAME} PUBLIC 
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+    ${Asio_INCLUDE_DIR}
 )
-
-# Installation directories
-set(${STIMWALKER_NAME}_BIN_FOLDER "${CMAKE_INSTALL_PREFIX}/bin/${STIMWALKER}")
-set_target_properties(${STIMWALKER_NAME} PROPERTIES
-    INSTALL_RPATH "${${STIMWALKER_NAME}_BIN_FOLDER}"
-    INSTALL_RPATH_USE_LINK_PATH TRUE
-)
-
-# Add the different modules of stimwalker
-set(STIMWALKER_MODULE_NAMES)
-
-add_subdirectory("src/Utils")
-list(APPEND STIMWALKER_MODULE_NAMES "${UTILS_MODULE_NAME}")
-
-add_subdirectory("src/Devices")
-list(APPEND STIMWALKER_MODULE_NAMES "${DEVICES_MODULE_NAME}")
 
 # Add linker
-target_link_libraries(${STIMWALKER_NAME}
-    "${STIMWALKER_MODULE_NAMES}"
+add_subdirectory("src/Utils")
+add_subdirectory("src/Devices")
+target_link_libraries(${STIMWALKER_NAME} PRIVATE
+    ${MODULE_UTILS}
+    ${MODULE_DEVICES}
     nlohmann_json::nlohmann_json
 )
 
 # install target
-install(
-    TARGETS ${STIMWALKER_NAME} EXPORT stimwalkerTargets
-    RUNTIME DESTINATION "${${STIMWALKER_NAME}_BIN_FOLDER}"
+set_target_properties(${STIMWALKER_NAME} PROPERTIES
+    INSTALL_RPATH "${CMAKE_INSTALL_BINDIR}"
+    INSTALL_RPATH_USE_LINK_PATH TRUE
+)
+install(TARGETS stimwalker
+    EXPORT stimwalkerTargets          # Export the target so it can be found
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}  # Install the shared library
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}  # For static library (if needed)
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}  # For executables (if any)
 )
 
 # Doc

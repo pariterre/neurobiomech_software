@@ -6,9 +6,6 @@
 #define _ENABLE_EXTENDED_ALIGNED_STORAGE
 #endif
 
-// Define some skip if ones doesn't want to compile them
-#cmakedefine SKIP_ASSERT
-
 #define STIMWALKER_NAMESPACE stimwalker
 
 #ifndef M_PI

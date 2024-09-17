@@ -6,3 +6,5 @@ dependencies:
 - eigen
 - cmake
 - doxygen
+- asio
+- nlohmann_json

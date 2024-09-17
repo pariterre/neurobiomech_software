@@ -22,7 +22,7 @@ namespace STIMWALKER_NAMESPACE::utils
         /// \brief Get the current time since epoch in milliseconds
         /// \return The current time since epoch in milliseconds
         ///
-        uint64_t timeSinceEpochMillisec();
+        uint64_t timeSinceEpoch();
     };
 }
 

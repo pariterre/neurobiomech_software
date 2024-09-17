@@ -302,7 +302,7 @@ void DelsysEmgDevice::startRecording()
 
 void DelsysEmgDevice::startRecordingInternal()
 {
-    emg_.start_recording("emg_data.csv");
+    emg_->start_recording("emg_data.csv");
 }
 
 void DelsysEmgDevice::stopRecording()
@@ -319,7 +319,7 @@ void DelsysEmgDevice::stopRecording()
 
 void DelsysEmgDevice::stopRecordingInternal()
 {
-    emg_.stop_recording();
+    emg_->stop_recording();
 }
 
 int DelsysEmgDevice::onNewData(std::function<void(const CollectorData &newData)> callback)
