@@ -1,3 +1,4 @@
+#include <asio.hpp>
 #include <iostream>
 #include <vector>
 #include <cstdint>
@@ -6,7 +7,6 @@
 #include <thread>
 #include <stdexcept>
 #include <map>
-#include <boost/asio.hpp>
 
 const uint8_t START_BYTE = 0xF0;
 const uint8_t STOP_BYTE = 0x0F;
@@ -125,7 +125,7 @@ public:
         packet.push_back(STUFFING_BYTE);
         packet.push_back(calculateCRC8(payload) ^ 0x55);
         packet.push_back(STUFFING_BYTE);
-        packet.push_back(payload.size() ^ 0x55);
+        packet.push_back(static_cast<uint8_t>(payload.size() ^ 0x55));
 
         for (uint8_t byte : payload)
         {
@@ -139,7 +139,7 @@ public:
     }
 
     bool parsePacket(std::vector<uint8_t> &packet, Command &command, std::vector<uint8_t> &data)
-    {   
+    {
         // std::cout << "packet before correction" << std::endl;
         // for (int i = 0; i < packet.size(); i++)
         // {
@@ -175,17 +175,21 @@ public:
 
         std::vector<uint8_t> unstuffed = unstuffPacket(packet);
 
-        std::cout << std::endl << "packet size : " << packet.size() << std::endl;
+        std::cout << std::endl
+                  << "packet size : " << packet.size() << std::endl;
         for (int i = 0; i < packet.size(); i++)
         {
             std::cout << std::hex << static_cast<int>(packet[i]) << " ";
         }
-        std::cout << std::endl << std::endl << "unstuffed size : " << unstuffed.size() << std::endl;
+        std::cout << std::endl
+                  << std::endl
+                  << "unstuffed size : " << unstuffed.size() << std::endl;
         for (int i = 0; i < unstuffed.size(); i++)
         {
             std::cout << std::hex << static_cast<int>(unstuffed[i]) << " ";
         }
-        std::cout << std::endl << std::endl;
+        std::cout << std::endl
+                  << std::endl;
 
         if (unstuffed.size() < 6)
         { // min packet size
@@ -209,7 +213,8 @@ public:
 
         command = static_cast<Command>(payload[1]);
         data = std::vector<uint8_t>(payload.begin() + 2, payload.end());
-        std::cout << "Packet succesfully parsed." << std::endl << std::endl;
+        std::cout << "Packet succesfully parsed." << std::endl
+                  << std::endl;
         return true;
     }
 
@@ -302,14 +307,15 @@ private:
 
     std::vector<uint8_t> unstuffPacket(const std::vector<uint8_t> &packet)
     {
-        std::cout << std::endl << "Unstuffing packet : " << std::endl;
+        std::cout << std::endl
+                  << "Unstuffing packet : " << std::endl;
         std::vector<uint8_t> unstuffed;
         bool escaped = false;
 
         for (int i = 0; i < packet.size(); i++)
         {
             if (escaped)
-            {   
+            {
                 std::cout << "unstuffing byte" << std::endl;
                 unstuffed.push_back(packet[i] ^ STUFFING_KEY);
                 escaped = false;
@@ -336,16 +342,16 @@ public:
     SerialCommunication(const std::string &port, unsigned int baud_rate)
         : io_(), serial_(io_, port)
     {
-        serial_.set_option(boost::asio::serial_port_base::baud_rate(baud_rate));
-        serial_.set_option(boost::asio::serial_port_base::character_size(8));
-        serial_.set_option(boost::asio::serial_port_base::stop_bits(boost::asio::serial_port_base::stop_bits::one));
-        serial_.set_option(boost::asio::serial_port_base::parity(boost::asio::serial_port_base::parity::even));
-        serial_.set_option(boost::asio::serial_port_base::flow_control(boost::asio::serial_port_base::flow_control::none));
+        serial_.set_option(asio::serial_port_base::baud_rate(baud_rate));
+        serial_.set_option(asio::serial_port_base::character_size(8));
+        serial_.set_option(asio::serial_port_base::stop_bits(asio::serial_port_base::stop_bits::one));
+        serial_.set_option(asio::serial_port_base::parity(asio::serial_port_base::parity::even));
+        serial_.set_option(asio::serial_port_base::flow_control(asio::serial_port_base::flow_control::none));
     }
 
     void send(const std::vector<uint8_t> &data)
     {
-        boost::asio::write(serial_, boost::asio::buffer(data));
+        asio::write(serial_, asio::buffer(data));
     }
 
     std::vector<uint8_t> receive(int bytes_to_read, std::chrono::milliseconds timeout)
@@ -353,15 +359,15 @@ public:
         std::vector<uint8_t> received_data(bytes_to_read);
         int bytes_read = 0;
 
-        boost::asio::async_read(serial_,
-                                boost::asio::buffer(received_data),
-                                [&bytes_read, &received_data](const boost::system::error_code &error, int bytes_transferred)
-                                {
-                                    if (!error)
-                                    {
-                                        bytes_read = bytes_transferred;
-                                    }
-                                });
+        asio::async_read(serial_,
+                         asio::buffer(received_data),
+                         [&bytes_read, &received_data](const auto &error, int bytes_transferred)
+                         {
+                             if (!error)
+                             {
+                                 bytes_read = bytes_transferred;
+                             }
+                         });
 
         if (io_.run_for(timeout))
         {
@@ -380,18 +386,25 @@ public:
     }
 
 private:
-    boost::asio::io_service io_;
-    boost::asio::serial_port serial_;
+    asio::io_service io_;
+    asio::serial_port serial_;
 
-    bool run_for(std::chrono::milliseconds timeout)
+    bool run_for(asio::io_context &io_context, std::chrono::milliseconds timeout)
     {
-        io_.reset();
-        auto timer = std::make_shared<boost::asio::deadline_timer>(io_);
-        timer->expires_from_now(boost::posix_time::milliseconds(timeout.count()));
-        timer->async_wait([this](const boost::system::error_code &)
-                          { io_.stop(); });
-        io_.run();
-        return timer->expires_from_now().total_milliseconds() > 0;
+        io_.restart(); // Reset the io_context to ensure it's not in a stopped state
+        auto timer = std::make_shared<asio::steady_timer>(io_);
+        timer->expires_after(timeout);
+
+        // Set the asynchronous wait operation
+        timer->async_wait([timer](const asio::error_code &)
+                          {
+                              timer->cancel(); // Ensure the timer is canceled once the operation is done
+                          });
+
+        io_.run(); // Run the io_context to start processing asynchronous events
+
+        // Return whether the timer has expired or not
+        return timer->expires_after(std::chrono::milliseconds::zero());
     }
 };
 
@@ -413,7 +426,8 @@ public:
             std::cout << "parsing packet" << std::endl;
             if (protocol_.parsePacket(response, command, data))
             {
-                std::cout << std::endl << "checking command" << std::endl;
+                std::cout << std::endl
+                          << "checking command" << std::endl;
                 std::cout << "command received : " << static_cast<int>(command) << std::endl;
                 std::cout << "command to receive : " << static_cast<int>(Command::Init) << std::endl;
                 std::cout << "version number of the protocol : " << static_cast<int>(data[0]) << std::endl;

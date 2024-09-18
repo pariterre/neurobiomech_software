@@ -6,7 +6,7 @@
 #include <array>
 #include <fstream>
 #include <filesystem>
-#include <asio.hpp> // You'll need to install the ASIO library
+#include <asio.hpp>
 #include <thread>
 #include <chrono>
 
@@ -37,17 +37,17 @@ public:
     std::vector<std::vector<float>> read(int num_samples)
     {
         int l_des = num_samples * min_recv_size_;
-        int l = 0;
+        size_t l = 0;
         std::vector<char> packet(l_des, 0);
 
         while (l < l_des)
         {
             try
             {
-                int received = data_socket_.receive(asio::buffer(packet.data() + l, l_des - l));
+                int received = static_cast<int>(data_socket_.receive(asio::buffer(packet.data() + l, l_des - l)));
                 l += received;
             }
-            catch (std::exception &e)
+            catch (std::exception &)
             {
                 l = packet.size();
                 std::fill(packet.begin() + l, packet.end(), 0);
@@ -212,7 +212,7 @@ public:
         {
             for (auto &sample : channel)
             {
-                sample *= scaler_;
+                sample *= static_cast<float>(scaler_);
             }
         }
 
@@ -264,7 +264,7 @@ public:
         {
             for (auto &sample : channel)
             {
-                sample *= scaler_;
+                sample *= static_cast<float>(scaler_);
             }
         }
 
@@ -278,7 +278,6 @@ private:
     double scaler_;
 };
 
-
 int main()
 {
     try
@@ -288,31 +287,31 @@ int main()
         std::cin >> runnumber;
         std::cout << "Starting " << runnumber << " seconds trial ..." << std::endl;
         TrignoEMG emg({0, 13}, 2000, "mV");
-        TrignoAUX aux({0, 143}, 1/(0.0135/2), "mv");
+        TrignoAUX aux({0, 143}, static_cast<int>(1.0 / (0.0135 / 2.0)), "mv");
         emg.start_recording("emg_data_sample.csv");
         aux.start_recording("aux_data_sample.csv");
-        emg.start(); //only fire START command once all Trigno instances have been summonned and recording have been launched 
+        emg.start(); // only fire START command once all Trigno instances have been summonned and recording have been launched
                      //(and with the master seesion only, otherwise it will fail)
 
         std::cout << std::endl;
         std::cout << std::endl;
         auto starttotalfirstrun = std::chrono::high_resolution_clock::now();
-        std::thread t1firstrun([&emg](){
+        std::thread t1firstrun([&emg]()
+                               {
             auto startt1firstrun = std::chrono::high_resolution_clock::now();
             auto datafirstrun = emg.read();
             auto endt1firstrun = std::chrono::high_resolution_clock::now();
             auto durationt1firstrun = std::chrono::duration_cast<std::chrono::microseconds>(endt1firstrun - startt1firstrun);
             std::cout << "EMG data time for 2000hz : " << durationt1firstrun.count() << std::endl;
-            std::cout << "Diff on 1s : " << durationt1firstrun.count() - 1000000 << " microseconds" << std::endl;
-        });
-        std::thread t2firstrun([&aux](){
+            std::cout << "Diff on 1s : " << durationt1firstrun.count() - 1000000 << " microseconds" << std::endl; });
+        std::thread t2firstrun([&aux]()
+                               {
             auto startt2firstrun = std::chrono::high_resolution_clock::now();
             auto dataauxfirstrun = aux.read();
             auto endt2firstrun = std::chrono::high_resolution_clock::now();
             auto durationt2firstrun = std::chrono::duration_cast<std::chrono::microseconds>(endt2firstrun - startt2firstrun);
             std::cout << "AUX data time for 148.148hz : " << durationt2firstrun.count() << std::endl;
-            std::cout << "Diff on 1s : " << durationt2firstrun.count() - 1000000 << " microseconds" << std::endl;
-        });
+            std::cout << "Diff on 1s : " << durationt2firstrun.count() - 1000000 << " microseconds" << std::endl; });
         t1firstrun.join();
         t2firstrun.join();
         std::cout << std::endl;
@@ -323,27 +322,26 @@ int main()
         std::cout << std::endl;
         std::cout << std::endl;
 
-
         auto starttotal = std::chrono::high_resolution_clock::now();
         for (int i = 0; i < runnumber; i++)
         {
             std::cout << "Run number " << i + 1 << std::endl;
-            std::thread t1([&emg](){
+            std::thread t1([&emg]()
+                           {
                 auto startt1 = std::chrono::high_resolution_clock::now();
                 auto data = emg.read();
                 auto endt1 = std::chrono::high_resolution_clock::now();
                 auto durationt1 = std::chrono::duration_cast<std::chrono::microseconds>(endt1 - startt1);
                 std::cout << "EMG data time for 2000hz : " << durationt1.count() << std::endl;
-                std::cout << "Diff on 1s : " << durationt1.count() - 1000000 << " microseconds" << std::endl;
-            });
-            std::thread t2([&aux](){
+                std::cout << "Diff on 1s : " << durationt1.count() - 1000000 << " microseconds" << std::endl; });
+            std::thread t2([&aux]()
+                           {
                 auto startt2 = std::chrono::high_resolution_clock::now();
                 auto dataaux = aux.read();
                 auto endt2 = std::chrono::high_resolution_clock::now();
                 auto durationt2 = std::chrono::duration_cast<std::chrono::microseconds>(endt2 - startt2);
                 std::cout << "AUX data time for 148.148hz : " << durationt2.count() << std::endl;
-                std::cout << "Diff on 1s : " << durationt2.count() - 1000000 << " microseconds" << std::endl;
-            });
+                std::cout << "Diff on 1s : " << durationt2.count() - 1000000 << " microseconds" << std::endl; });
             t1.join();
             t2.join();
             std::cout << std::endl;
@@ -353,7 +351,7 @@ int main()
         std::cout << std::endl;
         std::cout << std::endl;
         std::cout << "Total data time for " << runnumber << "s : " << durationtotal.count() << std::endl;
-        std::cout << "Diff on " << runnumber << "s : " << durationtotal.count() - (1000000*runnumber) << " microseconds" << std::endl;
+        std::cout << "Diff on " << runnumber << "s : " << durationtotal.count() - (1000000 * runnumber) << " microseconds" << std::endl;
         emg.stop();
         emg.stop_recording();
         aux.stop_recording();

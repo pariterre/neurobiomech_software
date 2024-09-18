@@ -10,6 +10,8 @@ option(BUILD_DOC
     "Build documentation" OFF)
 option(BUILD_TESTS 
     "Build all tests." OFF)
+option(BUILD_WIP
+    "Build all work in progress." OFF)
 
 # Set a default build type to 'Release' if none was specified
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -71,4 +73,8 @@ endif (BUILD_DOC)
 # Testing
 if (BUILD_TESTS)
     add_subdirectory("test")
+endif()
+
+if (BUILD_WIP)
+    add_subdirectory("WIP")
 endif()
