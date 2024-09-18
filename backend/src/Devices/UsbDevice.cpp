@@ -1,16 +1,12 @@
-#include "Utils/UsbDevice.h"
+#include "Devices/UsbDevice.h"
 
+#include <asio.hpp>
 #if defined(_WIN32)
 #include <windows.h>
 #include <setupapi.h>
 #include <cfgmgr32.h>
 #endif
 #include <regex>
-
-bool UsbDevice::operator==(const UsbDevice &other) const
-{
-    return m_Port == other.m_Port && m_Vid == other.m_Vid && m_Pid == other.m_Pid;
-}
 
 UsbDevice::UsbDevice(const std::string &port, const std::string &vid, const std::string &pid)
     : m_Port(port), m_Vid(vid), m_Pid(pid) {}
@@ -19,12 +15,29 @@ UsbDevice UsbDevice::fromVidAndPid(const std::string &vid, const std::string &pi
 {
     for (const auto &device : UsbDevice::listAll())
     {
-        if (device.getVid() == vid && device.getPid() == pid)
+        if (device.m_Vid == vid && device.m_Pid == pid)
         {
             return device;
         }
     }
     throw std::runtime_error("Device not found");
+}
+
+bool UsbDevice::connect()
+{
+    try
+    {
+        // TODO Declare io and serial as class members?
+        asio::io_service io;
+        asio::serial_port serial(io, m_Port);
+        serial.set_option(asio::serial_port_base::baud_rate(9600));
+        return true;
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "Connection error: " << e.what() << std::endl;
+        return false;
+    }
 }
 
 std::vector<UsbDevice> UsbDevice::listAll()
@@ -107,4 +120,9 @@ std::vector<UsbDevice> UsbDevice::listAll()
 #endif
 
     return devices;
+}
+
+bool UsbDevice::operator==(const UsbDevice &other) const
+{
+    return m_Port == other.m_Port && m_Vid == other.m_Vid && m_Pid == other.m_Pid;
 }

@@ -1,5 +1,4 @@
-#include <asio.hpp>
-#include <Utils/UsbDevice.h>
+#include <Devices/UsbDevice.h>
 
 int main()
 {
@@ -8,10 +7,7 @@ int main()
         std::string vid = "067B";
         std::string pid = "2303";
         auto device = UsbDevice::fromVidAndPid(vid, pid);
-
-        asio::io_service io;
-        asio::serial_port serial(io, device.getPort());
-        serial.set_option(asio::serial_port_base::baud_rate(9600));
+        device.connect();
 
         std::cout << "Opened port: " << device.getPort() << std::endl;
         // Communicate with the device here

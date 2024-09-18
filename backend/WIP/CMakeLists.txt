@@ -22,7 +22,7 @@ foreach(SOURCE_FILE ${SOURCE_FILES})
     )
     add_dependencies(${EXECUTABLE_NAME} ${MODULE_UTILS})
     target_link_libraries(${EXECUTABLE_NAME} PRIVATE
-        ${MODULE_UTILS}
+        ${MODULE_DEVICES}
     )
     if (WIN32)
         target_link_libraries(${EXECUTABLE_NAME} PRIVATE
