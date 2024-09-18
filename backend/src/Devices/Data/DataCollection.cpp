@@ -48,15 +48,21 @@ DataCollection DataCollection::deserialize(const nlohmann::json &json)
     DataCollection dataCollection;
     int dataId = 0;
 
-    for (const auto &dataIdString : json)
+    // Iterate over key-value pairs in the json object
+    for (const auto &device : json.items())
     {
-        for (const auto &data : dataIdString)
+        for (const auto &dataPoint : device.value())
         {
-            std::vector<double> dataValue = data["data"];
-            time_t timestamp = data["timestamp"];
+            // Extract "data" and "timestamp" from each object
+            std::vector<double> dataValue = dataPoint.at("data").get<std::vector<double>>();
+            time_t timestamp = dataPoint.at("timestamp").get<time_t>();
+
+            // Create CollectorData object and add it to dataCollection
             devices::CollectorData donnees(timestamp, dataValue);
             dataCollection.addData(dataId, donnees);
         }
+
+        // Increment the dataId after processing each key
         dataId++;
     }
 
