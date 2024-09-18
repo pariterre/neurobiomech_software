@@ -1,8 +1,9 @@
 #ifndef STIMWALKER_UTILS_TIMESTAMP_H
 #define STIMWALKER_UTILS_TIMESTAMP_H
 
-#include "stimwalkerConfig.h"
 #include <cstdint>
+
+#include "stimwalkerConfig.h"
 
 namespace STIMWALKER_NAMESPACE::utils
 {

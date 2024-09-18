@@ -1,10 +1,12 @@
 #ifndef DEVICE_DATA_COLLECTION_H
 #define DEVICE_DATA_COLLECTION_H
 
-#include "stimwalkerConfig.h"
-#include "nlohmann/json.hpp"
-
 #include <map>
+#include <memory>
+#include <nlohmann/json.hpp>
+#include <vector>
+
+#include "stimwalkerConfig.h"
 
 namespace STIMWALKER_NAMESPACE::devices
 {

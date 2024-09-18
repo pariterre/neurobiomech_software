@@ -4,13 +4,13 @@ project(${MODULE_UTILS})
 
 # Add the relevant files
 set(SRC_LIST_MODULE
-    "${CMAKE_CURRENT_SOURCE_DIR}/Path.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/String.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Timestamp.cpp"
+    ${CMAKE_CURRENT_SOURCE_DIR}/Path.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/String.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Timestamp.cpp
 )
 
 # Create the library
-add_library(${MODULE_UTILS} STATIC "${SRC_LIST_MODULE}")
+add_library(${MODULE_UTILS} STATIC ${SRC_LIST_MODULE})
 set_target_properties(${MODULE_UTILS} PROPERTIES DEBUG_POSTFIX "_debug")
 
 # Add the include

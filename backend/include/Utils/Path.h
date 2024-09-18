@@ -1,8 +1,9 @@
 #ifndef STIMWALKER_UTILS_PATH_H
 #define STIMWALKER_UTILS_PATH_H
 
-#include "stimwalkerConfig.h"
 #include <memory>
+
+#include "stimwalkerConfig.h"
 #include "Utils/String.h"
 
 namespace STIMWALKER_NAMESPACE::utils

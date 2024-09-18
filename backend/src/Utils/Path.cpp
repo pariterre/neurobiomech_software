@@ -285,7 +285,7 @@ String Path::absoluteFolder(
     }
     else
     {
-        Error::raise("I could not find the current drive to estimate the path");
+        throw FileNotFoundException("Could not find the current drive");
     }
 #else
     base = "/";
@@ -411,7 +411,7 @@ String Path::currentDir()
 {
     char buff[FILENAME_MAX];
 #ifdef _WIN32
-    if (!buff, FILENAME_MAX)
+    if (!_getcwd(buff, FILENAME_MAX))
     {
         throw FileNotFoundException("Could not find the current directory");
     }

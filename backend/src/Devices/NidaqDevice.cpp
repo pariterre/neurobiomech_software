@@ -80,7 +80,7 @@ void NidaqDevice::dispose()
     {
         stopRecording();
     }
-    catch (const DeviceIsNotRecordingException &e)
+    catch (const DeviceIsNotRecordingException &)
     {
         // Do nothing
     }
@@ -89,7 +89,7 @@ void NidaqDevice::dispose()
     {
         disconnect();
     }
-    catch (const DeviceIsNotConnectedException &e)
+    catch (const DeviceIsNotConnectedException &)
     {
         // Do nothing
     }

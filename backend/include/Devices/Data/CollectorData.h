@@ -1,10 +1,10 @@
 #ifndef COLLECTOR_DATA_H
 #define COLLECTOR_DATA_H
 
-#include "stimwalkerConfig.h"
 #include <ctime>
 #include <vector>
 
+#include "stimwalkerConfig.h"
 #include "Devices/Data/Data.h"
 
 namespace STIMWALKER_NAMESPACE::devices

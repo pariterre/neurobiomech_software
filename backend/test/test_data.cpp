@@ -50,20 +50,19 @@ TEST(Data, serialize)
 
 TEST(Data, deserialize)
 {
-    std::string jsonData = R"({
-            "0": [
-                {
-                    "data": [4.0, 5.0, 6.0],
-                    "timestamp": 2001
-                },
-                {
-                    "data": [-7.0, 8.0, 9.0],
-                    "timestamp": 2002
-                }
-            ]
-        })";
-
-    devices::DataCollection dataCollection = dataCollection.deserialize(jsonData);
+    nlohmann::json json = R"({
+        "0": [
+            {
+                "data": [4.0, 5.0, 6.0],
+                "timestamp": 2001
+            },
+            {
+                "data": [-7.0, 8.0, 9.0],
+                "timestamp": 2002
+            }
+        ]
+    })"_json;
+    devices::DataCollection dataCollection = dataCollection.deserialize(json);
 
     ASSERT_EQ(dataCollection.getNbDataId(), 1);
     const auto &deserializedData = dataCollection.getData(0);
@@ -86,7 +85,7 @@ TEST(Data, acquire)
 {
     auto data = devices::DataCollection();
     int dataId = data.registerNewDataId();
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     ASSERT_EQ(data.getNbDataId(), 0);
 

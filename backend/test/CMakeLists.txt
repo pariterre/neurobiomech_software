@@ -3,10 +3,10 @@ project(${STIMWALKER_NAME}_tests)
 # Download gtest if necessary
 set(RELATIVE_PATH_TO_GTEST external/googletest)
 find_path(GTEST_INCLUDE_DIR "gtest.h" HINTS
-    "${CMAKE_CURRENT_SOURCE_DIR}/../${RELATIVE_PATH_TO_GTEST}/googletest/include/gtest"
+    ${CMAKE_CURRENT_SOURCE_DIR}/../${RELATIVE_PATH_TO_GTEST}/googletest/include/gtest
 )
 
-if((NOT GTEST_INCLUDE_DIR) OR (NOT EXISTS "${GTEST_INCLUDE_DIR}"))
+if((NOT GTEST_INCLUDE_DIR) OR (NOT EXISTS ${GTEST_INCLUDE_DIR}))
     find_package(Git QUIET)
     if (NOT GIT_FOUND)
         message(FATAL_ERROR "Unable to find gtest and it could not be download since Git was not found!")
@@ -25,7 +25,7 @@ if((NOT GTEST_INCLUDE_DIR) OR (NOT EXISTS "${GTEST_INCLUDE_DIR}"))
     endif()
     
     find_path(GTEST_INCLUDE_DIR "gtest.h" HINTS
-        "${CMAKE_CURRENT_SOURCE_DIR}/../${RELATIVE_PATH_TO_GTEST}/googletest/include/gtest"
+        ${CMAKE_CURRENT_SOURCE_DIR}/../${RELATIVE_PATH_TO_GTEST}/googletest/include/gtest
     )
 endif()
 
@@ -38,8 +38,8 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 set(BUILD_GMOCK OFF)
 set(INSTALL_GTEST OFF)
 add_subdirectory(
-    "${CMAKE_CURRENT_SOURCE_DIR}/../${RELATIVE_PATH_TO_GTEST}"
-    "${CMAKE_BINARY_DIR}/gtest"
+    ${CMAKE_CURRENT_SOURCE_DIR}/../${RELATIVE_PATH_TO_GTEST}
+    ${CMAKE_BINARY_DIR}/gtest
     EXCLUDE_FROM_ALL
 )
 
@@ -49,20 +49,18 @@ add_subdirectory(
 enable_testing()
 
 set(TEST_SRC_FILES
-"${CMAKE_SOURCE_DIR}/test/test_data.cpp"
-"${CMAKE_SOURCE_DIR}/test/test_devices.cpp"
-"${CMAKE_SOURCE_DIR}/test/test_lokomat.cpp"
-"${CMAKE_SOURCE_DIR}/test/test_utils.cpp"
+    ${CMAKE_SOURCE_DIR}/test/test_data.cpp
+    ${CMAKE_SOURCE_DIR}/test/test_devices.cpp
+    ${CMAKE_SOURCE_DIR}/test/test_lokomat.cpp
+    ${CMAKE_SOURCE_DIR}/test/test_utils.cpp
 )
-add_executable(${PROJECT_NAME} "${TEST_SRC_FILES}")
+add_executable(${PROJECT_NAME} ${TEST_SRC_FILES})
 add_dependencies(${PROJECT_NAME} ${STIMWALKER_NAME})
 
 # headers for the project
 target_include_directories(${PROJECT_NAME} PRIVATE
-    "${CMAKE_SOURCE_DIR}/include"
-    "${${STIMWALKER_NAME}_BINARY_DIR}/include"
-    "${EIGEN3_INCLUDE_DIR}"
-    "${JSON_SOURCE_DIR}/single_include"
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
 )
 
 # Standard linking to gtest stuff.
@@ -71,11 +69,10 @@ target_link_libraries(${PROJECT_NAME}
 
 # Extra linking for the project.
 target_link_libraries(${PROJECT_NAME}
-    "${STIMWALKER_MODULE_NAMES}")
+    ${MODULE_UTILS}
+    ${MODULE_DEVICES})
 
 if (CMAKE_BUILD_TYPE STREQUAL "Coverage")
-    set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/.travis/cmake")
-
     include(CodeCoverage)
     setup_target_for_coverage(${STIMWALKER_NAME}_coverage
         "${PROJECT_NAME}" "coverage")
@@ -84,8 +81,8 @@ if (CMAKE_BUILD_TYPE STREQUAL "Coverage")
     SET(CMAKE_C_FLAGS "-g -O0 -fprofile-arcs -ftest-coverage")
 endif() #CMAKE_BUILD_TYPE STREQUAL "Coverage"
 
-set(ALL_TESTS "${PROJECT_NAME}")
+set(ALL_TESTS ${PROJECT_NAME})
 
 # This is so you can do 'make test' to see all your tests run, instead of
 # manually running the executable runUnitTests to see those specific tests.
-add_test(UnitTests "${ALL_TESTS}")
+add_test(UnitTests ${ALL_TESTS})

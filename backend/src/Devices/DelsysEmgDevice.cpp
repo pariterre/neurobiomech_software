@@ -36,17 +36,17 @@ void BaseTrignoDaq::start()
 std::vector<std::vector<float>> BaseTrignoDaq::read(int num_samples)
 {
     int l_des = num_samples * min_recv_size_;
-    int l = 0;
+    size_t l = 0;
     std::vector<char> packet(l_des, 0);
 
     while (l < l_des)
     {
         try
         {
-            int received = data_socket_.receive(asio::buffer(packet.data() + l, l_des - l));
+            int received = static_cast<int>(data_socket_.receive(asio::buffer(packet.data() + l, l_des - l)));
             l += received;
         }
-        catch (std::exception &e)
+        catch (std::exception &)
         {
             l = packet.size();
             std::fill(packet.begin() + l, packet.end(), 0);
@@ -191,7 +191,7 @@ std::vector<std::vector<float>> TrignoEMG::read()
     {
         for (auto &sample : channel)
         {
-            sample *= scaler_;
+            sample *= static_cast<float>(scaler_);
         }
     }
 
@@ -215,7 +215,7 @@ void DelsysEmgDevice::dispose()
     {
         stopRecording();
     }
-    catch (const DeviceIsNotRecordingException &e)
+    catch (const DeviceIsNotRecordingException &)
     {
         // Do nothing
     }
@@ -224,7 +224,7 @@ void DelsysEmgDevice::dispose()
     {
         disconnect();
     }
-    catch (const DeviceIsNotConnectedException &e)
+    catch (const DeviceIsNotConnectedException &)
     {
         // Do nothing
     }
@@ -325,7 +325,7 @@ void DelsysEmgDevice::stopRecordingInternal()
 int DelsysEmgDevice::onNewData(std::function<void(const CollectorData &newData)> callback)
 {
     m_listeners.push_back(callback);
-    return m_listeners.size() - 1;
+    return static_cast<int>(m_listeners.size() - 1);
 }
 
 void DelsysEmgDevice::removeListener(int listenerId)

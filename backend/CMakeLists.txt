@@ -32,7 +32,7 @@ add_executable(${STIMWALKER_NAME} ${SRC_LIST})
 set_target_properties(${STIMWALKER_NAME} PROPERTIES DEBUG_POSTFIX "_debug")
 
 # Compilation directories
-set(${STIMWALKER_NAME}_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+set(${STIMWALKER_NAME}_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 # Add headers
 # Include directories when building the library:
@@ -53,7 +53,7 @@ target_link_libraries(${STIMWALKER_NAME} PRIVATE
 
 # install target
 set_target_properties(${STIMWALKER_NAME} PROPERTIES
-    INSTALL_RPATH "${CMAKE_INSTALL_BINDIR}"
+    INSTALL_RPATH ${CMAKE_INSTALL_BINDIR}
     INSTALL_RPATH_USE_LINK_PATH TRUE
 )
 install(TARGETS stimwalker

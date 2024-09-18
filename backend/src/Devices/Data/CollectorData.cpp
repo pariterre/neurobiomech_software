@@ -26,7 +26,7 @@ double CollectorData::getData(int channel) const
 
 int CollectorData::getNbChannels() const
 {
-    return m_data.size();
+    return static_cast<int>(m_data.size());
 }
 
 nlohmann::json CollectorData::serialize() const

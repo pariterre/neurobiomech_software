@@ -1,8 +1,9 @@
 #ifndef STIMWALKER_UTILS_STRING_H
 #define STIMWALKER_UTILS_STRING_H
 
-#include "stimwalkerConfig.h"
 #include <iostream>
+
+#include "stimwalkerConfig.h"
 
 namespace STIMWALKER_NAMESPACE::utils
 {

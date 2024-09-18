@@ -1,11 +1,11 @@
 #ifndef DELSYSEMGDEVICE_H
 #define DELSYSEMGDEVICE_H
 
-#include <string>
-#include <vector>
 #include <array>
 #include <asio.hpp>
 #include <fstream>
+#include <string>
+#include <vector>
 
 #include "Devices/Generic/Device.h"
 #include "Devices/Generic/Collector.h"

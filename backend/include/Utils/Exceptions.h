@@ -1,8 +1,9 @@
 // Generate the custom exceptions
 
-#include "stimwalkerConfig.h"
 #include <exception>
 #include <string>
+
+#include "stimwalkerConfig.h"
 
 namespace STIMWALKER_NAMESPACE::utils
 {

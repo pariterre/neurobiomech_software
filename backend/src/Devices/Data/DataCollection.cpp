@@ -1,8 +1,8 @@
 #include "Devices/Data/DataCollection.h"
 
+#include "Devices/Data/CollectorData.h"
 #include "Devices/Data/Data.h"
 #include "Utils/String.h"
-#include "Devices/Data/CollectorData.h"
 
 using namespace STIMWALKER_NAMESPACE::devices;
 
@@ -14,7 +14,7 @@ int DataCollection::registerNewDataId()
 
 int DataCollection::getNbDataId() const
 {
-    return m_data.size();
+    return static_cast<int>(m_data.size());
 }
 
 const std::vector<std::unique_ptr<Data>> &DataCollection::getData(int dataId) const

@@ -1,12 +1,12 @@
 #ifndef NI_DAQ_DEVICE_H
 #define NI_DAQ_DEVICE_H
 
-#include "stimwalkerConfig.h"
+#include <map>
 #include <memory>
 #include <mutex>
 #include <thread>
-#include <map>
 
+#include "stimwalkerConfig.h"
 #include "Devices/Generic/Device.h"
 #include "Devices/Generic/Collector.h"
 
