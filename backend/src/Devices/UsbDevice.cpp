@@ -77,22 +77,32 @@ void UsbDevice::_initialize()
 
 void UsbDevice::_parseCommand(Commands command, const std::any &data)
 {
-    switch (command)
+    // Prepare the print message
+    const auto &timeSinceEpoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    std::cout << "Time stamp: " << timeSinceEpoch << " ms - ";
+
+    try
     {
-    case Commands::PRINT:
-    {
-        const std::string &text = std::any_cast<std::string>(data);
-        std::cout << "Time since epoch: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() << " ms - "
-                  << "Sent command: " << text << std::endl;
-        break;
+        switch (command)
+        {
+        case Commands::PRINT:
+            std::cout << "Sent command: " << std::any_cast<std::string>(data) << std::endl;
+            break;
+
+        case Commands::CHANGE_POKE_INTERVAL:
+            throw std::bad_any_cast();
+            _changePokeInterval(std::any_cast<const std::chrono::milliseconds>(data));
+            std::cout << "Changed poke interval to " << m_PokeInterval.count() << " ms" << std::endl;
+            break;
+        }
     }
-    case Commands::CHANGE_POKE_INTERVAL:
+    catch (const std::bad_any_cast &e)
     {
-        const std::chrono::milliseconds interval = std::any_cast<const std::chrono::milliseconds>(data);
-        _changePokeInterval(interval);
-        std::cout << "Changed poke interval to " << interval.count() << "ms" << std::endl;
-        break;
+        std::cerr << "The data you provided with the command (" << command << ") is invalid" << std::endl;
     }
+    catch (const std::exception &e)
+    {
+        std::cerr << "Error: " << e.what() << std::endl;
     }
 
     // Write the command to the device
