@@ -1,6 +1,5 @@
 #include "Devices/UsbDevice.h"
 
-#include <asio.hpp>
 #if defined(_WIN32)
 #include <windows.h>
 #include <setupapi.h>
@@ -9,11 +8,21 @@
 #include <regex>
 
 UsbDevice::UsbDevice(const std::string &port, const std::string &vid, const std::string &pid)
-    : m_Port(port), m_Vid(vid), m_Pid(pid) {}
+    : m_Port(port), m_Vid(vid), m_Pid(pid), m_Data("") {}
+
+UsbDevice::UsbDevice(const UsbDevice &other)
+    : m_Port(other.m_Port), m_Vid(other.m_Vid), m_Pid(other.m_Pid), m_Data("")
+{
+    // Throws an exception if the serial port is open as it cannot be copied
+    if (other.m_SerialPort != nullptr && other.m_SerialPort->is_open())
+    {
+        throw std::runtime_error("Cannot copy UsbDevice object with an open serial port");
+    }
+}
 
 UsbDevice UsbDevice::fromVidAndPid(const std::string &vid, const std::string &pid)
 {
-    for (const auto &device : UsbDevice::listAll())
+    for (const auto &device : UsbDevice::listAllUsbDevices())
     {
         if (device.m_Vid == vid && device.m_Pid == pid)
         {
@@ -29,8 +38,22 @@ bool UsbDevice::connect()
     {
         // TODO Declare io and serial as class members?
         asio::io_service io;
-        asio::serial_port serial(io, m_Port);
-        serial.set_option(asio::serial_port_base::baud_rate(9600));
+        m_SerialPort = std::make_unique<asio::serial_port>(io, m_Port);
+        m_SerialPort->set_option(asio::serial_port_base::baud_rate(9600));
+        m_SerialPort->set_option(asio::serial_port_base::character_size(8));
+        m_SerialPort->set_option(asio::serial_port_base::stop_bits(asio::serial_port_base::stop_bits::one));
+        m_SerialPort->set_option(asio::serial_port_base::parity(asio::serial_port_base::parity::none));
+
+        // Get number of bytes in the queue of the serial port
+        // std::size_t bytes = m_SerialPort->available();
+        asio::streambuf buf;
+        asio::read(*m_SerialPort, buf, asio::transfer_exactly(100));
+
+        std::istream is(&buf);
+        is >> m_Data;
+
+        std::cout << "Data: " << m_Data << std::endl;
+
         return true;
     }
     catch (const std::exception &e)
@@ -40,7 +63,19 @@ bool UsbDevice::connect()
     }
 }
 
-std::vector<UsbDevice> UsbDevice::listAll()
+void UsbDevice::setRapidMode(bool rapid)
+{
+    if (rapid)
+    {
+        m_SerialPort->set_option(asio::serial_port_base::flow_control(asio::serial_port_base::flow_control::hardware));
+    }
+    else
+    {
+        m_SerialPort->set_option(asio::serial_port_base::flow_control(asio::serial_port_base::flow_control::none));
+    }
+}
+
+std::vector<UsbDevice> UsbDevice::listAllUsbDevices()
 {
     std::vector<UsbDevice> devices;
 
@@ -71,7 +106,6 @@ std::vector<UsbDevice> UsbDevice::listAll()
         if (SetupDiGetDeviceInstanceIdA(deviceInfoSet, &deviceInfoData, deviceInstanceId, sizeof(deviceInstanceId), NULL))
         {
             std::string deviceInstanceStr(deviceInstanceId);
-            std::cout << "DeviceInstanceID: " << deviceInstanceStr << std::endl;
 
             // Check if this device is associated with the target COM port
             HKEY hDeviceRegistryKey = SetupDiOpenDevRegKey(deviceInfoSet, &deviceInfoData, DICS_FLAG_GLOBAL, 0, DIREG_DEV, KEY_READ);

@@ -3,8 +3,10 @@
 
 #include <iostream>
 
-#include "Utils/CppMacros.h"
+#include <asio.hpp>
 #include <vector>
+
+#include "Utils/CppMacros.h"
 
 /// @brief A class representing a USB device
 /// @details This class provides a way to list all USB devices connected to the system and get their information
@@ -18,6 +20,10 @@ public:
     /// @param vid The vendor ID of the device
     /// @param pid The product ID of the device
     UsbDevice(const std::string &port, const std::string &vid, const std::string &pid);
+
+    /// @brief Copy constructor
+    /// @param other The other UsbDevice object to copy
+    UsbDevice(const UsbDevice &other);
 
     /// @brief Factory method to create a UsbDevice object from a vendor ID and product ID. Throws an exception if the device is not found
     /// @param vid The vendor ID of the device
@@ -39,17 +45,28 @@ public:
     /// @return The product ID of the device
     DECLARE_PROTECTED_MEMBER(std::string, Pid)
 
+    /// @brief Get the data read from the device
+    /// @return The data read from the device
+    DECLARE_PROTECTED_MEMBER(std::string, Data)
+
+    DECLARE_PRIVATE_MEMBER(std::unique_ptr<asio::serial_port>, SerialPort)
+
     /// Methods
 public:
     /// @brief Connect to the device
     /// @return True if the connection was successful, false otherwise
     bool connect();
 
+protected:
+    /// @brief Set the rapid mode of the device
+    /// @param rapid True to enable rapid mode, false to disable it
+    void setRapidMode(bool rapid);
+
     /// Static methods
 public:
     /// @brief Static method to list all USB devices connected to the system
     /// @return A vector of UsbDevice objects representing the connected USB devices
-    static std::vector<UsbDevice> listAll();
+    static std::vector<UsbDevice> listAllUsbDevices();
 
     /// @brief Equality operator
     /// @param other The other UsbDevice object to compare with
