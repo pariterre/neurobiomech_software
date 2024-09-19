@@ -8,10 +8,12 @@
 #include <regex>
 
 UsbDevice::UsbDevice(const std::string &port, const std::string &vid, const std::string &pid)
-    : m_Port(port), m_Vid(vid), m_Pid(pid), m_Data("") {}
+    : m_Port(port), m_Vid(vid), m_Pid(pid)
+{
+}
 
 UsbDevice::UsbDevice(const UsbDevice &other)
-    : m_Port(other.m_Port), m_Vid(other.m_Vid), m_Pid(other.m_Pid), m_Data("")
+    : m_Port(other.m_Port), m_Vid(other.m_Vid), m_Pid(other.m_Pid)
 {
     // Throws an exception if the serial port is open as it cannot be copied
     if (other.m_SerialPort != nullptr && other.m_SerialPort->is_open())
@@ -32,47 +34,144 @@ UsbDevice UsbDevice::fromVidAndPid(const std::string &vid, const std::string &pi
     throw std::runtime_error("Device not found");
 }
 
-bool UsbDevice::connect()
+void UsbDevice::connect()
 {
-    try
-    {
-        // TODO Declare io and serial as class members?
-        asio::io_service io;
-        m_SerialPort = std::make_unique<asio::serial_port>(io, m_Port);
-        m_SerialPort->set_option(asio::serial_port_base::baud_rate(9600));
-        m_SerialPort->set_option(asio::serial_port_base::character_size(8));
-        m_SerialPort->set_option(asio::serial_port_base::stop_bits(asio::serial_port_base::stop_bits::one));
-        m_SerialPort->set_option(asio::serial_port_base::parity(asio::serial_port_base::parity::none));
+    // Start a worker thread to run the device using the [_initialize] method
+    m_Context = std::make_unique<asio::io_context>();
 
-        // Get number of bytes in the queue of the serial port
-        // std::size_t bytes = m_SerialPort->available();
-        asio::streambuf buf;
-        asio::read(*m_SerialPort, buf, asio::transfer_exactly(100));
-
-        std::istream is(&buf);
-        is >> m_Data;
-
-        std::cout << "Data: " << m_Data << std::endl;
-
-        return true;
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << "Connection error: " << e.what() << std::endl;
-        return false;
-    }
+    // Start the worker thread
+    m_Worker = std::thread([this]
+                           { _initialize(); m_Context->run(); });
 }
 
-void UsbDevice::setRapidMode(bool rapid)
+void UsbDevice::disconnect()
 {
-    if (rapid)
+    // Stop the worker thread
+    m_Context->stop();
+    m_Worker.join();
+}
+
+void UsbDevice::send(Commands command, const std::any &data)
+{
+    // Send a command to the worker to relay commands to the device
+    m_Context->post([this, command, data]
+                    {
+                        std::lock_guard<std::mutex> lock(m_Mutex);
+                        _parseCommand(command, data); });
+}
+
+void UsbDevice::_initialize()
+{
+    m_SerialPortContext = std::make_unique<asio::io_context>();
+    m_SerialPort = std::make_unique<asio::serial_port>(*m_SerialPortContext, m_Port);
+    m_SerialPort->set_option(asio::serial_port_base::baud_rate(9600));
+    m_SerialPort->set_option(asio::serial_port_base::character_size(8));
+    m_SerialPort->set_option(asio::serial_port_base::stop_bits(asio::serial_port_base::stop_bits::one));
+    m_SerialPort->set_option(asio::serial_port_base::parity(asio::serial_port_base::parity::none));
+    m_SerialPort->set_option(asio::serial_port_base::flow_control(asio::serial_port_base::flow_control::none));
+
+    m_KeepAliveTimer = std::make_unique<asio::steady_timer>(*m_Context);
+    m_PokeInterval = std::chrono::milliseconds(1000);
+    _keepAlive(m_PokeInterval);
+}
+
+void UsbDevice::_parseCommand(Commands command, const std::any &data)
+{
+    switch (command)
     {
-        m_SerialPort->set_option(asio::serial_port_base::flow_control(asio::serial_port_base::flow_control::hardware));
+    case Commands::PRINT:
+    {
+        const std::string &text = std::any_cast<std::string>(data);
+        std::cout << "Time since epoch: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count() << " ms - "
+                  << "Sent command: " << text << std::endl;
+        break;
+    }
+    case Commands::CHANGE_POKE_INTERVAL:
+    {
+        const std::chrono::milliseconds interval = std::any_cast<const std::chrono::milliseconds>(data);
+        _changePokeInterval(interval);
+        std::cout << "Changed poke interval to " << interval.count() << "ms" << std::endl;
+        break;
+    }
+    }
+
+    // Write the command to the device
+    // asio::write(*m_SerialPort, asio::buffer(command));
+}
+
+void UsbDevice::_keepAlive(const std::chrono::milliseconds &timeout)
+{
+    // Set a 5-second timer
+    m_KeepAliveTimer->expires_after(timeout);
+
+    m_KeepAliveTimer->async_wait([this](const asio::error_code &ec)
+                                 {
+                                    // If ec is not false, it means the timer was stopped to change the interval, or the 
+                                    // device was disconnected. In both cases, do nothing and return
+                                    if (ec) return;
+                                    // Otherwise, send a PING command to the device
+                                    std::lock_guard<std::mutex> lock(m_Mutex);
+                                    _parseCommand(Commands::PRINT, std::string("PING"));
+                                    _keepAlive(m_PokeInterval); });
+}
+
+void UsbDevice::_changePokeInterval(std::chrono::milliseconds interval)
+{
+    // Stop the timer
+
+    // Compute the remaining time before the next PING command was supposed to be sent
+    auto remainingTime = std::chrono::duration_cast<std::chrono::milliseconds>(
+        m_KeepAliveTimer->expiry() - asio::steady_timer::clock_type::now());
+    auto elapsedTime = m_PokeInterval - remainingTime;
+
+    // Set the interval to the requested value
+    m_PokeInterval = interval;
+
+    // Send a keep alive command with the remaining time
+    m_KeepAliveTimer->cancel();
+    _keepAlive(interval - elapsedTime);
+}
+
+void UsbDevice::_setFastCommunication(bool isFast)
+{
+#if defined(_WIN32)
+    // Set RTS ON
+    if (!EscapeCommFunction(m_SerialPort->native_handle(), isFast ? SETRTS : CLRRTS))
+    {
+        std::cerr << "Failed to set RTS to " << (isFast ? "ON" : "OFF") << std::endl;
     }
     else
     {
-        m_SerialPort->set_option(asio::serial_port_base::flow_control(asio::serial_port_base::flow_control::none));
+        std::cout << "RTS set to " << (isFast ? "ON" : "OFF") << std::endl;
     }
+#else
+    void useRTS(asio::serial_port & serial, bool fast)
+    {
+        int status;
+        if (ioctl(serial.native_handle(), TIOCMGET, &status) < 0)
+        {
+            std::cerr << "Failed to get serial port status" << std::endl;
+            return;
+        }
+
+        // Turn RTS ON or OFF
+        if (fast)
+        {
+            status |= TIOCM_RTS;
+            std::cout << "RTS set to ON (fast)" << std::endl;
+        }
+        else
+        {
+            status &= ~TIOCM_RTS;
+            std::cout << "RTS set to OFF (slow)" << std::endl;
+        }
+
+        if (ioctl(serial.native_handle(), TIOCMSET, &status) < 0)
+        {
+            std::cerr << "Failed to set RTS" << std::endl;
+        }
+    }
+#endif
 }
 
 std::vector<UsbDevice> UsbDevice::listAllUsbDevices()

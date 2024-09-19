@@ -9,17 +9,23 @@ int main()
         std::string vid = "067B";
         std::string pid = "2303";
         auto device = UsbDevice::fromVidAndPid(vid, pid);
-        if (!device.connect())
-        {
-            std::cerr << "Failed to open port: " << device.getPort() << std::endl;
-            throw std::runtime_error("Failed to open port");
-        }
 
+        device.connect();
         std::cout << "Opened port: " << device.getPort() << std::endl;
 
-        // Wait for 5 seconds
-        std::this_thread::sleep_for(std::chrono::seconds(5));
-        std::cout << device.getData() << std::endl;
+        // Simulate some work
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+        device.send(Commands::PRINT, "Hello, world!");
+        std::this_thread::sleep_for(std::chrono::seconds(4));
+        device.send(Commands::CHANGE_POKE_INTERVAL, std::chrono::milliseconds(200));
+        device.send(Commands::PRINT, "Coucou!");
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        device.send(Commands::CHANGE_POKE_INTERVAL, std::chrono::milliseconds(1500));
+        std::this_thread::sleep_for(std::chrono::seconds(8));
+        device.send(Commands::PRINT, "Too long..");
+
+        device.disconnect();
+        std::cout << "Closed port: " << device.getPort() << std::endl;
     }
     catch (std::exception &e)
     {
