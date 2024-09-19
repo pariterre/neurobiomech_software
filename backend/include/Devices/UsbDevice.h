@@ -8,6 +8,9 @@
 
 #include "Utils/CppMacros.h"
 
+// https://github.com/nicolasmcnair/magpy/blob/master/magpy/magstim.py#L129
+// https://github.com/nigelrogasch/MAGIC/blob/master/magstim.m#L301
+
 enum Commands
 {
     CHANGE_POKE_INTERVAL,

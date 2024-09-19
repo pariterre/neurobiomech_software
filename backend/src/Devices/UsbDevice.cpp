@@ -96,7 +96,7 @@ void UsbDevice::_parseCommand(Commands command, const std::any &data)
             break;
         }
     }
-    catch (const std::bad_any_cast &e)
+    catch (const std::bad_any_cast &)
     {
         std::cerr << "The data you provided with the command (" << command << ") is invalid" << std::endl;
     }
