@@ -1,5 +1,5 @@
-#ifndef STIMWALKER_UTILS_PATH_H
-#define STIMWALKER_UTILS_PATH_H
+#ifndef __STIMWALKER_UTILS_PATH_H__
+#define __STIMWALKER_UTILS_PATH_H__
 
 #include <memory>
 
@@ -230,4 +230,4 @@ namespace STIMWALKER_NAMESPACE::utils
 
 }
 
-#endif // STIMWALKER_UTILS_PATH_H
+#endif // __STIMWALKER_UTILS_PATH_H__

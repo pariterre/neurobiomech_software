@@ -1,5 +1,5 @@
-#ifndef STIMWALKER_CONFIG_H
-#define STIMWALKER_CONFIG_H
+#ifndef __STIMWALKER_CONFIG_H__
+#define __STIMWALKER_CONFIG_H__
 
 #define STIMWALKER_API // We kept this so if we want to convert to a shared library, we can do it easily
 #ifdef _WIN32
@@ -19,4 +19,4 @@
 #endif // NAN
 #endif // _WIN32
 
-#endif // STIMWALKER_CONFIG_H
+#endif // __STIMWALKER_CONFIG_H__

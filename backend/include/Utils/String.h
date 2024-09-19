@@ -1,5 +1,5 @@
-#ifndef STIMWALKER_UTILS_STRING_H
-#define STIMWALKER_UTILS_STRING_H
+#ifndef __STIMWALKER_UTILS_STRING_H__
+#define __STIMWALKER_UTILS_STRING_H__
 
 #include <iostream>
 
@@ -166,4 +166,4 @@ namespace STIMWALKER_NAMESPACE::utils
 ///
 std::ostream &operator<<(std::ostream &os, const STIMWALKER_NAMESPACE::utils::String &a);
 
-#endif // STIMWALKER_UTILS_STRING_H
+#endif // __STIMWALKER_UTILS_STRING_H__

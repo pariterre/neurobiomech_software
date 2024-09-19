@@ -1,5 +1,5 @@
-#ifndef LOCOMAT_H
-#define LOCOMAT_H
+#ifndef __STIMWALKER_DEVICES_LOCOMAT_H__
+#define __STIMWALKER_DEVICES_LOCOMAT_H__
 
 #include "stimwalkerConfig.h"
 #include "Devices/NidaqDevice.h"
@@ -17,4 +17,4 @@ namespace STIMWALKER_NAMESPACE::devices
     }
 }
 
-#endif // LOCOMAT_H
+#endif // __STIMWALKER_DEVICES_LOCOMAT_H__

@@ -1,3 +1,6 @@
+#ifndef __STIMWALKER_DEVICES_USB_DEVICE_H__
+#define __STIMWALKER_DEVICES_USB_DEVICE_H__
+
 #include <iostream>
 
 #include "Utils/CppMacros.h"
@@ -53,3 +56,5 @@ public:
     /// @return True if the two objects are equal, false otherwise
     bool operator==(const UsbDevice &other) const;
 };
+
+#endif // __STIMWALKER_DEVICES_USB_DEVICE_H__

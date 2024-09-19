@@ -1,5 +1,5 @@
-#ifndef DELSYSEMGDEVICE_H
-#define DELSYSEMGDEVICE_H
+#ifndef __STIMWALKER_DEVICES_DELSYS_EMG_DEVICE_H__
+#define __STIMWALKER_DEVICES_DELSYS_EMG_DEVICE_H__
 
 #include <array>
 #include <asio.hpp>
@@ -124,4 +124,4 @@ namespace STIMWALKER_NAMESPACE::devices
         std::unique_ptr<TrignoEMG> emg_;
     };
 }
-#endif // DELSYSEMGDEVICE_H
+#endif // __STIMWALKER_DEVICES_DELSYS_EMG_DEVICE_H__

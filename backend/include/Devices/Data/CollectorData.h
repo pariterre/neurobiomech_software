@@ -1,5 +1,5 @@
-#ifndef COLLECTOR_DATA_H
-#define COLLECTOR_DATA_H
+#ifndef __STIMWALKER_DEVICES_DATA_COLLECTOR_DATA_H__
+#define __STIMWALKER_DEVICES_DATA_COLLECTOR_DATA_H__
 
 #include <ctime>
 #include <vector>
@@ -51,4 +51,4 @@ namespace STIMWALKER_NAMESPACE::devices
 
 }
 
-#endif // COLLECTOR_DATA_H
+#endif // __STIMWALKER_DEVICES_DATA_COLLECTOR_DATA_H__

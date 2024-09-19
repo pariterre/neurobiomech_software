@@ -1,5 +1,5 @@
-#ifndef DEVICE_ABSTRACT_H
-#define DEVICE_ABSTRACT_H
+#ifndef __STIMWALKER_DEVICES_GENERIC_DEVICE_H__
+#define __STIMWALKER_DEVICES_GENERIC_DEVICE_H__
 
 #include "stimwalkerConfig.h"
 
@@ -28,4 +28,4 @@ namespace STIMWALKER_NAMESPACE::devices
 
 }
 
-#endif // DEVICE_ABSTRACT_H
+#endif // __STIMWALKER_DEVICES_GENERIC_DEVICE_H__

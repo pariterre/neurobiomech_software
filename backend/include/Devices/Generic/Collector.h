@@ -1,5 +1,5 @@
-#ifndef COLLECTOR_DEVICE_ABSTRACT_H
-#define COLLECTOR_DEVICE_ABSTRACT_H
+#ifndef __STIMWALKER_DEVICES_GENERIC_COLLECTOR_H__
+#define __STIMWALKER_DEVICES_GENERIC_COLLECTOR_H__
 
 #include "stimwalkerConfig.h"
 #include <functional>
@@ -54,4 +54,4 @@ namespace STIMWALKER_NAMESPACE::devices
 
 }
 
-#endif // COLLECTOR_DEVICE_ABSTRACT_H
+#endif // __STIMWALKER_DEVICES_GENERIC_COLLECTOR_H__

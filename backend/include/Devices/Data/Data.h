@@ -1,5 +1,5 @@
-#ifndef DEVICE_DATA_H
-#define DEVICE_DATA_H
+#ifndef __STIMWALKER_DEVICES_DATA_DATA_H__
+#define __STIMWALKER_DEVICES_DATA_DATA_H__
 
 #include <map>
 #include <nlohmann/json.hpp>
@@ -38,4 +38,4 @@ namespace STIMWALKER_NAMESPACE::devices
     };
 }
 
-#endif // DEVICE_DATA_H
+#endif // __STIMWALKER_DEVICES_DATA_DATA_H__

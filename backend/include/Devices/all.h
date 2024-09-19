@@ -1,5 +1,5 @@
-#ifndef STIMWALKER_DEVICES_ALL_H
-#define STIMWALKER_DEVICES_ALL_H
+#ifndef __STIMWALKER_DEVICES_ALL_H__
+#define __STIMWALKER_DEVICES_ALL_H__
 
 #include "Devices/Data/Data.h"
 #include "Devices/Data/CollectorData.h"
@@ -13,4 +13,4 @@
 #include "Devices/DelsysEmgDevice.h"
 #include "Devices/Lokomat.h"
 
-#endif // STIMWALKER_DEVICES_ALL_H
+#endif // __STIMWALKER_DEVICES_ALL_H__

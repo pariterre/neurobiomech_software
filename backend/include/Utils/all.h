@@ -1,9 +1,9 @@
-#ifndef STIMWALKER_UTILS_ALL_H
-#define STIMWALKER_UTILS_ALL_H
+#ifndef __STIMWALKER_UTILS_ALL_H__
+#define __STIMWALKER_UTILS_ALL_H__
 
 #include "Utils/Exceptions.h"
 #include "Utils/Path.h"
 #include "Utils/String.h"
 #include "Utils/Timestamp.h"
 
-#endif // STIMWALKER_UTILS_ALL_H
+#endif // __STIMWALKER_UTILS_ALL_H__

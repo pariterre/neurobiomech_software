@@ -1,5 +1,5 @@
-#ifndef NI_DAQ_DEVICE_H
-#define NI_DAQ_DEVICE_H
+#ifndef __STIMWALKER_DEVICES_NI_DAQ_DEVICE_H__
+#define __STIMWALKER_DEVICES_NI_DAQ_DEVICE_H__
 
 #include <map>
 #include <memory>
@@ -110,4 +110,4 @@ namespace STIMWALKER_NAMESPACE::devices
 
 }
 
-#endif // NI_DAQ_DEVICE_H
+#endif // __STIMWALKER_DEVICES_NI_DAQ_DEVICE_H__
