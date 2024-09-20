@@ -53,18 +53,6 @@ target_link_libraries(${STIMWALKER_NAME} PRIVATE
     nlohmann_json::nlohmann_json
 )
 
-# install target
-set_target_properties(${STIMWALKER_NAME} PROPERTIES
-    INSTALL_RPATH ${CMAKE_INSTALL_BINDIR}
-    INSTALL_RPATH_USE_LINK_PATH TRUE
-)
-install(TARGETS stimwalker
-    EXPORT stimwalkerTargets          # Export the target so it can be found
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}  # Install the shared library
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}  # For static library (if needed)
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}  # For executables (if any)
-)
-
 # Doc
 if (BUILD_DOC)
     add_subdirectory("doc")

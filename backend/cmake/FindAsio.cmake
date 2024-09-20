@@ -7,6 +7,9 @@ else()
     set(Asio_FOUND_PACKAGE ON)
 endif()
 
+# Remove the Asio_DIR key as it is added for some reason, but not found nor used
+unset(Asio_DIR CACHE)
+
 # Asio local version not found
 if(NOT Asio_INCLUDE_DIR)
     message(FATAL_ERROR "Not found a local version of Asio installed.")

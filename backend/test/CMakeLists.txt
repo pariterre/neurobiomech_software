@@ -55,7 +55,6 @@ set(TEST_SRC_FILES
     ${CMAKE_SOURCE_DIR}/test/test_utils.cpp
 )
 add_executable(${PROJECT_NAME} ${TEST_SRC_FILES})
-add_dependencies(${PROJECT_NAME} ${STIMWALKER_NAME})
 
 # headers for the project
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -64,13 +63,15 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 
 # Standard linking to gtest stuff.
-target_link_libraries(${PROJECT_NAME}
-    "gtest_main")
-
-# Extra linking for the project.
-target_link_libraries(${PROJECT_NAME}
+add_dependencies(${PROJECT_NAME} 
     ${MODULE_UTILS}
-    ${MODULE_DEVICES})
+    ${MODULE_DEVICES}
+)
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    ${MODULE_DEVICES}
+    nlohmann_json::nlohmann_json
+    "gtest_main"
+)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Coverage")
     include(CodeCoverage)
