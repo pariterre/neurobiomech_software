@@ -62,16 +62,7 @@ void UsbDevice::send(Commands command, const std::any &data) {
 
 void UsbDevice::_initialize() {
   m_SerialPortContext = std::make_unique<asio::io_context>();
-  m_SerialPort =
-      std::make_unique<asio::serial_port>(*m_SerialPortContext, m_Port);
-  m_SerialPort->set_option(asio::serial_port_base::baud_rate(9600));
-  m_SerialPort->set_option(asio::serial_port_base::character_size(8));
-  m_SerialPort->set_option(asio::serial_port_base::stop_bits(
-      asio::serial_port_base::stop_bits::one));
-  m_SerialPort->set_option(
-      asio::serial_port_base::parity(asio::serial_port_base::parity::none));
-  m_SerialPort->set_option(asio::serial_port_base::flow_control(
-      asio::serial_port_base::flow_control::none));
+  _connectSerialPort();
 
   m_KeepAliveTimer = std::make_unique<asio::steady_timer>(*m_Context);
   m_PokeInterval = std::chrono::milliseconds(1000);
@@ -94,7 +85,6 @@ void UsbDevice::_parseCommand(Commands command, const std::any &data) {
       break;
 
     case Commands::CHANGE_POKE_INTERVAL:
-      throw std::bad_any_cast();
       _changePokeInterval(std::any_cast<const std::chrono::milliseconds>(data));
       std::cout << "Changed poke interval to " << m_PokeInterval.count()
                 << " ms" << std::endl;
@@ -109,6 +99,19 @@ void UsbDevice::_parseCommand(Commands command, const std::any &data) {
 
   // Write the command to the device
   // asio::write(*m_SerialPort, asio::buffer(command));
+}
+
+void UsbDevice::_connectSerialPort() {
+  m_SerialPort =
+      std::make_unique<asio::serial_port>(*m_SerialPortContext, m_Port);
+  m_SerialPort->set_option(asio::serial_port_base::baud_rate(9600));
+  m_SerialPort->set_option(asio::serial_port_base::character_size(8));
+  m_SerialPort->set_option(asio::serial_port_base::stop_bits(
+      asio::serial_port_base::stop_bits::one));
+  m_SerialPort->set_option(
+      asio::serial_port_base::parity(asio::serial_port_base::parity::none));
+  m_SerialPort->set_option(asio::serial_port_base::flow_control(
+      asio::serial_port_base::flow_control::none));
 }
 
 void UsbDevice::_keepAlive(const std::chrono::milliseconds &timeout) {
@@ -265,4 +268,18 @@ std::vector<UsbDevice> UsbDevice::listAllUsbDevices() {
 
 bool UsbDevice::operator==(const UsbDevice &other) const {
   return m_Port == other.m_Port && m_Vid == other.m_Vid && m_Pid == other.m_Pid;
+}
+
+// --- MOCKER SECTION --- //
+UsbDeviceMock::UsbDeviceMock(const std::string &port, const std::string &vid,
+                             const std::string &pid)
+    : UsbDevice(port, vid, pid) {}
+
+UsbDeviceMock UsbDeviceMock::fromVidAndPid(const std::string &vid,
+                                           const std::string &pid) {
+  return UsbDeviceMock("MOCK", vid, pid);
+}
+
+void UsbDeviceMock::_connectSerialPort() {
+  // Do nothing
 }

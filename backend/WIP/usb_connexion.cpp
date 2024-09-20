@@ -9,13 +9,13 @@ int main() {
   try {
     std::string vid = "067B";
     std::string pid = "2303";
-    auto device = UsbDevice::fromVidAndPid(vid, pid);
+    auto device = UsbDeviceMock::fromVidAndPid(vid, pid);
 
     device.connect();
     std::cout << "Opened port: " << device.getPort() << std::endl;
 
     // Simulate some work
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1750));
     device.send(UsbDevice::Commands::PRINT, "Hello, world!");
     std::this_thread::sleep_for(std::chrono::seconds(4));
     device.send(UsbDevice::Commands::CHANGE_POKE_INTERVAL,

@@ -64,30 +64,32 @@ public:
 
   /// @brief Get the serial port of the device
   /// @return The serial port of the device
-  DECLARE_PRIVATE_MEMBER(std::unique_ptr<asio::serial_port>, SerialPort)
+  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::serial_port>, SerialPort)
 
   /// @brief Get the async context of the device
   /// @return The async context of the device
-  DECLARE_PRIVATE_MEMBER(std::unique_ptr<asio::io_context>, SerialPortContext)
+  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::io_context>,
+                                 SerialPortContext)
 
   /// @brief Get the async context of the command loop
   /// @return The async context of the command loop
-  DECLARE_PRIVATE_MEMBER(std::unique_ptr<asio::io_context>, Context)
+  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::io_context>, Context)
 
   /// @brief Get the mutex
   /// @return The mutex
-  DECLARE_PRIVATE_MEMBER(std::mutex, Mutex)
+  DECLARE_PROTECTED_MEMBER_NOGET(std::mutex, Mutex)
 
   /// @brief Get how long to wait before sending the PING command
   /// @return How long to wait before sending the PING command
-  DECLARE_PRIVATE_MEMBER(std::chrono::milliseconds, PokeInterval)
+  DECLARE_PROTECTED_MEMBER_NOGET(std::chrono::milliseconds, PokeInterval)
 
   /// @brief Worker thread to keep the device alive
-  DECLARE_PRIVATE_MEMBER(std::thread, Worker)
+  DECLARE_PROTECTED_MEMBER_NOGET(std::thread, Worker)
 
   /// @brief Get the keep-alive timer
   /// @return The keep-alive timer
-  DECLARE_PRIVATE_MEMBER(std::unique_ptr<asio::steady_timer>, KeepAliveTimer)
+  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::steady_timer>,
+                                 KeepAliveTimer)
 
   /// Methods
 public:
@@ -115,6 +117,9 @@ protected:
   /// @param data The data to parse
   void _parseCommand(Commands command, const std::any &data);
 
+  /// @brief Connect to the serial port
+  virtual void _connectSerialPort();
+
   /// @brief Set a worker thread to keep the device alive
   void _keepAlive(const std::chrono::milliseconds &timeout);
 
@@ -138,6 +143,18 @@ public:
   /// @param other The other UsbDevice object to compare with
   /// @return True if the two objects are equal, false otherwise
   bool operator==(const UsbDevice &other) const;
+};
+
+class UsbDeviceMock : public UsbDevice {
+public:
+  UsbDeviceMock(const std::string &port, const std::string &vid,
+                const std::string &pid);
+
+  static UsbDeviceMock fromVidAndPid(const std::string &vid,
+                                     const std::string &pid);
+
+protected:
+  void _connectSerialPort() override;
 };
 
 } // namespace STIMWALKER_NAMESPACE::devices
