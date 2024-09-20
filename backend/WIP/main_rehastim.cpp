@@ -1,12 +1,12 @@
-#include <asio.hpp>
-#include <iostream>
-#include <vector>
-#include <cstdint>
 #include <algorithm>
+#include <asio.hpp>
 #include <chrono>
-#include <thread>
-#include <stdexcept>
+#include <cstdint>
+#include <iostream>
 #include <map>
+#include <stdexcept>
+#include <thread>
+#include <vector>
 
 const uint8_t START_BYTE = 0xF0;
 const uint8_t STOP_BYTE = 0x0F;
@@ -49,528 +49,467 @@ const uint8_t CRC8_TABLE[256] = {
     0xE6, 0xE1, 0xE8, 0xEF, 0xFA, 0xFD, 0xF4, 0xF3  // 248..255
 };
 
-enum class Command : uint8_t
-{
-    Init = 1,
-    InitAck = 2,
-    UnknownCommand = 3,
-    Watchdog = 4,
-    GetStimulationMode = 10,
-    GetStimulationModeAck = 11,
-    InitChannelListMode = 30,
-    InitChannelListModeAck = 31,
-    StartChannelListMode = 32,
-    StartChannelListModeAck = 33,
-    StopChannelListMode = 34,
-    StopChannelListModeAck = 35,
-    SinglePulse = 36,
-    SinglePulseAck = 37,
-    StimulationError = 38,
-    InitPhaseTraining = 50,
-    InitPhaseTrainingAck = 51,
-    StartPhase = 52,
-    StartPhaseAck = 53,
-    PausePhase = 54,
-    PausePhaseAck = 55,
-    StopPhaseTraining = 56,
-    StopPhaseTrainingAck = 57,
-    PhaseResult = 58,
-    ActualValues = 60,
-    SetRotationDirection = 70,
-    SetRotationDirectionAck = 71,
-    SetSpeed = 72,
-    SetSpeedAck = 73,
-    SetGear = 74,
-    SetGearAck = 75,
-    SetKeyboardLock = 76,
-    SetKeyboardLockAck = 77,
-    StartBasicTraining = 80,
-    StartBasicTrainingAck = 81,
-    PauseBasicTraining = 82,
-    PauseBasicTrainingAck = 83,
-    ContinueBasicTraining = 84,
-    ContinueBasicTrainingAck = 85,
-    StopBasicTraining = 86,
-    StopBasicTrainingAck = 87,
-    MotomedCommandDone = 89,
-    MotomedError = 90,
+enum class Command : uint8_t {
+  Init = 1,
+  InitAck = 2,
+  UnknownCommand = 3,
+  Watchdog = 4,
+  GetStimulationMode = 10,
+  GetStimulationModeAck = 11,
+  InitChannelListMode = 30,
+  InitChannelListModeAck = 31,
+  StartChannelListMode = 32,
+  StartChannelListModeAck = 33,
+  StopChannelListMode = 34,
+  StopChannelListModeAck = 35,
+  SinglePulse = 36,
+  SinglePulseAck = 37,
+  StimulationError = 38,
+  InitPhaseTraining = 50,
+  InitPhaseTrainingAck = 51,
+  StartPhase = 52,
+  StartPhaseAck = 53,
+  PausePhase = 54,
+  PausePhaseAck = 55,
+  StopPhaseTraining = 56,
+  StopPhaseTrainingAck = 57,
+  PhaseResult = 58,
+  ActualValues = 60,
+  SetRotationDirection = 70,
+  SetRotationDirectionAck = 71,
+  SetSpeed = 72,
+  SetSpeedAck = 73,
+  SetGear = 74,
+  SetGearAck = 75,
+  SetKeyboardLock = 76,
+  SetKeyboardLockAck = 77,
+  StartBasicTraining = 80,
+  StartBasicTrainingAck = 81,
+  PauseBasicTraining = 82,
+  PauseBasicTrainingAck = 83,
+  ContinueBasicTraining = 84,
+  ContinueBasicTrainingAck = 85,
+  StopBasicTraining = 86,
+  StopBasicTrainingAck = 87,
+  MotomedCommandDone = 89,
+  MotomedError = 90,
 };
 
-enum class ErrorCode : uint8_t
-{
-    NoError = 0,
-    TransferError = 1,
-    ParameterError = 2,
-    WrongModeError = 3,
-    MotomedConnectionError = 4,
-    IncompatibleProtocolVersion = 5,
-    InvalidMotomedTrainer = 6,
-    MotomedBusyError = 7,
-    BusyError = 8,
+enum class ErrorCode : uint8_t {
+  NoError = 0,
+  TransferError = 1,
+  ParameterError = 2,
+  WrongModeError = 3,
+  MotomedConnectionError = 4,
+  IncompatibleProtocolVersion = 5,
+  InvalidMotomedTrainer = 6,
+  MotomedBusyError = 7,
+  BusyError = 8,
 };
 
-class ScienceMode2Protocol
-{
+class ScienceMode2Protocol {
 public:
-    ScienceMode2Protocol() : packet_number_(0) {}
+  ScienceMode2Protocol() : packet_number_(0) {}
 
-    std::vector<uint8_t> createPacket(Command command, const std::vector<uint8_t> &data)
-    {
-        std::vector<uint8_t> packet;
-        packet.push_back(START_BYTE);
+  std::vector<uint8_t> createPacket(Command command,
+                                    const std::vector<uint8_t> &data) {
+    std::vector<uint8_t> packet;
+    packet.push_back(START_BYTE);
 
-        std::vector<uint8_t> payload = {packet_number_, static_cast<uint8_t>(command)};
-        payload.insert(payload.end(), data.begin(), data.end());
+    std::vector<uint8_t> payload = {packet_number_,
+                                    static_cast<uint8_t>(command)};
+    payload.insert(payload.end(), data.begin(), data.end());
 
-        packet.push_back(STUFFING_BYTE);
-        packet.push_back(calculateCRC8(payload) ^ 0x55);
-        packet.push_back(STUFFING_BYTE);
-        packet.push_back(static_cast<uint8_t>(payload.size() ^ 0x55));
+    packet.push_back(STUFFING_BYTE);
+    packet.push_back(calculateCRC8(payload) ^ 0x55);
+    packet.push_back(STUFFING_BYTE);
+    packet.push_back(static_cast<uint8_t>(payload.size() ^ 0x55));
 
-        for (uint8_t byte : payload)
-        {
-            appendStuffed(packet, byte);
-        }
-
-        packet.push_back(STOP_BYTE);
-        packet_number_++;
-
-        return packet;
+    for (uint8_t byte : payload) {
+      appendStuffed(packet, byte);
     }
 
-    bool parsePacket(std::vector<uint8_t> &packet, Command &command, std::vector<uint8_t> &data)
-    {
-        // std::cout << "packet before correction" << std::endl;
-        // for (int i = 0; i < packet.size(); i++)
-        // {
-        //     std::cout << std::hex << static_cast<int>(packet[i]) << " ";
-        // }
-        // std::cout << std::endl;
-        if (packet.back() != STOP_BYTE)
-        {
-            for (int i = 0; i < packet.size(); i++)
-            {
-                // std::cout << "correcting packet by " << i + 1 << std::endl;
-                if (packet[i] == STOP_BYTE)
-                {
-                    std::rotate(packet.begin(), packet.begin() + i + 1, packet.end());
-                    // for (int i = 0; i < packet.size(); i++)
-                    // {
-                    //     std::cout << std::hex << static_cast<int>(packet[i]) << " ";
-                    // }
-                    // std::cout << std::endl;
-                    break;
-                }
-                if (i == packet.size() - 1)
-                {
-                    return false;
-                }
-            }
-        }
+    packet.push_back(STOP_BYTE);
+    packet_number_++;
 
-        if (packet.front() != START_BYTE || packet.back() != STOP_BYTE)
-        {
-            return false;
-        }
+    return packet;
+  }
 
-        std::vector<uint8_t> unstuffed = unstuffPacket(packet);
+  bool parsePacket(std::vector<uint8_t> &packet, Command &command,
+                   std::vector<uint8_t> &data) {
+    // std::cout << "packet before correction" << std::endl;
+    // for (int i = 0; i < packet.size(); i++)
+    // {
+    //     std::cout << std::hex << static_cast<int>(packet[i]) << " ";
+    // }
+    // std::cout << std::endl;
+    if (packet.back() != STOP_BYTE) {
+      for (int i = 0; i < packet.size(); i++) {
+        // std::cout << "correcting packet by " << i + 1 << std::endl;
+        if (packet[i] == STOP_BYTE) {
+          std::rotate(packet.begin(), packet.begin() + i + 1, packet.end());
+          // for (int i = 0; i < packet.size(); i++)
+          // {
+          //     std::cout << std::hex << static_cast<int>(packet[i]) << " ";
+          // }
+          // std::cout << std::endl;
+          break;
+        }
+        if (i == packet.size() - 1) {
+          return false;
+        }
+      }
+    }
 
-        std::cout << std::endl
-                  << "packet size : " << packet.size() << std::endl;
-        for (int i = 0; i < packet.size(); i++)
-        {
-            std::cout << std::hex << static_cast<int>(packet[i]) << " ";
-        }
-        std::cout << std::endl
-                  << std::endl
-                  << "unstuffed size : " << unstuffed.size() << std::endl;
-        for (int i = 0; i < unstuffed.size(); i++)
-        {
-            std::cout << std::hex << static_cast<int>(unstuffed[i]) << " ";
-        }
-        std::cout << std::endl
+    if (packet.front() != START_BYTE || packet.back() != STOP_BYTE) {
+      return false;
+    }
+
+    std::vector<uint8_t> unstuffed = unstuffPacket(packet);
+
+    std::cout << std::endl << "packet size : " << packet.size() << std::endl;
+    for (int i = 0; i < packet.size(); i++) {
+      std::cout << std::hex << static_cast<int>(packet[i]) << " ";
+    }
+    std::cout << std::endl
+              << std::endl
+              << "unstuffed size : " << unstuffed.size() << std::endl;
+    for (int i = 0; i < unstuffed.size(); i++) {
+      std::cout << std::hex << static_cast<int>(unstuffed[i]) << " ";
+    }
+    std::cout << std::endl << std::endl;
+
+    if (unstuffed.size() < 6) { // min packet size
+      return false;
+    }
+
+    uint8_t checksum = unstuffed[1];
+    uint16_t length = static_cast<int>(unstuffed[2]);
+
+    std::cout << "Payload lenght : " << length << std::endl;
+    if (unstuffed.size() !=
+        length + 4) { // 4 = checksum + data length + start + stop
+      return false;
+    }
+
+    std::vector<uint8_t> payload(unstuffed.begin() + 3, unstuffed.end() - 1);
+    if (calculateCRC8(payload) != checksum) {
+      return false;
+    }
+
+    command = static_cast<Command>(payload[1]);
+    data = std::vector<uint8_t>(payload.begin() + 2, payload.end());
+    std::cout << "Packet succesfully parsed." << std::endl << std::endl;
+    return true;
+  }
+
+  // for every command, remember create to a function that creates the packet
+  // according to the protocol (pages 15-28)
+
+  std::vector<uint8_t> createInitPacket(uint8_t version) {
+    return createPacket(Command::InitAck, {version});
+  }
+
+  std::vector<uint8_t> createInitChannelListModePacket(
+      uint8_t low_freq_factor, uint8_t active_channels,
+      uint8_t active_low_freq_channels, uint16_t inter_pulse_interval,
+      uint16_t main_stim_interval, uint8_t channel_execution) {
+    std::vector<uint8_t> data = {
+        low_freq_factor,
+        active_channels,
+        active_low_freq_channels,
+        static_cast<uint8_t>((inter_pulse_interval / 0.5) - 3),
+        static_cast<uint8_t>(main_stim_interval & 0xFF),
+        static_cast<uint8_t>((main_stim_interval >> 8) & 0xFF),
+        channel_execution};
+    return createPacket(Command::InitChannelListMode, data);
+  }
+
+  std::vector<uint8_t> createActualValuesPacket(uint16_t angle, int16_t speed,
+                                                int16_t torque) {
+    std::vector<uint8_t> data = {
+        static_cast<uint8_t>((angle >> 8) & 0xFF),  // Angle MSB
+        static_cast<uint8_t>(angle & 0xFF),         // Angle LSB
+        static_cast<uint8_t>((speed >> 8) & 0xFF),  // Speed MSB
+        static_cast<uint8_t>(speed & 0xFF),         // Speed LSB
+        static_cast<uint8_t>((torque >> 8) & 0xFF), // Torque MSB
+        static_cast<uint8_t>(torque & 0xFF),        // Torque LSB
+        0x0F                                        // Stop byte
+    };
+    return createPacket(Command::ActualValues, data);
+  }
+
+  std::vector<uint8_t> createStartChannelListModePacket(
+      const std::vector<std::tuple<uint8_t, uint16_t, uint8_t>>
+          &channel_params) {
+    std::vector<uint8_t> data;
+    for (const auto &params : channel_params) {
+      data.push_back(std::get<0>(params));               // Mode
+      data.push_back(std::get<1>(params) & 0xFF);        // Pulse width LSB
+      data.push_back((std::get<1>(params) >> 8) & 0xFF); // Pulse width MSB
+      data.push_back(std::get<2>(params));               // Current
+    }
+    return createPacket(Command::StartChannelListMode, data);
+  }
+
+private:
+  uint8_t packet_number_;
+
+  uint8_t calculateCRC8(const std::vector<uint8_t> &data) {
+    uint8_t crc = 0;
+    for (uint8_t byte : data) {
+      crc = CRC8_TABLE[crc ^ byte];
+    }
+    return crc;
+  }
+  unsigned char CalcCRC8(const void *data, unsigned int length) {
+    unsigned char crc = 0x00;
+
+    const unsigned char *buf = (const unsigned char *)data;
+
+    while (length--) {
+      crc = CRC8_TABLE[crc ^ *buf++];
+    }
+
+    crc ^= 0x00;
+    return crc;
+  }
+
+  void appendStuffed(std::vector<uint8_t> &packet, uint8_t byte) {
+    if (byte == START_BYTE || byte == STOP_BYTE || byte == STUFFING_BYTE) {
+      packet.push_back(STUFFING_BYTE);
+      packet.push_back(byte ^ STUFFING_KEY);
+    } else {
+      packet.push_back(byte);
+    }
+  }
+
+  std::vector<uint8_t> unstuffPacket(const std::vector<uint8_t> &packet) {
+    std::cout << std::endl << "Unstuffing packet : " << std::endl;
+    std::vector<uint8_t> unstuffed;
+    bool escaped = false;
+
+    for (int i = 0; i < packet.size(); i++) {
+      if (escaped) {
+        std::cout << "unstuffing byte" << std::endl;
+        unstuffed.push_back(packet[i] ^ STUFFING_KEY);
+        escaped = false;
+      } else if (packet[i] == STUFFING_BYTE) {
+        std::cout << "stuffing byte found" << std::endl;
+        escaped = true;
+      } else {
+        std::cout << "normal byte" << std::endl;
+        unstuffed.push_back(packet[i]);
+      }
+    }
+
+    return unstuffed;
+  }
+};
+
+class SerialCommunication {
+public:
+  SerialCommunication(const std::string &port, unsigned int baud_rate)
+      : io_(), serial_(io_, port) {
+    serial_.set_option(asio::serial_port_base::baud_rate(baud_rate));
+    serial_.set_option(asio::serial_port_base::character_size(8));
+    serial_.set_option(asio::serial_port_base::stop_bits(
+        asio::serial_port_base::stop_bits::one));
+    serial_.set_option(
+        asio::serial_port_base::parity(asio::serial_port_base::parity::even));
+    serial_.set_option(asio::serial_port_base::flow_control(
+        asio::serial_port_base::flow_control::none));
+  }
+
+  void send(const std::vector<uint8_t> &data) {
+    asio::write(serial_, asio::buffer(data));
+  }
+
+  std::vector<uint8_t> receive(int bytes_to_read,
+                               std::chrono::milliseconds timeout) {
+    std::vector<uint8_t> received_data(bytes_to_read);
+    int bytes_read = 0;
+
+    asio::async_read(serial_, asio::buffer(received_data),
+                     [&bytes_read, &received_data](const auto &error,
+                                                   int bytes_transferred) {
+                       if (!error) {
+                         bytes_read = bytes_transferred;
+                       }
+                     });
+
+    if (io_.run_for(timeout)) {
+      // auto tests = std::vector<uint8_t>(received_data.begin(),
+      // received_data.begin() + bytes_read); std::cout << "Data : "; for (int i
+      // = 0; i < bytes_read; i++) {
+      //     std::cout << std::hex << static_cast<int>(tests[i]) << " ";
+      // }
+      // std::cout << std::dec << std::endl;
+      return std::vector<uint8_t>(received_data.begin(),
+                                  received_data.begin() + bytes_read);
+    } else {
+      throw std::runtime_error("Timeout while receiving data");
+    }
+  }
+
+private:
+  asio::io_service io_;
+  asio::serial_port serial_;
+
+  bool run_for(asio::io_context &io_context,
+               std::chrono::milliseconds timeout) {
+    io_.restart(); // Reset the io_context to ensure it's not in a stopped state
+    auto timer = std::make_shared<asio::steady_timer>(io_);
+    timer->expires_after(timeout);
+
+    // Set the asynchronous wait operation
+    timer->async_wait([timer](const asio::error_code &) {
+      timer
+          ->cancel(); // Ensure the timer is canceled once the operation is done
+    });
+
+    io_.run(); // Run the io_context to start processing asynchronous events
+
+    // Return whether the timer has expired or not
+    return timer->expires_after(std::chrono::milliseconds::zero());
+  }
+};
+
+class RehaStim2Device {
+public:
+  RehaStim2Device(const std::string &port, unsigned int baud_rate)
+      : protocol_(), serial_(port, baud_rate), connected_(false),
+        stimulation_mode_(StimulationMode::StartMode) {}
+
+  bool connect() {
+    try {
+      auto response = wait_for_response(500, 9);
+      auto init_packet =
+          protocol_.createInitPacket(1); // protocol version 1 maybe idk
+      send_packet(init_packet);
+      Command command;
+      std::vector<uint8_t> data;
+      std::cout << "parsing packet" << std::endl;
+      if (protocol_.parsePacket(response, command, data)) {
+        std::cout << std::endl << "checking command" << std::endl;
+        std::cout << "command received : " << static_cast<int>(command)
                   << std::endl;
-
-        if (unstuffed.size() < 6)
-        { // min packet size
-            return false;
-        }
-
-        uint8_t checksum = unstuffed[1];
-        uint16_t length = static_cast<int>(unstuffed[2]);
-
-        std::cout << "Payload lenght : " << length << std::endl;
-        if (unstuffed.size() != length + 4)
-        { // 4 = checksum + data length + start + stop
-            return false;
-        }
-
-        std::vector<uint8_t> payload(unstuffed.begin() + 3, unstuffed.end() - 1);
-        if (calculateCRC8(payload) != checksum)
-        {
-            return false;
-        }
-
-        command = static_cast<Command>(payload[1]);
-        data = std::vector<uint8_t>(payload.begin() + 2, payload.end());
-        std::cout << "Packet succesfully parsed." << std::endl
+        std::cout << "command to receive : " << static_cast<int>(Command::Init)
                   << std::endl;
+        std::cout << "version number of the protocol : "
+                  << static_cast<int>(data[0]) << std::endl;
+        if (command == Command::Init && data[0] == 1) {
+          std::cout << "connection validated" << std::endl;
+          connected_ = true;
+          return true;
+        }
+      }
+    } catch (const std::exception &e) {
+      std::cerr << "Connection error: " << e.what() << std::endl;
+    }
+    return false;
+  }
+
+  void disconnect() { connected_ = false; }
+
+  bool initChannelListMode(uint8_t low_freq_factor, uint8_t active_channels,
+                           uint8_t active_low_freq_channels,
+                           uint16_t inter_pulse_interval,
+                           uint16_t main_stim_interval,
+                           uint8_t channel_execution) {
+    if (!connected_) {
+      throw std::runtime_error("Device not connected");
+    }
+
+    auto packet = protocol_.createInitChannelListModePacket(
+        low_freq_factor, active_channels, active_low_freq_channels,
+        inter_pulse_interval, main_stim_interval, channel_execution);
+    send_packet(packet);
+    auto response = wait_for_response(100, 9);
+
+    Command command;
+    std::vector<uint8_t> data;
+    if (protocol_.parsePacket(response, command, data)) {
+      if (command == Command::InitChannelListModeAck && data[0] == 0) {
+        stimulation_mode_ = StimulationMode::Initialized;
         return true;
+      }
+    }
+    return false;
+  }
+
+  bool
+  startChannelListMode(const std::vector<std::tuple<uint8_t, uint16_t, uint8_t>>
+                           &channel_params) {
+    if (!connected_ || stimulation_mode_ != StimulationMode::Initialized) {
+      throw std::runtime_error("Device not connected or not initialized");
     }
 
-    // for every command, remember create to a function that creates the packet according to the protocol (pages 15-28)
+    auto packet = protocol_.createStartChannelListModePacket(channel_params);
+    send_packet(packet);
+    auto response = wait_for_response(100, 9);
 
-    std::vector<uint8_t> createInitPacket(uint8_t version)
-    {
-        return createPacket(Command::InitAck, {version});
+    Command command;
+    std::vector<uint8_t> data;
+    if (protocol_.parsePacket(response, command, data)) {
+      if (command == Command::StartChannelListModeAck && data[0] == 0) {
+        stimulation_mode_ = StimulationMode::Started;
+        return true;
+      }
     }
+    return false;
+  }
 
-    std::vector<uint8_t> createInitChannelListModePacket(uint8_t low_freq_factor, uint8_t active_channels,
-                                                         uint8_t active_low_freq_channels, uint16_t inter_pulse_interval,
-                                                         uint16_t main_stim_interval, uint8_t channel_execution)
-    {
-        std::vector<uint8_t> data = {
-            low_freq_factor, active_channels, active_low_freq_channels,
-            static_cast<uint8_t>((inter_pulse_interval / 0.5) - 3),
-            static_cast<uint8_t>(main_stim_interval & 0xFF),
-            static_cast<uint8_t>((main_stim_interval >> 8) & 0xFF),
-            channel_execution};
-        return createPacket(Command::InitChannelListMode, data);
-    }
+private:
+  ScienceMode2Protocol protocol_;
+  SerialCommunication serial_;
+  bool connected_;
+  enum class StimulationMode {
+    StartMode,
+    Initialized,
+    Started
+  } stimulation_mode_;
 
-    std::vector<uint8_t> createActualValuesPacket(uint16_t angle, int16_t speed, int16_t torque)
-    {
-        std::vector<uint8_t> data = {
-            static_cast<uint8_t>((angle >> 8) & 0xFF),  // Angle MSB
-            static_cast<uint8_t>(angle & 0xFF),         // Angle LSB
-            static_cast<uint8_t>((speed >> 8) & 0xFF),  // Speed MSB
-            static_cast<uint8_t>(speed & 0xFF),         // Speed LSB
-            static_cast<uint8_t>((torque >> 8) & 0xFF), // Torque MSB
-            static_cast<uint8_t>(torque & 0xFF),        // Torque LSB
-            0x0F                                        // Stop byte
+  void send_packet(const std::vector<uint8_t> &packet) { serial_.send(packet); }
+
+  std::vector<uint8_t> wait_for_response(int timeout_ms, int num_bytes = 69) {
+    return serial_.receive(num_bytes, std::chrono::milliseconds(timeout_ms));
+  }
+};
+
+int main() {
+  try {
+    RehaStim2Device device("/dev/ttyUSB0", 460800);
+
+    if (device.connect()) {
+      std::cout << "Connected to RehaStim2 device" << std::endl;
+
+      if (device.initChannelListMode(0, 0xFF, 0, 10000, 50000, 0)) {
+        std::cout << "Channel list mode initialized" << std::endl;
+
+        std::vector<std::tuple<uint8_t, uint16_t, uint8_t>> channel_params = {
+            {0, 200, 20}, // Channel 1: Single pulse, 200 microsec, 20 mA
+            {1, 300, 25}, // Channel 2: Doublet, 300 microsec, 25 mA
         };
-        return createPacket(Command::ActualValues, data);
-    }
+        if (device.startChannelListMode(channel_params)) {
+          std::cout << "Channel list mode started" << std::endl;
 
-    std::vector<uint8_t> createStartChannelListModePacket(const std::vector<std::tuple<uint8_t, uint16_t, uint8_t>> &channel_params)
-    {
-        std::vector<uint8_t> data;
-        for (const auto &params : channel_params)
-        {
-            data.push_back(std::get<0>(params));               // Mode
-            data.push_back(std::get<1>(params) & 0xFF);        // Pulse width LSB
-            data.push_back((std::get<1>(params) >> 8) & 0xFF); // Pulse width MSB
-            data.push_back(std::get<2>(params));               // Current
+          std::this_thread::sleep_for(std::chrono::seconds(5));
+        } else {
+          std::cout << "Failed to start channel list mode" << std::endl;
         }
-        return createPacket(Command::StartChannelListMode, data);
+      } else {
+        std::cout << "Failed to initialize channel list mode" << std::endl;
+      }
+
+      device.disconnect();
+      std::cout << "Disconnected from RehaStim2 device" << std::endl;
+    } else {
+      std::cout << "Failed to connect to RehaStim2 device" << std::endl;
     }
+  } catch (const std::exception &e) {
+    std::cerr << "Error: " << e.what() << std::endl;
+  }
 
-private:
-    uint8_t packet_number_;
-
-    uint8_t calculateCRC8(const std::vector<uint8_t> &data)
-    {
-        uint8_t crc = 0;
-        for (uint8_t byte : data)
-        {
-            crc = CRC8_TABLE[crc ^ byte];
-        }
-        return crc;
-    }
-    unsigned char CalcCRC8(const void *data, unsigned int length)
-    {
-        unsigned char crc = 0x00;
-
-        const unsigned char *buf = (const unsigned char *)data;
-
-        while (length--)
-        {
-            crc = CRC8_TABLE[crc ^ *buf++];
-        }
-
-        crc ^= 0x00;
-        return crc;
-    }
-
-    void appendStuffed(std::vector<uint8_t> &packet, uint8_t byte)
-    {
-        if (byte == START_BYTE || byte == STOP_BYTE || byte == STUFFING_BYTE)
-        {
-            packet.push_back(STUFFING_BYTE);
-            packet.push_back(byte ^ STUFFING_KEY);
-        }
-        else
-        {
-            packet.push_back(byte);
-        }
-    }
-
-    std::vector<uint8_t> unstuffPacket(const std::vector<uint8_t> &packet)
-    {
-        std::cout << std::endl
-                  << "Unstuffing packet : " << std::endl;
-        std::vector<uint8_t> unstuffed;
-        bool escaped = false;
-
-        for (int i = 0; i < packet.size(); i++)
-        {
-            if (escaped)
-            {
-                std::cout << "unstuffing byte" << std::endl;
-                unstuffed.push_back(packet[i] ^ STUFFING_KEY);
-                escaped = false;
-            }
-            else if (packet[i] == STUFFING_BYTE)
-            {
-                std::cout << "stuffing byte found" << std::endl;
-                escaped = true;
-            }
-            else
-            {
-                std::cout << "normal byte" << std::endl;
-                unstuffed.push_back(packet[i]);
-            }
-        }
-
-        return unstuffed;
-    }
-};
-
-class SerialCommunication
-{
-public:
-    SerialCommunication(const std::string &port, unsigned int baud_rate)
-        : io_(), serial_(io_, port)
-    {
-        serial_.set_option(asio::serial_port_base::baud_rate(baud_rate));
-        serial_.set_option(asio::serial_port_base::character_size(8));
-        serial_.set_option(asio::serial_port_base::stop_bits(asio::serial_port_base::stop_bits::one));
-        serial_.set_option(asio::serial_port_base::parity(asio::serial_port_base::parity::even));
-        serial_.set_option(asio::serial_port_base::flow_control(asio::serial_port_base::flow_control::none));
-    }
-
-    void send(const std::vector<uint8_t> &data)
-    {
-        asio::write(serial_, asio::buffer(data));
-    }
-
-    std::vector<uint8_t> receive(int bytes_to_read, std::chrono::milliseconds timeout)
-    {
-        std::vector<uint8_t> received_data(bytes_to_read);
-        int bytes_read = 0;
-
-        asio::async_read(serial_,
-                         asio::buffer(received_data),
-                         [&bytes_read, &received_data](const auto &error, int bytes_transferred)
-                         {
-                             if (!error)
-                             {
-                                 bytes_read = bytes_transferred;
-                             }
-                         });
-
-        if (io_.run_for(timeout))
-        {
-            // auto tests = std::vector<uint8_t>(received_data.begin(), received_data.begin() + bytes_read);
-            // std::cout << "Data : ";
-            // for (int i = 0; i < bytes_read; i++) {
-            //     std::cout << std::hex << static_cast<int>(tests[i]) << " ";
-            // }
-            // std::cout << std::dec << std::endl;
-            return std::vector<uint8_t>(received_data.begin(), received_data.begin() + bytes_read);
-        }
-        else
-        {
-            throw std::runtime_error("Timeout while receiving data");
-        }
-    }
-
-private:
-    asio::io_service io_;
-    asio::serial_port serial_;
-
-    bool run_for(asio::io_context &io_context, std::chrono::milliseconds timeout)
-    {
-        io_.restart(); // Reset the io_context to ensure it's not in a stopped state
-        auto timer = std::make_shared<asio::steady_timer>(io_);
-        timer->expires_after(timeout);
-
-        // Set the asynchronous wait operation
-        timer->async_wait([timer](const asio::error_code &)
-                          {
-                              timer->cancel(); // Ensure the timer is canceled once the operation is done
-                          });
-
-        io_.run(); // Run the io_context to start processing asynchronous events
-
-        // Return whether the timer has expired or not
-        return timer->expires_after(std::chrono::milliseconds::zero());
-    }
-};
-
-class RehaStim2Device
-{
-public:
-    RehaStim2Device(const std::string &port, unsigned int baud_rate)
-        : protocol_(), serial_(port, baud_rate), connected_(false), stimulation_mode_(StimulationMode::StartMode) {}
-
-    bool connect()
-    {
-        try
-        {
-            auto response = wait_for_response(500, 9);
-            auto init_packet = protocol_.createInitPacket(1); // protocol version 1 maybe idk
-            send_packet(init_packet);
-            Command command;
-            std::vector<uint8_t> data;
-            std::cout << "parsing packet" << std::endl;
-            if (protocol_.parsePacket(response, command, data))
-            {
-                std::cout << std::endl
-                          << "checking command" << std::endl;
-                std::cout << "command received : " << static_cast<int>(command) << std::endl;
-                std::cout << "command to receive : " << static_cast<int>(Command::Init) << std::endl;
-                std::cout << "version number of the protocol : " << static_cast<int>(data[0]) << std::endl;
-                if (command == Command::Init && data[0] == 1)
-                {
-                    std::cout << "connection validated" << std::endl;
-                    connected_ = true;
-                    return true;
-                }
-            }
-        }
-        catch (const std::exception &e)
-        {
-            std::cerr << "Connection error: " << e.what() << std::endl;
-        }
-        return false;
-    }
-
-    void disconnect()
-    {
-        connected_ = false;
-    }
-
-    bool initChannelListMode(uint8_t low_freq_factor, uint8_t active_channels,
-                             uint8_t active_low_freq_channels, uint16_t inter_pulse_interval,
-                             uint16_t main_stim_interval, uint8_t channel_execution)
-    {
-        if (!connected_)
-        {
-            throw std::runtime_error("Device not connected");
-        }
-
-        auto packet = protocol_.createInitChannelListModePacket(low_freq_factor, active_channels,
-                                                                active_low_freq_channels, inter_pulse_interval,
-                                                                main_stim_interval, channel_execution);
-        send_packet(packet);
-        auto response = wait_for_response(100, 9);
-
-        Command command;
-        std::vector<uint8_t> data;
-        if (protocol_.parsePacket(response, command, data))
-        {
-            if (command == Command::InitChannelListModeAck && data[0] == 0)
-            {
-                stimulation_mode_ = StimulationMode::Initialized;
-                return true;
-            }
-        }
-        return false;
-    }
-
-    bool startChannelListMode(const std::vector<std::tuple<uint8_t, uint16_t, uint8_t>> &channel_params)
-    {
-        if (!connected_ || stimulation_mode_ != StimulationMode::Initialized)
-        {
-            throw std::runtime_error("Device not connected or not initialized");
-        }
-
-        auto packet = protocol_.createStartChannelListModePacket(channel_params);
-        send_packet(packet);
-        auto response = wait_for_response(100, 9);
-
-        Command command;
-        std::vector<uint8_t> data;
-        if (protocol_.parsePacket(response, command, data))
-        {
-            if (command == Command::StartChannelListModeAck && data[0] == 0)
-            {
-                stimulation_mode_ = StimulationMode::Started;
-                return true;
-            }
-        }
-        return false;
-    }
-
-private:
-    ScienceMode2Protocol protocol_;
-    SerialCommunication serial_;
-    bool connected_;
-    enum class StimulationMode
-    {
-        StartMode,
-        Initialized,
-        Started
-    } stimulation_mode_;
-
-    void send_packet(const std::vector<uint8_t> &packet)
-    {
-        serial_.send(packet);
-    }
-
-    std::vector<uint8_t> wait_for_response(int timeout_ms, int num_bytes = 69)
-    {
-        return serial_.receive(num_bytes, std::chrono::milliseconds(timeout_ms));
-    }
-};
-
-int main()
-{
-    try
-    {
-        RehaStim2Device device("/dev/ttyUSB0", 460800);
-
-        if (device.connect())
-        {
-            std::cout << "Connected to RehaStim2 device" << std::endl;
-
-            if (device.initChannelListMode(0, 0xFF, 0, 10000, 50000, 0))
-            {
-                std::cout << "Channel list mode initialized" << std::endl;
-
-                std::vector<std::tuple<uint8_t, uint16_t, uint8_t>> channel_params = {
-                    {0, 200, 20}, // Channel 1: Single pulse, 200 microsec, 20 mA
-                    {1, 300, 25}, // Channel 2: Doublet, 300 microsec, 25 mA
-                };
-                if (device.startChannelListMode(channel_params))
-                {
-                    std::cout << "Channel list mode started" << std::endl;
-
-                    std::this_thread::sleep_for(std::chrono::seconds(5));
-                }
-                else
-                {
-                    std::cout << "Failed to start channel list mode" << std::endl;
-                }
-            }
-            else
-            {
-                std::cout << "Failed to initialize channel list mode" << std::endl;
-            }
-
-            device.disconnect();
-            std::cout << "Disconnected from RehaStim2 device" << std::endl;
-        }
-        else
-        {
-            std::cout << "Failed to connect to RehaStim2 device" << std::endl;
-        }
-    }
-    catch (const std::exception &e)
-    {
-        std::cerr << "Error: " << e.what() << std::endl;
-    }
-
-    return 0;
+  return 0;
 }

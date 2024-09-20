@@ -1,7 +1,8 @@
 #ifndef __STIMWALKER_CONFIG_H__
 #define __STIMWALKER_CONFIG_H__
 
-#define STIMWALKER_API // We kept this so if we want to convert to a shared library, we can do it easily
+#define STIMWALKER_API // We kept this so if we want to convert to a shared
+                       // library, we can do it easily
 #ifdef _WIN32
 #define _ENABLE_EXTENDED_ALIGNED_STORAGE
 #endif

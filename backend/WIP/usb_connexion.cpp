@@ -1,36 +1,38 @@
 #include <Devices/UsbDevice.h>
+
 #include <chrono>
 #include <thread>
 
-int main()
-{
-    try
-    {
-        std::string vid = "067B";
-        std::string pid = "2303";
-        auto device = UsbDevice::fromVidAndPid(vid, pid);
+using namespace STIMWALKER_NAMESPACE::devices;
 
-        device.connect();
-        std::cout << "Opened port: " << device.getPort() << std::endl;
+int main() {
+  try {
+    std::string vid = "067B";
+    std::string pid = "2303";
+    auto device = UsbDevice::fromVidAndPid(vid, pid);
 
-        // Simulate some work
-        std::this_thread::sleep_for(std::chrono::seconds(2));
-        device.send(Commands::PRINT, "Hello, world!");
-        std::this_thread::sleep_for(std::chrono::seconds(4));
-        device.send(Commands::CHANGE_POKE_INTERVAL, std::chrono::milliseconds(200));
-        device.send(Commands::PRINT, "Coucou!");
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        device.send(Commands::CHANGE_POKE_INTERVAL, std::chrono::milliseconds(1500));
-        std::this_thread::sleep_for(std::chrono::seconds(8));
-        device.send(Commands::PRINT, "Too long..");
+    device.connect();
+    std::cout << "Opened port: " << device.getPort() << std::endl;
 
-        device.disconnect();
-        std::cout << "Closed port: " << device.getPort() << std::endl;
-    }
-    catch (std::exception &e)
-    {
-        std::cerr << "Error: " << e.what() << std::endl;
-    }
+    // Simulate some work
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    device.send(UsbDevice::Commands::PRINT, "Hello, world!");
+    std::this_thread::sleep_for(std::chrono::seconds(4));
+    device.send(UsbDevice::Commands::CHANGE_POKE_INTERVAL,
+                std::chrono::milliseconds(200));
+    device.send(UsbDevice::Commands::PRINT, "Coucou!");
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    device.send(UsbDevice::Commands::CHANGE_POKE_INTERVAL,
+                std::chrono::milliseconds(1500));
+    std::this_thread::sleep_for(std::chrono::seconds(8));
+    device.send(UsbDevice::Commands::PRINT, "Too long..");
 
-    return 0;
+    device.disconnect();
+    std::cout << "Closed port: " << device.getPort() << std::endl;
+  } catch (std::exception &e) {
+    std::cerr << "Error: " << e.what() << std::endl;
+    return EXIT_FAILURE;
+  }
+
+  return 0;
 }
