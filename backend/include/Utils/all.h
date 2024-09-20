@@ -2,6 +2,7 @@
 #define __STIMWALKER_UTILS_ALL_H__
 
 #include "Utils/Exceptions.h"
+#include "Utils/Logger.h"
 #include "Utils/Path.h"
 #include "Utils/String.h"
 #include "Utils/Timestamp.h"

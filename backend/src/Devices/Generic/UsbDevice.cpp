@@ -11,6 +11,8 @@
 #include <regex>
 #include <thread>
 
+#include "Utils/Logger.h"
+
 using namespace STIMWALKER_NAMESPACE::devices;
 
 UsbDevice::UsbDevice(const std::string &port, const std::string &vid,
@@ -93,18 +95,12 @@ void UsbDevice::_initialize() {
 
 UsbResponses UsbDevice::_parseCommand(const UsbCommands &command,
                                       const std::any &data) {
-  // Prepare the print message
-  const auto &timeSinceEpoch =
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          std::chrono::steady_clock::now().time_since_epoch())
-          .count();
-  std::cout << "Time stamp: " << timeSinceEpoch << " ms - ";
+  auto &logger = Logger::getInstance();
 
   try {
     switch (command.getValue()) {
     case UsbCommands::PRINT:
-      std::cout << "Sent command: " << std::any_cast<std::string>(data)
-                << std::endl;
+      logger.info("Sent command: " + std::any_cast<std::string>(data));
 
       return UsbResponses::OK;
     }
@@ -134,14 +130,15 @@ void UsbDevice::_connectSerialPort() {
 }
 
 void UsbDevice::_setFastCommunication(bool isFast) {
+  auto &logger = Logger::getInstance();
+
 #if defined(_WIN32)
   // Set RTS ON
   if (!EscapeCommFunction(m_SerialPort->native_handle(),
                           isFast ? SETRTS : CLRRTS)) {
-    std::cerr << "Failed to set RTS to " << (isFast ? "ON" : "OFF")
-              << std::endl;
+    logger.error("Failed to set RTS to " + std::to_string(isFast));
   } else {
-    std::cout << "RTS set to " << (isFast ? "ON" : "OFF") << std::endl;
+    logger.info("RTS set to " + (isFast ? "ON" : "OFF"));
   }
 #else
   int status;
@@ -153,14 +150,14 @@ void UsbDevice::_setFastCommunication(bool isFast) {
   // Turn RTS ON or OFF
   if (isFast) {
     status |= TIOCM_RTS;
-    std::cout << "RTS set to ON (fast)" << std::endl;
+    logger.info("RTS set to ON (fast)");
   } else {
     status &= ~TIOCM_RTS;
-    std::cout << "RTS set to OFF (slow)" << std::endl;
+    logger.info("RTS set to OFF (slow)");
   }
 
   if (ioctl(m_SerialPort->native_handle(), TIOCMSET, &status) < 0) {
-    std::cerr << "Failed to set RTS" << std::endl;
+    logger.error("Failed to set RTS");
   }
 
 #endif
@@ -226,7 +223,6 @@ std::vector<UsbDevice> UsbDevice::listAllUsbDevices() {
 #else
   // Iterate through each directory in the USB devices path
   for (const auto &devName : std::filesystem::directory_iterator("/dev")) {
-    std::cout << devName << std::endl;
     if (devName.path().string().find("ttyUSB") != std::string::npos ||
         devName.path().string().find("ttyACM") != std::string::npos) {
       std::string port = devName.path().string();

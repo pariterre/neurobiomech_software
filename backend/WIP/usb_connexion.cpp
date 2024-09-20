@@ -1,4 +1,5 @@
 #include <Devices/MagstimRapidDevice.h>
+#include <Utils/Logger.h>
 
 #include <chrono>
 #include <thread>
@@ -6,19 +7,26 @@
 using namespace STIMWALKER_NAMESPACE::devices;
 
 int main() {
+  auto &logger = Logger::getInstance();
+  logger.setLogLevel(Logger::INFO);
+
+  logger.info("Starting the application");
+
   try {
     auto magstim = MagstimRapidDeviceMock::FindMagstimDevice();
 
     magstim.connect();
-    std::cout << "Opened port: " << magstim.getPort() << std::endl;
+    logger.info("Opened port: " + magstim.getPort());
 
     // Simulate some work
     std::this_thread::sleep_for(std::chrono::milliseconds(1750));
     magstim.send(MagstimRapidCommands::PRINT, "Hello, world!", true);
+
     std::this_thread::sleep_for(std::chrono::seconds(4));
     auto response =
         magstim.send(MagstimRapidCommands::ARM, std::chrono::milliseconds(200));
-    std::cout << "Response: " << response.getValue() << std::endl;
+    logger.info("Response: " + response.getValue());
+
     magstim.send(MagstimRapidCommands::PRINT, "Coucou!");
     std::this_thread::sleep_for(std::chrono::seconds(1));
     magstim.send(MagstimRapidCommands::DISARM, std::chrono::milliseconds(1500));
@@ -26,10 +34,11 @@ int main() {
     magstim.send(MagstimRapidCommands::PRINT, "Too long..");
 
     magstim.disconnect();
-    std::cout << "Closed port: " << magstim.getPort() << std::endl;
+
+    logger.info("Closed port: " + magstim.getPort());
 
   } catch (std::exception &e) {
-    std::cerr << "Error: " << e.what() << std::endl;
+    logger.error(e.what());
     return EXIT_FAILURE;
   }
 

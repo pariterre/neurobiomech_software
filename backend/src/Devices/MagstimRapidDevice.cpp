@@ -10,6 +10,8 @@
 #endif // _WIN32
 #include <regex>
 
+#include "Utils/Logger.h"
+
 using namespace STIMWALKER_NAMESPACE::devices;
 
 MagstimRapidDevice MagstimRapidDevice::FindMagstimDevice() {
@@ -40,12 +42,12 @@ UsbResponses MagstimRapidDevice::_parseCommand(const UsbCommands &command,
                                                const std::any &data) {
   // First call the parent class to handle the common commands
   UsbDevice::_parseCommand(command, data);
+  auto &logger = Logger::getInstance();
 
   try {
     switch (command.getValue()) {
     case MagstimRapidCommands::POKE:
-      std::cout << "Sent command: " << std::any_cast<std::string>(data)
-                << std::endl;
+      logger.info("Sent command: " + std::any_cast<std::string>(data));
       break;
 
     case MagstimRapidCommands::SET_FAST_COMMUNICATION:
@@ -61,9 +63,10 @@ UsbResponses MagstimRapidDevice::_parseCommand(const UsbCommands &command,
       _changePokeInterval(std::chrono::milliseconds(
           m_IsArmed ? m_ArmedPokeInterval : m_DisarmedPokeInterval));
 
-      std::cout << (m_IsArmed ? "Armed" : "Disarmed")
-                << " the system and changed poke interval to "
-                << m_PokeInterval.count() << " ms" << std::endl;
+      logger.info(std::string(m_IsArmed ? "Armed" : "Disarmed") +
+                  " the system and changed poke interval to " +
+                  std::to_string(m_PokeInterval.count()) + " ms");
+
       break;
 
     case MagstimRapidCommands::DISARM:
@@ -76,16 +79,16 @@ UsbResponses MagstimRapidDevice::_parseCommand(const UsbCommands &command,
       _changePokeInterval(std::chrono::milliseconds(
           m_IsArmed ? m_ArmedPokeInterval : m_DisarmedPokeInterval));
 
-      std::cout << (m_IsArmed ? "Armed" : "Disarmed")
-                << " the system and changed poke interval to "
-                << m_PokeInterval.count() << " ms" << std::endl;
+      logger.info(std::string(m_IsArmed ? "Armed" : "Disarmed") +
+                  " the system and changed poke interval to " +
+                  std::to_string(m_PokeInterval.count()) + " ms");
       break;
     }
   } catch (const std::bad_any_cast &) {
-    std::cerr << "The data you provided with the command ("
-              << command.toString() << ") is invalid" << std::endl;
+    logger.error("The data you provided with the command (" +
+                 command.toString() + ") is invalid");
   } catch (const std::exception &e) {
-    std::cerr << "Error: " << e.what() << std::endl;
+    logger.error("Error: " + std::string(e.what()));
   }
 
   return UsbResponses::COMMAND_NOT_FOUND;
