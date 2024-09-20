@@ -16,6 +16,26 @@ public:
   static constexpr int ARM = 102;
   static constexpr int DISARM = 103;
 
+  virtual std::string toString() const override {
+    auto value = UsbCommands::toString();
+    if (value != "UNKNOWN") {
+      return value;
+    }
+
+    switch (m_Value) {
+    case POKE:
+      return "POKE";
+    case SET_FAST_COMMUNICATION:
+      return "SET_FAST_COMMUNICATION";
+    case ARM:
+      return "ARM";
+    case DISARM:
+      return "DISARM";
+    default:
+      return "UNKNOWN";
+    }
+  }
+
   MagstimRapidCommands() = delete;
   MagstimRapidCommands(int value) : UsbCommands(value) {}
 };
@@ -68,7 +88,8 @@ protected:
   /// @brief Parse a command received from the user and send to the device
   /// @param command The command to parse
   /// @param data The data to parse
-  void _parseCommand(const UsbCommands &command, const std::any &data) override;
+  UsbResponses _parseCommand(const UsbCommands &command,
+                             const std::any &data) override;
 
   /// @brief Set a worker thread to keep the device alive
   void _keepAlive(const std::chrono::milliseconds &timeout);

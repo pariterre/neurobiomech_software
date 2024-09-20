@@ -14,9 +14,11 @@ int main() {
 
     // Simulate some work
     std::this_thread::sleep_for(std::chrono::milliseconds(1750));
-    magstim.send(MagstimRapidCommands::PRINT, "Hello, world!");
+    magstim.send(MagstimRapidCommands::PRINT, "Hello, world!", true);
     std::this_thread::sleep_for(std::chrono::seconds(4));
-    magstim.send(MagstimRapidCommands::ARM, std::chrono::milliseconds(200));
+    auto response =
+        magstim.send(MagstimRapidCommands::ARM, std::chrono::milliseconds(200));
+    std::cout << "Response: " << response.getValue() << std::endl;
     magstim.send(MagstimRapidCommands::PRINT, "Coucou!");
     std::this_thread::sleep_for(std::chrono::seconds(1));
     magstim.send(MagstimRapidCommands::DISARM, std::chrono::milliseconds(1500));
@@ -25,10 +27,11 @@ int main() {
 
     magstim.disconnect();
     std::cout << "Closed port: " << magstim.getPort() << std::endl;
+
   } catch (std::exception &e) {
     std::cerr << "Error: " << e.what() << std::endl;
     return EXIT_FAILURE;
   }
 
-  return 0;
+  return EXIT_SUCCESS;
 }

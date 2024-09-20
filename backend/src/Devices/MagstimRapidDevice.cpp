@@ -22,9 +22,9 @@ MagstimRapidDevice MagstimRapidDevice::FindMagstimDevice() {
 }
 
 MagstimRapidDevice::MagstimRapidDevice(const std::string &port)
-    : m_IsArmed(false), m_ArmedPokeInterval(std::chrono::milliseconds(5000)),
-      m_DisarmedPokeInterval(std::chrono::milliseconds(500)),
-      m_PokeInterval(std::chrono::milliseconds(-1)),
+    : m_IsArmed(false), m_ArmedPokeInterval(std::chrono::milliseconds(500)),
+      m_DisarmedPokeInterval(std::chrono::milliseconds(5000)),
+      m_PokeInterval(std::chrono::milliseconds(5000)),
       UsbDevice(port, "067B", "2303") {}
 
 void MagstimRapidDevice::_initialize() {
@@ -36,8 +36,8 @@ void MagstimRapidDevice::_initialize() {
   _keepAlive(m_PokeInterval);
 }
 
-void MagstimRapidDevice::_parseCommand(const UsbCommands &command,
-                                       const std::any &data) {
+UsbResponses MagstimRapidDevice::_parseCommand(const UsbCommands &command,
+                                               const std::any &data) {
   // First call the parent class to handle the common commands
   UsbDevice::_parseCommand(command, data);
 
@@ -83,11 +83,12 @@ void MagstimRapidDevice::_parseCommand(const UsbCommands &command,
     }
   } catch (const std::bad_any_cast &) {
     std::cerr << "The data you provided with the command ("
-              << command.getValue() << ") is invalid" << std::endl;
+              << command.toString() << ") is invalid" << std::endl;
   } catch (const std::exception &e) {
     std::cerr << "Error: " << e.what() << std::endl;
   }
 
+  return UsbResponses::COMMAND_NOT_FOUND;
   // Send a command to the USB device
   // asio::write(*m_SerialPort, asio::buffer(command));
 }

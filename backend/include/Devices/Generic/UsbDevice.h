@@ -22,6 +22,36 @@ public:
   UsbCommands() = delete;
   UsbCommands(int value) : m_Value(value) {}
 
+  virtual std::string toString() const {
+    switch (m_Value) {
+    case PRINT:
+      return "PRINT";
+    default:
+      return "UNKNOWN";
+    }
+  }
+
+protected:
+  DECLARE_PROTECTED_MEMBER(int, Value);
+};
+
+class UsbResponses {
+public:
+  static constexpr int OK = 0;
+  static constexpr int ERROR = 1;
+  static constexpr int COMMAND_NOT_FOUND = 2;
+
+  // Constructor from int
+  UsbResponses(int value) : m_Value(value) {}
+
+  // Use default move semantics
+  UsbResponses(UsbResponses &&other) noexcept = default;
+  UsbResponses &operator=(UsbResponses &&other) noexcept = default;
+
+  // Use default copy semantics
+  UsbResponses(const UsbResponses &other) = default;
+  UsbResponses &operator=(const UsbResponses &other) = default;
+
 protected:
   DECLARE_PROTECTED_MEMBER(int, Value);
 };
@@ -101,9 +131,12 @@ public:
   /// @brief Send a command to the device
   /// @param command The command to send to the device
   /// @param data The data to send to the device
-  void send(UsbCommands command, const std::any &data);
-  void send(UsbCommands command, const char *data) {
-    send(command, std::string(data));
+  /// @param ignoreResponse True to ignore the response, false otherwise
+  UsbResponses send(const UsbCommands &command, const std::any &data,
+                    bool ignoreResponse = false);
+  UsbResponses send(const UsbCommands &command, const char *data,
+                    bool ignoreResponse = false) {
+    return send(command, std::string(data), ignoreResponse);
   }
 
 protected:
@@ -114,7 +147,8 @@ protected:
   /// @brief Parse a command received from the user and send to the device
   /// @param command The command to parse
   /// @param data The data to parse
-  virtual void _parseCommand(const UsbCommands &command, const std::any &data);
+  virtual UsbResponses _parseCommand(const UsbCommands &command,
+                                     const std::any &data);
 
   /// @brief Connect to the serial port
   virtual void _connectSerialPort();

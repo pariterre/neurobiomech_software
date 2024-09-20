@@ -59,12 +59,31 @@ void UsbDevice::disconnect() {
   m_Worker.join();
 }
 
-void UsbDevice::send(UsbCommands command, const std::any &data) {
+UsbResponses UsbDevice::send(const UsbCommands &command, const std::any &data,
+                             bool ignoreResponse) {
+  // Create a promise and get the future associated with it
+  std::promise<UsbResponses> promise;
+  std::future<UsbResponses> future = promise.get_future();
   // Send a command to the worker to relay commands to the device
-  m_Context->post([this, command, data] {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    _parseCommand(command, data);
-  });
+  m_Context->post(
+      [this, command, data = data, p = &promise, ignoreResponse]() mutable {
+        std::lock_guard<std::mutex> lock(m_Mutex);
+
+        // Parse the command and get the response
+        auto response = _parseCommand(command, data);
+
+        // Set the response value in the promise
+        if (!ignoreResponse) {
+          p->set_value(response);
+        }
+      });
+
+  if (ignoreResponse) {
+    return UsbResponses::OK;
+  }
+
+  // Wait for the response from the worker thread and return the result
+  return future.get();
 }
 
 void UsbDevice::_initialize() {
@@ -72,8 +91,8 @@ void UsbDevice::_initialize() {
   _connectSerialPort();
 }
 
-void UsbDevice::_parseCommand(const UsbCommands &command,
-                              const std::any &data) {
+UsbResponses UsbDevice::_parseCommand(const UsbCommands &command,
+                                      const std::any &data) {
   // Prepare the print message
   const auto &timeSinceEpoch =
       std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -86,17 +105,19 @@ void UsbDevice::_parseCommand(const UsbCommands &command,
     case UsbCommands::PRINT:
       std::cout << "Sent command: " << std::any_cast<std::string>(data)
                 << std::endl;
-      break;
+
+      return UsbResponses::OK;
     }
   } catch (const std::bad_any_cast &) {
     std::cerr << "The data you provided with the command ("
-              << command.getValue() << ") is invalid" << std::endl;
+              << command.toString() << ") is invalid" << std::endl;
+    return UsbResponses::ERROR;
   } catch (const std::exception &e) {
     std::cerr << "Error: " << e.what() << std::endl;
+    return UsbResponses::ERROR;
   }
 
-  // Send a command to the USB device
-  // asio::write(*m_SerialPort, asio::buffer(command));
+  return UsbResponses::COMMAND_NOT_FOUND;
 }
 
 void UsbDevice::_connectSerialPort() {
