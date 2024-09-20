@@ -7,6 +7,7 @@
 #include <iostream>
 #include <vector>
 
+#include "UsbExceptions.h"
 #include "Utils/CppMacros.h"
 
 // https://github.com/nicolasmcnair/magpy/blob/master/magpy/magstim.py#L129
@@ -14,15 +15,23 @@
 
 namespace STIMWALKER_NAMESPACE::devices {
 
+class UsbCommands {
+public:
+  static constexpr int PRINT = 0;
+
+  UsbCommands() = delete;
+  UsbCommands(int value) : m_Value(value) {}
+
+protected:
+  DECLARE_PROTECTED_MEMBER(int, Value);
+};
+
 /// @brief A class representing a USB device
-/// @details This class provides a way to list all USB devices connected to the
-/// system and get their information
+/// @details This class provides a way to list all USB devices connected to
+/// the system and get their information
 /// @note This class is only available on Windows and Linux
 class UsbDevice {
-  /// Enums
 public:
-  enum Commands { CHANGE_POKE_INTERVAL, PRINT };
-
   /// Constructors
 public:
   /// @brief Constructor
@@ -45,9 +54,8 @@ public:
   static UsbDevice fromVidAndPid(const std::string &vid,
                                  const std::string &pid);
 
-public:
-  /// Members with Get accessors
-
+protected:
+  /// Protected members with Get accessors
   /// @brief Get the port name of the device
   /// @return The port name of the device
   DECLARE_PROTECTED_MEMBER(std::string, Port)
@@ -60,7 +68,7 @@ public:
   /// @return The product ID of the device
   DECLARE_PROTECTED_MEMBER(std::string, Pid)
 
-  /// Private members
+  /// Protected members without Get accessors
 
   /// @brief Get the serial port of the device
   /// @return The serial port of the device
@@ -79,17 +87,8 @@ public:
   /// @return The mutex
   DECLARE_PROTECTED_MEMBER_NOGET(std::mutex, Mutex)
 
-  /// @brief Get how long to wait before sending the PING command
-  /// @return How long to wait before sending the PING command
-  DECLARE_PROTECTED_MEMBER_NOGET(std::chrono::milliseconds, PokeInterval)
-
   /// @brief Worker thread to keep the device alive
   DECLARE_PROTECTED_MEMBER_NOGET(std::thread, Worker)
-
-  /// @brief Get the keep-alive timer
-  /// @return The keep-alive timer
-  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::steady_timer>,
-                                 KeepAliveTimer)
 
   /// Methods
 public:
@@ -102,35 +101,29 @@ public:
   /// @brief Send a command to the device
   /// @param command The command to send to the device
   /// @param data The data to send to the device
-  void send(Commands command, const std::any &data);
-  void send(Commands command, const char *data) {
+  void send(UsbCommands command, const std::any &data);
+  void send(UsbCommands command, const char *data) {
     send(command, std::string(data));
   }
 
 protected:
   /// @brief Connect to the ubs device. This is expected to run on an async
   /// thread
-  void _initialize();
+  virtual void _initialize();
 
   /// @brief Parse a command received from the user and send to the device
   /// @param command The command to parse
   /// @param data The data to parse
-  void _parseCommand(Commands command, const std::any &data);
+  virtual void _parseCommand(const UsbCommands &command, const std::any &data);
 
   /// @brief Connect to the serial port
   virtual void _connectSerialPort();
 
-  /// @brief Set a worker thread to keep the device alive
-  void _keepAlive(const std::chrono::milliseconds &timeout);
-
-  /// @brief Change the interval at which the device is poked
-  void _changePokeInterval(std::chrono::milliseconds interval);
-
-  /// @brief Set the "RTS" mode of the communication. [isFast] to true is faster
-  /// but less reliable.
+  /// @brief Set the "RTS" mode of the communication. [isFast] to true is
+  /// faster but less reliable.
   /// @param isFast True to enable fast mode, false to disable it
   /// @note This methods emulates the useRTS signal from Python
-  void _setFastCommunication(bool isFast);
+  virtual void _setFastCommunication(bool isFast);
 
   /// Static helper methods
 public:
@@ -143,18 +136,6 @@ public:
   /// @param other The other UsbDevice object to compare with
   /// @return True if the two objects are equal, false otherwise
   bool operator==(const UsbDevice &other) const;
-};
-
-class UsbDeviceMock : public UsbDevice {
-public:
-  UsbDeviceMock(const std::string &port, const std::string &vid,
-                const std::string &pid);
-
-  static UsbDeviceMock fromVidAndPid(const std::string &vid,
-                                     const std::string &pid);
-
-protected:
-  void _connectSerialPort() override;
 };
 
 } // namespace STIMWALKER_NAMESPACE::devices

@@ -1,4 +1,4 @@
-#include <Devices/UsbDevice.h>
+#include <Devices/MagstimRapidDevice.h>
 
 #include <chrono>
 #include <thread>
@@ -7,28 +7,24 @@ using namespace STIMWALKER_NAMESPACE::devices;
 
 int main() {
   try {
-    std::string vid = "067B";
-    std::string pid = "2303";
-    auto device = UsbDeviceMock::fromVidAndPid(vid, pid);
+    auto magstim = MagstimRapidDeviceMock::FindMagstimDevice();
 
-    device.connect();
-    std::cout << "Opened port: " << device.getPort() << std::endl;
+    magstim.connect();
+    std::cout << "Opened port: " << magstim.getPort() << std::endl;
 
     // Simulate some work
     std::this_thread::sleep_for(std::chrono::milliseconds(1750));
-    device.send(UsbDevice::Commands::PRINT, "Hello, world!");
+    magstim.send(MagstimRapidCommands::PRINT, "Hello, world!");
     std::this_thread::sleep_for(std::chrono::seconds(4));
-    device.send(UsbDevice::Commands::CHANGE_POKE_INTERVAL,
-                std::chrono::milliseconds(200));
-    device.send(UsbDevice::Commands::PRINT, "Coucou!");
+    magstim.send(MagstimRapidCommands::ARM, std::chrono::milliseconds(200));
+    magstim.send(MagstimRapidCommands::PRINT, "Coucou!");
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    device.send(UsbDevice::Commands::CHANGE_POKE_INTERVAL,
-                std::chrono::milliseconds(1500));
+    magstim.send(MagstimRapidCommands::DISARM, std::chrono::milliseconds(1500));
     std::this_thread::sleep_for(std::chrono::seconds(8));
-    device.send(UsbDevice::Commands::PRINT, "Too long..");
+    magstim.send(MagstimRapidCommands::PRINT, "Too long..");
 
-    device.disconnect();
-    std::cout << "Closed port: " << device.getPort() << std::endl;
+    magstim.disconnect();
+    std::cout << "Closed port: " << magstim.getPort() << std::endl;
   } catch (std::exception &e) {
     std::cerr << "Error: " << e.what() << std::endl;
     return EXIT_FAILURE;

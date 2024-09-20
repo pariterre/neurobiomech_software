@@ -8,7 +8,8 @@ set(SRC_LIST_MODULE
     ${CMAKE_CURRENT_SOURCE_DIR}/Data/CollectorData.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/NidaqDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/DelsysEmgDevice.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/UsbDevice.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Generic/UsbDevice.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/MagstimRapidDevice.cpp
 )
 
 # Create the library

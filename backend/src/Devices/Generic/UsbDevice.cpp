@@ -1,4 +1,4 @@
-#include "Devices/UsbDevice.h"
+#include "Devices/Generic/UsbDevice.h"
 
 #if defined(_WIN32)
 #include <cfgmgr32.h>
@@ -9,6 +9,7 @@
 #include <fstream>
 #endif // _WIN32
 #include <regex>
+#include <thread>
 
 using namespace STIMWALKER_NAMESPACE::devices;
 
@@ -20,7 +21,7 @@ UsbDevice::UsbDevice(const UsbDevice &other)
     : m_Port(other.m_Port), m_Vid(other.m_Vid), m_Pid(other.m_Pid) {
   // Throws an exception if the serial port is open as it cannot be copied
   if (other.m_SerialPort != nullptr && other.m_SerialPort->is_open()) {
-    throw std::runtime_error(
+    throw UsbIllegalOperationException(
         "Cannot copy UsbDevice object with an open serial port");
   }
 }
@@ -32,7 +33,7 @@ UsbDevice UsbDevice::fromVidAndPid(const std::string &vid,
       return device;
     }
   }
-  throw std::runtime_error("Device not found");
+  throw UsbDeviceNotFoundException("USB device not found");
 }
 
 void UsbDevice::connect() {
@@ -44,15 +45,21 @@ void UsbDevice::connect() {
     _initialize();
     m_Context->run();
   });
+
+  // Give a bit of time for the worker thread to start
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
 void UsbDevice::disconnect() {
+  // Just leave a bit of time if there are any pending commands to process
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
   // Stop the worker thread
   m_Context->stop();
   m_Worker.join();
 }
 
-void UsbDevice::send(Commands command, const std::any &data) {
+void UsbDevice::send(UsbCommands command, const std::any &data) {
   // Send a command to the worker to relay commands to the device
   m_Context->post([this, command, data] {
     std::lock_guard<std::mutex> lock(m_Mutex);
@@ -63,13 +70,10 @@ void UsbDevice::send(Commands command, const std::any &data) {
 void UsbDevice::_initialize() {
   m_SerialPortContext = std::make_unique<asio::io_context>();
   _connectSerialPort();
-
-  m_KeepAliveTimer = std::make_unique<asio::steady_timer>(*m_Context);
-  m_PokeInterval = std::chrono::milliseconds(1000);
-  _keepAlive(m_PokeInterval);
 }
 
-void UsbDevice::_parseCommand(Commands command, const std::any &data) {
+void UsbDevice::_parseCommand(const UsbCommands &command,
+                              const std::any &data) {
   // Prepare the print message
   const auto &timeSinceEpoch =
       std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -78,26 +82,20 @@ void UsbDevice::_parseCommand(Commands command, const std::any &data) {
   std::cout << "Time stamp: " << timeSinceEpoch << " ms - ";
 
   try {
-    switch (command) {
-    case Commands::PRINT:
+    switch (command.getValue()) {
+    case UsbCommands::PRINT:
       std::cout << "Sent command: " << std::any_cast<std::string>(data)
                 << std::endl;
       break;
-
-    case Commands::CHANGE_POKE_INTERVAL:
-      _changePokeInterval(std::any_cast<const std::chrono::milliseconds>(data));
-      std::cout << "Changed poke interval to " << m_PokeInterval.count()
-                << " ms" << std::endl;
-      break;
     }
   } catch (const std::bad_any_cast &) {
-    std::cerr << "The data you provided with the command (" << command
-              << ") is invalid" << std::endl;
+    std::cerr << "The data you provided with the command ("
+              << command.getValue() << ") is invalid" << std::endl;
   } catch (const std::exception &e) {
     std::cerr << "Error: " << e.what() << std::endl;
   }
 
-  // Write the command to the device
+  // Send a command to the USB device
   // asio::write(*m_SerialPort, asio::buffer(command));
 }
 
@@ -112,40 +110,6 @@ void UsbDevice::_connectSerialPort() {
       asio::serial_port_base::parity(asio::serial_port_base::parity::none));
   m_SerialPort->set_option(asio::serial_port_base::flow_control(
       asio::serial_port_base::flow_control::none));
-}
-
-void UsbDevice::_keepAlive(const std::chrono::milliseconds &timeout) {
-  // Set a 5-second timer
-  m_KeepAliveTimer->expires_after(timeout);
-
-  m_KeepAliveTimer->async_wait([this](const asio::error_code &ec) {
-    // If ec is not false, it means the timer was stopped to change the
-    // interval, or the device was disconnected. In both cases, do nothing and
-    // return
-    if (ec)
-      return;
-    // Otherwise, send a PING command to the device
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    _parseCommand(Commands::PRINT, std::string("PING"));
-    _keepAlive(m_PokeInterval);
-  });
-}
-
-void UsbDevice::_changePokeInterval(std::chrono::milliseconds interval) {
-  // Stop the timer
-
-  // Compute the remaining time before the next PING command was supposed to be
-  // sent
-  auto remainingTime = std::chrono::duration_cast<std::chrono::milliseconds>(
-      m_KeepAliveTimer->expiry() - asio::steady_timer::clock_type::now());
-  auto elapsedTime = m_PokeInterval - remainingTime;
-
-  // Set the interval to the requested value
-  m_PokeInterval = interval;
-
-  // Send a keep alive command with the remaining time
-  m_KeepAliveTimer->cancel();
-  _keepAlive(interval - elapsedTime);
 }
 
 void UsbDevice::_setFastCommunication(bool isFast) {
@@ -268,18 +232,4 @@ std::vector<UsbDevice> UsbDevice::listAllUsbDevices() {
 
 bool UsbDevice::operator==(const UsbDevice &other) const {
   return m_Port == other.m_Port && m_Vid == other.m_Vid && m_Pid == other.m_Pid;
-}
-
-// --- MOCKER SECTION --- //
-UsbDeviceMock::UsbDeviceMock(const std::string &port, const std::string &vid,
-                             const std::string &pid)
-    : UsbDevice(port, vid, pid) {}
-
-UsbDeviceMock UsbDeviceMock::fromVidAndPid(const std::string &vid,
-                                           const std::string &pid) {
-  return UsbDeviceMock("MOCK", vid, pid);
-}
-
-void UsbDeviceMock::_connectSerialPort() {
-  // Do nothing
 }
