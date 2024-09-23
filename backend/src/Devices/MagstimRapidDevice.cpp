@@ -85,10 +85,10 @@ UsbResponses MagstimRapidDevice::_parseCommand(const UsbCommands &command,
       break;
     }
   } catch (const std::bad_any_cast &) {
-    logger.error("The data you provided with the command (" +
+    logger.fatal("The data you provided with the command (" +
                  command.toString() + ") is invalid");
   } catch (const std::exception &e) {
-    logger.error("Error: " + std::string(e.what()));
+    logger.fatal("Error: " + std::string(e.what()));
   }
 
   return UsbResponses::COMMAND_NOT_FOUND;

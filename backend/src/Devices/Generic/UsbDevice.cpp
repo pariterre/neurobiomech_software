@@ -107,10 +107,10 @@ UsbResponses UsbDevice::_parseCommand(const UsbCommands &command,
   } catch (const std::bad_any_cast &) {
     std::cerr << "The data you provided with the command ("
               << command.toString() << ") is invalid" << std::endl;
-    return UsbResponses::ERROR;
+    return UsbResponses::NOK;
   } catch (const std::exception &e) {
     std::cerr << "Error: " << e.what() << std::endl;
-    return UsbResponses::ERROR;
+    return UsbResponses::NOK;
   }
 
   return UsbResponses::COMMAND_NOT_FOUND;
@@ -136,9 +136,9 @@ void UsbDevice::_setFastCommunication(bool isFast) {
   // Set RTS ON
   if (!EscapeCommFunction(m_SerialPort->native_handle(),
                           isFast ? SETRTS : CLRRTS)) {
-    logger.error("Failed to set RTS to " + std::to_string(isFast));
+    logger.fatal("Failed to set RTS to " + std::to_string(isFast));
   } else {
-    logger.info("RTS set to " + (isFast ? "ON" : "OFF"));
+    logger.info("RTS set to " + std::string(isFast ? "ON" : "OFF"));
   }
 #else
   int status;
@@ -157,7 +157,7 @@ void UsbDevice::_setFastCommunication(bool isFast) {
   }
 
   if (ioctl(m_SerialPort->native_handle(), TIOCMSET, &status) < 0) {
-    logger.error("Failed to set RTS");
+    logger.fatal("Failed to set RTS");
   }
 
 #endif

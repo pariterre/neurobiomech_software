@@ -25,7 +25,7 @@ int main() {
     std::this_thread::sleep_for(std::chrono::seconds(4));
     auto response =
         magstim.send(MagstimRapidCommands::ARM, std::chrono::milliseconds(200));
-    logger.info("Response: " + response.getValue());
+    logger.info("Response: " + std::to_string(response.getValue()));
 
     magstim.send(MagstimRapidCommands::PRINT, "Coucou!");
     std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -38,7 +38,7 @@ int main() {
     logger.info("Closed port: " + magstim.getPort());
 
   } catch (std::exception &e) {
-    logger.error(e.what());
+    logger.fatal(e.what());
     return EXIT_FAILURE;
   }
 

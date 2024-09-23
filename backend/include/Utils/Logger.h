@@ -7,15 +7,15 @@
 class Logger {
 public:
   // Define the log levels
-  enum Level { INFO, WARNING, ERROR };
+  enum Level { INFO, WARNING, FATAL };
 
   // Get the singleton instance of the Logger
   static Logger &getInstance();
 
-  // Log a message at the INFO, WARNING, or ERROR level
+  // Log a message at the INFO, WARNING, or FATAL level
   void info(const std::string &message);
   void warning(const std::string &message);
-  void error(const std::string &message);
+  void fatal(const std::string &message);
 
   // Set the minimum log level. Messages below this level will not be logged.
   void setLogLevel(Level level);

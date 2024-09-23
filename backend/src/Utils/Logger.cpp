@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 
 // Define the log levels
 enum Level { INFO, WARNING, ERROR };
@@ -17,7 +18,7 @@ void Logger::info(const std::string &message) { log(message, INFO); }
 
 void Logger::warning(const std::string &message) { log(message, WARNING); }
 
-void Logger::error(const std::string &message) { log(message, ERROR); }
+void Logger::fatal(const std::string &message) { log(message, FATAL); }
 
 // Set the minimum log level. Messages below this level will not be logged.
 void Logger::setLogLevel(Level level) {
@@ -98,18 +99,24 @@ std::string Logger::getCurrentTime() {
 
   // Get current time as time_point
   auto now = std::chrono::system_clock::now();
-  auto now_time_t = std::chrono::system_clock::to_time_t(now);
 
   // Extract the milliseconds part
-  auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                    now.time_since_epoch()) %
-                1000;
+  auto nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                   now.time_since_epoch()) %
+               1000;
 
   // Format the time as [YYYY-MM-DD HH:MM:SS.MMM]
+  auto nowTimeT = std::chrono::system_clock::to_time_t(now);
+#ifdef _WIN32
+  struct tm localtime;
+  localtime_s(&localtime, &nowTimeT);
+#else
+  auto localtime = std::localtime(&nowTimeT);
+#endif
   std::stringstream ss;
-  ss << std::put_time(std::localtime(&now_time_t), "[%Y-%m-%d %H:%M:%S");
+  ss << std::put_time(&localtime, "[%Y-%m-%d %H:%M:%S");
   ss << '.' << std::setfill('0') << std::setw(3)
-     << now_ms.count(); // Add milliseconds
-  ss << "] ";           // Space after the timestamp
+     << nowMs.count(); // Add milliseconds
+  ss << "] ";          // Space after the timestamp
   return ss.str();
 }

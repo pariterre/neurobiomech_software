@@ -38,7 +38,7 @@ protected:
 class UsbResponses {
 public:
   static constexpr int OK = 0;
-  static constexpr int ERROR = 1;
+  static constexpr int NOK = 1;
   static constexpr int COMMAND_NOT_FOUND = 2;
 
   // Constructor from int
