@@ -71,7 +71,7 @@ void Logger::log(const std::string &message, Level level) {
   std::string timeStamp = getCurrentTime();
 
   // Log to console
-  std::ostream &os = (level == ERROR) ? std::cerr : std::cout;
+  std::ostream &os = (level == FATAL) ? std::cerr : std::cout;
   os << timeStamp << getLabel(level) << message << std::endl;
 
   // Log to file if logging to a file is enabled
@@ -108,13 +108,13 @@ std::string Logger::getCurrentTime() {
   // Format the time as [YYYY-MM-DD HH:MM:SS.MMM]
   auto nowTimeT = std::chrono::system_clock::to_time_t(now);
 #ifdef _WIN32
-  struct tm localtime;
-  localtime_s(&localtime, &nowTimeT);
+  struct tm *localtime;
+  localtime_s(localtime, &nowTimeT);
 #else
-  auto localtime = std::localtime(&nowTimeT);
+  struct tm *localtime = std::localtime(&nowTimeT);
 #endif
   std::stringstream ss;
-  ss << std::put_time(&localtime, "[%Y-%m-%d %H:%M:%S");
+  ss << std::put_time(localtime, "[%Y-%m-%d %H:%M:%S");
   ss << '.' << std::setfill('0') << std::setw(3)
      << nowMs.count(); // Add milliseconds
   ss << "] ";          // Space after the timestamp
