@@ -4,6 +4,7 @@
 #include <map>
 #include <nlohmann/json.hpp>
 
+#include "Utils/CppMacros.h"
 #include "stimwalkerConfig.h"
 
 namespace STIMWALKER_NAMESPACE::devices {
@@ -11,28 +12,26 @@ namespace STIMWALKER_NAMESPACE::devices {
 /// @brief Class to store data
 class Data {
 public:
-  /// @brief Destructor
-  virtual ~Data() = default;
-
-  /// @brief Get the timestamp
-  /// @return The timestamp
-  virtual time_t getTimestamp() const = 0;
-
-  // @brief Get the data
-  /// @return The data
-  virtual const std::vector<double> &getData() const = 0;
+  Data(time_t timestamp, const std::vector<double> &data);
 
   /// @brief Convert the object to JSON
   /// @return The JSON object
-  virtual nlohmann::json serialize() const = 0;
+  nlohmann::json serialize() const;
 
   /// @brief Deserialize the object
   /// @param json The JSON object
-  virtual void deserialize(const nlohmann::json &json) = 0;
+  static Data deserialize(const nlohmann::json &json);
 
-  /// @brief Get a unique_ptr of the current object
-  /// @return A unique_ptr of the current object
-  virtual std::unique_ptr<Data> clone() const = 0;
+  /// @brief Get a copy of the current object
+  /// @return A copy of the current object
+  Data copy() const;
+
+protected:
+  /// @brief The data timestamp
+  DECLARE_PROTECTED_MEMBER(time_t, Timestamp);
+
+  /// @brief The data
+  DECLARE_PROTECTED_MEMBER(std::vector<double>, Data);
 };
 } // namespace STIMWALKER_NAMESPACE::devices
 

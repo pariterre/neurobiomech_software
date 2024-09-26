@@ -4,8 +4,9 @@ project(${MODULE_DEVICES})
 
 # Add the relevant files
 set(SRC_LIST_MODULE
-    ${CMAKE_CURRENT_SOURCE_DIR}/Data/DataCollection.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/Data/CollectorData.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Data/Data.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Data/TimeSeriesData.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Data/DevicesData.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/NidaqDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/DelsysEmgDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Generic/UsbDevice.cpp

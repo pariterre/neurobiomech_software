@@ -1,5 +1,4 @@
 #include "Devices/DelsysEmgDevice.h"
-#include "Devices/Data/CollectorData.h"
 #include "Devices/Generic/Exceptions.h"
 #include <cstring>
 #include <iostream>
