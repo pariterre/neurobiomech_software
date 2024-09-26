@@ -18,8 +18,15 @@ int main() {
     magstim.connect();
     logger.info("Opened port: " + magstim.getPort());
 
+    // Give the system some time
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Get the temperature
+    // magstim.send(MagstimRapidCommands::GET_TEMPERATURE, "");
+
     // Simulate some work
     std::this_thread::sleep_for(std::chrono::milliseconds(1750));
+    logger.info("Sending Hello World");
     magstim.send(MagstimRapidCommands::PRINT, "Hello, world!", true);
 
     std::this_thread::sleep_for(std::chrono::seconds(4));

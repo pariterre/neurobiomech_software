@@ -95,6 +95,7 @@ void UsbDevice::_initialize() {
 
 UsbResponses UsbDevice::_parseCommand(const UsbCommands &command,
                                       const std::any &data) {
+  // TODO Add a flusher for the serial port
   auto &logger = Logger::getInstance();
 
   try {
@@ -104,10 +105,12 @@ UsbResponses UsbDevice::_parseCommand(const UsbCommands &command,
 
       return UsbResponses::OK;
     }
+
   } catch (const std::bad_any_cast &) {
     std::cerr << "The data you provided with the command ("
               << command.toString() << ") is invalid" << std::endl;
     return UsbResponses::NOK;
+
   } catch (const std::exception &e) {
     std::cerr << "Error: " << e.what() << std::endl;
     return UsbResponses::NOK;

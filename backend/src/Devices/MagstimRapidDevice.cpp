@@ -44,11 +44,26 @@ UsbResponses MagstimRapidDevice::_parseCommand(const UsbCommands &command,
   UsbDevice::_parseCommand(command, data);
   auto &logger = Logger::getInstance();
 
+  std::string commandString;
+  std::string response;
+
   try {
     switch (command.getValue()) {
     case MagstimRapidCommands::POKE:
       logger.info("Sent command: " + std::any_cast<std::string>(data));
       break;
+
+    case MagstimRapidCommands::GET_TEMPERATURE:
+      // We do not need to check if the system is armed for this command
+      commandString = "F@";
+      asio::write(*m_SerialPort,
+                  asio::buffer(commandString + _computeCRC(commandString)));
+
+      // Wait for the response (9 bytes)
+      response = std::string(9, '\0');
+      asio::read(*m_SerialPort, asio::buffer(response));
+      std::cout << "Temperature: " << response << std::endl;
+      return UsbResponses::OK;
 
     case MagstimRapidCommands::SET_FAST_COMMUNICATION:
       _setFastCommunication(std::any_cast<bool>(data));
@@ -92,8 +107,6 @@ UsbResponses MagstimRapidDevice::_parseCommand(const UsbCommands &command,
   }
 
   return UsbResponses::COMMAND_NOT_FOUND;
-  // Send a command to the USB device
-  // asio::write(*m_SerialPort, asio::buffer(command));
 }
 
 void MagstimRapidDevice::_keepAlive(const std::chrono::milliseconds &timeout) {
@@ -111,6 +124,17 @@ void MagstimRapidDevice::_keepAlive(const std::chrono::milliseconds &timeout) {
     _parseCommand(MagstimRapidCommands::POKE, std::string("POKE"));
     _keepAlive(m_PokeInterval);
   });
+}
+
+std::string MagstimRapidDevice::_computeCRC(const std::string &data) {
+  // Convert the command string to sum of ASCII/byte values
+  int commandSum = 0;
+  for (const auto &c : data) {
+    commandSum += c;
+  }
+
+  // Convert command sum to binary, then invert and return 8-bit character value
+  return std::string(1, static_cast<char>(~commandSum & 0xff));
 }
 
 void MagstimRapidDevice::_changePokeInterval(

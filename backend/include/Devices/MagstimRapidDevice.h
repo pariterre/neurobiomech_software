@@ -13,8 +13,9 @@ class MagstimRapidCommands : public UsbCommands {
 public:
   static constexpr int POKE = 100;
   static constexpr int SET_FAST_COMMUNICATION = 101;
-  static constexpr int ARM = 102;
-  static constexpr int DISARM = 103;
+  static constexpr int GET_TEMPERATURE = 102;
+  static constexpr int ARM = 103;
+  static constexpr int DISARM = 104;
 
   virtual std::string toString() const override {
     auto value = UsbCommands::toString();
@@ -27,6 +28,8 @@ public:
       return "POKE";
     case SET_FAST_COMMUNICATION:
       return "SET_FAST_COMMUNICATION";
+    case GET_TEMPERATURE:
+      return "GET_TEMPERATURE";
     case ARM:
       return "ARM";
     case DISARM:
@@ -93,6 +96,11 @@ protected:
 
   /// @brief Set a worker thread to keep the device alive
   void _keepAlive(const std::chrono::milliseconds &timeout);
+
+  /// @brief Compute the CRC checksum of the data
+  /// @param data The data to compute the CRC for
+  /// @return The CRC checksum of the data
+  std::string _computeCRC(const std::string &data);
 
   /// @brief Change the interval at which the device is poked
   void _changePokeInterval(std::chrono::milliseconds interval);

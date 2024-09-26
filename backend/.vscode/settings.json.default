@@ -7,7 +7,7 @@
         "-DBUILD_WIP=ON",
         "-DCMAKE_INSTALL_PREFIX={PATH_TO_INSTALL}"
     ],
-    "editor.rulers": [120],
+    "editor.rulers": [80],
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "ms-vscode.cpptools",
     "C_Cpp.clang_format_fallbackStyle": "LLVM",
