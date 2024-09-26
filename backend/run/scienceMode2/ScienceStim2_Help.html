@@ -1,0 +1,158 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD>
+	<META HTTP-EQUIV="CONTENT-TYPE" CONTENT="text/html; charset=windows-1252">
+	<TITLE>RehaStim2 Interface Block for Matlab/Simulink</TITLE>
+	<META NAME="GENERATOR" CONTENT="LibreOffice 3.6  (Windows)">
+	<META NAME="CREATED" CONTENT="0;0">
+	<META NAME="CHANGED" CONTENT="20121120;10161551">
+</HEAD>
+<BODY LANG="en-GB" BGCOLOR="#ffffff" DIR="LTR">
+<P><FONT COLOR="#990000"><FONT SIZE=4><B>RehaStim2 device
+communication block</B></FONT></FONT></P>
+<P>The stimulator interface block is used to control the stimulation
+device RehaStim2 in real-time. This block uses the ScienceMode2
+communication protocol. The RehaStim2 device by <A HREF="http://www.hasomed.de/">HASOMED
+GmbH</A> supports this protocol. 
+</P>
+<P><FONT COLOR="#990000"><!-- H2 --><FONT SIZE=4><B>Connecting the
+Stimulator to the PC</B></FONT></FONT></P>
+<P>The ScienceMode2 protocol expects the stimulator to be connected
+to a PC over a serial port style connection. The RehaStim2 stimulator
+device uses a built-in FTDI controller that manages this serial port
+style connection. Just connect the RehaStim2 via USB A/B connection
+cable to your PC. 
+</P>
+<P>Within a MS Windows operating system the USB port must be
+configured as a virtual communication port (VCP) using the correct
+driver. Please download this driver from <A HREF="http://www.ftdichip.com/Drivers/VCP.htm">Future
+Technology Devices International Ltd</A> and select the FT232BM
+driver from the list associated with the correct platform. 
+</P>
+<P>Once the driver is installed the USB port can be set up and used
+as normal serial port. 
+</P>
+<P><FONT COLOR="#990000"><!-- H2 --><FONT SIZE=4><B>Inputs</B></FONT></FONT></P>
+<DL>
+	<DT><B>Current:</B> 
+	</DT><DD>
+	<BR>
+	</DD><DD>
+	This input is a vector of values (e.g. [10 30 30 10]) representing
+	the current amplitudes for each channel specified in the block
+	parameters (<B>Channels to be Stimulated)</B>. Thus if the specified
+	channels are [1 2 5 8] then the vector dimension must be 4 in this
+	case. 
+	</DD><DT>
+	<BR>
+	</DT><DT>
+	<B>Pulsewidth:</B> 
+	</DT><DD>
+	<BR>
+	</DD><DD>
+	This input is a vector of values (e.g. [200 300 100 300])
+	representing the pulse widths for each channel specified in the
+	block parameters (<B>Channels to be Stimulated)</B>. 
+	</DD><DD>
+	<BR>
+	</DD><DT>
+	<B>Mode:</B> 
+	</DT><DD>
+	<BR>
+	</DD><DL>
+		<DD STYLE="margin-left: 0.97cm; margin-bottom: 0.5cm">
+		This input is a vector of values (e.g. [0 1 2 0]) representing the
+		mode for each channel specified in the block parameters (<B>Channels
+		to be Stimulated)</B>. 
+		</DD></DL>
+</DL>
+<P>
+<FONT COLOR="#990000"><!-- H2 --><FONT SIZE=4><B>Parameters</B></FONT></FONT></P>
+<DL>
+	<DT><B>Sample Time:</B> 
+	</DT><DD>
+	<BR>
+	</DD><DD>
+	The sample time of the block (specifies the update period for
+	stimulation parameters; defines the main pulse interval for the One
+	Shot Channel List Mode) 
+	</DD><DD>
+	<BR>
+	</DD><DT STYLE="margin-bottom: 0.5cm">
+	<B>Serial Port:</B> 
+	</DT></DL>
+<UL>
+	<LI><DD>
+	sciencemode2 connects to /dev/sciencemode2 on Linux systems. 
+	</DD><LI><DD>
+	ttyUSB0 connects to /dev/ttyUSB0 on Linux systems. 
+	</DD><LI><DD>
+	ttyUSB1 connects to /dev/ttyUSB1 on Linux systems. 
+	</DD><LI><DD>
+	ttyUSB2 connects to /dev/ttyUSB2 on Linux systems. 
+	</DD><LI><DD>
+	ttyUSB3 connects to /dev/ttyUSB3 on Linux systems. 
+	</DD><LI><DD>
+	COM1 connects to COM1 on MS Windows systems. 
+	</DD><LI><DD>
+	COM2 connects to COM2 on MS Windows systems. 
+	</DD><LI><DD>
+	COM3 connects to COM3 on MS Windows systems. 
+	</DD><LI><DD>
+	COM4 connects to COM4 on MS Windows systems. 
+	</DD><DD>
+	&hellip;</DD><LI><DD STYLE="margin-bottom: 0.5cm">
+	COM8 connects to COM8 on windows systems.</DD></UL>
+<DL>
+	<DT STYLE="margin-bottom: 0.5cm"><B>Mode (if enabled):</B> 
+	</DT></DL>
+<UL>
+	<LI><DD>
+	0 is for single stimulation pulses 
+	</DD><LI><DD>
+	1 is for doublet stimulation pulses 
+	</DD><LI><DD STYLE="margin-bottom: 0.5cm">
+	2 is for triplet stimulation pulses 
+	</DD></UL>
+<DL>
+	<DT><B>Channels to be Stimulated:</B> 
+	</DT><DD>
+	<BR>
+	</DD><DD>
+	A vector of channel numbers (1..8) to be used for stimulation (e.g.
+	[1 2 5 8]) 
+	</DD><DT>
+	<BR>
+	</DT><DT>
+	<B>Main Pulse Interval:</B> 
+	</DT><DD>
+	<BR>
+	</DD><DD>
+	The stimulation period (set this to 0 for One Shot Channel List
+	Mode) 
+	</DD><DT>
+	<BR>
+	</DT><DT>
+	<B>Inter Pulse Interval:</B> 
+	</DT><DD>
+	<BR>
+	</DD><DD>
+	Defines the time between two pulse groups if doublets or triplets
+	are used. 
+	</DD><DT>
+	<BR>
+	</DT><DT>
+	<B>Low Frequency Channels:</B> 
+	</DT><DD>
+	<BR>
+	</DD><DD STYLE="margin-bottom: 0.5cm">
+	A sub-set of the channels selected for low frequency stimulation 
+	</DD><DT STYLE="margin-bottom: 0.5cm">
+	<B>Low Frequency Factor:</B> 
+	</DT></DL>
+<P STYLE="margin-left: 1.04cm; margin-bottom: 0cm">
+Defines how many times the stimulation is skipped for the channels
+specified in low <BR>frequency channels. (0 = no skip, 1 = skip once
+etc.)</P>
+</BODY>
+</HTML>

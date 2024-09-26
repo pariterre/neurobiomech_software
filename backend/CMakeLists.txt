@@ -10,8 +10,8 @@ option(BUILD_DOC
     "Build documentation" OFF)
 option(BUILD_TESTS 
     "Build all tests." OFF)
-option(BUILD_WIP
-    "Build all work in progress." OFF)
+option(BUILD_BINARIES
+    "Build all binary examples." OFF)
 
 # Set a default build type to 'Release' if none was specified
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -28,30 +28,12 @@ set (STIMWALKER_NAME ${PROJECT_NAME})
 find_package(nlohmann_json 3.2.0 CONFIG REQUIRED)
 find_package(Asio REQUIRED)
 
-# Prepare add library
-set(SRC_LIST "src/main.cpp")
-add_executable(${STIMWALKER_NAME} ${SRC_LIST})
-set_target_properties(${STIMWALKER_NAME} PROPERTIES DEBUG_POSTFIX "_debug")
-
 # Compilation directories
 set(${STIMWALKER_NAME}_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
-
-# Add headers
-# Include directories when building the library:
-target_include_directories(${STIMWALKER_NAME} PUBLIC 
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    $<INSTALL_INTERFACE:include>
-    ${Asio_INCLUDE_DIR}
-)
 
 # Add linker
 add_subdirectory("src/Utils")
 add_subdirectory("src/Devices")
-target_link_libraries(${STIMWALKER_NAME} PRIVATE
-    ${MODULE_UTILS}
-    ${MODULE_DEVICES}
-    nlohmann_json::nlohmann_json
-)
 
 # Doc
 if (BUILD_DOC)
@@ -63,6 +45,6 @@ if (BUILD_TESTS)
     add_subdirectory("test")
 endif()
 
-if (BUILD_WIP)
-    add_subdirectory("WIP")
+if (BUILD_BINARIES)
+    add_subdirectory("run")
 endif()

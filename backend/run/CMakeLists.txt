@@ -9,7 +9,8 @@ set(SOURCE_FILES
     main_emg_delsys_timings.cpp  
     main_emg_delsys.cpp 
     main_rehastim.cpp
-    usb_connexion.cpp
+    main_lokomat.cpp
+    main_magstim.cpp
 )
 foreach(SOURCE_FILE ${SOURCE_FILES})
     get_filename_component(EXECUTABLE_NAME ${SOURCE_FILE} NAME_WE)
