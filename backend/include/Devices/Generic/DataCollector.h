@@ -5,12 +5,12 @@
 #include <functional>
 #include <vector>
 
+#include "Devices/Data/DataPoint.h"
 #include "Devices/Generic/Device.h"
 #include "Utils/CppMacros.h"
 #include "Utils/GenericCallback.h"
 
 namespace STIMWALKER_NAMESPACE::devices {
-class DataPoint;
 
 /// @brief Abstract class for data collectors
 class DataCollector {
@@ -22,11 +22,7 @@ public:
         m_IsRecording(false) {}
 
   /// @brief Destructor
-  virtual ~DataCollector() {
-    if (m_IsRecording) {
-      stopRecording();
-    }
-  }
+  virtual ~DataCollector() = default;
 
   /// @brief Start collecting data
   virtual void startRecording() = 0;
@@ -50,7 +46,7 @@ protected:
 public:
   /// @brief Set the callback function to call when data is collected
   /// @param callback The callback function
-  GenericCallback<const DataPoint &> OnNewData;
+  GenericCallback<DataPoint> OnNewData;
 
 protected:
   /// @brief Method that is internally called when new data are ready. It is

@@ -22,12 +22,12 @@ TcpDevice::TcpDevice(const TcpDevice &other)
 
 std::vector<char> TcpDevice::read(size_t bufferSize) {
   size_t cursor = 0;
-  std::vector<char> packet(bufferSize, 0);
+  std::vector<char> packets(bufferSize, 0);
 
   while (cursor < bufferSize) {
     try {
       int received = static_cast<int>(m_TcpSocket->receive(
-          asio::buffer(packet.data() + cursor, bufferSize - cursor)));
+          asio::buffer(packets.data() + cursor, bufferSize - cursor)));
       cursor += received;
     } catch (std::exception &) {
       disconnect();
@@ -35,7 +35,7 @@ std::vector<char> TcpDevice::read(size_t bufferSize) {
     }
   }
 
-  return packet;
+  return packets;
 }
 
 void TcpDevice::disconnect() {

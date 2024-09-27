@@ -7,10 +7,10 @@
 #include <nlohmann/json.hpp>
 #include <vector>
 
+#include "Devices/Data/DataPoint.h"
 #include "Utils/CppMacros.h"
 
 namespace STIMWALKER_NAMESPACE::devices {
-class DataPoint;
 
 /// @brief Class to store data
 class TimeSeries {

@@ -86,24 +86,24 @@ protected:
 protected:
   /// @brief Connect to the ubs device. This is expected to run on an async
   /// thread
-  void _initialize() override;
+  void handleConnect() override;
 
   /// @brief Parse a command received from the user and send to the device
   /// @param command The command to parse
   /// @param data The data to parse
-  UsbResponses _parseCommand(const UsbCommands &command,
-                             const std::any &data) override;
+  DeviceResponses parseCommand(const DeviceCommands &command,
+                               const std::any &data) override;
 
   /// @brief Set a worker thread to keep the device alive
-  void _keepAlive(const std::chrono::milliseconds &timeout);
+  void keepAlive(const std::chrono::milliseconds &timeout);
 
   /// @brief Compute the CRC checksum of the data
   /// @param data The data to compute the CRC for
   /// @return The CRC checksum of the data
-  std::string _computeCRC(const std::string &data);
+  std::string computeCRC(const std::string &data);
 
   /// @brief Change the interval at which the device is poked
-  void _changePokeInterval(std::chrono::milliseconds interval);
+  void changePokeInterval(std::chrono::milliseconds interval);
 };
 
 class MagstimRapidDeviceMock : public MagstimRapidDevice {
@@ -111,9 +111,6 @@ public:
   MagstimRapidDeviceMock(const std::string &port);
 
   static MagstimRapidDeviceMock FindMagstimDevice();
-
-protected:
-  void _connectSerialPort() override;
 };
 
 } // namespace STIMWALKER_NAMESPACE::devices

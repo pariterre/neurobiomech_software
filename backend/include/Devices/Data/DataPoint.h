@@ -12,6 +12,13 @@ namespace STIMWALKER_NAMESPACE::devices {
 /// @brief Class to store data
 class DataPoint {
 public:
+  /// @brief Constructor. Since timestamp is not provided, it is set to -1
+  /// @param data The data to store
+  DataPoint(const std::vector<double> &data);
+
+  /// @brief Constructor
+  /// @param timestamp The timestamp of the data
+  /// @param data The data to store
   DataPoint(time_t timestamp, const std::vector<double> &data);
 
   /// @brief Convert the object to JSON

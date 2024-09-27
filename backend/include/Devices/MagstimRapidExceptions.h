@@ -1,20 +1,20 @@
 #ifndef __STIMWALKER_DEVICES_MAGSTIM_RAPID_EXCEPTIONS_H__
 #define __STIMWALKER_DEVICES_MAGSTIM_RAPID_EXCEPTIONS_H__
 
-#include "Generic/UsbExceptions.h"
+#include "Generic/Exceptions.h"
 
 namespace STIMWALKER_NAMESPACE ::devices {
 
-class MagsimRapidAlreadyArmedException : public UsbGenericException {
+class MagsimRapidAlreadyArmedException : public SerialPortGenericException {
 public:
   MagsimRapidAlreadyArmedException(const std::string &message)
-      : UsbGenericException(message) {}
+      : SerialPortGenericException(message) {}
 };
 
-class MagsimRapidNotArmedException : public UsbGenericException {
+class MagsimRapidNotArmedException : public SerialPortGenericException {
 public:
   MagsimRapidNotArmedException(const std::string &message)
-      : UsbGenericException(message) {}
+      : SerialPortGenericException(message) {}
 };
 
 } // namespace STIMWALKER_NAMESPACE::devices

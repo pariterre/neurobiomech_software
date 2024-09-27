@@ -2,6 +2,9 @@
 
 using namespace STIMWALKER_NAMESPACE::devices;
 
+DataPoint::DataPoint(const std::vector<double> &data)
+    : m_Timestamp(-1), m_Data(data) {}
+
 DataPoint::DataPoint(time_t timestamp, const std::vector<double> &data)
     : m_Timestamp(timestamp), m_Data(data) {}
 

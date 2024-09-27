@@ -4,6 +4,7 @@
 #include <iostream>
 #include <stdexcept>
 
+#include "Devices/Data/DataPoint.h"
 #include "Devices/Generic/Exceptions.h"
 
 using namespace STIMWALKER_NAMESPACE::devices;
@@ -16,6 +17,16 @@ DelsysEmgDevice::DelsysEmgDevice(std::vector<size_t> channelIndices,
       m_DataDevice(TcpDevice(host, dataPort)),
       m_TerminaisonCharacters("\r\n\r\n"), m_BytesPerChannel(4), AsyncDevice(),
       DataCollector(channelIndices.size(), frameRate) {}
+
+DelsysEmgDevice::~DelsysEmgDevice() {
+  if (m_IsRecording) {
+    stopRecording();
+  }
+
+  if (m_IsConnected) {
+    disconnect();
+  }
+}
 
 void DelsysEmgDevice::disconnect() {
   if (!m_IsConnected) {
@@ -34,7 +45,7 @@ void DelsysEmgDevice::startRecording() {
     throw DeviceIsRecordingException("The device is already recording");
   }
 
-  sendCommand("START");
+  m_CommandDevice.send(DelsysCommands::START);
   m_IsRecording = true;
 }
 
@@ -43,7 +54,7 @@ void DelsysEmgDevice::stopRecording() {
     throw DeviceIsNotRecordingException("The device is not recording");
   }
 
-  sendCommand("STOP");
+  m_CommandDevice.send(DelsysCommands::STOP);
 
   m_IsRecording = false;
 }
@@ -60,15 +71,21 @@ void DelsysEmgDevice::handleConnect() {
   m_IsConnected = true;
 }
 
-void DelsysEmgDevice::parseCommand(const std::string &command) {
-  // TODO: Change the input string to enum
-  m_CommandDevice.send(
-      asio::buffer((command + m_TerminaisonCharacters).c_str()));
-  char[128] response;
-  m_CommandDevice.receive(asio::buffer(response));
-  if (std::string(response) != "OK") {
-    throw std::runtime_error("Command failed: " + command);
+DeviceResponses DelsysEmgDevice::parseCommand(const DeviceCommands &command,
+                                              const std::any &data) {
+
+  std::string fullCommand(command.toString() + m_TerminaisonCharacters);
+  m_CommandDevice.send(command, data);
+
+  // Response is exactly 128 bytes long
+  std::vector<char> response = m_CommandDevice.read(128);
+
+  // Check if the response is not OK
+  if (std::strncmp(response.data(), "OK", 2) != 0) {
+    throw std::runtime_error("Command failed: " + command.toString());
   }
+
+  return DeviceResponses::OK;
 }
 
 void DelsysEmgDevice::HandleNewData(const DataPoint &data) {
@@ -79,30 +96,20 @@ size_t DelsysEmgDevice::bufferSize() const {
   return m_DataChannelCount * m_BytesPerChannel;
 }
 
-std::vector<float> DelsysEmgDevice::read(size_t bufferSize) {
+DataPoint DelsysEmgDevice::read() {
+  // The raw data are supposed to be a single vector char of size
+  // timeCount x channelCount x bytesPerChannel. We need to reshape it
+  // to a timeCount x channelCount matrix of floats.
+  std::vector<char> raw(m_DataDevice.read(bufferSize()));
 
-  std::vector<char> out = m_DataDevice.read(bufferSize);
-
-  std::vector<float> data(bufferSize / m_BytesPerChannel);
-  std::memcpy(data.data(), packet.data(), bufferSize);
-
-  std::vector<std::vector<float>> reshaped_data(
-      total_channels_, std::vector<float>(num_samples));
-  for (int i = 0; i < num_samples; ++i) {
-    for (int j = 0; j < total_channels_; ++j) {
-      reshaped_data[j][i] = data[i * total_channels_ + j];
-    }
+  std::vector<double> data(m_DataChannelCount);
+  for (int i = 0; i < m_DataChannelCount; ++i) {
+    data[i] = *reinterpret_cast<float *>(raw.data() + i * m_BytesPerChannel);
   }
+  DataPoint dataPoint(data);
 
-  if (is_recording_) {
-    for (int i = 0; i < num_samples; ++i) {
-      for (int j = 0; j < total_channels_; ++j) {
-        recording_file_ << reshaped_data[j][i] << ",";
-      }
-      recording_file_ << "\n";
-    }
-    recording_file_.flush();
+  if (m_IsRecording) {
+    OnNewData.notifyListeners(dataPoint);
   }
-
-  return reshaped_data;
+  return dataPoint;
 }

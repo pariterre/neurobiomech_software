@@ -6,110 +6,58 @@
 #include <mutex>
 #include <thread>
 
-#include "Devices/Generic/Collector.h"
+#include "Devices/Generic/DataCollector.h"
 #include "Devices/Generic/Device.h"
 #include "stimwalkerConfig.h"
 
 namespace STIMWALKER_NAMESPACE::devices {
 
 /// @brief Abstract class for devices
-class NidaqDevice : public Device, public Collector {
+class NidaqDevice : public Device, public DataCollector {
 
 public:
   /// @brief Constructor
-  /// @param nbChannels The number of channels
+  /// @param channelCount The number of channels
   /// @param frameRate The frame rate
-  NidaqDevice(int nbChannels, int frameRate);
+  NidaqDevice(size_t channelCount, size_t frameRate);
 
   // Delete copy constructor and assignment operator, this class cannot be
   // copied because of the mutex member
   NidaqDevice(const NidaqDevice &) = delete;
   NidaqDevice &operator=(const NidaqDevice &) = delete;
 
-  virtual ~NidaqDevice();
-
-  int getNbChannels() const override;
-
-  int getFrameRate() const override;
-
-  bool getIsConnected() const override;
+  ~NidaqDevice();
 
   void connect() override;
-
-  /// @brief Connect the device, this method is called by connect and can be
-  /// overriden by a mock
-  virtual void connectInternal();
-
   void disconnect() override;
-
-  /// @brief Disconnect the device, this method is called by disconnect and can
-  /// be overriden by a mock
-  virtual void disconnectInternal();
-
-  void dispose() override;
-
-  bool isRecording() const override;
-
   void startRecording() override;
-
-  /// @brief Start recording the data, this method is called by startRecording
-  /// and can be overriden by a mock
-  virtual void startRecordingInternal();
-
   void stopRecording() override;
-
-  /// @brief Stop recording the data, this method is called by stopRecording and
-  /// can be overriden by a mock
-  virtual void stopRecordingInternal();
-
-  int onNewData(
-      std::function<void(const CollectorData &newData)> callback) override;
-
-  void removeListener(int listenerId) override;
-
-  std::vector<CollectorData> getData() const override;
-
-  CollectorData getData(int index) const override;
 
 protected:
   /// @brief Notify the listeners that new data has been collected
-  void notifyListeners(const CollectorData &newData);
-
-  bool m_isConnected; ///< Is the device connected
-  bool m_isRecording =
-      false; ///< Is the device currently recording (thread safe)
-
-  int m_nbChannels; ///< Number of channels of the device
-  int m_frameRate;  ///< Frame rate of the device
-
-  std::vector<CollectorData> m_data; ///< Data collected by the device
-  std::map<int, std::function<void(const CollectorData &newData)>>
-      m_listeners; ///< Listeners for the data collected
-
-  // Thread safe information while recording
-  std::thread m_recordingThread; ///< Thread to simulate the recording
-  std::mutex m_recordingMutex;   ///< Mutex to protect the recording state
+  void HandleNewData(const DataPoint &data) override;
 };
 
-class NidaqDeviceMock : public NidaqDevice {
-public:
-  NidaqDeviceMock(int nbChannels, int frameRate);
+// // TODO Reimplement the mocker
+// class NidaqDeviceMock : public NidaqDevice {
+// public:
+//   NidaqDeviceMock(int channelCount, int frameRate);
 
-  // Delete copy constructor and assignment operator, this class cannot be
-  // copied because of the mutex member
-  NidaqDeviceMock(const NidaqDeviceMock &) = delete;
-  NidaqDeviceMock &operator=(const NidaqDeviceMock &) = delete;
+//   // Delete copy constructor and assignment operator, this class cannot be
+//   // copied because of the mutex member
+//   NidaqDeviceMock(const NidaqDeviceMock &) = delete;
+//   NidaqDeviceMock &operator=(const NidaqDeviceMock &) = delete;
 
-  void startRecordingInternal() override;
+//   void startRecording() override;
+//   void stopRecording() override;
 
-  void stopRecordingInternal() override;
+// protected:
+//   /// @brief Simulate the recording
+//   void generateData();
 
-protected:
-  /// @brief Simulate the recording
-  void generateData();
-  bool m_generateData =
-      false; ///< Should the mock continue generating data (thread safe)
-};
+//   ///< Should the mock continue generating data (thread safe)
+//   bool m_generateData = false;
+// };
 
 } // namespace STIMWALKER_NAMESPACE::devices
 

@@ -20,7 +20,7 @@ MagstimRapidDevice MagstimRapidDevice::FindMagstimDevice() {
       return MagstimRapidDevice(device.getPort());
     }
   }
-  throw UsbDeviceNotFoundException("MagstimRapid device not found");
+  throw SerialPortDeviceNotFoundException("MagstimRapid device not found");
 }
 
 MagstimRapidDevice::MagstimRapidDevice(const std::string &port)
@@ -29,19 +29,18 @@ MagstimRapidDevice::MagstimRapidDevice(const std::string &port)
       m_PokeInterval(std::chrono::milliseconds(5000)),
       UsbDevice(port, "067B", "2303") {}
 
-void MagstimRapidDevice::_initialize() {
-  UsbDevice::_initialize();
+void MagstimRapidDevice::handleConnect() {
 
   // Add a keep-alive timer
-  m_KeepAliveTimer = std::make_unique<asio::steady_timer>(*m_Context);
+  m_KeepAliveTimer = std::make_unique<asio::steady_timer>(m_AsyncContext);
   m_PokeInterval = std::chrono::milliseconds(1000);
-  _keepAlive(m_PokeInterval);
+  keepAlive(m_PokeInterval);
 }
 
-UsbResponses MagstimRapidDevice::_parseCommand(const UsbCommands &command,
-                                               const std::any &data) {
+DeviceResponses MagstimRapidDevice::parseCommand(const DeviceCommands &command,
+                                                 const std::any &data) {
   // First call the parent class to handle the common commands
-  UsbDevice::_parseCommand(command, data);
+  UsbDevice::parseCommand(command, data);
   auto &logger = Logger::getInstance();
 
   std::string commandString;
@@ -57,16 +56,16 @@ UsbResponses MagstimRapidDevice::_parseCommand(const UsbCommands &command,
       // We do not need to check if the system is armed for this command
       commandString = "F@";
       asio::write(*m_SerialPort,
-                  asio::buffer(commandString + _computeCRC(commandString)));
+                  asio::buffer(commandString + computeCRC(commandString)));
 
       // Wait for the response (9 bytes)
       response = std::string(9, '\0');
       asio::read(*m_SerialPort, asio::buffer(response));
       std::cout << "Temperature: " << response << std::endl;
-      return UsbResponses::OK;
+      return DeviceResponses::OK;
 
     case MagstimRapidCommands::SET_FAST_COMMUNICATION:
-      _setFastCommunication(std::any_cast<bool>(data));
+      setFastCommunication(std::any_cast<bool>(data));
       break;
 
     case MagstimRapidCommands::ARM:
@@ -75,7 +74,7 @@ UsbResponses MagstimRapidDevice::_parseCommand(const UsbCommands &command,
       }
       m_IsArmed = command.getValue() == MagstimRapidCommands::ARM;
 
-      _changePokeInterval(std::chrono::milliseconds(
+      changePokeInterval(std::chrono::milliseconds(
           m_IsArmed ? m_ArmedPokeInterval : m_DisarmedPokeInterval));
 
       logger.info(std::string(m_IsArmed ? "Armed" : "Disarmed") +
@@ -91,7 +90,7 @@ UsbResponses MagstimRapidDevice::_parseCommand(const UsbCommands &command,
 
       m_IsArmed = command.getValue() == MagstimRapidCommands::ARM;
 
-      _changePokeInterval(std::chrono::milliseconds(
+      changePokeInterval(std::chrono::milliseconds(
           m_IsArmed ? m_ArmedPokeInterval : m_DisarmedPokeInterval));
 
       logger.info(std::string(m_IsArmed ? "Armed" : "Disarmed") +
@@ -106,10 +105,10 @@ UsbResponses MagstimRapidDevice::_parseCommand(const UsbCommands &command,
     logger.fatal("Error: " + std::string(e.what()));
   }
 
-  return UsbResponses::COMMAND_NOT_FOUND;
+  return DeviceResponses::COMMAND_NOT_FOUND;
 }
 
-void MagstimRapidDevice::_keepAlive(const std::chrono::milliseconds &timeout) {
+void MagstimRapidDevice::keepAlive(const std::chrono::milliseconds &timeout) {
   // Set a 5-second timer
   m_KeepAliveTimer->expires_after(timeout);
 
@@ -120,13 +119,13 @@ void MagstimRapidDevice::_keepAlive(const std::chrono::milliseconds &timeout) {
     if (ec)
       return;
     // Otherwise, send a PING command to the device
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    _parseCommand(MagstimRapidCommands::POKE, std::string("POKE"));
-    _keepAlive(m_PokeInterval);
+    std::lock_guard<std::mutex> lock(m_AsyncMutex);
+    parseCommand(MagstimRapidCommands::POKE, std::string("POKE"));
+    keepAlive(m_PokeInterval);
   });
 }
 
-std::string MagstimRapidDevice::_computeCRC(const std::string &data) {
+std::string MagstimRapidDevice::computeCRC(const std::string &data) {
   // Convert the command string to sum of ASCII/byte values
   int commandSum = 0;
   for (const auto &c : data) {
@@ -137,7 +136,7 @@ std::string MagstimRapidDevice::_computeCRC(const std::string &data) {
   return std::string(1, static_cast<char>(~commandSum & 0xff));
 }
 
-void MagstimRapidDevice::_changePokeInterval(
+void MagstimRapidDevice::changePokeInterval(
     std::chrono::milliseconds interval) {
   // Stop the timer
 
@@ -152,7 +151,7 @@ void MagstimRapidDevice::_changePokeInterval(
 
   // Send a keep alive command with the remaining time
   m_KeepAliveTimer->cancel();
-  _keepAlive(interval - elapsedTime);
+  keepAlive(interval - elapsedTime);
 }
 
 // --- MOCKER SECTION --- //
@@ -161,8 +160,4 @@ MagstimRapidDeviceMock::MagstimRapidDeviceMock(const std::string &port)
 
 MagstimRapidDeviceMock MagstimRapidDeviceMock::FindMagstimDevice() {
   return MagstimRapidDeviceMock("MOCK");
-}
-
-void MagstimRapidDeviceMock::_connectSerialPort() {
-  // Do nothing
 }

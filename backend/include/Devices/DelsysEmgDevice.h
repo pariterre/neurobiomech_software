@@ -13,6 +13,27 @@
 #include "Utils/CppMacros.h"
 
 namespace STIMWALKER_NAMESPACE::devices {
+class DataPoint;
+
+class DelsysCommands : public DeviceCommands {
+public:
+  static constexpr int START = 0;
+  static constexpr int STOP = 1;
+
+  DelsysCommands(int value) : DeviceCommands(value) {}
+
+  virtual std::string toString() const {
+    switch (m_Value) {
+    case START:
+      return "START";
+    case STOP:
+      return "STOP";
+    default:
+      return "UNKNOWN";
+    }
+  }
+};
+
 class DelsysEmgDevice : public AsyncDevice, public DataCollector {
 public:
   DelsysEmgDevice(std::vector<size_t> channelIndices, size_t frameRate,
@@ -30,7 +51,7 @@ public:
   /// @brief Read the data from the device
   /// @param bufferSize The size of the buffer to read
   /// @return One frame of data read from the device
-  std::vector<float> read(size_t bufferSize);
+  DataPoint read();
 
   /// DATA RELATED METHODS
 protected:
@@ -47,7 +68,8 @@ protected:
 
   /// @brief Send a command to the [m_CommandDevice]
   /// @param command The command to send
-  void sendCommand(const std::string &command);
+  DeviceResponses parseCommand(const DeviceCommands &command,
+                               const std::any &data) override;
 
   virtual void HandleNewData(const DataPoint &data) override;
 
@@ -59,6 +81,8 @@ protected:
   /// @brief The length of the data buffer for each channel
   DECLARE_PROTECTED_MEMBER_NOGET(size_t, BytesPerChannel)
 
+  /// @brief The data buffer
+  /// @return The data buffer
   size_t bufferSize() const;
 };
 } // namespace STIMWALKER_NAMESPACE::devices

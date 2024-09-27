@@ -1,170 +1,109 @@
 #include "Devices/NidaqDevice.h"
 
-#include "Devices/Data/CollectorData.h"
 #include "Devices/Generic/Exceptions.h"
 
 #include <iostream>
 using namespace STIMWALKER_NAMESPACE::devices;
 
-NidaqDevice::NidaqDevice(int nbChannels, int frameRate)
-    : m_nbChannels(nbChannels), m_frameRate(frameRate), m_isConnected(false),
-      m_isRecording(false) {}
+NidaqDevice::NidaqDevice(size_t channelCount, size_t frameRate)
+    : Device(), DataCollector(channelCount, frameRate) {}
 
-NidaqDevice::~NidaqDevice() { dispose(); }
+NidaqDevice::~NidaqDevice() {
+  if (m_IsRecording) {
+    stopRecording();
+  }
 
-int NidaqDevice::getNbChannels() const { return m_nbChannels; }
-
-int NidaqDevice::getFrameRate() const { return m_frameRate; }
-
-bool NidaqDevice::getIsConnected() const { return m_isConnected; }
+  if (m_IsConnected) {
+    disconnect();
+  }
+}
 
 void NidaqDevice::connect() {
-  if (getIsConnected()) {
+  if (m_IsConnected) {
     throw DeviceIsConnectedException("The device is already connected");
   }
 
-  connectInternal();
+  // TODO Implement the connection to the device
 
-  m_isConnected = true;
-}
-
-void NidaqDevice::connectInternal() {
-  // TODO: Implement this method
+  m_IsConnected = true;
 }
 
 void NidaqDevice::disconnect() {
-  if (isRecording()) {
-    throw DeviceIsRecordingException("The device is currently recording");
-  }
-
-  if (!getIsConnected()) {
+  if (!m_IsConnected) {
     throw DeviceIsNotConnectedException("The device is not connected");
   }
 
-  disconnectInternal();
-
-  m_isConnected = false;
-}
-
-void NidaqDevice::disconnectInternal() {
-  // TODO: Implement this method
-}
-
-void NidaqDevice::dispose() {
-  try {
+  if (m_IsRecording) {
     stopRecording();
-  } catch (const DeviceIsNotRecordingException &) {
-    // Do nothing
   }
 
-  try {
-    disconnect();
-  } catch (const DeviceIsNotConnectedException &) {
-    // Do nothing
-  }
+  // TODO Implement the disconnection from the device
+
+  m_IsConnected = false;
 }
-
-bool NidaqDevice::isRecording() const { return m_isRecording; }
 
 void NidaqDevice::startRecording() {
-  if (!getIsConnected()) {
+  if (!m_IsConnected) {
     throw DeviceIsNotConnectedException("The device is not connected");
   }
-  if (isRecording()) {
+  if (m_IsRecording) {
     throw DeviceIsRecordingException("The device is already recording");
   }
 
-  startRecordingInternal();
+  // TODO Implement the start recording
 
-  std::lock_guard<std::mutex> lock(m_recordingMutex);
-  m_isRecording = true;
-}
-
-void NidaqDevice::startRecordingInternal() {
-  // TODO: Implement this method
+  m_IsRecording = true;
 }
 
 void NidaqDevice::stopRecording() {
-  if (!isRecording()) {
+  if (!m_IsRecording) {
     throw DeviceIsNotRecordingException("The device is not recording");
   }
 
-  stopRecordingInternal();
+  // TODO Implement the stop recording
 
-  std::lock_guard<std::mutex> lock(m_recordingMutex);
-  m_isRecording = false;
+  m_IsRecording = false;
 }
 
-void NidaqDevice::stopRecordingInternal() {
-  // TODO: Implement this method
-}
+// // Mock implementation
+// NidaqDeviceMock::NidaqDeviceMock(int nbChannels, int frameRate)
+//     : NidaqDevice(nbChannels, frameRate) {}
 
-int NidaqDevice::onNewData(
-    std::function<void(const CollectorData &newData)> callback) {
-  static int listenerId = 0;
+// void NidaqDeviceMock::startRecording() {
 
-  std::lock_guard<std::mutex> lock(m_recordingMutex);
-  m_listeners[listenerId] =
-      std::function<void(const CollectorData &)>(callback);
+//   {
+//     std::lock_guard<std::mutex> lock(m_recordingMutex);
+//     m_generateData = true;
+//   }
 
-  return listenerId++;
-}
+//   m_recordingThread = std::thread(&NidaqDeviceMock::generateData, this);
+// }
 
-void NidaqDevice::removeListener(int listenerId) {
-  std::lock_guard<std::mutex> lock(m_recordingMutex);
-  m_listeners.erase(listenerId);
-}
+// void NidaqDeviceMock::stopRecordingInternal() {
+//   {
+//     std::lock_guard<std::mutex> lock(m_recordingMutex);
+//     m_isRecording = false;
+//     m_generateData = false;
+//   }
+//   if (m_recordingThread.joinable())
+//     m_recordingThread.join();
+// }
 
-std::vector<CollectorData> NidaqDevice::getData() const { return m_data; }
+// void NidaqDeviceMock::generateData() {
+//   while (true) {
+//     {
+//       std::lock_guard<std::mutex> lock(m_recordingMutex);
+//       if (!m_generateData)
+//         break;
+//     }
 
-CollectorData NidaqDevice::getData(int index) const { return m_data[index]; }
+//     // Generate data
+//     auto now =
+//         std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+//     auto data = std::vector<double>(getNbChannels(), 0.0);
+//     CollectorData newData(now, data);
+//     notifyListeners(newData);
 
-void NidaqDevice::notifyListeners(const CollectorData &newData) {
-  std::lock_guard<std::mutex> lock(m_recordingMutex);
-  for (const auto &listener : m_listeners) {
-    listener.second(newData);
-  }
-}
-
-// Mock implementation
-NidaqDeviceMock::NidaqDeviceMock(int nbChannels, int frameRate)
-    : NidaqDevice(nbChannels, frameRate) {}
-
-void NidaqDeviceMock::startRecordingInternal() {
-
-  {
-    std::lock_guard<std::mutex> lock(m_recordingMutex);
-    m_generateData = true;
-  }
-
-  m_recordingThread = std::thread(&NidaqDeviceMock::generateData, this);
-}
-
-void NidaqDeviceMock::stopRecordingInternal() {
-  {
-    std::lock_guard<std::mutex> lock(m_recordingMutex);
-    m_isRecording = false;
-    m_generateData = false;
-  }
-  if (m_recordingThread.joinable())
-    m_recordingThread.join();
-}
-
-void NidaqDeviceMock::generateData() {
-  while (true) {
-    {
-      std::lock_guard<std::mutex> lock(m_recordingMutex);
-      if (!m_generateData)
-        break;
-    }
-
-    // Generate data
-    auto now =
-        std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    auto data = std::vector<double>(getNbChannels(), 0.0);
-    CollectorData newData(now, data);
-    notifyListeners(newData);
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(1 / m_frameRate));
-  }
-}
+//     std::this_thread::sleep_for(std::chrono::milliseconds(1 / m_frameRate));
+//   }
+// }

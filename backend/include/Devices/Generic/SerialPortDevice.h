@@ -43,9 +43,6 @@ protected:
   /// @brief Connect to the serial port device
   virtual void handleConnect() override;
 
-  /// @brief Connect to the serial port
-  virtual void connectSerialPort();
-
   /// @brief Set the "RTS" mode of the communication. [isFast] to true is
   /// faster but less reliable.
   /// @param isFast True to enable fast mode, false to disable it

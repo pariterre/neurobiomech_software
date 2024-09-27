@@ -18,7 +18,7 @@ namespace STIMWALKER_NAMESPACE::devices {
 class AsyncDevice : public Device {
 public:
   /// Constructors
-  AsyncDevice();
+  AsyncDevice() = default;
   ~AsyncDevice();
 
 protected:
@@ -50,16 +50,16 @@ public:
   /// @param ignoreResponse True to ignore the response, false otherwise
   DeviceResponses send(const DeviceCommands &command, const std::any &data,
                        bool ignoreResponse = false);
+  DeviceResponses send(const DeviceCommands &command,
+                       bool ignoreResponse = false) {
+    return send(command, nullptr, ignoreResponse);
+  }
   DeviceResponses send(const DeviceCommands &command, const char *data,
                        bool ignoreResponse = false) {
     return send(command, std::string(data), ignoreResponse);
   }
 
 protected:
-  /// @brief Connect to the device on an async thread. This method calls the
-  /// initialize method of the concrete class (on the async thread)
-  virtual void startWorker();
-
   /// @brief Initialize the device. When using an async device, one should not
   /// override the connect method but this one instead
   virtual void handleConnect() = 0;

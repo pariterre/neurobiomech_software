@@ -9,5 +9,6 @@ public:
   void notifyListeners(const T &data);
 
 protected:
-  std::map<const T &, std::function<void(const T &)>> m_Callbacks;
+  std::map<std::function<void(const T &)>, std::function<void(const T &)>>
+      m_Callbacks;
 };
