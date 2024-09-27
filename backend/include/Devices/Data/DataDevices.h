@@ -1,5 +1,5 @@
-#ifndef __STIMWALKER_DEVICES_DATA_DEVICES_DATA_H__
-#define __STIMWALKER_DEVICES_DATA_DEVICES_DATA_H__
+#ifndef __STIMWALKER_DEVICES_DATA_DATA_DEVICES_H__
+#define __STIMWALKER_DEVICES_DATA_DATA_DEVICES_H__
 
 #include <map>
 #include <memory>
@@ -10,10 +10,10 @@
 #include "stimwalkerConfig.h"
 
 namespace STIMWALKER_NAMESPACE::devices {
-class TimeSeriesData;
+class TimeSeries;
 
 /// @brief Class to store data
-class DevicesData {
+class DataDevices {
 public:
   /// @brief Get the number of devices in the collection
   /// @return The number of devices in the collection
@@ -21,12 +21,12 @@ public:
 
   /// @brief Create a new device in the collection
   /// @param deviceName The name of the device
-  void addDevice(const std::string &deviceName);
+  void newDevice(const std::string &deviceName);
 
   /// @brief Get the data of a specific device
   /// @param deviceName The name of the device
   /// @return The data of the device
-  std::vector<TimeSeriesData> &device(const std::string &deviceName);
+  std::vector<TimeSeries> &device(const std::string &deviceName);
 
   /// @brief Get the data in serialized form
   /// @return The data in serialized form
@@ -34,12 +34,12 @@ public:
 
   /// @brief Deserialize the data
   /// @param json The data in serialized form
-  static DevicesData deserialize(const nlohmann::json &json);
+  static DataDevices deserialize(const nlohmann::json &json);
 
 protected:
   /// @brief The data of the collection
-  std::map<std::string, std::vector<TimeSeriesData>> m_AllDevices;
+  std::map<std::string, std::vector<TimeSeries>> m_AllDevices;
 };
 } // namespace STIMWALKER_NAMESPACE::devices
 
-#endif // __STIMWALKER_DEVICES_DATA_DEVICES_DATA_H__
+#endif // __STIMWALKER_DEVICES_DATA_DATA_DEVICES_H__

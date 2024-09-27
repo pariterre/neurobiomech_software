@@ -7,123 +7,59 @@
 #include <string>
 #include <vector>
 
-#include "Devices/Generic/Collector.h"
-#include "Devices/Generic/Device.h"
-
-class BaseTrignoDaq {
-public:
-  static const int BYTES_PER_CHANNEL = 4;
-  static const std::string CMD_TERM;
-
-  BaseTrignoDaq(const std::string &host, int cmd_port, int data_port,
-                int total_channels, double timeout);
-  virtual ~BaseTrignoDaq();
-
-  void start();
-  std::vector<std::vector<float>> read(int num_samples);
-  void stop();
-  void reset();
-  void start_recording(const std::string &filename);
-  void stop_recording();
-
-protected:
-  void initialize();
-  void send_cmd(const std::string &command);
-  std::vector<char> cmd(const std::string &command);
-  void validate(const std::array<char, 128> &response);
-
-private:
-  std::string host_;
-  int cmd_port_;
-  int data_port_;
-  int total_channels_;
-  double timeout_;
-  int min_recv_size_;
-  asio::io_context io_context_;
-  asio::ip::tcp::socket comm_socket_;
-  asio::ip::tcp::socket data_socket_;
-  std::ofstream recording_file_;
-  bool is_recording_;
-};
-
-class TrignoEMG : public BaseTrignoDaq {
-public:
-  TrignoEMG(const std::pair<int, int> &channel_range, int samples_per_read,
-            const std::string &units = "V",
-            const std::string &host = "localhost", int cmd_port = 50040,
-            int data_port = 50043, double timeout = 10);
-
-  void set_channel_range(const std::pair<int, int> &channel_range);
-  std::vector<std::vector<float>> read();
-
-private:
-  std::pair<int, int> channel_range_;
-  int samples_per_read_;
-  int num_channels_;
-  double scaler_;
-};
+#include "Devices/Generic/AsyncDevice.h"
+#include "Devices/Generic/DataCollector.h"
+#include "Devices/Generic/TcpDevice.h"
+#include "Utils/CppMacros.h"
 
 namespace STIMWALKER_NAMESPACE::devices {
-class DelsysEmgDevice : public Device, public Collector {
+class DelsysEmgDevice : public AsyncDevice, public DataCollector {
 public:
-  DelsysEmgDevice(const std::pair<int, int> &channelRange, int frameRate,
-                  const std::string &units = "V",
-                  const std::string &host = "localhost", int cmdPort = 50040,
-                  int dataPort = 50043, double timeout = 10);
+  DelsysEmgDevice(std::vector<size_t> channelIndices, size_t frameRate,
+                  const std::string &host = "localhost",
+                  size_t commandPort = 50040, size_t dataPort = 50043);
 
   ~DelsysEmgDevice();
 
-  int getNbChannels() const override;
-
-  int getFrameRate() const override;
-
-  bool getIsConnected() const override;
-
-  void connect() override;
-
-  virtual void connectInternal();
-
   void disconnect() override;
-
-  virtual void disconnectInternal();
-
-  void dispose() override;
-
-  bool isRecording() const override;
 
   void startRecording() override;
 
-  virtual void startRecordingInternal();
-
   void stopRecording() override;
 
-  virtual void stopRecordingInternal();
+  /// @brief Read the data from the device
+  /// @param bufferSize The size of the buffer to read
+  /// @return One frame of data read from the device
+  std::vector<float> read(size_t bufferSize);
 
-  int onNewData(
-      std::function<void(const CollectorData &newData)> callback) override;
-
-  void removeListener(int listenerId) override;
-
-  std::vector<CollectorData> getData() const override;
-
-  CollectorData getData(int index) const override;
-
+  /// DATA RELATED METHODS
 protected:
-  void notifyListeners(const CollectorData &newData);
+  void handleConnect() override;
 
-  bool m_isConnected;
-  bool m_isRecording = false;
+  /// @brief The index of the channels to collect
+  DECLARE_PROTECTED_MEMBER(std::vector<size_t>, ChannelIndices)
 
-  int m_nbChannels;
-  int m_frameRate;
+  /// @brief The command device
+  DECLARE_PROTECTED_MEMBER_NOGET(TcpDevice, CommandDevice);
 
-  TimeSeriesData m_data_;
-  std::vector<std::function<void(const CollectorData &newData)>> m_listeners;
+  /// @brief The data device
+  DECLARE_PROTECTED_MEMBER_NOGET(TcpDevice, DataDevice);
 
-  std::thread m_recordingThread;
-  std::mutex m_recordingMutex;
+  /// @brief Send a command to the [m_CommandDevice]
+  /// @param command The command to send
+  void sendCommand(const std::string &command);
 
-  std::unique_ptr<TrignoEMG> emg_;
+  virtual void HandleNewData(const DataPoint &data) override;
+
+  /// INTERNAL METHODS
+protected:
+  /// @brief The terminaison character expected by the device ("\r\n\r\n")
+  DECLARE_PROTECTED_MEMBER_NOGET(std::string, TerminaisonCharacters)
+
+  /// @brief The length of the data buffer for each channel
+  DECLARE_PROTECTED_MEMBER_NOGET(size_t, BytesPerChannel)
+
+  size_t bufferSize() const;
 };
 } // namespace STIMWALKER_NAMESPACE::devices
 #endif // __STIMWALKER_DEVICES_DELSYS_EMG_DEVICE_H__

@@ -1,51 +1,90 @@
 #include "Devices/DelsysEmgDevice.h"
-#include "Devices/Generic/Exceptions.h"
+
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
+
+#include "Devices/Generic/Exceptions.h"
+
 using namespace STIMWALKER_NAMESPACE::devices;
 
-const std::string BaseTrignoDaq::CMD_TERM = "\r\n\r\n";
+DelsysEmgDevice::DelsysEmgDevice(std::vector<size_t> channelIndices,
+                                 size_t frameRate, const std::string &host,
+                                 size_t commandPort, size_t dataPort)
+    : m_ChannelIndices(channelIndices),
+      m_CommandDevice(TcpDevice(host, commandPort)),
+      m_DataDevice(TcpDevice(host, dataPort)),
+      m_TerminaisonCharacters("\r\n\r\n"), m_BytesPerChannel(4), AsyncDevice(),
+      DataCollector(channelIndices.size(), frameRate) {}
 
-BaseTrignoDaq::BaseTrignoDaq(const std::string &host, int cmd_port,
-                             int data_port, int total_channels, double timeout)
-    : host_(host), cmd_port_(cmd_port), data_port_(data_port),
-      total_channels_(total_channels), timeout_(timeout),
-      comm_socket_(io_context_), data_socket_(io_context_),
-      is_recording_(false) {
-  min_recv_size_ = total_channels_ * BYTES_PER_CHANNEL;
-  initialize();
+void DelsysEmgDevice::disconnect() {
+  if (!m_IsConnected) {
+    throw DeviceIsNotConnectedException("The device is not connected");
+  }
+
+  if (m_IsRecording) {
+    stopRecording();
+  }
+
+  AsyncDevice::disconnect();
 }
 
-BaseTrignoDaq::~BaseTrignoDaq() {
-  try {
-    comm_socket_.close();
-  } catch (...) {
-    // do nothing
+void DelsysEmgDevice::startRecording() {
+  if (m_IsRecording) {
+    throw DeviceIsRecordingException("The device is already recording");
+  }
+
+  sendCommand("START");
+  m_IsRecording = true;
+}
+
+void DelsysEmgDevice::stopRecording() {
+  if (!m_IsRecording) {
+    throw DeviceIsNotRecordingException("The device is not recording");
+  }
+
+  sendCommand("STOP");
+
+  m_IsRecording = false;
+}
+
+void DelsysEmgDevice::handleConnect() {
+  if (getIsConnected()) {
+    throw DeviceIsConnectedException("The device is already connected");
+  }
+
+  m_CommandDevice.connect();
+  m_CommandDevice.read(1024); // Consume the welcome message
+
+  m_DataDevice.connect();
+  m_IsConnected = true;
+}
+
+void DelsysEmgDevice::parseCommand(const std::string &command) {
+  // TODO: Change the input string to enum
+  m_CommandDevice.send(
+      asio::buffer((command + m_TerminaisonCharacters).c_str()));
+  char[128] response;
+  m_CommandDevice.receive(asio::buffer(response));
+  if (std::string(response) != "OK") {
+    throw std::runtime_error("Command failed: " + command);
   }
 }
 
-void BaseTrignoDaq::start() { send_cmd("START"); }
+void DelsysEmgDevice::HandleNewData(const DataPoint &data) {
+  OnNewData.notifyListeners(data);
+}
 
-std::vector<std::vector<float>> BaseTrignoDaq::read(int num_samples) {
-  int l_des = num_samples * min_recv_size_;
-  size_t l = 0;
-  std::vector<char> packet(l_des, 0);
+size_t DelsysEmgDevice::bufferSize() const {
+  return m_DataChannelCount * m_BytesPerChannel;
+}
 
-  while (l < l_des) {
-    try {
-      int received = static_cast<int>(
-          data_socket_.receive(asio::buffer(packet.data() + l, l_des - l)));
-      l += received;
-    } catch (std::exception &) {
-      l = packet.size();
-      std::fill(packet.begin() + l, packet.end(), 0);
-      throw std::runtime_error("Device disconnected.");
-    }
-  }
+std::vector<float> DelsysEmgDevice::read(size_t bufferSize) {
 
-  std::vector<float> data(l_des / BYTES_PER_CHANNEL);
-  std::memcpy(data.data(), packet.data(), l_des);
+  std::vector<char> out = m_DataDevice.read(bufferSize);
+
+  std::vector<float> data(bufferSize / m_BytesPerChannel);
+  std::memcpy(data.data(), packet.data(), bufferSize);
 
   std::vector<std::vector<float>> reshaped_data(
       total_channels_, std::vector<float>(num_samples));
@@ -66,213 +105,4 @@ std::vector<std::vector<float>> BaseTrignoDaq::read(int num_samples) {
   }
 
   return reshaped_data;
-}
-
-void BaseTrignoDaq::start_recording(const std::string &filename) {
-  if (!is_recording_) {
-    recording_file_.open("DelsysEmgDevice-" + filename,
-                         std::ios::out | std::ios::trunc);
-    if (!recording_file_.is_open()) {
-      throw std::runtime_error("Unable to open log file: DelsysEmgDevice-" +
-                               filename);
-    }
-
-    for (int i = 0; i < total_channels_; ++i) {
-      recording_file_ << "Channel_" << i << ",";
-    }
-    recording_file_ << "\n";
-
-    is_recording_ = true;
-  }
-}
-
-void BaseTrignoDaq::stop_recording() {
-  if (is_recording_) {
-    recording_file_.close();
-    is_recording_ = false;
-  }
-}
-
-void BaseTrignoDaq::stop() { send_cmd("STOP"); }
-
-void BaseTrignoDaq::reset() { initialize(); }
-
-void BaseTrignoDaq::initialize() {
-  asio::ip::tcp::endpoint comm_endpoint(asio::ip::address::from_string(host_),
-                                        cmd_port_);
-  asio::ip::tcp::endpoint data_endpoint(asio::ip::address::from_string(host_),
-                                        data_port_);
-
-  comm_socket_.connect(comm_endpoint);
-  std::array<char, 1024> buffer;
-  comm_socket_.receive(asio::buffer(buffer));
-
-  data_socket_.connect(data_endpoint);
-}
-
-void BaseTrignoDaq::send_cmd(const std::string &command) {
-  comm_socket_.send(asio::buffer(cmd(command)));
-  std::array<char, 128> resp;
-  comm_socket_.receive(asio::buffer(resp));
-  validate(resp);
-}
-
-std::vector<char> BaseTrignoDaq::cmd(const std::string &command) {
-  std::string full_cmd = command + CMD_TERM;
-  return std::vector<char>(full_cmd.begin(), full_cmd.end());
-}
-
-void BaseTrignoDaq::validate(const std::array<char, 128> &response) {
-  std::string s(response.data());
-  if (s.find("OK") == std::string::npos) {
-    std::cerr << "warning: TrignoDaq command failed: " << s << std::endl;
-  }
-}
-
-TrignoEMG::TrignoEMG(const std::pair<int, int> &channel_range,
-                     int samples_per_read, const std::string &units,
-                     const std::string &host, int cmd_port, int data_port,
-                     double timeout)
-    : BaseTrignoDaq(host, cmd_port, data_port, 14, timeout),
-      channel_range_(channel_range), samples_per_read_(samples_per_read),
-      scaler_(1.0) {
-  if (units == "mV") {
-    scaler_ = 1000.0;
-  } else if (units == "normalized") {
-    scaler_ = 1 / 0.011;
-  }
-  set_channel_range(channel_range);
-}
-
-void TrignoEMG::set_channel_range(const std::pair<int, int> &channel_range) {
-  channel_range_ = channel_range;
-  num_channels_ = channel_range_.second - channel_range_.first + 1;
-}
-
-std::vector<std::vector<float>> TrignoEMG::read() {
-  auto data = BaseTrignoDaq::read(samples_per_read_);
-  std::vector<std::vector<float>> channel_data(
-      num_channels_, std::vector<float>(samples_per_read_));
-
-  for (int i = 0; i < num_channels_; ++i) {
-    channel_data[i] = data[channel_range_.first + i];
-  }
-
-  for (auto &channel : channel_data) {
-    for (auto &sample : channel) {
-      sample *= static_cast<float>(scaler_);
-    }
-  }
-
-  return channel_data;
-}
-
-DelsysEmgDevice::DelsysEmgDevice(const std::pair<int, int> &channelRange,
-                                 int frameRate, const std::string &units,
-                                 const std::string &host, int cmdPort,
-                                 int dataPort, double timeout)
-    : m_frameRate(frameRate), m_isConnected(false), m_isRecording(false) {
-  DelsysEmgDevice::connect();
-}
-
-DelsysEmgDevice::~DelsysEmgDevice() { dispose(); }
-
-void DelsysEmgDevice::dispose() {
-  try {
-    stopRecording();
-  } catch (const DeviceIsNotRecordingException &) {
-    // Do nothing
-  }
-
-  try {
-    disconnect();
-  } catch (const DeviceIsNotConnectedException &) {
-    // Do nothing
-  }
-}
-
-int DelsysEmgDevice::getNbChannels() const { return 14; }
-
-int DelsysEmgDevice::getFrameRate() const { return m_frameRate; }
-
-bool DelsysEmgDevice::getIsConnected() const { return m_isConnected; }
-
-void DelsysEmgDevice::connect() {
-  if (getIsConnected()) {
-    throw DeviceIsConnectedException("The device is already connected");
-  }
-
-  connectInternal();
-
-  m_isConnected = true;
-}
-
-void DelsysEmgDevice::connectInternal() {
-  emg_ = std::make_unique<TrignoEMG>(std::make_pair(0, 15), 2000, "mV", "host");
-}
-
-void DelsysEmgDevice::disconnect() {
-  if (isRecording()) {
-    throw DeviceIsRecordingException("The device is currently recording");
-  }
-
-  if (!getIsConnected()) {
-    throw DeviceIsNotConnectedException("The device is not connected");
-  }
-
-  disconnectInternal();
-
-  m_isConnected = false;
-}
-
-void DelsysEmgDevice::disconnectInternal() {}
-
-bool DelsysEmgDevice::isRecording() const { return m_isRecording; }
-
-void DelsysEmgDevice::startRecording() {
-  if (isRecording()) {
-    throw DeviceIsRecordingException("The device is already recording");
-  }
-
-  startRecordingInternal();
-
-  m_isRecording = true;
-}
-
-void DelsysEmgDevice::startRecordingInternal() {
-  emg_->start_recording("emg_data.csv");
-}
-
-void DelsysEmgDevice::stopRecording() {
-  if (!isRecording()) {
-    throw DeviceIsNotRecordingException("The device is not recording");
-  }
-
-  stopRecordingInternal();
-
-  m_isRecording = false;
-}
-
-void DelsysEmgDevice::stopRecordingInternal() { emg_->stop_recording(); }
-
-int DelsysEmgDevice::onNewData(
-    std::function<void(const CollectorData &newData)> callback) {
-  m_listeners.push_back(callback);
-  return static_cast<int>(m_listeners.size() - 1);
-}
-
-void DelsysEmgDevice::removeListener(int listenerId) {
-  m_listeners.erase(m_listeners.begin() + listenerId);
-}
-
-std::vector<CollectorData> DelsysEmgDevice::getData() const { return m_data_; }
-
-CollectorData DelsysEmgDevice::getData(int index) const {
-  return m_data_[index];
-}
-
-void DelsysEmgDevice::notifyListeners(const CollectorData &newData) {
-  for (auto &listener : m_listeners) {
-    listener(newData);
-  }
 }

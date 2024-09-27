@@ -1,5 +1,5 @@
-#ifndef __STIMWALKER_DEVICES_DATA_DATA_H__
-#define __STIMWALKER_DEVICES_DATA_DATA_H__
+#ifndef __STIMWALKER_DEVICES_DATA_DATA_POINT_H__
+#define __STIMWALKER_DEVICES_DATA_DATA_POINT_H__
 
 #include <map>
 #include <nlohmann/json.hpp>
@@ -10,9 +10,9 @@
 namespace STIMWALKER_NAMESPACE::devices {
 
 /// @brief Class to store data
-class Data {
+class DataPoint {
 public:
-  Data(time_t timestamp, const std::vector<double> &data);
+  DataPoint(time_t timestamp, const std::vector<double> &data);
 
   /// @brief Convert the object to JSON
   /// @return The JSON object
@@ -20,11 +20,11 @@ public:
 
   /// @brief Deserialize the object
   /// @param json The JSON object
-  static Data deserialize(const nlohmann::json &json);
+  static DataPoint deserialize(const nlohmann::json &json);
 
   /// @brief Get a copy of the current object
   /// @return A copy of the current object
-  Data copy() const;
+  DataPoint copy() const;
 
 protected:
   /// @brief The data timestamp
@@ -35,4 +35,4 @@ protected:
 };
 } // namespace STIMWALKER_NAMESPACE::devices
 
-#endif // __STIMWALKER_DEVICES_DATA_DATA_H__
+#endif // __STIMWALKER_DEVICES_DATA_DATA_POINT_H__

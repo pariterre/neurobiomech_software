@@ -1,16 +1,9 @@
 #ifndef __STIMWALKER_DEVICES_ALL_H__
 #define __STIMWALKER_DEVICES_ALL_H__
 
-#include "Devices/Data/CollectorData.h"
-#include "Devices/Data/Data.h"
-#include "Devices/Data/DataCollection.h"
-#include "Devices/Data/StimulatorData.h"
 #include "Devices/DelsysEmgDevice.h"
-#include "Devices/Generic/Collector.h"
-#include "Devices/Generic/Device.h"
-#include "Devices/Generic/Exceptions.h"
-#include "Devices/Generic/StimulatorDevice.h"
 #include "Devices/Lokomat.h"
+#include "Devices/MagstimRapidDevice.h"
 #include "Devices/NidaqDevice.h"
 
 #endif // __STIMWALKER_DEVICES_ALL_H__

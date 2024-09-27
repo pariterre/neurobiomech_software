@@ -1,5 +1,5 @@
-#ifndef __STIMWALKER_DEVICES_DATA_TIME_SERIES_DATA_H__
-#define __STIMWALKER_DEVICES_DATA_TIME_SERIES_DATA_H__
+#ifndef __STIMWALKER_DEVICES_DATA_TIME_SERIES_H__
+#define __STIMWALKER_DEVICES_DATA_TIME_SERIES_H__
 
 #include "stimwalkerConfig.h"
 #include <map>
@@ -10,10 +10,10 @@
 #include "Utils/CppMacros.h"
 
 namespace STIMWALKER_NAMESPACE::devices {
-class Data;
+class DataPoint;
 
 /// @brief Class to store data
-class TimeSeriesData {
+class TimeSeries {
 public:
   /// @brief Get the number of data in the collection
   /// @return The number of data in the collection
@@ -21,7 +21,7 @@ public:
 
   /// @brief Add new data to the collection
   /// @param data The data to add
-  void add(const Data &data);
+  void add(const DataPoint &data);
 
   /// @brief Get the data in serialized form
   /// @return The data in serialized form
@@ -29,12 +29,12 @@ public:
 
   /// @brief Deserialize the data
   /// @param json The data in serialized form
-  static TimeSeriesData deserialize(const nlohmann::json &json);
+  static TimeSeries deserialize(const nlohmann::json &json);
 
 protected:
   /// @brief The data of the collection
-  DECLARE_PROTECTED_MEMBER(std::vector<Data>, Data);
+  DECLARE_PROTECTED_MEMBER(std::vector<DataPoint>, Data);
 };
 } // namespace STIMWALKER_NAMESPACE::devices
 
-#endif // __STIMWALKER_DEVICES_DATA_TIME_SERIES_DATA_H__
+#endif // __STIMWALKER_DEVICES_DATA_TIME_SERIES_H__

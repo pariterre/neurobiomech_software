@@ -1,15 +1,13 @@
 #include "Devices/Generic/UsbDevice.h"
 
 #if defined(_WIN32)
-#include <cfgmgr32.h>
-#include <setupapi.h>
-#include <windows.h>
+// #include <cfgmgr32.h>
+// #include <setupapi.h>
+// #include <windows.h>
 #else // Linux or macOS
 #include <filesystem>
 #include <fstream>
 #endif // _WIN32
-#include <regex>
-#include <thread>
 
 #include "Utils/Logger.h"
 
@@ -17,16 +15,7 @@ using namespace STIMWALKER_NAMESPACE::devices;
 
 UsbDevice::UsbDevice(const std::string &port, const std::string &vid,
                      const std::string &pid)
-    : m_Port(port), m_Vid(vid), m_Pid(pid) {}
-
-UsbDevice::UsbDevice(const UsbDevice &other)
-    : m_Port(other.m_Port), m_Vid(other.m_Vid), m_Pid(other.m_Pid) {
-  // Throws an exception if the serial port is open as it cannot be copied
-  if (other.m_SerialPort != nullptr && other.m_SerialPort->is_open()) {
-    throw UsbIllegalOperationException(
-        "Cannot copy UsbDevice object with an open serial port");
-  }
-}
+    : m_Vid(vid), m_Pid(pid), SerialPortDevice(port) {}
 
 UsbDevice UsbDevice::fromVidAndPid(const std::string &vid,
                                    const std::string &pid) {
@@ -35,66 +24,11 @@ UsbDevice UsbDevice::fromVidAndPid(const std::string &vid,
       return device;
     }
   }
-  throw UsbDeviceNotFoundException("USB device not found");
+  throw SerialPortDeviceNotFoundException("USB device not found");
 }
 
-void UsbDevice::connect() {
-  // Start a worker thread to run the device using the [_initialize] method
-  m_Context = std::make_unique<asio::io_context>();
-
-  // Start the worker thread
-  m_Worker = std::thread([this] {
-    _initialize();
-    m_Context->run();
-  });
-
-  // Give a bit of time for the worker thread to start
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
-}
-
-void UsbDevice::disconnect() {
-  // Just leave a bit of time if there are any pending commands to process
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-  // Stop the worker thread
-  m_Context->stop();
-  m_Worker.join();
-}
-
-UsbResponses UsbDevice::send(const UsbCommands &command, const std::any &data,
-                             bool ignoreResponse) {
-  // Create a promise and get the future associated with it
-  std::promise<UsbResponses> promise;
-  std::future<UsbResponses> future = promise.get_future();
-  // Send a command to the worker to relay commands to the device
-  m_Context->post(
-      [this, command, data = data, p = &promise, ignoreResponse]() mutable {
-        std::lock_guard<std::mutex> lock(m_Mutex);
-
-        // Parse the command and get the response
-        auto response = _parseCommand(command, data);
-
-        // Set the response value in the promise
-        if (!ignoreResponse) {
-          p->set_value(response);
-        }
-      });
-
-  if (ignoreResponse) {
-    return UsbResponses::OK;
-  }
-
-  // Wait for the response from the worker thread and return the result
-  return future.get();
-}
-
-void UsbDevice::_initialize() {
-  m_SerialPortContext = std::make_unique<asio::io_context>();
-  _connectSerialPort();
-}
-
-UsbResponses UsbDevice::_parseCommand(const UsbCommands &command,
-                                      const std::any &data) {
+DeviceResponses UsbDevice::parseCommand(const DeviceCommands &command,
+                                        const std::any &data) {
   // TODO Add a flusher for the serial port
   auto &logger = Logger::getInstance();
 
@@ -103,67 +37,20 @@ UsbResponses UsbDevice::_parseCommand(const UsbCommands &command,
     case UsbCommands::PRINT:
       logger.info("Sent command: " + std::any_cast<std::string>(data));
 
-      return UsbResponses::OK;
+      return DeviceResponses::OK;
     }
 
   } catch (const std::bad_any_cast &) {
     std::cerr << "The data you provided with the command ("
               << command.toString() << ") is invalid" << std::endl;
-    return UsbResponses::NOK;
+    return DeviceResponses::NOK;
 
   } catch (const std::exception &e) {
     std::cerr << "Error: " << e.what() << std::endl;
-    return UsbResponses::NOK;
+    return DeviceResponses::NOK;
   }
 
-  return UsbResponses::COMMAND_NOT_FOUND;
-}
-
-void UsbDevice::_connectSerialPort() {
-  m_SerialPort =
-      std::make_unique<asio::serial_port>(*m_SerialPortContext, m_Port);
-  m_SerialPort->set_option(asio::serial_port_base::baud_rate(9600));
-  m_SerialPort->set_option(asio::serial_port_base::character_size(8));
-  m_SerialPort->set_option(asio::serial_port_base::stop_bits(
-      asio::serial_port_base::stop_bits::one));
-  m_SerialPort->set_option(
-      asio::serial_port_base::parity(asio::serial_port_base::parity::none));
-  m_SerialPort->set_option(asio::serial_port_base::flow_control(
-      asio::serial_port_base::flow_control::none));
-}
-
-void UsbDevice::_setFastCommunication(bool isFast) {
-  auto &logger = Logger::getInstance();
-
-#if defined(_WIN32)
-  // Set RTS ON
-  if (!EscapeCommFunction(m_SerialPort->native_handle(),
-                          isFast ? SETRTS : CLRRTS)) {
-    logger.fatal("Failed to set RTS to " + std::to_string(isFast));
-  } else {
-    logger.info("RTS set to " + std::string(isFast ? "ON" : "OFF"));
-  }
-#else
-  int status;
-  if (ioctl(m_SerialPort->native_handle(), TIOCMGET, &status) < 0) {
-    std::cerr << "Failed to get serial port status" << std::endl;
-    return;
-  }
-
-  // Turn RTS ON or OFF
-  if (isFast) {
-    status |= TIOCM_RTS;
-    logger.info("RTS set to ON (fast)");
-  } else {
-    status &= ~TIOCM_RTS;
-    logger.info("RTS set to OFF (slow)");
-  }
-
-  if (ioctl(m_SerialPort->native_handle(), TIOCMSET, &status) < 0) {
-    logger.fatal("Failed to set RTS");
-  }
-
-#endif
+  return DeviceResponses::COMMAND_NOT_FOUND;
 }
 
 std::vector<UsbDevice> UsbDevice::listAllUsbDevices() {
@@ -248,8 +135,4 @@ std::vector<UsbDevice> UsbDevice::listAllUsbDevices() {
 #endif
 
   return devices;
-}
-
-bool UsbDevice::operator==(const UsbDevice &other) const {
-  return m_Port == other.m_Port && m_Vid == other.m_Vid && m_Pid == other.m_Pid;
 }

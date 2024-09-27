@@ -111,9 +111,7 @@ std::string Logger::getCurrentTime() {
   struct tm localtime = tm();
   localtime_s(&localtime, &nowTimeT);
 #else
-  struct tm localtime = tm();
-  localtime_s(&localtime, &nowTimeT);
-  // struct tm localtime = *std::localtime(&nowTimeT);
+  struct tm localtime = *std::localtime(&nowTimeT);
 #endif
   std::stringstream ss;
   ss << std::put_time(&localtime, "[%Y-%m-%d %H:%M:%S");

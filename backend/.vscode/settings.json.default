@@ -4,7 +4,7 @@
     "cmake.configureArgs": [
         "-DBUILD_TESTS=ON",
         "-DBUILD_DOC=OFF",
-        "-DBUILD_WIP=ON",
+        "-DBUILD_BINARIES=ON",
         "-DCMAKE_INSTALL_PREFIX={PATH_TO_INSTALL}"
     ],
     "editor.rulers": [80],

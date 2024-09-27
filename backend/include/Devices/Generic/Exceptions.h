@@ -47,6 +47,27 @@ public:
       : DeviceException(message) {}
 };
 
+class SerialPortGenericException : public std::exception {
+public:
+  SerialPortGenericException(const std::string &message) : m_message(message) {}
+
+  const char *what() const noexcept override { return m_message.c_str(); }
+
+protected:
+  std::string m_message;
+};
+
+class SerialPortDeviceNotFoundException : public SerialPortGenericException {
+public:
+  SerialPortDeviceNotFoundException(const std::string &message)
+      : SerialPortGenericException(message) {}
+};
+
+class SerialPortIllegalOperationException : public SerialPortGenericException {
+public:
+  SerialPortIllegalOperationException(const std::string &message)
+      : SerialPortGenericException(message) {}
+};
 } // namespace STIMWALKER_NAMESPACE::devices
 
 #endif // __STIMWALKER_DEVICES_GENERIC_EXCEPTIONS_H__
