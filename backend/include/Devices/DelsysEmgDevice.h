@@ -71,8 +71,6 @@ protected:
   DeviceResponses parseCommand(const DeviceCommands &command,
                                const std::any &data) override;
 
-  void HandleNewData(const data::DataPoint &data) override;
-
   /// INTERNAL METHODS
 protected:
   /// @brief The terminaison character expected by the device ("\r\n\r\n")

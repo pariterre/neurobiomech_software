@@ -88,10 +88,6 @@ DeviceResponses DelsysEmgDevice::parseCommand(const DeviceCommands &command,
   return DeviceResponses::OK;
 }
 
-void DelsysEmgDevice::HandleNewData(const data::DataPoint &data) {
-  onNewData.notifyListeners(data);
-}
-
 size_t DelsysEmgDevice::bufferSize() const {
   return m_DataChannelCount * m_BytesPerChannel;
 }

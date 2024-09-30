@@ -52,7 +52,9 @@ protected:
   /// @brief Method that is internally called when new data are ready. It is
   /// expected to be called by the device and then call the onNewData callback
   /// @param data The new data to handle
-  virtual void HandleNewData(const data::DataPoint &data) = 0;
+  virtual void HandleNewData(const data::DataPoint &data) {
+    onNewData.notifyListeners(data);
+  }
 };
 
 } // namespace STIMWALKER_NAMESPACE::devices

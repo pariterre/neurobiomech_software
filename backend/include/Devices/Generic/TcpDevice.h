@@ -53,9 +53,6 @@ protected:
   /// @brief Connect to the tcp device. This is expected to run on an
   /// async thread
   void handleConnect() override;
-
-  /// @brief Connect to the tcp connexion
-  virtual void _connectTcp();
 };
 
 } // namespace STIMWALKER_NAMESPACE::devices

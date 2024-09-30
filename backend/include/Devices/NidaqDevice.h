@@ -32,10 +32,6 @@ public:
   void disconnect() override;
   void startRecording() override;
   void stopRecording() override;
-
-protected:
-  /// @brief Notify the listeners that new data has been collected
-  void HandleNewData(const data::DataPoint &data) override;
 };
 
 // // TODO Reimplement the mocker
