@@ -50,8 +50,9 @@ enable_testing()
 
 set(TEST_SRC_FILES
     ${CMAKE_SOURCE_DIR}/test/test_data.cpp
-    ${CMAKE_SOURCE_DIR}/test/test_devices.cpp
     ${CMAKE_SOURCE_DIR}/test/test_lokomat.cpp
+    ${CMAKE_SOURCE_DIR}/test/test_magstim.cpp
+    ${CMAKE_SOURCE_DIR}/test/test_nidaq.cpp
     ${CMAKE_SOURCE_DIR}/test/test_utils.cpp
 )
 add_executable(${PROJECT_NAME} ${TEST_SRC_FILES})
@@ -62,16 +63,22 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     $<INSTALL_INTERFACE:include>
 )
 
-# Standard linking to gtest stuff.
+# Standard linking to gtest stuff
 add_dependencies(${PROJECT_NAME} 
     ${MODULE_UTILS}
     ${MODULE_DEVICES}
 )
 target_link_libraries(${PROJECT_NAME} PRIVATE
+    ${MODULE_UTILS}
     ${MODULE_DEVICES}
     nlohmann_json::nlohmann_json
     "gtest_main"
 )
+if (WIN32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        Setupapi
+    )
+endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Coverage")
     include(CodeCoverage)

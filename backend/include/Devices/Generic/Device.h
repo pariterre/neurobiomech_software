@@ -38,6 +38,20 @@ public:
   DeviceResponses(const DeviceResponses &other) = default;
   DeviceResponses &operator=(const DeviceResponses &other) = default;
 
+  // String representation of the object
+  virtual std::string toString() const {
+    switch (m_Value) {
+    case OK:
+      return "OK";
+    case NOK:
+      return "NOK";
+    case COMMAND_NOT_FOUND:
+      return "COMMAND_NOT_FOUND";
+    default:
+      return "UNKNOWN";
+    }
+  }
+
 protected:
   DECLARE_PROTECTED_MEMBER(int, Value);
 };

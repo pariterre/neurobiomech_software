@@ -63,20 +63,19 @@ protected:
 
   /// @brief Get the armed state of the device
   /// @return The armed state of the device
-  DECLARE_PROTECTED_MEMBER_NOGET(bool, IsArmed)
+  DECLARE_PROTECTED_MEMBER(bool, IsArmed)
 
   /// @brief Get the interval at which the device is poked when armed
   /// @return The interval at which the device is poked when armed
-  DECLARE_PROTECTED_MEMBER_NOGET(std::chrono::milliseconds, ArmedPokeInterval)
+  DECLARE_PROTECTED_MEMBER(std::chrono::milliseconds, ArmedPokeInterval)
 
   /// @brief Get the interval at which the device is poked when disarmed
   /// @return The interval at which the device is poked when disarmed
-  DECLARE_PROTECTED_MEMBER_NOGET(std::chrono::milliseconds,
-                                 DisarmedPokeInterval)
+  DECLARE_PROTECTED_MEMBER(std::chrono::milliseconds, DisarmedPokeInterval)
 
   /// @brief Get how long to wait before sending the PING command
   /// @return How long to wait before sending the PING command
-  DECLARE_PROTECTED_MEMBER_NOGET(std::chrono::milliseconds, PokeInterval)
+  DECLARE_PROTECTED_MEMBER(std::chrono::milliseconds, PokeInterval)
 
   /// @brief Get the keep-alive timer
   /// @return The keep-alive timer

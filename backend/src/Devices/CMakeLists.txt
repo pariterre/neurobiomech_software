@@ -19,6 +19,7 @@ set(SRC_LIST_MODULE
 # Create the library
 add_library(${MODULE_DEVICES} STATIC ${SRC_LIST_MODULE})
 set_target_properties(${MODULE_DEVICES} PROPERTIES DEBUG_POSTFIX "_debug")
+add_dependencies(${MODULE_DEVICES} ${MODULE_UTILS})
 
 # Add the include
 target_include_directories(${MODULE_DEVICES} PRIVATE 

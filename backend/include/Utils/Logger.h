@@ -1,8 +1,14 @@
 #ifndef __STIMWALKER_UTILS_LOGGER_H__
 #define __STIMWALKER_UTILS_LOGGER_H__
 
+#include "stimwalkerConfig.h"
+
 #include <fstream>
 #include <mutex>
+
+#include "Utils/StimwalkerEvent.h"
+
+namespace STIMWALKER_NAMESPACE::utils {
 
 class Logger {
 public:
@@ -23,6 +29,9 @@ public:
   // Set the log file to write logs to a file
   void setLogFile(const std::string &filename);
 
+  // Set a event to get a callback when a new log is added
+  StimwalkerEvent<std::string> onNewLog;
+
 protected:
   // Private constructor and destructor to prevent direct instantiation
   Logger();
@@ -42,5 +51,7 @@ protected:
   std::ofstream file_; // Optional file stream for logging to a file
   Level minLogLevel_;  // The minimum log level that will be displayed
 };
+
+} // namespace STIMWALKER_NAMESPACE::utils
 
 #endif // __STIMWALKER_UTILS_LOGGER_H__

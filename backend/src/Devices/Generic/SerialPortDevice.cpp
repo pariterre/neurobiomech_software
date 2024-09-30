@@ -47,7 +47,7 @@ void SerialPortDevice::handleConnect() {
 }
 
 void SerialPortDevice::setFastCommunication(bool isFast) {
-  auto &logger = Logger::getInstance();
+  auto &logger = utils::Logger::getInstance();
 
 #if defined(_WIN32)
   // Set RTS ON

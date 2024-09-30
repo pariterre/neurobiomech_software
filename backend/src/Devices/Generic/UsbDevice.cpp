@@ -31,7 +31,7 @@ UsbDevice UsbDevice::fromVidAndPid(const std::string &vid,
 DeviceResponses UsbDevice::parseCommand(const DeviceCommands &command,
                                         const std::any &data) {
   // TODO Add a flusher for the serial port
-  auto &logger = Logger::getInstance();
+  auto &logger = utils::Logger::getInstance();
 
   try {
     switch (command.getValue()) {

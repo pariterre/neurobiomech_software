@@ -49,5 +49,6 @@ void TcpDevice::disconnect() {
 void TcpDevice::handleConnect() {
   m_TcpSocket = std::make_unique<asio::ip::tcp::socket>(m_TcpContext);
   m_TcpSocket->connect(
-      asio::ip::tcp::endpoint(asio::ip::address::from_string(m_Host), m_Port));
+      asio::ip::tcp::endpoint(asio::ip::address::from_string(m_Host),
+                              static_cast<unsigned short>(m_Port)));
 }

@@ -12,7 +12,11 @@
 
 using namespace STIMWALKER_NAMESPACE::devices;
 
-AsyncDevice::~AsyncDevice() { disconnect(); }
+AsyncDevice::~AsyncDevice() {
+  if (m_IsConnected) {
+    disconnect();
+  }
+}
 
 void AsyncDevice::connect() {
   // Start a worker thread to run the device using the [_initialize] method
@@ -27,6 +31,10 @@ void AsyncDevice::connect() {
 }
 
 void AsyncDevice::disconnect() {
+  if (!m_IsConnected) {
+    throw DeviceIsNotConnectedException("The device is not connected");
+  }
+
   // Just leave a bit of time if there are any pending commands to process
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
 

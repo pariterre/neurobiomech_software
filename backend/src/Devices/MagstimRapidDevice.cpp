@@ -12,15 +12,11 @@
 
 #include "Utils/Logger.h"
 
+using namespace STIMWALKER_NAMESPACE;
 using namespace STIMWALKER_NAMESPACE::devices;
 
 MagstimRapidDevice MagstimRapidDevice::FindMagstimDevice() {
-  for (const auto &device : UsbDevice::listAllUsbDevices()) {
-    if (device.getVid() == "067B" && device.getPid() == "2303") {
-      return MagstimRapidDevice(device.getPort());
-    }
-  }
-  throw SerialPortDeviceNotFoundException("MagstimRapid device not found");
+  return MagstimRapidDevice(UsbDevice::fromVidAndPid("067B", "2303").getPort());
 }
 
 MagstimRapidDevice::MagstimRapidDevice(const std::string &port)
@@ -33,7 +29,7 @@ void MagstimRapidDevice::handleConnect() {
 
   // Add a keep-alive timer
   m_KeepAliveTimer = std::make_unique<asio::steady_timer>(m_AsyncContext);
-  m_PokeInterval = std::chrono::milliseconds(1000);
+  m_PokeInterval = std::chrono::milliseconds(m_DisarmedPokeInterval);
   keepAlive(m_PokeInterval);
 }
 
@@ -41,7 +37,7 @@ DeviceResponses MagstimRapidDevice::parseCommand(const DeviceCommands &command,
                                                  const std::any &data) {
   // First call the parent class to handle the common commands
   UsbDevice::parseCommand(command, data);
-  auto &logger = Logger::getInstance();
+  auto &logger = utils::Logger::getInstance();
 
   std::string commandString;
   std::string response;
@@ -59,14 +55,16 @@ DeviceResponses MagstimRapidDevice::parseCommand(const DeviceCommands &command,
                   asio::buffer(commandString + computeCRC(commandString)));
 
       // Wait for the response (9 bytes)
-      response = std::string(9, '\0');
-      asio::read(*m_SerialPort, asio::buffer(response));
+      // response = std::string(9, '\0');
+      response = "42";
+
+      // asio::read(*m_SerialPort, asio::buffer(response));
       std::cout << "Temperature: " << response << std::endl;
-      return DeviceResponses::OK;
+      return 42;
 
     case MagstimRapidCommands::SET_FAST_COMMUNICATION:
       setFastCommunication(std::any_cast<bool>(data));
-      break;
+      return DeviceResponses::OK;
 
     case MagstimRapidCommands::ARM:
       if (m_IsArmed) {
@@ -80,8 +78,7 @@ DeviceResponses MagstimRapidDevice::parseCommand(const DeviceCommands &command,
       logger.info(std::string(m_IsArmed ? "Armed" : "Disarmed") +
                   " the system and changed poke interval to " +
                   std::to_string(m_PokeInterval.count()) + " ms");
-
-      break;
+      return DeviceResponses::OK;
 
     case MagstimRapidCommands::DISARM:
       if (!m_IsArmed) {
@@ -96,7 +93,7 @@ DeviceResponses MagstimRapidDevice::parseCommand(const DeviceCommands &command,
       logger.info(std::string(m_IsArmed ? "Armed" : "Disarmed") +
                   " the system and changed poke interval to " +
                   std::to_string(m_PokeInterval.count()) + " ms");
-      break;
+      return DeviceResponses::OK;
     }
   } catch (const std::bad_any_cast &) {
     logger.fatal("The data you provided with the command (" +

@@ -5,6 +5,8 @@
 #include <iostream>
 #include <sstream>
 
+using namespace STIMWALKER_NAMESPACE::utils;
+
 // Define the log levels
 enum Level { INFO, WARNING, ERROR };
 
@@ -70,14 +72,20 @@ void Logger::log(const std::string &message, Level level) {
   // Get current time as a string
   std::string timeStamp = getCurrentTime();
 
+  // Prepare the actual message
+  std::string toPrint = timeStamp + getLabel(level) + message;
+
   // Log to console
   std::ostream &os = (level == FATAL) ? std::cerr : std::cout;
-  os << timeStamp << getLabel(level) << message << std::endl;
+  os << toPrint << std::endl;
 
   // Log to file if logging to a file is enabled
   if (file_.is_open()) {
-    file_ << timeStamp << getLabel(level) << message << std::endl;
+    file_ << toPrint << std::endl;
   }
+
+  // Emit the onNewLog event
+  onNewLog.notifyListeners(toPrint);
 }
 
 // Function to convert log level to a string label

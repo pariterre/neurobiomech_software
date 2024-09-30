@@ -27,6 +27,7 @@ foreach(SOURCE_FILE ${SOURCE_FILES})
         ${MODULE_DEVICES}
     )
     target_link_libraries(${EXECUTABLE_NAME} PRIVATE
+        ${MODULE_UTILS}
         ${MODULE_DEVICES}
         nlohmann_json::nlohmann_json
     )
