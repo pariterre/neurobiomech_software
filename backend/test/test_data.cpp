@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 #include <iostream>
 
-#include "Devices/Data/CollectorData.h"
-#include "Devices/Data/DataCollection.h"
+#include "Devices/Data/DataDevices.h"
+#include "Devices/Data/TimeSeries.h"
 #include "Devices/NidaqDevice.h"
 
 #include "Utils/String.h"
@@ -14,21 +14,20 @@ using namespace STIMWALKER_NAMESPACE;
 // Start the tests
 
 TEST(Data, serialize) {
-  auto data = devices::DataCollection();
-  int dataId = data.registerNewDataId();
+  auto devices = devices::data::DataDevices();
+  devices.newDevice("0");
 
-  devices::CollectorData newData(1001, {1.0, 2.0, 3.0});
-  data.addData(dataId, newData);
+  devices::data::DataPoint newData(1001, {1.0, 2.0, 3.0});
+  devices["0"].add(newData);
 
-  auto json = data.serialize();
-  auto dataIdString = utils::String(dataId);
+  auto json = devices.serialize();
   ASSERT_EQ(json.size(), 1);
-  ASSERT_EQ(json[dataIdString].size(), 1);
-  ASSERT_EQ(json[dataIdString][0]["timestamp"], 1001);
-  ASSERT_EQ(json[dataIdString][0]["data"].size(), 3);
-  ASSERT_NEAR(json[dataIdString][0]["data"][0], 1.0, requiredPrecision);
-  ASSERT_NEAR(json[dataIdString][0]["data"][1], 2.0, requiredPrecision);
-  ASSERT_NEAR(json[dataIdString][0]["data"][2], 3.0, requiredPrecision);
+  ASSERT_EQ(json["0"].size(), 1);
+  ASSERT_EQ(json["0"][0]["timestamp"], 1001);
+  ASSERT_EQ(json["0"][0]["data"].size(), 3);
+  ASSERT_NEAR(json["0"][0]["data"][0], 1.0, requiredPrecision);
+  ASSERT_NEAR(json["0"][0]["data"][1], 2.0, requiredPrecision);
+  ASSERT_NEAR(json["0"][0]["data"][2], 3.0, requiredPrecision);
 
   auto jsonAsString = json.dump(2);
   ASSERT_STREQ(jsonAsString.c_str(), "{\n"
@@ -58,44 +57,43 @@ TEST(Data, deserialize) {
             }
         ]
     })"_json;
-  devices::DataCollection dataCollection = dataCollection.deserialize(json);
+  devices::data::DataDevices devices =
+      devices::data::DataDevices::deserialize(json);
 
-  ASSERT_EQ(dataCollection.getNbDataId(), 1);
-  const auto &deserializedData = dataCollection.getData(0);
-  ASSERT_EQ(deserializedData.size(), 2);
+  ASSERT_EQ(devices.size(), 1);
+  auto &timeSeries = devices["0"];
+  ASSERT_EQ(timeSeries.size(), 2);
 
-  ASSERT_EQ(deserializedData[0]->getTimestamp(), 2001);
-  ASSERT_EQ(deserializedData[0]->getData().size(), 3);
-  ASSERT_NEAR(deserializedData[0]->getData()[0], 4.0, requiredPrecision);
-  ASSERT_NEAR(deserializedData[0]->getData()[1], 5.0, requiredPrecision);
-  ASSERT_NEAR(deserializedData[0]->getData()[2], 6.0, requiredPrecision);
+  ASSERT_EQ(timeSeries[0].getTimestamp(), 2001);
+  ASSERT_EQ(timeSeries[0].getData().size(), 3);
+  ASSERT_NEAR(timeSeries[0].getData()[0], 4.0, requiredPrecision);
+  ASSERT_NEAR(timeSeries[0].getData()[1], 5.0, requiredPrecision);
+  ASSERT_NEAR(timeSeries[0].getData()[2], 6.0, requiredPrecision);
 
-  ASSERT_EQ(deserializedData[1]->getTimestamp(), 2002);
-  ASSERT_EQ(deserializedData[1]->getData().size(), 3);
-  ASSERT_NEAR(deserializedData[1]->getData()[0], -7.0, requiredPrecision);
-  ASSERT_NEAR(deserializedData[1]->getData()[1], 8.0, requiredPrecision);
-  ASSERT_NEAR(deserializedData[1]->getData()[2], 9.0, requiredPrecision);
+  ASSERT_EQ(timeSeries[1].getTimestamp(), 2002);
+  ASSERT_EQ(timeSeries[1].getData().size(), 3);
+  ASSERT_NEAR(timeSeries[1].getData()[0], -7.0, requiredPrecision);
+  ASSERT_NEAR(timeSeries[1].getData()[1], 8.0, requiredPrecision);
+  ASSERT_NEAR(timeSeries[1].getData()[2], 9.0, requiredPrecision);
 }
 
 TEST(Data, acquire) {
-  auto data = devices::DataCollection();
-  int dataId = data.registerNewDataId();
+  auto devices = devices::data::DataDevices();
+  devices.newDevice("Dummy");
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-  ASSERT_EQ(data.getNbDataId(), 0);
-
-  auto callback = [&data, dataId](const devices::CollectorData &newData) {
-    data.addData(dataId, newData);
+  auto callback = [&devices](const devices::data::DataPoint &newData) {
+    devices["Dummy"].add(newData);
   };
 
-  auto nidaq = devices::NidaqDeviceMock(4, 1000);
-  nidaq.onNewData(callback);
+  // TODO Redo the Mock
+  auto nidaq = devices::NidaqDevice(4, 1000);
+  nidaq.onNewData.listen(callback);
   nidaq.connect();
   nidaq.startRecording();
   std::this_thread::sleep_for(std::chrono::milliseconds(1));
-  nidaq.dispose();
 
-  ASSERT_EQ(data.getNbDataId(), 1);
-  const auto &dataFirstDeviceAfter = data.getData(dataId);
+  ASSERT_EQ(devices["Dummy"].size(), 1);
+  const auto &dataFirstDeviceAfter = devices["Dummy"];
   ASSERT_GE(dataFirstDeviceAfter.size(), 1);
 }

@@ -2,9 +2,9 @@
 
 #include "Devices/Data/TimeSeries.h"
 
-using namespace STIMWALKER_NAMESPACE::devices;
+using namespace STIMWALKER_NAMESPACE::devices::data;
 
-size_t DataDevices::length() const {
+size_t DataDevices::size() const {
   return static_cast<int>(m_AllDevices.size());
 }
 
@@ -13,32 +13,29 @@ void DataDevices::newDevice(const std::string &deviceName) {
     throw std::invalid_argument("Device already exists");
   }
 
-  m_AllDevices[deviceName] = std::vector<TimeSeries>();
+  m_AllDevices[deviceName] = TimeSeries();
 }
 
-std::vector<TimeSeries> &DataDevices::device(const std::string &deviceName) {
+TimeSeries &DataDevices::device(const std::string &deviceName) {
   return m_AllDevices.at(deviceName);
+}
+
+TimeSeries &DataDevices::operator[](const std::string &deviceName) {
+  return device(deviceName);
 }
 
 nlohmann::json DataDevices::serialize() const {
   nlohmann::json json;
-  for (const auto &[deviceName, deviceData] : m_AllDevices) {
-    json[deviceName] = nlohmann::json::array();
-    for (const auto &data : deviceData) {
-      json[deviceName].push_back(data.serialize());
-    }
+  for (const auto &[deviceName, timeSeries] : m_AllDevices) {
+    json[deviceName] = timeSeries.serialize();
   }
   return json;
 }
 
 DataDevices DataDevices::deserialize(const nlohmann::json &json) {
   DataDevices data;
-  for (const auto &[deviceName, deviceData] : json.items()) {
-    data.newDevice(deviceName);
-    auto &device = data.device(deviceName);
-    for (const auto &point : deviceData) {
-      device.push_back(TimeSeries::deserialize(point));
-    }
+  for (const auto &[deviceName, timeSeries] : json.items()) {
+    data[deviceName] = TimeSeries::deserialize(timeSeries);
   }
   return data;
 }

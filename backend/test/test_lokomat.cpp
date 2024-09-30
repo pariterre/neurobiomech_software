@@ -14,6 +14,6 @@ TEST(Lokomat, factory) {
   bool isMock = true;
   auto lokomat = devices::makeLokomatDevice(isMock);
 
-  ASSERT_EQ(lokomat->getNbChannels(), 25);
+  ASSERT_EQ(lokomat->getDataChannelCount(), 25);
   ASSERT_EQ(lokomat->getFrameRate(), 1000);
 }

@@ -8,6 +8,7 @@
 #include "stimwalkerConfig.h"
 
 namespace STIMWALKER_NAMESPACE::devices {
+namespace data {
 
 /// @brief Class to store data
 class DataPoint {
@@ -40,6 +41,8 @@ protected:
   /// @brief The data
   DECLARE_PROTECTED_MEMBER(std::vector<double>, Data);
 };
+
+} // namespace data
 } // namespace STIMWALKER_NAMESPACE::devices
 
 #endif // __STIMWALKER_DEVICES_DATA_DATA_POINT_H__

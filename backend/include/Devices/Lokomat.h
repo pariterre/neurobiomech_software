@@ -9,7 +9,7 @@ std::unique_ptr<NidaqDevice> makeLokomatDevice(bool isMock) {
   int nbChannels = 25;
   int frameRate = 1000;
 
-  return isMock ? std::make_unique<NidaqDeviceMock>(nbChannels, frameRate)
+  return isMock ? throw std::runtime_error("Mock not implemented yet")
                 : std::make_unique<NidaqDevice>(nbChannels, frameRate);
 }
 } // namespace STIMWALKER_NAMESPACE::devices

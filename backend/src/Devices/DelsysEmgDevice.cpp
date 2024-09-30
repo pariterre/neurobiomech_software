@@ -88,15 +88,15 @@ DeviceResponses DelsysEmgDevice::parseCommand(const DeviceCommands &command,
   return DeviceResponses::OK;
 }
 
-void DelsysEmgDevice::HandleNewData(const DataPoint &data) {
-  OnNewData.notifyListeners(data);
+void DelsysEmgDevice::HandleNewData(const data::DataPoint &data) {
+  onNewData.notifyListeners(data);
 }
 
 size_t DelsysEmgDevice::bufferSize() const {
   return m_DataChannelCount * m_BytesPerChannel;
 }
 
-DataPoint DelsysEmgDevice::read() {
+data::DataPoint DelsysEmgDevice::read() {
   // The raw data are supposed to be a single vector char of size
   // timeCount x channelCount x bytesPerChannel. We need to reshape it
   // to a timeCount x channelCount matrix of floats.
@@ -106,10 +106,10 @@ DataPoint DelsysEmgDevice::read() {
   for (int i = 0; i < m_DataChannelCount; ++i) {
     data[i] = *reinterpret_cast<float *>(raw.data() + i * m_BytesPerChannel);
   }
-  DataPoint dataPoint(data);
+  data::DataPoint dataPoint(data);
 
   if (m_IsRecording) {
-    OnNewData.notifyListeners(dataPoint);
+    onNewData.notifyListeners(dataPoint);
   }
   return dataPoint;
 }

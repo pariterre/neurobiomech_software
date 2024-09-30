@@ -8,7 +8,7 @@
 #include "Devices/Data/DataPoint.h"
 #include "Devices/Generic/Device.h"
 #include "Utils/CppMacros.h"
-#include "Utils/GenericCallback.h"
+#include "Utils/StimwalkerEvent.h"
 
 namespace STIMWALKER_NAMESPACE::devices {
 
@@ -33,11 +33,11 @@ public:
 protected:
   /// @brief Get the number of channels
   /// @return The number of channels
-  DECLARE_PROTECTED_MEMBER(int, DataChannelCount)
+  DECLARE_PROTECTED_MEMBER(size_t, DataChannelCount)
 
   /// @brief Get the frame rate
   /// @return The frame rate
-  DECLARE_PROTECTED_MEMBER(int, FrameRate)
+  DECLARE_PROTECTED_MEMBER(size_t, FrameRate)
 
   /// @brief Get if the device is currently recording
   /// @return True if the device is recording, false otherwise
@@ -46,13 +46,13 @@ protected:
 public:
   /// @brief Set the callback function to call when data is collected
   /// @param callback The callback function
-  GenericCallback<DataPoint> OnNewData;
+  StimwalkerEvent<data::DataPoint> onNewData;
 
 protected:
   /// @brief Method that is internally called when new data are ready. It is
-  /// expected to be called by the device and then call the OnNewData callback
+  /// expected to be called by the device and then call the onNewData callback
   /// @param data The new data to handle
-  virtual void HandleNewData(const DataPoint &data) = 0;
+  virtual void HandleNewData(const data::DataPoint &data) = 0;
 };
 
 } // namespace STIMWALKER_NAMESPACE::devices

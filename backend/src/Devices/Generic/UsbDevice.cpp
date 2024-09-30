@@ -1,9 +1,10 @@
 #include "Devices/Generic/UsbDevice.h"
 
 #if defined(_WIN32)
-// #include <cfgmgr32.h>
-// #include <setupapi.h>
-// #include <windows.h>
+#include <cfgmgr32.h>
+#include <regex>
+#include <setupapi.h>
+#include <windows.h>
 #else // Linux or macOS
 #include <filesystem>
 #include <fstream>

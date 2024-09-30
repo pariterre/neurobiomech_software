@@ -35,7 +35,7 @@ public:
 
 protected:
   /// @brief Notify the listeners that new data has been collected
-  void HandleNewData(const DataPoint &data) override;
+  void HandleNewData(const data::DataPoint &data) override;
 };
 
 // // TODO Reimplement the mocker

@@ -4,11 +4,10 @@ project(${MODULE_UTILS})
 
 # Add the relevant files
 set(SRC_LIST_MODULE
-    ${CMAKE_CURRENT_SOURCE_DIR}/GenericCallback.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Logger.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Path.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/String.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Timestamp.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/Logger.cpp
 )
 
 # Create the library

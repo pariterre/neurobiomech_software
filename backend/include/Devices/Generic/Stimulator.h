@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "Utils/CppMacros.h"
-#include "Utils/GenericCallback.h"
+#include "Utils/StimwalkerEvent.h"
 
 namespace STIMWALKER_NAMESPACE::devices {
 class DataPoint;
@@ -25,7 +25,7 @@ public:
 public:
   /// @brief Set the callback function to call when a stimulation is performed
   /// @param onStimulate The callback function
-  GenericCallback<const DataPoint &> OnStimulation;
+  StimwalkerEvent<const DataPoint &> OnStimulation;
 
 protected:
   /// @brief Method that is internally called when a stimulation is performed.

@@ -1,6 +1,6 @@
 #include "Devices/Data/DataPoint.h"
 
-using namespace STIMWALKER_NAMESPACE::devices;
+using namespace STIMWALKER_NAMESPACE::devices::data;
 
 DataPoint::DataPoint(const std::vector<double> &data)
     : m_Timestamp(-1), m_Data(data) {}

@@ -10,6 +10,8 @@
 #include "stimwalkerConfig.h"
 
 namespace STIMWALKER_NAMESPACE::devices {
+namespace data {
+
 class TimeSeries;
 
 /// @brief Class to store data
@@ -17,7 +19,7 @@ class DataDevices {
 public:
   /// @brief Get the number of devices in the collection
   /// @return The number of devices in the collection
-  size_t length() const;
+  size_t size() const;
 
   /// @brief Create a new device in the collection
   /// @param deviceName The name of the device
@@ -26,7 +28,12 @@ public:
   /// @brief Get the data of a specific device
   /// @param deviceName The name of the device
   /// @return The data of the device
-  std::vector<TimeSeries> &device(const std::string &deviceName);
+  TimeSeries &device(const std::string &deviceName);
+
+  /// @brief Add a new device to the collection
+  /// @param deviceName The name of the device
+  /// @return The data of the device
+  TimeSeries &operator[](const std::string &deviceName);
 
   /// @brief Get the data in serialized form
   /// @return The data in serialized form
@@ -38,8 +45,10 @@ public:
 
 protected:
   /// @brief The data of the collection
-  std::map<std::string, std::vector<TimeSeries>> m_AllDevices;
+  std::map<std::string, TimeSeries> m_AllDevices;
 };
+
+} // namespace data
 } // namespace STIMWALKER_NAMESPACE::devices
 
 #endif // __STIMWALKER_DEVICES_DATA_DATA_DEVICES_H__
