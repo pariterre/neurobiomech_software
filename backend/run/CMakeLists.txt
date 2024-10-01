@@ -10,7 +10,7 @@ set(SOURCE_FILES
     main_emg_delsys.cpp 
     main_rehastim.cpp
     main_lokomat.cpp
-    main_magstim.cpp
+    example_magstim.cpp
 )
 foreach(SOURCE_FILE ${SOURCE_FILES})
     get_filename_component(EXECUTABLE_NAME ${SOURCE_FILE} NAME_WE)
@@ -19,6 +19,7 @@ foreach(SOURCE_FILE ${SOURCE_FILES})
     
     target_include_directories(${EXECUTABLE_NAME} PRIVATE
         $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
         $<INSTALL_INTERFACE:include>
         ${Asio_INCLUDE_DIR}
     )

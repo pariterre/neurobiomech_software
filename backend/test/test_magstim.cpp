@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <iostream>
+#include <thread>
 
 #include "Devices/MagstimRapidDevice.h"
 #include "Utils/Logger.h"
@@ -8,7 +9,43 @@ static double requiredPrecision(1e-10);
 
 using namespace STIMWALKER_NAMESPACE;
 
+int listenToLogger(std::vector<std::string> &messagesToDevice) {
+  auto &logger = utils::Logger::getInstance();
+  logger.setShouldPrintToConsole(false);
+
+  size_t loggerId =
+      logger.onNewLog.listen([&messagesToDevice](const std::string &message) {
+        messagesToDevice.push_back(message);
+      });
+  return loggerId;
+}
+
+bool findMessageInLogger(const std::vector<std::string> &messagesToDevice,
+                         const std::string &message) {
+  for (const auto &msg : messagesToDevice) {
+    if (msg.find(message) != std::string::npos) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void clearListenToLogger(int loggerId) {
+  utils::Logger::getInstance().onNewLog.clear(loggerId);
+}
+
+TEST(Magstim, info) {
+  auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
+
+  ASSERT_STREQ(magstim.getPort().c_str(), "MOCK");
+  ASSERT_STREQ(magstim.getVid().c_str(), "067B");
+  ASSERT_STREQ(magstim.getPid().c_str(), "2303");
+}
+
 TEST(Magstim, connect) {
+  std::vector<std::string> messagesToDevice;
+  size_t loggerId = listenToLogger(messagesToDevice);
+
   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
 
   // Is not connected when created
@@ -17,220 +54,210 @@ TEST(Magstim, connect) {
   // Connect to the device, now shows as connected
   magstim.connect();
   ASSERT_EQ(magstim.getIsConnected(), true);
+  ASSERT_TRUE(
+      findMessageInLogger(messagesToDevice, "The device is now connected"));
+  messagesToDevice.clear();
 
   // Cannot connect twice
   EXPECT_THROW(magstim.connect(), devices::DeviceIsConnectedException);
+  ASSERT_TRUE(findMessageInLogger(
+      messagesToDevice,
+      "Cannot connect to the device because it is already connected"));
+  messagesToDevice.clear();
 
   // Disconnecting, shows as not connected anymore
   magstim.disconnect();
   ASSERT_EQ(magstim.getIsConnected(), false);
+  ASSERT_TRUE(
+      findMessageInLogger(messagesToDevice, "The device is now disconnected"));
+  messagesToDevice.clear();
 
   // Cannot disconnect twice
   EXPECT_THROW(magstim.disconnect(), devices::DeviceIsNotConnectedException);
+  ASSERT_TRUE(findMessageInLogger(
+      messagesToDevice,
+      "Cannot disconnect from the device because it is not connected"));
+
+  clearListenToLogger(loggerId);
 }
-// TEST(UsbDevice, Print) {
-//   auto &logger = utils::Logger::getInstance();
-//   logger.setLogLevel(utils::Logger::INFO);
 
-//   std::vector<std::string> messagesToDevice;
-//   logger.onNewLog.listen([&messagesToDevice](const std::string &message) {
-//     messagesToDevice.push_back(message);
-//   });
+TEST(UsbDevice, Print) {
+  std::vector<std::string> messagesToDevice;
+  size_t loggerId = listenToLogger(messagesToDevice);
 
-//   // Send a PRINT message to a USB device
-//   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
-//   magstim.send(devices::MagstimRapidCommands::PRINT, "Hello, world!", true);
+  // Send a PRINT message to a USB device
+  auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
+  EXPECT_THROW(
+      magstim.send(devices::MagstimRapidCommands::PRINT, "Hello, world!"),
+      devices::DeviceIsNotConnectedException);
 
-//   // At least one message should have been sent
-//   ASSERT_GE(messagesToDevice.size(), 1);
-//   bool hasPrint = false;
-//   for (const auto &message : messagesToDevice) {
-//     if (message.find("Hello, world!") != std::string::npos) {
-//       hasPrint = true;
-//     }
-//   }
-//   ASSERT_TRUE(hasPrint);
-// }
+  // Send a PRINT message to a USB device and wait for the response
+  magstim.connect();
+  magstim.send(devices::MagstimRapidCommands::PRINT, "Hello, world!");
+  magstim.disconnect();
+  clearListenToLogger(loggerId);
 
-// TEST(Magstim, getTemperature) {
-//   auto &logger = utils::Logger::getInstance();
-//   logger.setLogLevel(utils::Logger::INFO);
+  // At least one message should have been sent
+  ASSERT_TRUE(findMessageInLogger(messagesToDevice, "Hello, world!"));
 
-//   std::vector<std::string> messagesToDevice;
-//   logger.onNewLog.listen([&messagesToDevice](const std::string &message) {
-//     messagesToDevice.push_back(message);
-//   });
+  clearListenToLogger(loggerId);
+}
 
-//   // Connect the system and wait at least one POKE time and close
-//   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
-//   magstim.connect();
+TEST(Magstim, getTemperature) {
+  std::vector<std::string> messagesToDevice;
+  size_t loggerId = listenToLogger(messagesToDevice);
 
-//   // Get the temperature
-//   auto response =
-//   magstim.send(devices::MagstimRapidCommands::GET_TEMPERATURE);
-//   ASSERT_EQ(response, 42);
+  // Connect the system and wait at least one POKE time and close
+  auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
 
-//   // At least one message should have been sent
-//   ASSERT_GE(messagesToDevice.size(), 1);
-//   bool hasTemperature = false;
-//   for (const auto &message : messagesToDevice) {
-//     if (message.find("Temperature") != std::string::npos) {
-//       hasTemperature = true;
-//     }
-//   }
-//   ASSERT_TRUE(hasTemperature);
-// }
+  // Get the temperature
+  magstim.connect();
+  auto response = magstim.send(devices::MagstimRapidCommands::GET_TEMPERATURE);
+  magstim.disconnect();
+  clearListenToLogger(loggerId);
+  ASSERT_EQ(response.getValue(), 42);
 
-// TEST(Magstim, setRapid) {
-//   auto &logger = utils::Logger::getInstance();
-//   logger.setLogLevel(utils::Logger::INFO);
+  // At least one message should have been sent
+  ASSERT_TRUE(findMessageInLogger(messagesToDevice, "Temperature: 42"));
 
-//   std::vector<std::string> messagesToDevice;
-//   logger.onNewLog.listen([&messagesToDevice](const std::string &message) {
-//     messagesToDevice.push_back(message);
-//   });
+  clearListenToLogger(loggerId);
+}
 
-//   // Connect the system and set RTS to ON then to OFF
-//   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
-//   magstim.send(devices::MagstimRapidCommands::SET_FAST_COMMUNICATION, true);
-//   magstim.send(devices::MagstimRapidCommands::SET_FAST_COMMUNICATION, false);
+TEST(Magstim, setRapid) {
+  std::vector<std::string> messagesToDevice;
+  size_t loggerId = listenToLogger(messagesToDevice);
 
-//   // We should have at least 2 messages, one for the ON and one for the OFF
-//   ASSERT_GE(messagesToDevice.size(), 2);
-//   bool hasSetOn = false;
-//   bool hasSetOff = false;
-//   for (const auto &message : messagesToDevice) {
-//     if (message.find("ON") != std::string::npos) {
-//       hasSetOn = true;
-//     }
-//     if (message.find("OFF") != std::string::npos) {
-//       hasSetOff = true;
-//     }
-//   }
-//   ASSERT_TRUE(hasSetOn);
-//   ASSERT_TRUE(hasSetOff);
-// }
+  // Connect the system and set RTS to ON then to OFF
+  auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
 
-// TEST(Magstim, arming) {
-//   auto &logger = utils::Logger::getInstance();
-//   logger.setLogLevel(utils::Logger::INFO);
+  magstim.connect();
+  magstim.send(devices::MagstimRapidCommands::SET_FAST_COMMUNICATION, true);
+  ASSERT_TRUE(findMessageInLogger(messagesToDevice, "ON"));
+  messagesToDevice.clear();
 
-//   std::vector<std::string> messagesToDevice;
-//   logger.onNewLog.listen([&messagesToDevice](const std::string &message) {
-//     messagesToDevice.push_back(message);
-//   });
+  magstim.send(devices::MagstimRapidCommands::SET_FAST_COMMUNICATION, false);
+  ASSERT_TRUE(findMessageInLogger(messagesToDevice, "OFF"));
+  messagesToDevice.clear();
 
-//   // Connect the system and wait at least one POKE time and close
-//   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
+  magstim.disconnect();
+  clearListenToLogger(loggerId);
+}
 
-//   // Trying to ARM the system without connecting should not work
-//   auto response = magstim.send(devices::MagstimRapidCommands::ARM);
-//   ASSERT_EQ(response, devices::DeviceResponses::NOK);
+TEST(Magstim, arming) {
+  std::vector<std::string> messagesToDevice;
+  size_t loggerId = listenToLogger(messagesToDevice);
 
-//   // Connect the system then send the ARM command
-//   magstim.connect();
-//   response = magstim.send(devices::MagstimRapidCommands::ARM);
-//   ASSERT_EQ(response, devices::DeviceResponses::OK);
-//   ASSERT_EQ(magstim.getIsArmed(), true);
+  // Connect the system and wait at least one POKE time and close
+  auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
 
-//   response = magstim.send(devices::MagstimRapidCommands::DISARM);
-//   ASSERT_EQ(response, devices::DeviceResponses::OK);
-//   ASSERT_EQ(magstim.getIsArmed(), false);
-//   magstim.disconnect();
+  // Trying to ARM the system without connecting should not work
+  EXPECT_THROW(magstim.send(devices::MagstimRapidCommands::ARM),
+               devices::DeviceIsNotConnectedException);
+  ASSERT_EQ(magstim.getIsArmed(), false);
+  ASSERT_TRUE(findMessageInLogger(
+      messagesToDevice,
+      "Cannot send a command to the device because it is not connected"));
+  messagesToDevice.clear();
 
-//   // Should not be able to ARM the system after it is disconnected
-//   response = magstim.send(devices::MagstimRapidCommands::DISARM);
-//   ASSERT_EQ(response, devices::DeviceResponses::OK);
+  // Connect the system then send the ARM command
+  magstim.connect();
+  auto response = magstim.send(devices::MagstimRapidCommands::ARM);
+  ASSERT_EQ(response.getValue(), devices::DeviceResponses::OK);
+  ASSERT_EQ(magstim.getIsArmed(), true);
+  ASSERT_TRUE(findMessageInLogger(
+      messagesToDevice,
+      "Armed the system and changed poke interval to 500 ms"));
+  messagesToDevice.clear();
 
-//   // The callbacks should have been called at least 2 times, one for the ARM
-//   and
-//   // one for the DISARM
-//   ASSERT_GE(messagesToDevice.size(), 2);
-//   bool hasArmed = false;
-//   bool hasDisarmed = false;
-//   for (const auto &message : messagesToDevice) {
-//     if (message.find("ARM") != std::string::npos) {
-//       hasArmed = true;
-//     }
-//     if (message.find("DISARM") != std::string::npos) {
-//       hasDisarmed = true;
-//     }
-//   }
-//   ASSERT_TRUE(hasArmed);
-//   ASSERT_TRUE(hasDisarmed);
-// }
+  // Should not be able to ARM the system after it is already armed
+  response = magstim.send(devices::MagstimRapidCommands::ARM);
+  ASSERT_EQ(response.getValue(), devices::DeviceResponses::NOK);
+  ASSERT_EQ(magstim.getIsArmed(), true);
+  ASSERT_TRUE(findMessageInLogger(messagesToDevice,
+                                  "Error: The device is already armed"));
+  messagesToDevice.clear();
 
-// TEST(Magstim, automaticPokingNotArmed) {
-//   auto &logger = utils::Logger::getInstance();
-//   std::vector<std::string> messagesToDevice;
-//   logger.onNewLog.listen([&messagesToDevice](const std::string &message) {
-//     messagesToDevice.push_back(message);
-//   });
+  // Disarm the system
+  response = magstim.send(devices::MagstimRapidCommands::DISARM);
+  ASSERT_EQ(response.getValue(), devices::DeviceResponses::OK);
+  ASSERT_EQ(magstim.getIsArmed(), false);
+  ASSERT_TRUE(findMessageInLogger(
+      messagesToDevice,
+      "Disarmed the system and changed poke interval to 5000 ms"));
+  messagesToDevice.clear();
 
-//   // Connect the system and wait at least one POKE time and close
-//   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
-//   magstim.connect();
-//   std::this_thread::sleep_for(std::chrono::milliseconds(6000));
-//   magstim.disconnect();
+  // Should not be able to DISARM the system after it is already disarmed
+  response = magstim.send(devices::MagstimRapidCommands::DISARM);
+  ASSERT_EQ(response.getValue(), devices::DeviceResponses::NOK);
+  ASSERT_EQ(magstim.getIsArmed(), false);
+  ASSERT_TRUE(findMessageInLogger(messagesToDevice,
+                                  "Error: The device is already disarmed"));
+  messagesToDevice.clear();
 
-//   // The messagesToDevices should have be called at least once but maximum 2
-//   ASSERT_GE(messagesToDevice.size(), 1);
-//   ASSERT_LE(messagesToDevice.size(), 2);
+  magstim.disconnect();
+  clearListenToLogger(loggerId);
+}
 
-//   // The first message should be a POKE command, but the message contains the
-//   // time, so it must be parsed for the POKE tag
-//   ASSERT_TRUE(messagesToDevice[0].find("POKE") != std::string::npos);
-// }
+#ifndef SKIP_LONG_TESTS
+TEST(Magstim, automaticPokingDisarmed) {
+  std::vector<std::string> messagesToDevice;
+  size_t loggerId = listenToLogger(messagesToDevice);
 
-// TEST(Magstim, automaticPokingDisarmed) {
-//   auto &logger = utils::Logger::getInstance();
-//   std::vector<std::string> messagesToDevice;
-//   logger.onNewLog.listen([&messagesToDevice](const std::string &message) {
-//     messagesToDevice.push_back(message);
-//   });
+  // Connect the system and wait at least one POKE time and close
+  auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
+  ASSERT_EQ(magstim.getDisarmedPokeInterval(), std::chrono::milliseconds(5000));
+  ASSERT_EQ(magstim.getPokeInterval(), std::chrono::milliseconds(5000));
 
-//   // Connect the system and wait at least one POKE time and close
-//   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
+  magstim.connect();
+  messagesToDevice.clear();
+  ASSERT_EQ(magstim.getPokeInterval(), std::chrono::milliseconds(5000));
 
-//   // Connect the system without sending the ARM command
-//   ASSERT_EQ(magstim.getDisarmedPokeInterval(),
-//   std::chrono::milliseconds(5000)); magstim.connect();
-//   std::this_thread::sleep_for(std::chrono::milliseconds(6000));
-//   magstim.disconnect();
+  std::this_thread::sleep_for(std::chrono::milliseconds(4000));
+  ASSERT_EQ(messagesToDevice.size(), 0);
 
-//   // The messagesToDevices should have be called at least once
-//   size_t pokeCount = 0;
-//   for (const auto &message : messagesToDevice) {
-//     if (message.find("POKE") != std::string::npos) {
-//       pokeCount++;
-//     }
-//   }
-//   ASSERT_GE(pokeCount, 1);
-// }
+  std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+  ASSERT_EQ(messagesToDevice.size(), 1);
+  ASSERT_TRUE(findMessageInLogger(messagesToDevice, "POKE"));
 
-// TEST(Magstim, automaticPokingArmed) {
-//   auto &logger = utils::Logger::getInstance();
-//   std::vector<std::string> messagesToDevice;
-//   logger.onNewLog.listen([&messagesToDevice](const std::string &message) {
-//     messagesToDevice.push_back(message);
-//   });
+  magstim.disconnect();
+  clearListenToLogger(loggerId);
+}
+#endif
 
-//   // Connect the system and wait at least one POKE time and close
-//   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
+#ifndef SKIP_LONG_TESTS
+TEST(Magstim, automaticPokingArmed) {
+  std::vector<std::string> messagesToDevice;
+  size_t loggerId = listenToLogger(messagesToDevice);
 
-//   // Connect the system without sending the ARM command
-//   ASSERT_EQ(magstim.getArmedPokeInterval(), std::chrono::milliseconds(500));
-//   magstim.connect();
-//   magstim.send(devices::MagstimRapidCommands::ARM);
-//   std::this_thread::sleep_for(std::chrono::milliseconds(6000));
-//   magstim.disconnect();
+  // Connect the system and wait at least one POKE time and close
+  auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
+  ASSERT_EQ(magstim.getArmedPokeInterval(), std::chrono::milliseconds(500));
 
-//   // The messagesToDevices should have be called at least five times
-//   size_t pokeCount = 0;
-//   for (const auto &message : messagesToDevice) {
-//     if (message.find("POKE") != std::string::npos) {
-//       pokeCount++;
-//     }
-//   }
-//   ASSERT_GE(pokeCount, 5);
-// }
+  magstim.connect();
+  magstim.send(devices::MagstimRapidCommands::ARM);
+  ASSERT_EQ(magstim.getPokeInterval(), std::chrono::milliseconds(500));
+  messagesToDevice.clear();
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+  ASSERT_EQ(messagesToDevice.size(), 0);
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(2200));
+  ASSERT_GE(messagesToDevice.size(), 4); // 4 pokes in 2 seconds
+  magstim.disconnect();
+  clearListenToLogger(loggerId);
+
+  // The messagesToDevices should have be called at least five times
+  size_t pokeCount = 0;
+  for (const auto &message : messagesToDevice) {
+    if (message.find("POKE") != std::string::npos) {
+      pokeCount++;
+    }
+  }
+  ASSERT_GE(pokeCount, 4);
+}
+#endif
+
+TEST(Magstim, computeCrc) {
+  auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
+  ASSERT_EQ(magstim.computeCrcInterface("Hello, world!"), "v");
+}

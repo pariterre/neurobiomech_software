@@ -13,12 +13,7 @@
 using namespace STIMWALKER_NAMESPACE::devices;
 
 TcpDevice::TcpDevice(const std::string &host, size_t port)
-    : m_Host(host), m_Port(port) {}
-
-TcpDevice::TcpDevice(const TcpDevice &other)
-    : m_Host(other.m_Host), m_Port(other.m_Port) {
-  // TODO Throws an exception if the serial port is open as it cannot be copied
-}
+    : m_Host(host), m_Port(port), AsyncDevice() {}
 
 std::vector<char> TcpDevice::read(size_t bufferSize) {
   size_t cursor = 0;

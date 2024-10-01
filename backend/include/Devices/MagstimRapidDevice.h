@@ -57,6 +57,7 @@ public:
   /// @brief Constructor for a known port
   /// @param port The port name of the device
   MagstimRapidDevice(const std::string &port);
+  MagstimRapidDevice(const MagstimRapidDevice &other) = delete;
 
 protected:
   /// Protected members without Get accessors
@@ -94,12 +95,16 @@ protected:
                                const std::any &data) override;
 
   /// @brief Set a worker thread to keep the device alive
+  /// @param timeout The time to wait before sending the next POKE command
   void keepAlive(const std::chrono::milliseconds &timeout);
+
+  /// @brief Start the keep-alive mechanism
+  void startKeepAlive();
 
   /// @brief Compute the CRC checksum of the data
   /// @param data The data to compute the CRC for
   /// @return The CRC checksum of the data
-  std::string computeCRC(const std::string &data);
+  std::string computeCrc(const std::string &data);
 
   /// @brief Change the interval at which the device is poked
   void changePokeInterval(std::chrono::milliseconds interval);
@@ -110,6 +115,13 @@ public:
   MagstimRapidDeviceMock(const std::string &port);
 
   static MagstimRapidDeviceMock FindMagstimDevice();
+
+  std::string computeCrcInterface(const std::string &data);
+
+protected:
+  void handleConnect() override;
+
+  void setFastCommunication(bool isFast) override;
 };
 
 } // namespace STIMWALKER_NAMESPACE::devices

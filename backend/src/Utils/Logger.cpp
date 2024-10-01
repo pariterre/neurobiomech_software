@@ -76,8 +76,10 @@ void Logger::log(const std::string &message, Level level) {
   std::string toPrint = timeStamp + getLabel(level) + message;
 
   // Log to console
-  std::ostream &os = (level == FATAL) ? std::cerr : std::cout;
-  os << toPrint << std::endl;
+  if (m_ShouldPrintToConsole) {
+    std::ostream &os = (level == FATAL) ? std::cerr : std::cout;
+    os << toPrint << std::endl;
+  }
 
   // Log to file if logging to a file is enabled
   if (file_.is_open()) {

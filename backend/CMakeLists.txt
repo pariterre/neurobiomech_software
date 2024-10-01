@@ -25,8 +25,15 @@ endif()
 
 # Prepare linkings
 set (STIMWALKER_NAME ${PROJECT_NAME})
+
+# Add the configuration include
+configure_file(${CMAKE_SOURCE_DIR}/include/stimwalkerConfig.h.in
+    ${CMAKE_BINARY_DIR}/include/stimwalkerConfig.h)
+
+
 find_package(nlohmann_json 3.2.0 CONFIG REQUIRED)
 find_package(Asio REQUIRED)
+
 
 # Compilation directories
 set(${STIMWALKER_NAME}_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})

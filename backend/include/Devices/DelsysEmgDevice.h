@@ -13,7 +13,6 @@
 #include "Utils/CppMacros.h"
 
 namespace STIMWALKER_NAMESPACE::devices {
-class data::DataPoint;
 
 class DelsysCommands : public DeviceCommands {
 public:
@@ -39,6 +38,7 @@ public:
   DelsysEmgDevice(std::vector<size_t> channelIndices, size_t frameRate,
                   const std::string &host = "localhost",
                   size_t commandPort = 50040, size_t dataPort = 50043);
+  DelsysEmgDevice(const DelsysEmgDevice &other) = delete;
 
   ~DelsysEmgDevice();
 

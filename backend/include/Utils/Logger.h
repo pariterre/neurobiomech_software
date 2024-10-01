@@ -37,6 +37,8 @@ protected:
   Logger();
   ~Logger();
 
+  DECLARE_PROTECTED_MEMBER_WITH_SETTER(bool, ShouldPrintToConsole)
+
   // Log a message if it meets the minimum log level
   void log(const std::string &message, Level level);
 

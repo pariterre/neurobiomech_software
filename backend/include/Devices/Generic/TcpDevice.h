@@ -13,10 +13,7 @@ public:
   /// @param host The host name of the device
   /// @param port The port number of the device
   TcpDevice(const std::string &host, size_t port);
-
-  /// @brief Copy constructor
-  /// @param other The other TcpDevice object to copy
-  TcpDevice(const TcpDevice &other);
+  TcpDevice(const TcpDevice &other) = delete;
 
   /// @brief Read data from the tcp device
   /// @param bufferSize The size of the buffer to read

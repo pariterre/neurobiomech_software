@@ -60,6 +60,7 @@ add_executable(${PROJECT_NAME} ${TEST_SRC_FILES})
 # headers for the project
 target_include_directories(${PROJECT_NAME} PRIVATE
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
 

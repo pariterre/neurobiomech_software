@@ -26,7 +26,11 @@ MagstimRapidDevice::MagstimRapidDevice(const std::string &port)
       UsbDevice(port, "067B", "2303") {}
 
 void MagstimRapidDevice::handleConnect() {
+  UsbDevice::handleConnect();
+  startKeepAlive();
+}
 
+void MagstimRapidDevice::startKeepAlive() {
   // Add a keep-alive timer
   m_KeepAliveTimer = std::make_unique<asio::steady_timer>(m_AsyncContext);
   m_PokeInterval = std::chrono::milliseconds(m_DisarmedPokeInterval);
@@ -51,15 +55,15 @@ DeviceResponses MagstimRapidDevice::parseCommand(const DeviceCommands &command,
     case MagstimRapidCommands::GET_TEMPERATURE:
       // We do not need to check if the system is armed for this command
       commandString = "F@";
-      asio::write(*m_SerialPort,
-                  asio::buffer(commandString + computeCRC(commandString)));
+      // asio::write(*m_SerialPort,
+      //             asio::buffer(commandString + computeCRC(commandString)));
 
       // Wait for the response (9 bytes)
       // response = std::string(9, '\0');
       response = "42";
 
       // asio::read(*m_SerialPort, asio::buffer(response));
-      std::cout << "Temperature: " << response << std::endl;
+      logger.info("Temperature: " + response);
       return 42;
 
     case MagstimRapidCommands::SET_FAST_COMMUNICATION:
@@ -96,10 +100,12 @@ DeviceResponses MagstimRapidDevice::parseCommand(const DeviceCommands &command,
       return DeviceResponses::OK;
     }
   } catch (const std::bad_any_cast &) {
-    logger.fatal("The data you provided with the command (" +
-                 command.toString() + ") is invalid");
+    logger.warning("The data you provided with the command (" +
+                   command.toString() + ") is invalid");
+    return DeviceResponses::NOK;
   } catch (const std::exception &e) {
-    logger.fatal("Error: " + std::string(e.what()));
+    logger.warning("Error: " + std::string(e.what()));
+    return DeviceResponses::NOK;
   }
 
   return DeviceResponses::COMMAND_NOT_FOUND;
@@ -122,7 +128,7 @@ void MagstimRapidDevice::keepAlive(const std::chrono::milliseconds &timeout) {
   });
 }
 
-std::string MagstimRapidDevice::computeCRC(const std::string &data) {
+std::string MagstimRapidDevice::computeCrc(const std::string &data) {
   // Convert the command string to sum of ASCII/byte values
   int commandSum = 0;
   for (const auto &c : data) {
@@ -157,4 +163,21 @@ MagstimRapidDeviceMock::MagstimRapidDeviceMock(const std::string &port)
 
 MagstimRapidDeviceMock MagstimRapidDeviceMock::FindMagstimDevice() {
   return MagstimRapidDeviceMock("MOCK");
+}
+
+std::string
+MagstimRapidDeviceMock::computeCrcInterface(const std::string &data) {
+  return computeCrc(data);
+}
+
+void MagstimRapidDeviceMock::handleConnect() { startKeepAlive(); }
+
+void MagstimRapidDeviceMock::setFastCommunication(bool isFast) {
+  auto &logger = utils::Logger::getInstance();
+
+  if (isFast) {
+    logger.info("RTS set to ON");
+  } else {
+    logger.info("RTS set to OFF");
+  }
 }

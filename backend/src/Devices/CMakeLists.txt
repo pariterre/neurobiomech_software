@@ -24,6 +24,7 @@ add_dependencies(${MODULE_DEVICES} ${MODULE_UTILS})
 # Add the include
 target_include_directories(${MODULE_DEVICES} PRIVATE 
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>
     ${Asio_INCLUDE_DIR}
 )

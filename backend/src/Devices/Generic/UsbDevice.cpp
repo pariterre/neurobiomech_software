@@ -20,9 +20,10 @@ UsbDevice::UsbDevice(const std::string &port, const std::string &vid,
 
 UsbDevice UsbDevice::fromVidAndPid(const std::string &vid,
                                    const std::string &pid) {
-  for (const auto &device : UsbDevice::listAllUsbDevices()) {
-    if (device.m_Vid == vid && device.m_Pid == pid) {
-      return device;
+  std::vector<std::unique_ptr<UsbDevice>> devices = listAllUsbDevices();
+  for (const auto &device : devices) {
+    if (device->m_Vid == vid && device->m_Pid == pid) {
+      return UsbDevice(device->m_Port, vid, pid);
     }
   }
   throw SerialPortDeviceNotFoundException("USB device not found");
@@ -54,8 +55,8 @@ DeviceResponses UsbDevice::parseCommand(const DeviceCommands &command,
   return DeviceResponses::COMMAND_NOT_FOUND;
 }
 
-std::vector<UsbDevice> UsbDevice::listAllUsbDevices() {
-  std::vector<UsbDevice> devices;
+std::vector<std::unique_ptr<UsbDevice>> UsbDevice::listAllUsbDevices() {
+  std::vector<std::unique_ptr<UsbDevice>> devices;
 
 #if defined(_WIN32)
   HDEVINFO deviceInfoSet;
@@ -129,7 +130,7 @@ std::vector<UsbDevice> UsbDevice::listAllUsbDevices() {
       file >> pid;
       file.close();
 
-      devices.push_back(UsbDevice(port, vid, pid));
+      devices.push_back(std::make_unique<UsbDevice>(port, vid, pid));
     }
   }
 

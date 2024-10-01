@@ -13,10 +13,7 @@ public:
   /// @brief Constructor
   /// @param port The port name of the device
   SerialPortDevice(const std::string &port);
-
-  /// @brief Copy constructor
-  /// @param other The other SerialPortResponses object to copy
-  SerialPortDevice(const SerialPortDevice &other);
+  SerialPortDevice(const SerialPortDevice &other) = delete;
 
 protected:
   /// Protected members with Get accessors
@@ -57,5 +54,16 @@ public:
   bool operator==(const SerialPortDevice &other) const;
 };
 
+class SerialPortDeviceMock : public SerialPortDevice {
+public:
+  SerialPortDeviceMock(const std::string &port);
+
+protected:
+  void handleConnect() override;
+
+  void setFastCommunication(bool isFast) override;
+};
+
 } // namespace STIMWALKER_NAMESPACE::devices
+
 #endif // __STIMWALKER_DEVICES_SERIAL_PORT_DEVICE_H__

@@ -19,6 +19,15 @@ AsyncDevice::~AsyncDevice() {
 }
 
 void AsyncDevice::connect() {
+  auto &logger = utils::Logger::getInstance();
+
+  if (m_IsConnected) {
+    logger.warning(
+        "Cannot connect to the device because it is already connected");
+    throw DeviceIsConnectedException(
+        "Cannot connect to the device because it is already connected");
+  }
+
   // Start a worker thread to run the device using the [_initialize] method
   // Start the worker thread
   m_AsyncWorker = std::thread([this] {
@@ -27,12 +36,19 @@ void AsyncDevice::connect() {
   });
 
   // Give a bit of time for the worker thread to start
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  logger.info("The device is now connected");
+  m_IsConnected = true;
 }
 
 void AsyncDevice::disconnect() {
+  auto &logger = utils::Logger::getInstance();
+
   if (!m_IsConnected) {
-    throw DeviceIsNotConnectedException("The device is not connected");
+    logger.warning(
+        "Cannot disconnect from the device because it is not connected");
+    throw DeviceIsNotConnectedException(
+        "Cannot disconnect from the device because it is not connected");
   }
 
   // Just leave a bit of time if there are any pending commands to process
@@ -43,10 +59,45 @@ void AsyncDevice::disconnect() {
   m_AsyncWorker.join();
 
   m_IsConnected = false;
+  logger.info("The device is now disconnected");
 }
 
+DeviceResponses AsyncDevice::send(const DeviceCommands &command) {
+  return sendInternal(command, nullptr, false);
+}
 DeviceResponses AsyncDevice::send(const DeviceCommands &command,
-                                  const std::any &data, bool ignoreResponse) {
+                                  const char *data) {
+  return sendInternal(command, std::string(data), false);
+}
+DeviceResponses AsyncDevice::send(const DeviceCommands &command,
+                                  const std::any &data) {
+  return sendInternal(command, data, false);
+}
+
+DeviceResponses AsyncDevice::sendFast(const DeviceCommands &command) {
+  return sendInternal(command, nullptr, true);
+}
+DeviceResponses AsyncDevice::sendFast(const DeviceCommands &command,
+                                      const char *data) {
+  return sendInternal(command, std::string(data), true);
+}
+DeviceResponses AsyncDevice::sendFast(const DeviceCommands &command,
+                                      const std::any &data) {
+  return sendInternal(command, data, true);
+}
+
+DeviceResponses AsyncDevice::sendInternal(const DeviceCommands &command,
+                                          const std::any &data,
+                                          bool ignoreResponse) {
+  auto &logger = utils::Logger::getInstance();
+
+  if (!m_IsConnected) {
+    logger.warning(
+        "Cannot send a command to the device because it is not connected");
+    throw DeviceIsNotConnectedException(
+        "Cannot send a command to the device because it is not connected");
+  }
+
   // Create a promise and get the future associated with it
   std::promise<DeviceResponses> promise;
   std::future<DeviceResponses> future = promise.get_future();

@@ -5,6 +5,7 @@
         "-DBUILD_TESTS=ON",
         "-DBUILD_DOC=OFF",
         "-DBUILD_BINARIES=ON",
+        "-DSKIP_LONG_TESTS=OFF",
         "-DCMAKE_INSTALL_PREFIX={PATH_TO_INSTALL}"
     ],
     "editor.rulers": [80],

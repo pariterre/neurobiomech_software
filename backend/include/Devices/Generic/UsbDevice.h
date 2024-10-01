@@ -36,10 +36,7 @@ public:
   /// @param pid The product ID of the device
   UsbDevice(const std::string &port, const std::string &vid,
             const std::string &pid);
-
-  /// @brief Copy constructor
-  /// @param other The other UsbDevice object to copy
-  UsbDevice(const UsbDevice &other) = default;
+  UsbDevice(const UsbDevice &other) = delete;
 
   /// @brief Factory method to create a UsbDevice object from a vendor ID and
   /// product ID. Throws an exception if the device is not found
@@ -72,7 +69,7 @@ public:
   /// @brief Static method to list all USB devices connected to the system
   /// @return A vector of UsbDevice objects representing the connected USB
   /// devices
-  static std::vector<UsbDevice> listAllUsbDevices();
+  static std::vector<std::unique_ptr<UsbDevice>> listAllUsbDevices();
 };
 
 } // namespace STIMWALKER_NAMESPACE::devices

@@ -12,16 +12,9 @@
 
 using namespace STIMWALKER_NAMESPACE::devices;
 
-SerialPortDevice::SerialPortDevice(const std::string &port) : m_Port(port) {}
-
-SerialPortDevice::SerialPortDevice(const SerialPortDevice &other)
-    : m_Port(other.m_Port) {
-  // Throws an exception if the serial port is open as it cannot be copied
-  if (other.m_SerialPort != nullptr && other.m_SerialPort->is_open()) {
-    throw SerialPortIllegalOperationException(
-        "Cannot copy SerialPortDevice object with an open serial port");
-  }
-}
+SerialPortDevice::SerialPortDevice(const std::string &port)
+    : m_Port(port), m_SerialPortContext(std::make_unique<asio::io_context>()),
+      AsyncDevice() {}
 
 void SerialPortDevice::disconnect() {
   if (m_SerialPort != nullptr && m_SerialPort->is_open()) {
@@ -32,8 +25,6 @@ void SerialPortDevice::disconnect() {
 }
 
 void SerialPortDevice::handleConnect() {
-  m_SerialPortContext = std::make_unique<asio::io_context>();
-
   m_SerialPort =
       std::make_unique<asio::serial_port>(*m_SerialPortContext, m_Port);
   m_SerialPort->set_option(asio::serial_port_base::baud_rate(9600));
@@ -67,10 +58,10 @@ void SerialPortDevice::setFastCommunication(bool isFast) {
   // Turn RTS ON or OFF
   if (isFast) {
     status |= TIOCM_RTS;
-    logger.info("RTS set to ON (fast)");
+    logger.info("RTS set to ON");
   } else {
     status &= ~TIOCM_RTS;
-    logger.info("RTS set to OFF (slow)");
+    logger.info("RTS set to OFF");
   }
 
   if (ioctl(m_SerialPort->native_handle(), TIOCMSET, &status) < 0) {
@@ -82,4 +73,21 @@ void SerialPortDevice::setFastCommunication(bool isFast) {
 
 bool SerialPortDevice::operator==(const SerialPortDevice &other) const {
   return m_Port == other.m_Port;
+}
+
+SerialPortDeviceMock::SerialPortDeviceMock(const std::string &port)
+    : SerialPortDevice(port) {}
+
+void SerialPortDeviceMock::handleConnect() {
+  // Do nothing
+}
+
+void SerialPortDeviceMock::setFastCommunication(bool isFast) {
+  auto &logger = utils::Logger::getInstance();
+
+  if (isFast) {
+    logger.info("RTS set to ON");
+  } else {
+    logger.info("RTS set to OFF");
+  }
 }

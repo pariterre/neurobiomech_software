@@ -17,5 +17,6 @@ set_target_properties(${MODULE_UTILS} PROPERTIES DEBUG_POSTFIX "_debug")
 # Add the include
 target_include_directories(${MODULE_UTILS} PRIVATE
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )

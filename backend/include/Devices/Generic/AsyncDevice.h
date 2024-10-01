@@ -19,6 +19,7 @@ class AsyncDevice : public Device {
 public:
   /// Constructors
   AsyncDevice() = default;
+  AsyncDevice(const AsyncDevice &other) = delete;
   ~AsyncDevice();
 
 protected:
@@ -46,23 +47,31 @@ public:
 
   /// @brief Send a command to the device
   /// @param command The command to send to the device
-  /// @param data The data to send to the device
-  /// @param ignoreResponse True to ignore the response, false otherwise
-  DeviceResponses send(const DeviceCommands &command, const std::any &data,
-                       bool ignoreResponse = false);
-  DeviceResponses send(const DeviceCommands &command,
-                       bool ignoreResponse = false) {
-    return send(command, nullptr, ignoreResponse);
-  }
-  DeviceResponses send(const DeviceCommands &command, const char *data,
-                       bool ignoreResponse = false) {
-    return send(command, std::string(data), ignoreResponse);
-  }
+  /// @param data The optional data to send to the device
+  DeviceResponses send(const DeviceCommands &command);
+  DeviceResponses send(const DeviceCommands &command, const char *data);
+  DeviceResponses send(const DeviceCommands &command, const std::any &data);
+
+  /// @brief Send a command to the device without waiting for a response
+  /// @param command The command to send to the device
+  /// @param data The optional data to send to the device
+  DeviceResponses sendFast(const DeviceCommands &command);
+  DeviceResponses sendFast(const DeviceCommands &command, const char *data);
+  DeviceResponses sendFast(const DeviceCommands &command, const std::any &data);
 
 protected:
   /// @brief Initialize the device. When using an async device, one should not
   /// override the connect method but this one instead
   virtual void handleConnect() = 0;
+
+  /// @brief Send a command to the device. This method is called by the public
+  /// [send] method
+  /// @param command The command to send to the device
+  /// @param data The data to send to the device
+  /// @param ignoreResponse True to ignore the response, false otherwise
+  /// @return The response from the device
+  DeviceResponses sendInternal(const DeviceCommands &command,
+                               const std::any &data, bool ignoreResponse);
 
   /// @brief Parse a command received from the user and send to the device
   /// @param command The command to parse
