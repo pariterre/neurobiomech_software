@@ -45,6 +45,10 @@ void DelsysEmgDevice::startRecording() {
   }
 
   m_CommandDevice.send(DelsysCommands::START);
+  auto response = m_CommandDevice.read(128); // Wait for the OK message
+  if (std::strncmp(response.data(), "OK", 2) != 0) {
+    throw std::runtime_error("Command failed: START");
+  }
   m_IsRecording = true;
 }
 
@@ -54,6 +58,10 @@ void DelsysEmgDevice::stopRecording() {
   }
 
   m_CommandDevice.send(DelsysCommands::STOP);
+  auto response = m_CommandDevice.read(128); // Wait for the OK message
+  if (std::strncmp(response.data(), "OK", 2) != 0) {
+    throw std::runtime_error("Command failed: STOP");
+  }
 
   m_IsRecording = false;
 }
@@ -64,10 +72,12 @@ void DelsysEmgDevice::handleConnect() {
   }
 
   m_CommandDevice.connect();
-  auto coucou = m_CommandDevice.read(128); // Consume the welcome message
+  m_CommandDevice.read(128); // Consume the welcome message
 
   m_DataDevice.connect();
   m_IsConnected = true;
+
+  // RENDU ICI!!!! Find a way to keep the thread alive
 }
 
 DeviceResponses DelsysEmgDevice::parseCommand(const DeviceCommands &command,

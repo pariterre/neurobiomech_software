@@ -48,8 +48,7 @@ int main(int argc, char **argv) {
   lokomat.disconnect();
 
   std::string filename = "emg_data.csv";
-  std::string host = "127.0.0.1";
-  devices::DelsysEmgDevice emg(std::make_pair<size_t>(0, 15), 2000, host);
+  devices::DelsysEmgDevice emg;
   emg.connect();
   emg.startRecording();
 
