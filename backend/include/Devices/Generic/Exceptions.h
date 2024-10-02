@@ -24,6 +24,12 @@ public:
       : DeviceException(filename) {}
 };
 
+class DeviceConnexionFailedException : public DeviceException {
+public:
+  DeviceConnexionFailedException(const std::string &filename)
+      : DeviceException(filename) {}
+};
+
 class DeviceIsNotConnectedException : public DeviceException {
 public:
   DeviceIsNotConnectedException(const std::string &filename)

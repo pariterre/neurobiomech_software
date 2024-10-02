@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
 
   std::string filename = "emg_data.csv";
   std::string host = "127.0.0.1";
-  devices::DelsysEmgDevice emg(std::vector<size_t>({0, 15}), 2000, host);
+  devices::DelsysEmgDevice emg(std::make_pair<size_t>(0, 15), 2000, host);
   emg.connect();
   emg.startRecording();
 

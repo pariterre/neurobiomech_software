@@ -49,4 +49,7 @@ int main() {
     logger.fatal(e.what());
     return EXIT_FAILURE;
   }
+
+  logger.info("Exiting the application");
+  return EXIT_SUCCESS;
 }

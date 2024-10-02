@@ -35,17 +35,19 @@ public:
 
 class DelsysEmgDevice : public AsyncDevice, public DataCollector {
 public:
-  DelsysEmgDevice(std::vector<size_t> channelIndices, size_t frameRate,
-                  const std::string &host = "localhost",
+  /// @brief Constructor of the DelsysEmgDevice
+  /// @param host The host name of the device
+  /// @param commandPort The port of the command device
+  /// @param dataPort The port of the data device
+  DelsysEmgDevice(const std::string &host = "localhost",
                   size_t commandPort = 50040, size_t dataPort = 50043);
   DelsysEmgDevice(const DelsysEmgDevice &other) = delete;
 
+  /// @brief Destructor of the DelsysEmgDevice
   ~DelsysEmgDevice();
 
   void disconnect() override;
-
   void startRecording() override;
-
   void stopRecording() override;
 
   /// @brief Read the data from the device
@@ -56,9 +58,6 @@ public:
   /// DATA RELATED METHODS
 protected:
   void handleConnect() override;
-
-  /// @brief The index of the channels to collect
-  DECLARE_PROTECTED_MEMBER(std::vector<size_t>, ChannelIndices)
 
   /// @brief The command device
   DECLARE_PROTECTED_MEMBER_NOGET(TcpDevice, CommandDevice);

@@ -6,11 +6,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Add the executable
 set(SOURCE_FILES 
+    example_delsys.cpp
+    example_magstim.cpp
     main_emg_delsys_timings.cpp  
     main_emg_delsys.cpp 
     main_rehastim.cpp
     main_lokomat.cpp
-    example_magstim.cpp
 )
 foreach(SOURCE_FILE ${SOURCE_FILES})
     get_filename_component(EXECUTABLE_NAME ${SOURCE_FILE} NAME_WE)

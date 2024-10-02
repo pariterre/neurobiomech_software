@@ -30,15 +30,35 @@ void AsyncDevice::connect() {
 
   // Start a worker thread to run the device using the [_initialize] method
   // Start the worker thread
-  m_AsyncWorker = std::thread([this] {
-    handleConnect();
-    m_AsyncContext.run();
+  bool isConnectionHandled = false;
+  bool hasFailed = false;
+  m_AsyncWorker = std::thread([this, &isConnectionHandled, &hasFailed]() {
+    try {
+      handleConnect();
+      isConnectionHandled = true;
+      m_AsyncContext.run();
+    } catch (std::exception &e) {
+      auto &logger = utils::Logger::getInstance();
+      logger.fatal("Error while connecting to the device: " +
+                   std::string(e.what()));
+      hasFailed = true;
+      return;
+    }
   });
 
   // Give a bit of time for the worker thread to start
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  while (!isConnectionHandled) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    if (hasFailed) {
+      logger.fatal("Error while connecting to the device");
+      throw DeviceConnexionFailedException(
+          "Error while connecting to the device, see logs for more details");
+    }
+  }
+
+  m_IsConnected = isConnectionHandled;
+
   logger.info("The device is now connected");
-  m_IsConnected = true;
 }
 
 void AsyncDevice::disconnect() {

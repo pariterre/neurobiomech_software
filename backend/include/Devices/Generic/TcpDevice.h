@@ -33,14 +33,13 @@ protected:
 
   /// Protected members without Get accessors
 
-  /// @brief Get the tcp socket of the device
-  /// @return The tcp socket of the device
-  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
-                                 TcpSocket)
-
   /// @brief Get the async context of the device
   /// @return The async context of the device
   DECLARE_PROTECTED_MEMBER_NOGET(asio::io_context, TcpContext)
+
+  /// @brief Get the tcp socket of the device
+  /// @return The tcp socket of the device
+  DECLARE_PROTECTED_MEMBER_NOGET(asio::ip::tcp::socket, TcpSocket)
 
   /// Methods
 public:

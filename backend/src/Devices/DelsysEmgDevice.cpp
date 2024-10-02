@@ -6,17 +6,16 @@
 
 #include "Devices/Data/DataPoint.h"
 #include "Devices/Generic/Exceptions.h"
+#include "Utils/Logger.h"
 
 using namespace STIMWALKER_NAMESPACE::devices;
 
-DelsysEmgDevice::DelsysEmgDevice(std::vector<size_t> channelIndices,
-                                 size_t frameRate, const std::string &host,
-                                 size_t commandPort, size_t dataPort)
-    : m_ChannelIndices(channelIndices),
-      m_CommandDevice(TcpDevice(host, commandPort)),
+DelsysEmgDevice::DelsysEmgDevice(const std::string &host, size_t commandPort,
+                                 size_t dataPort)
+    : m_CommandDevice(TcpDevice(host, commandPort)),
       m_DataDevice(TcpDevice(host, dataPort)),
       m_TerminaisonCharacters("\r\n\r\n"), m_BytesPerChannel(4), AsyncDevice(),
-      DataCollector(channelIndices.size(), frameRate) {}
+      DataCollector(16, 2000) {}
 
 DelsysEmgDevice::~DelsysEmgDevice() {
   if (m_IsRecording) {
@@ -60,12 +59,12 @@ void DelsysEmgDevice::stopRecording() {
 }
 
 void DelsysEmgDevice::handleConnect() {
-  if (getIsConnected()) {
+  if (m_IsConnected) {
     throw DeviceIsConnectedException("The device is already connected");
   }
 
   m_CommandDevice.connect();
-  m_CommandDevice.read(1024); // Consume the welcome message
+  auto coucou = m_CommandDevice.read(128); // Consume the welcome message
 
   m_DataDevice.connect();
   m_IsConnected = true;
@@ -76,15 +75,10 @@ DeviceResponses DelsysEmgDevice::parseCommand(const DeviceCommands &command,
 
   std::string fullCommand(command.toString() + m_TerminaisonCharacters);
   m_CommandDevice.send(command, data);
-
-  // Response is exactly 128 bytes long
   std::vector<char> response = m_CommandDevice.read(128);
-
-  // Check if the response is not OK
   if (std::strncmp(response.data(), "OK", 2) != 0) {
     throw std::runtime_error("Command failed: " + command.toString());
   }
-
   return DeviceResponses::OK;
 }
 
