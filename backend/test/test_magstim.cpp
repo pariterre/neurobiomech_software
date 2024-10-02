@@ -9,7 +9,7 @@ static double requiredPrecision(1e-10);
 
 using namespace STIMWALKER_NAMESPACE;
 
-int listenToLogger(std::vector<std::string> &messagesToDevice) {
+size_t listenToLogger(std::vector<std::string> &messagesToDevice) {
   auto &logger = utils::Logger::getInstance();
   logger.setShouldPrintToConsole(false);
 
@@ -30,7 +30,7 @@ bool findMessageInLogger(const std::vector<std::string> &messagesToDevice,
   return false;
 }
 
-void clearListenToLogger(int loggerId) {
+void clearListenToLogger(size_t loggerId) {
   utils::Logger::getInstance().onNewLog.clear(loggerId);
 }
 

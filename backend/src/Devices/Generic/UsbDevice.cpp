@@ -103,7 +103,8 @@ std::vector<std::unique_ptr<UsbDevice>> UsbDevice::listAllUsbDevices() {
                                  std::regex::icase);
           std::smatch match;
           if (std::regex_search(deviceInstanceStr, match, vidPidRegex)) {
-            devices.push_back(UsbDevice(portName, match.str(1), match.str(2)));
+            devices.push_back(std::make_unique<UsbDevice>(
+                portName, match.str(1), match.str(2)));
           }
         }
         RegCloseKey(hDeviceRegistryKey);
