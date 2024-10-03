@@ -16,24 +16,52 @@ namespace STIMWALKER_NAMESPACE::devices {
 
 class DelsysCommands : public DeviceCommands {
 public:
-  static constexpr int START = 0;
-  static constexpr int STOP = 1;
-
-  DelsysCommands(int value) : DeviceCommands(value) {}
+  DECLARE_DEVICE_COMMAND(START, 0);
+  DECLARE_DEVICE_COMMAND(STOP, 1);
 
   virtual std::string toString() const {
     switch (m_Value) {
     case START:
-      return "START";
+      return START_AS_STRING + m_TerminaisonCharacters;
     case STOP:
-      return "STOP";
+      return STOP_AS_STRING + m_TerminaisonCharacters;
     default:
-      return "UNKNOWN";
+      throw UnknownCommandException("Unknown command in DelsysCommands");
     }
   }
+
+  /// @brief The terminaison characters for the command ("\r\n\r\n")
+  DECLARE_PROTECTED_MEMBER_NOGET(std::string, TerminaisonCharacters)
+
+protected:
+  friend class DelsysEmgDevice;
+  DelsysCommands(int value)
+      : m_TerminaisonCharacters("\r\n\r\n"), DeviceCommands(value) {}
+  DelsysCommands() = delete;
 };
 
 class DelsysEmgDevice : public AsyncDevice, public DataCollector {
+protected:
+  class CommandTcpDevice : public TcpDevice {
+  public:
+    CommandTcpDevice(const std::string &host, size_t port);
+    CommandTcpDevice(const TcpDevice &other) = delete;
+
+  protected:
+    DeviceResponses parseSendCommand(const DeviceCommands &command,
+                                     const std::any &data) override;
+  };
+
+  class DataTcpDevice : public TcpDevice {
+  public:
+    DataTcpDevice(const std::string &host, size_t port);
+    DataTcpDevice(const TcpDevice &other) = delete;
+
+  protected:
+    DeviceResponses parseSendCommand(const DeviceCommands &command,
+                                     const std::any &data) override;
+  };
+
 public:
   /// @brief Constructor of the DelsysEmgDevice
   /// @param host The host name of the device
@@ -50,37 +78,40 @@ public:
   void startRecording() override;
   void stopRecording() override;
 
-  /// @brief Read the data from the device
-  /// @param bufferSize The size of the buffer to read
-  /// @return One frame of data read from the device
-  data::DataPoint read();
-
-  /// DATA RELATED METHODS
 protected:
   void handleConnect() override;
 
   /// @brief The command device
-  DECLARE_PROTECTED_MEMBER_NOGET(TcpDevice, CommandDevice);
+  DECLARE_PROTECTED_MEMBER_NOGET(CommandTcpDevice, CommandDevice);
 
   /// @brief The data device
-  DECLARE_PROTECTED_MEMBER_NOGET(TcpDevice, DataDevice);
+  DECLARE_PROTECTED_MEMBER_NOGET(DataTcpDevice, DataDevice);
 
   /// @brief Send a command to the [m_CommandDevice]
   /// @param command The command to send
-  DeviceResponses parseCommand(const DeviceCommands &command,
-                               const std::any &data) override;
+  DeviceResponses parseSendCommand(const DeviceCommands &command,
+                                   const std::any &data) override;
 
-  /// INTERNAL METHODS
+  /// DATA RELATED METHODS
+public: // protected:
+  /// @brief Read the data from the device. This is meant to be called in a loop
+  /// from a worker thread
+  /// @param bufferSize The size of the buffer to read
+  /// @return One frame of data read from the device
+  data::DataPoint readData();
+
 protected:
-  /// @brief The terminaison character expected by the device ("\r\n\r\n")
-  DECLARE_PROTECTED_MEMBER_NOGET(std::string, TerminaisonCharacters)
+  /// @brief The length of the data buffer for each channel (4 for the Delsys)
+  DECLARE_PROTECTED_MEMBER(size_t, BytesPerChannel)
 
-  /// @brief The length of the data buffer for each channel
-  DECLARE_PROTECTED_MEMBER_NOGET(size_t, BytesPerChannel)
+  /// @brief The number of channels (16 for the Delsys Trigno)
+  DECLARE_PROTECTED_MEMBER(size_t, ChannelCount)
 
-  /// @brief The data buffer
-  /// @return The data buffer
-  size_t bufferSize() const;
+  /// @brief The snample count for each frame (27 for the Delsys)
+  DECLARE_PROTECTED_MEMBER(size_t, SampleCount)
+
+  /// @brief The buffer to read the data from the device
+  DECLARE_PROTECTED_MEMBER(std::vector<char>, DataBuffer)
 };
 } // namespace STIMWALKER_NAMESPACE::devices
 #endif // __STIMWALKER_DEVICES_DELSYS_EMG_DEVICE_H__

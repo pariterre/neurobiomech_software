@@ -10,12 +10,38 @@
 
 using namespace STIMWALKER_NAMESPACE::devices;
 
+DelsysEmgDevice::CommandTcpDevice::CommandTcpDevice(const std::string &host,
+                                                    size_t port)
+    : TcpDevice(host, port) {}
+
+DeviceResponses DelsysEmgDevice::CommandTcpDevice::parseSendCommand(
+    const DeviceCommands &command, const std::any &data) {
+  auto commandAsDelsys = DelsysCommands(command.getValue());
+  write(commandAsDelsys.toString());
+  std::vector<char> response = read(128);
+  return std::strncmp(response.data(), "OK", 2) == 0 ? DeviceResponses::OK
+                                                     : DeviceResponses::NOK;
+}
+
+DelsysEmgDevice::DataTcpDevice::DataTcpDevice(const std::string &host,
+                                              size_t port)
+    : TcpDevice(host, port) {}
+
+DeviceResponses
+DelsysEmgDevice::DataTcpDevice::parseSendCommand(const DeviceCommands &command,
+                                                 const std::any &data) {
+  throw DeviceShouldNotUseSendException(
+      "This method should not be called for DataTcpDevice");
+}
+
 DelsysEmgDevice::DelsysEmgDevice(const std::string &host, size_t commandPort,
                                  size_t dataPort)
-    : m_CommandDevice(TcpDevice(host, commandPort)),
-      m_DataDevice(TcpDevice(host, dataPort)),
-      m_TerminaisonCharacters("\r\n\r\n"), m_BytesPerChannel(4), AsyncDevice(),
-      DataCollector(16, 2000) {}
+    : m_CommandDevice(CommandTcpDevice(host, commandPort)),
+      m_DataDevice(DataTcpDevice(host, dataPort)), m_BytesPerChannel(4),
+      m_ChannelCount(16), m_SampleCount(27),
+      m_DataBuffer(std::vector<char>(m_ChannelCount * m_SampleCount *
+                                     m_BytesPerChannel)),
+      AsyncDevice(), DataCollector(16, 2000) {}
 
 DelsysEmgDevice::~DelsysEmgDevice() {
   if (m_IsRecording) {
@@ -44,10 +70,8 @@ void DelsysEmgDevice::startRecording() {
     throw DeviceIsRecordingException("The device is already recording");
   }
 
-  m_CommandDevice.send(DelsysCommands::START);
-  auto response = m_CommandDevice.read(128); // Wait for the OK message
-  if (std::strncmp(response.data(), "OK", 2) != 0) {
-    throw std::runtime_error("Command failed: START");
+  if (m_CommandDevice.send(DelsysCommands::START) != DeviceResponses::OK) {
+    throw DeviceFailedToStartRecordingException("Command failed: START");
   }
   m_IsRecording = true;
 }
@@ -57,12 +81,9 @@ void DelsysEmgDevice::stopRecording() {
     throw DeviceIsNotRecordingException("The device is not recording");
   }
 
-  m_CommandDevice.send(DelsysCommands::STOP);
-  auto response = m_CommandDevice.read(128); // Wait for the OK message
-  if (std::strncmp(response.data(), "OK", 2) != 0) {
-    throw std::runtime_error("Command failed: STOP");
+  if (m_CommandDevice.send(DelsysCommands::STOP) != DeviceResponses::OK) {
+    throw DeviceFailedToStopRecordingException("Command failed: STOP");
   }
-
   m_IsRecording = false;
 }
 
@@ -83,36 +104,31 @@ void DelsysEmgDevice::handleConnect() {
   }
 }
 
-DeviceResponses DelsysEmgDevice::parseCommand(const DeviceCommands &command,
-                                              const std::any &data) {
-
-  std::string fullCommand(command.toString() + m_TerminaisonCharacters);
-  m_CommandDevice.send(command, data);
-  std::vector<char> response = m_CommandDevice.read(128);
-  if (std::strncmp(response.data(), "OK", 2) != 0) {
-    throw std::runtime_error("Command failed: " + command.toString());
-  }
-  return DeviceResponses::OK;
+DeviceResponses DelsysEmgDevice::parseSendCommand(const DeviceCommands &command,
+                                                  const std::any &data) {
+  throw DeviceShouldNotUseSendException(
+      "This method should not be called for DelsysEmgDevice");
 }
 
-size_t DelsysEmgDevice::bufferSize() const {
-  return m_DataChannelCount * m_BytesPerChannel;
-}
+data::DataPoint DelsysEmgDevice::readData() {
 
-data::DataPoint DelsysEmgDevice::read() {
-  // The raw data are supposed to be a single vector char of size
-  // timeCount x channelCount x bytesPerChannel. We need to reshape it
-  // to a timeCount x channelCount matrix of floats.
-  std::vector<char> raw(m_DataDevice.read(bufferSize()));
+  // Wait for some time
+  std::vector<std::vector<double>> allData;
+  while (allData.size() < 1000) {
+    m_DataDevice.read(m_DataBuffer);
 
-  std::vector<double> data(m_DataChannelCount);
-  for (int i = 0; i < m_DataChannelCount; ++i) {
-    data[i] = *reinterpret_cast<float *>(raw.data() + i * m_BytesPerChannel);
+    std::vector<double> data(m_ChannelCount * m_SampleCount);
+    std::memcpy(data.data(), m_DataBuffer.data(),
+                m_ChannelCount * m_SampleCount * m_BytesPerChannel);
+    for (int i = 0; i < m_SampleCount; i++) {
+      std::vector<double> dataAsDouble(m_ChannelCount);
+      std::transform(data.begin() + i * m_ChannelCount,
+                     data.begin() + (i + 1) * m_ChannelCount,
+                     dataAsDouble.begin(),
+                     [](int x) { return static_cast<double>(x); });
+      allData.push_back(dataAsDouble);
+    }
   }
-  data::DataPoint dataPoint(data);
 
-  if (m_IsRecording) {
-    onNewData.notifyListeners(dataPoint);
-  }
-  return dataPoint;
+  return data::DataPoint(allData[0]);
 }

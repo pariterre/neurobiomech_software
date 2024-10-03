@@ -76,14 +76,13 @@ int main() {
     logger.info("Connected");
 
     delsys.startRecording();
-    // // // Give the system some time
-    // std::this_thread::sleep_for(std::chrono::milliseconds(100000));
+    delsys.readData();
 
     // // Get the data
     // logger.info("Get last values");
 
-    // delsys.disconnect();
-    // logger.info("Disconnected");
+    delsys.disconnect();
+    logger.info("Disconnected");
   } catch (std::exception &e) {
     logger.fatal(e.what());
     return EXIT_FAILURE;

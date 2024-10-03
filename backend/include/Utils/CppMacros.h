@@ -1,6 +1,10 @@
 #ifndef __STIMWALKER_UTILS_CPP_MACROS_H__
 #define __STIMWALKER_UTILS_CPP_MACROS_H__
 
+/// -------------------- ///
+/// GENERIC DECLARATIONS ///
+/// -------------------- ///
+
 // Define a "DECLARE_PROTECTED_MEMBER_WITH_SETTER" macro that will declare a
 // protected member variable and a public getter and setter for it. The macro
 // does not capitalize the first letter of the member variable name, so it
@@ -30,5 +34,13 @@ protected:                                                                     \
 #define DECLARE_PROTECTED_MEMBER_NOGET(type, name)                             \
 protected:                                                                     \
   type m_##name;
+
+/// ---------------------- ///
+/// DEVICE COMMANDS MACROS ///
+/// ---------------------- ///
+#define DECLARE_DEVICE_COMMAND(commandName, value)                             \
+public:                                                                        \
+  static constexpr int commandName = value;                                    \
+  static constexpr const char *commandName##_AS_STRING = #commandName;
 
 #endif // __STIMWALKER_UTILS_CPP_MACROS_H__

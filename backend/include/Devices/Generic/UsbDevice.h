@@ -8,22 +8,6 @@
 
 namespace STIMWALKER_NAMESPACE::devices {
 
-class UsbCommands : public DeviceCommands {
-public:
-  static constexpr int PRINT = 0;
-
-  UsbCommands(int value) : DeviceCommands(value) {}
-
-  virtual std::string toString() const {
-    switch (m_Value) {
-    case PRINT:
-      return "PRINT";
-    default:
-      return "UNKNOWN";
-    }
-  }
-};
-
 /// @brief A class representing a USB device
 /// @note This class is only available on Windows and Linux
 class UsbDevice : public SerialPortDevice {
@@ -61,8 +45,8 @@ protected:
   /// @brief Parse a command received from the user and send to the device
   /// @param command The command to parse
   /// @param data The data to parse
-  virtual DeviceResponses parseCommand(const DeviceCommands &command,
-                                       const std::any &data) override;
+  virtual DeviceResponses parseSendCommand(const DeviceCommands &command,
+                                           const std::any &data) override;
 
   /// Static helper methods
 public:

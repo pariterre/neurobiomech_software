@@ -29,29 +29,8 @@ UsbDevice UsbDevice::fromVidAndPid(const std::string &vid,
   throw SerialPortDeviceNotFoundException("USB device not found");
 }
 
-DeviceResponses UsbDevice::parseCommand(const DeviceCommands &command,
-                                        const std::any &data) {
-  // TODO Add a flusher for the serial port
-  auto &logger = utils::Logger::getInstance();
-
-  try {
-    switch (command.getValue()) {
-    case UsbCommands::PRINT:
-      logger.info("Sent command: " + std::any_cast<std::string>(data));
-
-      return DeviceResponses::OK;
-    }
-
-  } catch (const std::bad_any_cast &) {
-    std::cerr << "The data you provided with the command ("
-              << command.toString() << ") is invalid" << std::endl;
-    return DeviceResponses::NOK;
-
-  } catch (const std::exception &e) {
-    std::cerr << "Error: " << e.what() << std::endl;
-    return DeviceResponses::NOK;
-  }
-
+DeviceResponses UsbDevice::parseSendCommand(const DeviceCommands &command,
+                                            const std::any &data) {
   return DeviceResponses::COMMAND_NOT_FOUND;
 }
 

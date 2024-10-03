@@ -12,6 +12,8 @@
 
 using namespace STIMWALKER_NAMESPACE::devices;
 
+AsyncDevice::AsyncDevice() : m_KeepWorkerAliveInterval(1000), Device() {}
+
 AsyncDevice::~AsyncDevice() {
   if (m_IsConnected) {
     disconnect();
@@ -39,6 +41,7 @@ void AsyncDevice::connect() {
       return;
     }
     isConnectionHandled = true;
+    startKeepWorkerAlive();
     m_AsyncContext.run();
     utils::Logger::getInstance().info("Worker thread has stopped");
   });
@@ -101,6 +104,33 @@ DeviceResponses AsyncDevice::sendFast(const DeviceCommands &command,
   return sendInternal(command, data, true);
 }
 
+void AsyncDevice::startKeepWorkerAlive() {
+  // Add a keep-alive timer
+  m_KeepWorkerAliveTimer = std::make_unique<asio::steady_timer>(m_AsyncContext);
+  keepWorkerAlive(m_KeepWorkerAliveInterval);
+}
+
+void AsyncDevice::keepWorkerAlive(std::chrono::milliseconds timeout) {
+  // Set a 5-second timer
+  m_KeepWorkerAliveTimer->expires_after(timeout);
+
+  m_KeepWorkerAliveTimer->async_wait([this](const asio::error_code &ec) {
+    // If ec is not false, it means the timer was stopped to change the
+    // interval, or the device was disconnected. In both cases, do nothing and
+    // return
+    if (ec)
+      return;
+    // Otherwise, send a PING command to the device
+    std::lock_guard<std::mutex> lock(m_AsyncMutex);
+    pingWorker();
+
+    // Once its done, repeat the process
+    keepWorkerAlive(m_KeepWorkerAliveInterval);
+  });
+}
+
+void AsyncDevice::pingWorker() {}
+
 DeviceResponses AsyncDevice::sendInternal(const DeviceCommands &command,
                                           const std::any &data,
                                           bool ignoreResponse) {
@@ -117,11 +147,11 @@ DeviceResponses AsyncDevice::sendInternal(const DeviceCommands &command,
   std::future<DeviceResponses> future = promise.get_future();
   // Send a command to the worker to relay commands to the device
   m_AsyncContext.post(
-      [this, command, data = data, p = &promise, ignoreResponse]() mutable {
+      [this, &command, data = data, p = &promise, ignoreResponse]() mutable {
         std::lock_guard<std::mutex> lock(m_AsyncMutex);
 
         // Parse the command and get the response
-        auto response = parseCommand(command, data);
+        auto response = parseSendCommand(command, data);
 
         // Set the response value in the promise
         if (!ignoreResponse) {
@@ -135,11 +165,4 @@ DeviceResponses AsyncDevice::sendInternal(const DeviceCommands &command,
 
   // Wait for the response from the worker thread and return the result
   return future.get();
-}
-
-DeviceResponses AsyncDevice::parseCommand(const DeviceCommands &command,
-                                          const std::any &data) {
-  // TODO Add a flusher for the serial port
-
-  return DeviceResponses::COMMAND_NOT_FOUND;
 }

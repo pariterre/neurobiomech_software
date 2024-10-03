@@ -20,6 +20,15 @@ public:
   /// @return The data read from the device
   virtual std::vector<char> read(size_t bufferSize);
 
+  /// @brief Write data to the tcp device. Uses the buffer.size() as the size of
+  /// the data to write and fills the pre-allocated buffer with the data
+  /// @param buffer The buffer to write to the device
+  virtual void read(std::vector<char> &buffer);
+
+  /// @brief Write data to the tcp device
+  /// @param data The data to write to the device
+  virtual void write(const std::string &data);
+
 protected:
   /// Protected members with Get accessors
 
@@ -46,8 +55,6 @@ public:
   void disconnect() override;
 
 protected:
-  /// @brief Connect to the tcp device. This is expected to run on an
-  /// async thread
   void handleConnect() override;
 };
 

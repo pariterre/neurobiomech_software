@@ -8,57 +8,6 @@
 
 namespace STIMWALKER_NAMESPACE::devices {
 
-class DeviceCommands {
-public:
-  DeviceCommands() = delete;
-  DeviceCommands(int value) : m_Value(value) {}
-
-  virtual std::string toString() const {
-    throw std::runtime_error("This method should be overriden");
-  };
-
-protected:
-  DECLARE_PROTECTED_MEMBER(int, Value);
-};
-
-class DeviceResponses {
-public:
-  static constexpr int OK = 0;
-  static constexpr int NOK = 1;
-  static constexpr int COMMAND_NOT_FOUND = 2;
-  static constexpr int DEVICE_NOT_CONNECTED = 3;
-
-  // Constructor from int
-  DeviceResponses(int value) : m_Value(value) {}
-
-  // Use default move semantics
-  DeviceResponses(DeviceResponses &&other) noexcept = default;
-  DeviceResponses &operator=(DeviceResponses &&other) noexcept = default;
-
-  // Use default copy semantics
-  DeviceResponses(const DeviceResponses &other) = default;
-  DeviceResponses &operator=(const DeviceResponses &other) = default;
-
-  // String representation of the object
-  virtual std::string toString() const {
-    switch (m_Value) {
-    case OK:
-      return "OK";
-    case NOK:
-      return "NOK";
-    case COMMAND_NOT_FOUND:
-      return "COMMAND_NOT_FOUND";
-    case DEVICE_NOT_CONNECTED:
-      return "DEVICE_NOT_CONNECTED";
-    default:
-      return "UNKNOWN";
-    }
-  }
-
-protected:
-  DECLARE_PROTECTED_MEMBER(int, Value);
-};
-
 /// @brief Abstract class for devices
 class Device {
 public:

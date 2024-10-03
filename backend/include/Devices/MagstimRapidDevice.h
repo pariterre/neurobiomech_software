@@ -9,38 +9,37 @@
 
 namespace STIMWALKER_NAMESPACE::devices {
 
-class MagstimRapidCommands : public UsbCommands {
+class MagstimRapidCommands : public DeviceCommands {
 public:
-  static constexpr int POKE = 100;
-  static constexpr int SET_FAST_COMMUNICATION = 101;
-  static constexpr int GET_TEMPERATURE = 102;
-  static constexpr int ARM = 103;
-  static constexpr int DISARM = 104;
+  DECLARE_DEVICE_COMMAND(PRINT, 0);
+  DECLARE_DEVICE_COMMAND(POKE, 1);
+  DECLARE_DEVICE_COMMAND(SET_FAST_COMMUNICATION, 2);
+  DECLARE_DEVICE_COMMAND(GET_TEMPERATURE, 3);
+  DECLARE_DEVICE_COMMAND(ARM, 4);
+  DECLARE_DEVICE_COMMAND(DISARM, 5);
 
   virtual std::string toString() const override {
-    auto value = UsbCommands::toString();
-    if (value != "UNKNOWN") {
-      return value;
-    }
-
     switch (m_Value) {
+    case PRINT:
+      return PRINT_AS_STRING;
     case POKE:
-      return "POKE";
+      return POKE_AS_STRING;
     case SET_FAST_COMMUNICATION:
-      return "SET_FAST_COMMUNICATION";
+      return SET_FAST_COMMUNICATION_AS_STRING;
     case GET_TEMPERATURE:
-      return "GET_TEMPERATURE";
+      return GET_TEMPERATURE_AS_STRING;
     case ARM:
-      return "ARM";
+      return ARM_AS_STRING;
     case DISARM:
-      return "DISARM";
+      return DISARM_AS_STRING;
     default:
-      return "UNKNOWN";
+      throw UnknownCommandException("Unknown command in MagstimRapidCommands");
     }
   }
 
+protected:
   MagstimRapidCommands() = delete;
-  MagstimRapidCommands(int value) : UsbCommands(value) {}
+  MagstimRapidCommands(int value) : DeviceCommands(value) {}
 };
 
 /// @brief A class representing a Magstim Rapid device
@@ -74,32 +73,14 @@ protected:
   /// @return The interval at which the device is poked when disarmed
   DECLARE_PROTECTED_MEMBER(std::chrono::milliseconds, DisarmedPokeInterval)
 
-  /// @brief Get how long to wait before sending the PING command
-  /// @return How long to wait before sending the PING command
-  DECLARE_PROTECTED_MEMBER(std::chrono::milliseconds, PokeInterval)
-
-  /// @brief Get the keep-alive timer
-  /// @return The keep-alive timer
-  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::steady_timer>,
-                                 KeepAliveTimer)
-
 protected:
-  /// @brief Connect to the ubs device. This is expected to run on an async
-  /// thread
-  void handleConnect() override;
+  void pingWorker() override;
 
   /// @brief Parse a command received from the user and send to the device
   /// @param command The command to parse
   /// @param data The data to parse
-  DeviceResponses parseCommand(const DeviceCommands &command,
-                               const std::any &data) override;
-
-  /// @brief Set a worker thread to keep the device alive
-  /// @param timeout The time to wait before sending the next POKE command
-  void keepAlive(const std::chrono::milliseconds &timeout);
-
-  /// @brief Start the keep-alive mechanism
-  void startKeepAlive();
+  DeviceResponses parseSendCommand(const DeviceCommands &command,
+                                   const std::any &data) override;
 
   /// @brief Compute the CRC checksum of the data
   /// @param data The data to compute the CRC for

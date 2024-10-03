@@ -18,15 +18,39 @@ protected:
   std::string m_message;
 };
 
+class UnknownCommandException : public DeviceException {
+public:
+  UnknownCommandException(const std::string &filename)
+      : DeviceException(filename) {}
+};
+
 class DeviceIsConnectedException : public DeviceException {
 public:
   DeviceIsConnectedException(const std::string &filename)
       : DeviceException(filename) {}
 };
 
+class DeviceShouldNotUseSendException : public DeviceException {
+public:
+  DeviceShouldNotUseSendException(const std::string &filename)
+      : DeviceException(filename) {}
+};
+
 class DeviceConnexionFailedException : public DeviceException {
 public:
   DeviceConnexionFailedException(const std::string &filename)
+      : DeviceException(filename) {}
+};
+
+class DeviceFailedToStartRecordingException : public DeviceException {
+public:
+  DeviceFailedToStartRecordingException(const std::string &filename)
+      : DeviceException(filename) {}
+};
+
+class DeviceFailedToStopRecordingException : public DeviceException {
+public:
+  DeviceFailedToStopRecordingException(const std::string &filename)
       : DeviceException(filename) {}
 };
 
