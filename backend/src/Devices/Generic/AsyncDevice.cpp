@@ -24,8 +24,7 @@ void AsyncDevice::connect() {
   if (m_IsConnected) {
     logger.warning(
         "Cannot connect to the device because it is already connected");
-    throw DeviceIsConnectedException(
-        "Cannot connect to the device because it is already connected");
+    return;
   }
 
   // Start a worker thread to run the device using the [_initialize] method
@@ -35,29 +34,26 @@ void AsyncDevice::connect() {
   m_AsyncWorker = std::thread([this, &isConnectionHandled, &hasFailed]() {
     try {
       handleConnect();
-      isConnectionHandled = true;
-      m_AsyncContext.run();
-    } catch (std::exception &e) {
-      auto &logger = utils::Logger::getInstance();
-      logger.fatal("Error while connecting to the device: " +
-                   std::string(e.what()));
+    } catch (std::exception &) {
       hasFailed = true;
       return;
     }
+    isConnectionHandled = true;
+    m_AsyncContext.run();
+    utils::Logger::getInstance().info("Worker thread has stopped");
   });
 
   // Give a bit of time for the worker thread to start
   while (!isConnectionHandled) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     if (hasFailed) {
-      logger.fatal("Error while connecting to the device");
+      m_AsyncWorker.join();
       throw DeviceConnexionFailedException(
-          "Error while connecting to the device, see logs for more details");
+          "Error while connecting to the device");
     }
   }
 
-  m_IsConnected = isConnectionHandled;
-
+  m_IsConnected = true;
   logger.info("The device is now connected");
 }
 

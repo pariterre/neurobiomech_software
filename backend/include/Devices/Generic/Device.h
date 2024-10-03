@@ -26,6 +26,7 @@ public:
   static constexpr int OK = 0;
   static constexpr int NOK = 1;
   static constexpr int COMMAND_NOT_FOUND = 2;
+  static constexpr int DEVICE_NOT_CONNECTED = 3;
 
   // Constructor from int
   DeviceResponses(int value) : m_Value(value) {}
@@ -47,6 +48,8 @@ public:
       return "NOK";
     case COMMAND_NOT_FOUND:
       return "COMMAND_NOT_FOUND";
+    case DEVICE_NOT_CONNECTED:
+      return "DEVICE_NOT_CONNECTED";
     default:
       return "UNKNOWN";
     }

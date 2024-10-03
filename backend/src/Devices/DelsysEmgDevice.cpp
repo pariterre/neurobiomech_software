@@ -71,13 +71,16 @@ void DelsysEmgDevice::handleConnect() {
     throw DeviceIsConnectedException("The device is already connected");
   }
 
-  m_CommandDevice.connect();
-  m_CommandDevice.read(128); // Consume the welcome message
-
-  m_DataDevice.connect();
-  m_IsConnected = true;
-
-  // RENDU ICI!!!! Find a way to keep the thread alive
+  try {
+    m_CommandDevice.connect();
+    m_CommandDevice.read(128); // Consume the welcome message
+    m_DataDevice.connect();
+    m_IsConnected = true;
+  } catch (DeviceConnexionFailedException &e) {
+    utils::Logger::getInstance().fatal(
+        "The command device is not connected, did you start Trigno?");
+    throw e;
+  }
 }
 
 DeviceResponses DelsysEmgDevice::parseCommand(const DeviceCommands &command,
