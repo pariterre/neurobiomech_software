@@ -65,28 +65,6 @@ void DelsysEmgDevice::disconnect() {
   AsyncDevice::disconnect();
 }
 
-void DelsysEmgDevice::startRecording() {
-  if (m_IsRecording) {
-    throw DeviceIsRecordingException("The device is already recording");
-  }
-
-  if (m_CommandDevice.send(DelsysCommands::START) != DeviceResponses::OK) {
-    throw DeviceFailedToStartRecordingException("Command failed: START");
-  }
-  m_IsRecording = true;
-}
-
-void DelsysEmgDevice::stopRecording() {
-  if (!m_IsRecording) {
-    throw DeviceIsNotRecordingException("The device is not recording");
-  }
-
-  if (m_CommandDevice.send(DelsysCommands::STOP) != DeviceResponses::OK) {
-    throw DeviceFailedToStopRecordingException("Command failed: STOP");
-  }
-  m_IsRecording = false;
-}
-
 void DelsysEmgDevice::handleConnect() {
   if (m_IsConnected) {
     throw DeviceIsConnectedException("The device is already connected");
@@ -104,6 +82,18 @@ void DelsysEmgDevice::handleConnect() {
   }
 }
 
+void DelsysEmgDevice::handleStartRecording() {
+  if (m_CommandDevice.send(DelsysCommands::START) != DeviceResponses::OK) {
+    throw DeviceFailedToStartRecordingException("Command failed: START");
+  }
+}
+
+void DelsysEmgDevice::handleStopRecording() {
+  if (m_CommandDevice.send(DelsysCommands::STOP) != DeviceResponses::OK) {
+    throw DeviceFailedToStopRecordingException("Command failed: STOP");
+  }
+}
+
 DeviceResponses DelsysEmgDevice::parseSendCommand(const DeviceCommands &command,
                                                   const std::any &data) {
   throw DeviceShouldNotUseSendException(
@@ -112,23 +102,23 @@ DeviceResponses DelsysEmgDevice::parseSendCommand(const DeviceCommands &command,
 
 data::DataPoint DelsysEmgDevice::readData() {
 
-  // Wait for some time
-  std::vector<std::vector<double>> allData;
-  while (allData.size() < 1000) {
-    m_DataDevice.read(m_DataBuffer);
+  // // Wait for some time
+  // std::vector<std::vector<double>> allData;
+  // while (allData.size() < 1000) {
+  //   m_DataDevice.read(m_DataBuffer);
 
-    std::vector<double> data(m_ChannelCount * m_SampleCount);
-    std::memcpy(data.data(), m_DataBuffer.data(),
-                m_ChannelCount * m_SampleCount * m_BytesPerChannel);
-    for (int i = 0; i < m_SampleCount; i++) {
-      std::vector<double> dataAsDouble(m_ChannelCount);
-      std::transform(data.begin() + i * m_ChannelCount,
-                     data.begin() + (i + 1) * m_ChannelCount,
-                     dataAsDouble.begin(),
-                     [](int x) { return static_cast<double>(x); });
-      allData.push_back(dataAsDouble);
-    }
-  }
+  //   std::vector<double> data(m_ChannelCount * m_SampleCount);
+  //   std::memcpy(data.data(), m_DataBuffer.data(),
+  //               m_ChannelCount * m_SampleCount * m_BytesPerChannel);
+  //   for (int i = 0; i < m_SampleCount; i++) {
+  //     std::vector<double> dataAsDouble(m_ChannelCount);
+  //     std::transform(data.begin() + i * m_ChannelCount,
+  //                    data.begin() + (i + 1) * m_ChannelCount,
+  //                    dataAsDouble.begin(),
+  //                    [](int x) { return static_cast<double>(x); });
+  //     allData.push_back(dataAsDouble);
+  //   }
+  // }
 
-  return data::DataPoint(allData[0]);
+  return data::DataPoint(std::vector<double>(16, 0.0));
 }

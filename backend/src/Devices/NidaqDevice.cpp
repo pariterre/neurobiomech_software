@@ -6,7 +6,7 @@
 using namespace STIMWALKER_NAMESPACE::devices;
 
 NidaqDevice::NidaqDevice(size_t channelCount, size_t frameRate)
-    : Device(), DataCollector(channelCount, frameRate) {}
+    : AsyncDevice(), DataCollector(channelCount, frameRate) {}
 
 NidaqDevice::~NidaqDevice() {
   if (m_IsRecording) {
@@ -18,16 +18,6 @@ NidaqDevice::~NidaqDevice() {
   }
 }
 
-void NidaqDevice::connect() {
-  if (m_IsConnected) {
-    throw DeviceIsConnectedException("The device is already connected");
-  }
-
-  // TODO Implement the connection to the device
-
-  m_IsConnected = true;
-}
-
 void NidaqDevice::disconnect() {
   if (!m_IsConnected) {
     throw DeviceIsNotConnectedException("The device is not connected");
@@ -37,32 +27,25 @@ void NidaqDevice::disconnect() {
     stopRecording();
   }
 
-  // TODO Implement the disconnection from the device
-
-  m_IsConnected = false;
+  AsyncDevice::disconnect();
 }
 
-void NidaqDevice::startRecording() {
-  if (!m_IsConnected) {
-    throw DeviceIsNotConnectedException("The device is not connected");
-  }
-  if (m_IsRecording) {
-    throw DeviceIsRecordingException("The device is already recording");
-  }
+void NidaqDevice::handleConnect() {
+  // TODO Implement the connection to the device
+}
 
+void NidaqDevice::handleStartRecording() {
   // TODO Implement the start recording
-
-  m_IsRecording = true;
 }
 
-void NidaqDevice::stopRecording() {
-  if (!m_IsRecording) {
-    throw DeviceIsNotRecordingException("The device is not recording");
-  }
-
+void NidaqDevice::handleStopRecording() {
   // TODO Implement the stop recording
+}
 
-  m_IsRecording = false;
+DeviceResponses NidaqDevice::parseSendCommand(const DeviceCommands &command,
+                                              const std::any &data) {
+  throw DeviceShouldNotUseSendException(
+      "This method should not be called for NidaqDevice");
 }
 
 // // Mock implementation

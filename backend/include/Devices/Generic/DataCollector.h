@@ -25,12 +25,22 @@ public:
   virtual ~DataCollector() = default;
 
   /// @brief Start collecting data
-  virtual void startRecording() = 0;
+  virtual void startRecording();
 
   /// @brief Stop collecting data
-  virtual void stopRecording() = 0;
+  virtual void stopRecording();
 
 protected:
+  /// @brief Method to handle the start recording command. This is called on the
+  /// thread recording the data before starting the recording. If something goes
+  /// wrong, an exception should be thrown
+  virtual void handleStartRecording() = 0;
+
+  /// @brief Method to handle the stop recording command. This is called on the
+  /// thread recording the data before stopping the recording. If something goes
+  /// wrong, an exception should be thrown
+  virtual void handleStopRecording() = 0;
+
   /// @brief Get the number of channels
   /// @return The number of channels
   DECLARE_PROTECTED_MEMBER(size_t, DataChannelCount)

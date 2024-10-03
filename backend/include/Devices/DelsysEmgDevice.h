@@ -75,11 +75,11 @@ public:
   ~DelsysEmgDevice();
 
   void disconnect() override;
-  void startRecording() override;
-  void stopRecording() override;
 
 protected:
   void handleConnect() override;
+  void handleStartRecording() override;
+  void handleStopRecording() override;
 
   /// @brief The command device
   DECLARE_PROTECTED_MEMBER_NOGET(CommandTcpDevice, CommandDevice);

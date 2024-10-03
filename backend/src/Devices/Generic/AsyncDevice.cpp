@@ -1,10 +1,5 @@
 #include "Devices/Generic/AsyncDevice.h"
 
-#if defined(_WIN32)
-// #include <cfgmgr32.h>
-// #include <setupapi.h>
-// #include <windows.h>
-#endif // _WIN32
 #include <regex>
 #include <thread>
 
@@ -43,7 +38,6 @@ void AsyncDevice::connect() {
     isConnectionHandled = true;
     startKeepWorkerAlive();
     m_AsyncContext.run();
-    utils::Logger::getInstance().info("Worker thread has stopped");
   });
 
   // Give a bit of time for the worker thread to start

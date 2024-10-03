@@ -6,14 +6,14 @@
 #include <mutex>
 #include <thread>
 
+#include "Devices/Generic/AsyncDevice.h"
 #include "Devices/Generic/DataCollector.h"
-#include "Devices/Generic/Device.h"
 #include "stimwalkerConfig.h"
 
 namespace STIMWALKER_NAMESPACE::devices {
 
 /// @brief Abstract class for devices
-class NidaqDevice : public Device, public DataCollector {
+class NidaqDevice : public AsyncDevice, public DataCollector {
 
 public:
   /// @brief Constructor
@@ -28,10 +28,15 @@ public:
 
   ~NidaqDevice();
 
-  void connect() override;
   void disconnect() override;
-  void startRecording() override;
-  void stopRecording() override;
+
+protected:
+  void handleConnect() override;
+  void handleStartRecording() override;
+  void handleStopRecording() override;
+
+  DeviceResponses parseSendCommand(const DeviceCommands &command,
+                                   const std::any &data) override;
 };
 
 // // TODO Reimplement the mocker
