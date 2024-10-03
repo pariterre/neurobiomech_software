@@ -24,13 +24,13 @@ void Logger::fatal(const std::string &message) { log(message, FATAL); }
 
 // Set the minimum log level. Messages below this level will not be logged.
 void Logger::setLogLevel(Level level) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  minLogLevel_ = level;
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_LogLevel = level;
 }
 
 // Set the log file to write logs to a file
 void Logger::setLogFile(const std::string &filename) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(m_Mutex);
 
   std::filesystem::path filePath(filename);
   std::filesystem::path dirPath =
@@ -45,27 +45,27 @@ void Logger::setLogFile(const std::string &filename) {
     }
   }
 
-  if (file_.is_open()) {
-    file_.close();
+  if (m_File.is_open()) {
+    m_File.close();
   }
-  file_.open(filename, std::ios::out | std::ios::app);
+  m_File.open(filename, std::ios::out | std::ios::app);
 }
 
 // Private constructor and destructor to prevent direct instantiation
-Logger::Logger() : minLogLevel_(INFO) {}
+Logger::Logger() : m_ShouldPrintToConsole(true), m_LogLevel(INFO) {}
 
 Logger::~Logger() {
-  if (file_.is_open()) {
-    file_.close();
+  if (m_File.is_open()) {
+    m_File.close();
   }
 }
 
 // Log a message if it meets the minimum log level
 void Logger::log(const std::string &message, Level level) {
-  std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(m_Mutex);
 
   // Check if the current message meets the log level threshold
-  if (level < minLogLevel_) {
+  if (level < m_LogLevel) {
     return; // Skip logging if below the minimum log level
   }
 
@@ -77,13 +77,12 @@ void Logger::log(const std::string &message, Level level) {
 
   // Log to console
   if (m_ShouldPrintToConsole) {
-    std::ostream &os = (level == FATAL) ? std::cerr : std::cout;
-    os << toPrint << std::endl;
+    std::cout << toPrint << std::endl;
   }
 
   // Log to file if logging to a file is enabled
-  if (file_.is_open()) {
-    file_ << toPrint << std::endl;
+  if (m_File.is_open()) {
+    m_File << toPrint << std::endl;
   }
 
   // Emit the onNewLog event

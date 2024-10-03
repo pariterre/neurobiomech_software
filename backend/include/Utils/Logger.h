@@ -37,8 +37,6 @@ protected:
   Logger();
   ~Logger();
 
-  DECLARE_PROTECTED_MEMBER_WITH_SETTER(bool, ShouldPrintToConsole)
-
   // Log a message if it meets the minimum log level
   void log(const std::string &message, Level level);
 
@@ -49,9 +47,16 @@ protected:
   std::string getCurrentTime();
 
   // Logger state
-  std::mutex mutex_;   // For thread safety
-  std::ofstream file_; // Optional file stream for logging to a file
-  Level minLogLevel_;  // The minimum log level that will be displayed
+  DECLARE_PROTECTED_MEMBER_WITH_SETTER(bool, ShouldPrintToConsole)
+
+  /// @brief The mutex to lock the logger
+  DECLARE_PROTECTED_MEMBER_NOGET(std::mutex, Mutex)
+
+  /// @brief The file stream to write logs to a file
+  DECLARE_PROTECTED_MEMBER_NOGET(std::ofstream, File)
+
+  /// @brief The minimum log level that will be displayed
+  DECLARE_PROTECTED_MEMBER(Level, LogLevel)
 };
 
 } // namespace STIMWALKER_NAMESPACE::utils

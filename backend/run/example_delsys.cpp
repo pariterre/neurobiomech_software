@@ -85,8 +85,7 @@ int main() {
     // delsys.disconnect();
     // logger.info("Disconnected");
   } catch (std::exception &e) {
-    logger.info(e.what());
-    std::cout << e.what() << std::endl;
+    logger.fatal(e.what());
     return EXIT_FAILURE;
   }
 

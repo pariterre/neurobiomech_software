@@ -100,11 +100,11 @@ DeviceResponses MagstimRapidDevice::parseCommand(const DeviceCommands &command,
       return DeviceResponses::OK;
     }
   } catch (const std::bad_any_cast &) {
-    logger.warning("The data you provided with the command (" +
-                   command.toString() + ") is invalid");
+    logger.fatal("The data you provided with the command (" +
+                 command.toString() + ") is invalid");
     return DeviceResponses::NOK;
   } catch (const std::exception &e) {
-    logger.warning("Error: " + std::string(e.what()));
+    logger.fatal("Error: " + std::string(e.what()));
     return DeviceResponses::NOK;
   }
 

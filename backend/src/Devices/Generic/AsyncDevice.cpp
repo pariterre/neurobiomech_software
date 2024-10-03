@@ -67,8 +67,7 @@ void AsyncDevice::disconnect() {
   if (!m_IsConnected) {
     logger.warning(
         "Cannot disconnect from the device because it is not connected");
-    throw DeviceIsNotConnectedException(
-        "Cannot disconnect from the device because it is not connected");
+    return;
   }
 
   // Just leave a bit of time if there are any pending commands to process
@@ -114,8 +113,7 @@ DeviceResponses AsyncDevice::sendInternal(const DeviceCommands &command,
   if (!m_IsConnected) {
     logger.warning(
         "Cannot send a command to the device because it is not connected");
-    throw DeviceIsNotConnectedException(
-        "Cannot send a command to the device because it is not connected");
+    return DeviceResponses::DEVICE_NOT_CONNECTED;
   }
 
   // Create a promise and get the future associated with it
