@@ -50,12 +50,9 @@ protected:
   /// @return The tcp socket of the device
   DECLARE_PROTECTED_MEMBER_NOGET(asio::ip::tcp::socket, TcpSocket)
 
-  /// Methods
-public:
-  void disconnect() override;
-
 protected:
-  void handleConnect() override;
+  void handleAsyncConnect() override;
+  void handleAsyncDisconnect() override;
 };
 
 } // namespace STIMWALKER_NAMESPACE::devices

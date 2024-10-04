@@ -45,8 +45,8 @@ protected:
   /// @brief Parse a command received from the user and send to the device
   /// @param command The command to parse
   /// @param data The data to parse
-  virtual DeviceResponses parseSendCommand(const DeviceCommands &command,
-                                           const std::any &data) override;
+  virtual DeviceResponses parseAsyncSendCommand(const DeviceCommands &command,
+                                                const std::any &data) override;
 
   /// Static helper methods
 public:

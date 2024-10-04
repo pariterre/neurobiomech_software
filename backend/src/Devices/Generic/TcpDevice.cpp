@@ -42,17 +42,15 @@ void TcpDevice::write(const std::string &data) {
   }
 }
 
-void TcpDevice::disconnect() {
-  if (m_TcpSocket.is_open()) {
-    m_TcpSocket.close();
-  }
-
-  AsyncDevice::disconnect();
-}
-
-void TcpDevice::handleConnect() {
+void TcpDevice::handleAsyncConnect() {
   m_TcpSocket.connect(
       asio::ip::tcp::endpoint(asio::ip::address::from_string(
                                   m_Host == "localhost" ? "127.0.0.1" : m_Host),
                               static_cast<unsigned short>(m_Port)));
+}
+
+void TcpDevice::handleAsyncDisconnect() {
+  if (m_TcpSocket.is_open()) {
+    m_TcpSocket.close();
+  }
 }

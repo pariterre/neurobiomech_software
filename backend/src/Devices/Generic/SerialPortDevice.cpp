@@ -24,7 +24,7 @@ void SerialPortDevice::disconnect() {
   AsyncDevice::disconnect();
 }
 
-void SerialPortDevice::handleConnect() {
+void SerialPortDevice::handleAsyncConnect() {
   m_SerialPort =
       std::make_unique<asio::serial_port>(*m_SerialPortContext, m_Port);
   m_SerialPort->set_option(asio::serial_port_base::baud_rate(9600));
@@ -35,6 +35,12 @@ void SerialPortDevice::handleConnect() {
       asio::serial_port_base::parity(asio::serial_port_base::parity::none));
   m_SerialPort->set_option(asio::serial_port_base::flow_control(
       asio::serial_port_base::flow_control::none));
+}
+
+void SerialPortDevice::handleAsyncDisconnect() {
+  if (m_SerialPort != nullptr && m_SerialPort->is_open()) {
+    m_SerialPort->close();
+  }
 }
 
 void SerialPortDevice::setFastCommunication(bool isFast) {
@@ -78,7 +84,11 @@ bool SerialPortDevice::operator==(const SerialPortDevice &other) const {
 SerialPortDeviceMock::SerialPortDeviceMock(const std::string &port)
     : SerialPortDevice(port) {}
 
-void SerialPortDeviceMock::handleConnect() {
+void SerialPortDeviceMock::handleAsyncConnect() {
+  // Do nothing
+}
+
+void SerialPortDeviceMock::handleAsyncDisconnect() {
   // Do nothing
 }
 

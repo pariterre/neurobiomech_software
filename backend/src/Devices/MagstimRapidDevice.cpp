@@ -27,8 +27,8 @@ MagstimRapidDevice::MagstimRapidDevice(const std::string &port)
 }
 
 DeviceResponses
-MagstimRapidDevice::parseSendCommand(const DeviceCommands &command,
-                                     const std::any &data) {
+MagstimRapidDevice::parseAsyncSendCommand(const DeviceCommands &command,
+                                          const std::any &data) {
   auto &logger = utils::Logger::getInstance();
   std::string commandString;
   std::string response;
@@ -52,10 +52,8 @@ MagstimRapidDevice::parseSendCommand(const DeviceCommands &command,
 
       // Wait for the response (9 bytes)
       // response = std::string(9, '\0');
-      response = "42";
 
       // asio::read(*m_SerialPort, asio::buffer(response));
-      logger.info("Temperature: " + response);
       return 42;
 
     case MagstimRapidCommands::SET_FAST_COMMUNICATION:
@@ -104,7 +102,7 @@ MagstimRapidDevice::parseSendCommand(const DeviceCommands &command,
 }
 
 void MagstimRapidDevice::pingWorker() {
-  parseSendCommand(MagstimRapidCommands::POKE, std::string("POKE"));
+  parseAsyncSendCommand(MagstimRapidCommands::POKE, std::string("POKE"));
 }
 
 std::string MagstimRapidDevice::computeCrc(const std::string &data) {
@@ -149,8 +147,6 @@ MagstimRapidDeviceMock::computeCrcInterface(const std::string &data) {
   return computeCrc(data);
 }
 
-void MagstimRapidDeviceMock::handleConnect() {}
-
 void MagstimRapidDeviceMock::setFastCommunication(bool isFast) {
   auto &logger = utils::Logger::getInstance();
 
@@ -160,3 +156,7 @@ void MagstimRapidDeviceMock::setFastCommunication(bool isFast) {
     logger.info("RTS set to OFF");
   }
 }
+
+void MagstimRapidDeviceMock::handleAsyncConnect() {}
+
+void MagstimRapidDeviceMock::handleAsyncDisconnect() {}

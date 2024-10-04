@@ -30,7 +30,7 @@ void NidaqDevice::disconnect() {
   AsyncDevice::disconnect();
 }
 
-void NidaqDevice::handleConnect() {
+void NidaqDevice::handleAsyncConnect() {
   // TODO Implement the connection to the device
 }
 
@@ -42,8 +42,9 @@ void NidaqDevice::handleStopRecording() {
   // TODO Implement the stop recording
 }
 
-DeviceResponses NidaqDevice::parseSendCommand(const DeviceCommands &command,
-                                              const std::any &data) {
+DeviceResponses
+NidaqDevice::parseAsyncSendCommand(const DeviceCommands &command,
+                                   const std::any &data) {
   throw DeviceShouldNotUseSendException(
       "This method should not be called for NidaqDevice");
 }

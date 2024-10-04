@@ -14,7 +14,7 @@ DelsysEmgDevice::CommandTcpDevice::CommandTcpDevice(const std::string &host,
                                                     size_t port)
     : TcpDevice(host, port) {}
 
-DeviceResponses DelsysEmgDevice::CommandTcpDevice::parseSendCommand(
+DeviceResponses DelsysEmgDevice::CommandTcpDevice::parseAsyncSendCommand(
     const DeviceCommands &command, const std::any &data) {
   auto commandAsDelsys = DelsysCommands(command.getValue());
   write(commandAsDelsys.toString());
@@ -27,9 +27,8 @@ DelsysEmgDevice::DataTcpDevice::DataTcpDevice(const std::string &host,
                                               size_t port)
     : TcpDevice(host, port) {}
 
-DeviceResponses
-DelsysEmgDevice::DataTcpDevice::parseSendCommand(const DeviceCommands &command,
-                                                 const std::any &data) {
+DeviceResponses DelsysEmgDevice::DataTcpDevice::parseAsyncSendCommand(
+    const DeviceCommands &command, const std::any &data) {
   throw DeviceShouldNotUseSendException(
       "This method should not be called for DataTcpDevice");
 }
@@ -76,21 +75,21 @@ void DelsysEmgDevice::disconnect() {
   AsyncDevice::disconnect();
 }
 
-void DelsysEmgDevice::handleConnect() {
-  if (m_IsConnected) {
-    throw DeviceIsConnectedException("The device is already connected");
-  }
-
+void DelsysEmgDevice::handleAsyncConnect() {
   try {
     m_CommandDevice->connect();
     m_CommandDevice->read(128); // Consume the welcome message
     m_DataDevice->connect();
-    m_IsConnected = true;
   } catch (DeviceConnexionFailedException &e) {
     utils::Logger::getInstance().fatal(
         "The command device is not connected, did you start Trigno?");
     throw e;
   }
+}
+
+void DelsysEmgDevice::handleAsyncDisconnect() {
+  m_CommandDevice->disconnect();
+  m_DataDevice->disconnect();
 }
 
 void DelsysEmgDevice::handleStartRecording() {
@@ -105,8 +104,9 @@ void DelsysEmgDevice::handleStopRecording() {
   }
 }
 
-DeviceResponses DelsysEmgDevice::parseSendCommand(const DeviceCommands &command,
-                                                  const std::any &data) {
+DeviceResponses
+DelsysEmgDevice::parseAsyncSendCommand(const DeviceCommands &command,
+                                       const std::any &data) {
   throw DeviceShouldNotUseSendException(
       "This method should not be called for DelsysEmgDevice");
 }
@@ -152,11 +152,12 @@ void DelsysEmgDeviceMock::CommandTcpDeviceMock::read(
   std::fill(buffer.begin() + welcomeMessage.size(), buffer.end(), 0);
 }
 
-void DelsysEmgDeviceMock::CommandTcpDeviceMock::handleConnect() {
+void DelsysEmgDeviceMock::CommandTcpDeviceMock::handleAsyncConnect() {
   m_IsConnected = true;
 }
 
-DeviceResponses DelsysEmgDeviceMock::CommandTcpDeviceMock::parseSendCommand(
+DeviceResponses
+DelsysEmgDeviceMock::CommandTcpDeviceMock::parseAsyncSendCommand(
     const DeviceCommands &command, const std::any &data) {
   m_IsConnected = true;
   return DeviceResponses::OK;
@@ -171,11 +172,11 @@ void DelsysEmgDeviceMock::DataTcpDeviceMock::read(std::vector<char> &buffer) {
   std::fill(buffer.begin(), buffer.end(), 1);
 }
 
-void DelsysEmgDeviceMock::DataTcpDeviceMock::handleConnect() {
+void DelsysEmgDeviceMock::DataTcpDeviceMock::handleAsyncConnect() {
   m_IsConnected = true;
 }
 
-DeviceResponses DelsysEmgDeviceMock::DataTcpDeviceMock::parseSendCommand(
+DeviceResponses DelsysEmgDeviceMock::DataTcpDeviceMock::parseAsyncSendCommand(
     const DeviceCommands &command, const std::any &data) {
   return DeviceResponses::OK;
 }

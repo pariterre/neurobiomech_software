@@ -31,12 +31,12 @@ public:
   void disconnect() override;
 
 protected:
-  void handleConnect() override;
+  void handleAsyncConnect() override;
   void handleStartRecording() override;
   void handleStopRecording() override;
 
-  DeviceResponses parseSendCommand(const DeviceCommands &command,
-                                   const std::any &data) override;
+  DeviceResponses parseAsyncSendCommand(const DeviceCommands &command,
+                                        const std::any &data) override;
 };
 
 // // TODO Reimplement the mocker

@@ -48,8 +48,8 @@ protected:
     CommandTcpDevice(const CommandTcpDevice &other) = delete;
 
   protected:
-    DeviceResponses parseSendCommand(const DeviceCommands &command,
-                                     const std::any &data) override;
+    DeviceResponses parseAsyncSendCommand(const DeviceCommands &command,
+                                          const std::any &data) override;
   };
 
   class DataTcpDevice : public TcpDevice {
@@ -58,8 +58,8 @@ protected:
     DataTcpDevice(const DataTcpDevice &other) = delete;
 
   protected:
-    DeviceResponses parseSendCommand(const DeviceCommands &command,
-                                     const std::any &data) override;
+    DeviceResponses parseAsyncSendCommand(const DeviceCommands &command,
+                                          const std::any &data) override;
   };
 
 public:
@@ -84,7 +84,8 @@ public:
   void disconnect() override;
 
 protected:
-  void handleConnect() override;
+  void handleAsyncConnect() override;
+  void handleAsyncDisconnect() override;
   void handleStartRecording() override;
   void handleStopRecording() override;
 
@@ -97,8 +98,8 @@ protected:
 
   /// @brief Send a command to the [m_CommandDevice]
   /// @param command The command to send
-  DeviceResponses parseSendCommand(const DeviceCommands &command,
-                                   const std::any &data) override;
+  DeviceResponses parseAsyncSendCommand(const DeviceCommands &command,
+                                        const std::any &data) override;
 
   /// DATA RELATED METHODS
 public: // protected:
@@ -134,10 +135,10 @@ protected:
     void read(std::vector<char> &buffer) override;
 
   protected:
-    DeviceResponses parseSendCommand(const DeviceCommands &command,
+    DeviceResponses parseAsyncSendCommand(const DeviceCommands &command,
                                      const std::any &data) override;
 
-    void handleConnect() override;
+    void handleAsyncConnect() override;
   };
 
   class DataTcpDeviceMock : public DataTcpDevice {
@@ -146,10 +147,10 @@ protected:
     void read(std::vector<char> &buffer) override;
 
   protected:
-    DeviceResponses parseSendCommand(const DeviceCommands &command,
+    DeviceResponses parseAsyncSendCommand(const DeviceCommands &command,
                                      const std::any &data) override;
 
-    void handleConnect() override;
+    void handleAsyncConnect() override;
   };
 
 public:

@@ -10,8 +10,8 @@ void DataCollector::startRecording() {
     throw DeviceIsRecordingException("The device is already recording");
   }
 
-  // RENDU ICI!!!! Start a thread and call handleStartRecording in the thread
   handleStartRecording();
+
   m_IsRecording = true;
 }
 
@@ -22,5 +22,6 @@ void DataCollector::stopRecording() {
 
   // RENDU ICI!!!! Start a thread and call handleStopRecording in the thread
   handleStopRecording();
+
   m_IsRecording = false;
 }

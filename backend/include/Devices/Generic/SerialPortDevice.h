@@ -37,8 +37,8 @@ public:
   void disconnect() override;
 
 protected:
-  /// @brief Connect to the serial port device
-  virtual void handleConnect() override;
+  void handleAsyncConnect() override;
+  void handleAsyncDisconnect() override;
 
   /// @brief Set the "RTS" mode of the communication. [isFast] to true is
   /// faster but less reliable.
@@ -59,7 +59,8 @@ public:
   SerialPortDeviceMock(const std::string &port);
 
 protected:
-  void handleConnect() override;
+  void handleAsyncConnect() override;
+  void handleAsyncDisconnect() override;
 
   void setFastCommunication(bool isFast) override;
 };

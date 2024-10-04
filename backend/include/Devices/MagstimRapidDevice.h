@@ -59,8 +59,6 @@ public:
   MagstimRapidDevice(const MagstimRapidDevice &other) = delete;
 
 protected:
-  /// Protected members without Get accessors
-
   /// @brief Get the armed state of the device
   /// @return The armed state of the device
   DECLARE_PROTECTED_MEMBER(bool, IsArmed)
@@ -79,8 +77,8 @@ protected:
   /// @brief Parse a command received from the user and send to the device
   /// @param command The command to parse
   /// @param data The data to parse
-  DeviceResponses parseSendCommand(const DeviceCommands &command,
-                                   const std::any &data) override;
+  DeviceResponses parseAsyncSendCommand(const DeviceCommands &command,
+                                        const std::any &data) override;
 
   /// @brief Compute the CRC checksum of the data
   /// @param data The data to compute the CRC for
@@ -100,7 +98,8 @@ public:
   std::string computeCrcInterface(const std::string &data);
 
 protected:
-  void handleConnect() override;
+  void handleAsyncConnect() override;
+  void handleAsyncDisconnect() override;
 
   void setFastCommunication(bool isFast) override;
 };
