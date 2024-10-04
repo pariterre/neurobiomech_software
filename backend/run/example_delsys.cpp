@@ -68,9 +68,7 @@ int main() {
     //   std::cout << data[0] << "," << std::endl;
     // }
 
-    auto delsys = devices::DelsysEmgDevice();
-    // TODO Implement Mock with the following welcome message:
-    // "Delsys Trigno System Digital Protocol Version 3.6.0 \r\n\r\n"
+    auto delsys = devices::DelsysEmgDeviceMock();
 
     delsys.connect();
     logger.info("Connected");

@@ -45,7 +45,7 @@ protected:
   class CommandTcpDevice : public TcpDevice {
   public:
     CommandTcpDevice(const std::string &host, size_t port);
-    CommandTcpDevice(const TcpDevice &other) = delete;
+    CommandTcpDevice(const CommandTcpDevice &other) = delete;
 
   protected:
     DeviceResponses parseSendCommand(const DeviceCommands &command,
@@ -55,7 +55,7 @@ protected:
   class DataTcpDevice : public TcpDevice {
   public:
     DataTcpDevice(const std::string &host, size_t port);
-    DataTcpDevice(const TcpDevice &other) = delete;
+    DataTcpDevice(const DataTcpDevice &other) = delete;
 
   protected:
     DeviceResponses parseSendCommand(const DeviceCommands &command,
@@ -71,6 +71,13 @@ public:
                   size_t commandPort = 50040, size_t dataPort = 50043);
   DelsysEmgDevice(const DelsysEmgDevice &other) = delete;
 
+protected:
+  DelsysEmgDevice(std::unique_ptr<CommandTcpDevice> commandDevice,
+                  std::unique_ptr<DataTcpDevice> dataDevice,
+                  const std::string &host = "localhost",
+                  size_t commandPort = 50040, size_t dataPort = 50043);
+
+public:
   /// @brief Destructor of the DelsysEmgDevice
   ~DelsysEmgDevice();
 
@@ -82,10 +89,11 @@ protected:
   void handleStopRecording() override;
 
   /// @brief The command device
-  DECLARE_PROTECTED_MEMBER_NOGET(CommandTcpDevice, CommandDevice);
+  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<CommandTcpDevice>,
+                                 CommandDevice);
 
   /// @brief The data device
-  DECLARE_PROTECTED_MEMBER_NOGET(DataTcpDevice, DataDevice);
+  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<DataTcpDevice>, DataDevice);
 
   /// @brief Send a command to the [m_CommandDevice]
   /// @param command The command to send
@@ -113,5 +121,41 @@ protected:
   /// @brief The buffer to read the data from the device
   DECLARE_PROTECTED_MEMBER(std::vector<char>, DataBuffer)
 };
+
+/// ------------ ///
+/// MOCK SECTION ///
+/// ------------ ///
+
+class DelsysEmgDeviceMock : public DelsysEmgDevice {
+protected:
+  class CommandTcpDeviceMock : public CommandTcpDevice {
+  public:
+    CommandTcpDeviceMock(const std::string &host, size_t port);
+    void read(std::vector<char> &buffer) override;
+
+  protected:
+    DeviceResponses parseSendCommand(const DeviceCommands &command,
+                                     const std::any &data) override;
+
+    void handleConnect() override;
+  };
+
+  class DataTcpDeviceMock : public DataTcpDevice {
+  public:
+    DataTcpDeviceMock(const std::string &host, size_t port);
+    void read(std::vector<char> &buffer) override;
+
+  protected:
+    DeviceResponses parseSendCommand(const DeviceCommands &command,
+                                     const std::any &data) override;
+
+    void handleConnect() override;
+  };
+
+public:
+  DelsysEmgDeviceMock(const std::string &host = "localhost",
+                      size_t commandPort = 50040, size_t dataPort = 50043);
+};
+
 } // namespace STIMWALKER_NAMESPACE::devices
 #endif // __STIMWALKER_DEVICES_DELSYS_EMG_DEVICE_H__
