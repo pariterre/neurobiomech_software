@@ -5,8 +5,13 @@
 #include <iostream>
 using namespace STIMWALKER_NAMESPACE::devices;
 
-NidaqDevice::NidaqDevice(size_t channelCount, size_t frameRate)
-    : AsyncDevice(), DataCollector(channelCount, frameRate) {}
+NidaqDevice::NidaqDevice(size_t channelCount,
+                         std::chrono::milliseconds dataCheckIntervals)
+    : AsyncDevice(dataCheckIntervals), DataCollector(channelCount) {}
+
+NidaqDevice::NidaqDevice(size_t channelCount,
+                         std::chrono::microseconds dataCheckIntervals)
+    : AsyncDevice(dataCheckIntervals), DataCollector(channelCount) {}
 
 NidaqDevice::~NidaqDevice() {
   if (m_IsRecording) {

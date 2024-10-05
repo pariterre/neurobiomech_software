@@ -1,36 +1,37 @@
 #include "Devices/Generic/AsyncDevice.h"
 
+#include "Utils/Logger.h"
 #include <regex>
 #include <thread>
 
-#include "Utils/Logger.h"
-
 using namespace STIMWALKER_NAMESPACE::devices;
 
-AsyncDevice::AsyncDevice() : m_KeepWorkerAliveInterval(1000), Device() {}
+AsyncDevice::AsyncDevice(const std::chrono::milliseconds &keepAliveInterval)
+    : m_KeepDeviceWorkerAliveInterval(keepAliveInterval), Device() {}
+
+AsyncDevice::AsyncDevice(const std::chrono::microseconds &keepAliveInterval)
+    : m_KeepDeviceWorkerAliveInterval(keepAliveInterval), Device() {}
 
 void AsyncDevice::handleConnect() {
-  // Start a worker thread to run the device using the [_initialize] method
-  // Start the worker thread
   bool isConnectionHandled = false;
   bool hasFailed = false;
-  m_AsyncWorker = std::thread([this, &isConnectionHandled, &hasFailed]() {
+  m_AsyncDeviceWorker = std::thread([this, &isConnectionHandled, &hasFailed]() {
     try {
       handleAsyncConnect();
     } catch (std::exception &) {
       hasFailed = true;
       return;
     }
-    startKeepWorkerAlive();
+    startKeepDeviceWorkerAlive();
     isConnectionHandled = true;
-    m_AsyncContext.run();
+    m_AsyncDeviceContext.run();
   });
 
   // Wait until the connection is established
   while (!isConnectionHandled) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     if (hasFailed) {
-      m_AsyncWorker.join();
+      m_AsyncDeviceWorker.join();
       throw DeviceConnexionFailedException(
           "Error while connecting to the device");
     }
@@ -45,8 +46,8 @@ void AsyncDevice::handleDisconnect() {
   handleAsyncDisconnect();
 
   // Stop the worker thread
-  m_AsyncContext.stop();
-  m_AsyncWorker.join();
+  m_AsyncDeviceContext.stop();
+  m_AsyncDeviceWorker.join();
 }
 
 DeviceResponses AsyncDevice::sendFast(const DeviceCommands &command) {
@@ -61,32 +62,38 @@ DeviceResponses AsyncDevice::sendFast(const DeviceCommands &command,
   return sendInternalFast(command, data);
 }
 
-void AsyncDevice::startKeepWorkerAlive() {
+void AsyncDevice::startKeepDeviceWorkerAlive() {
   // Add a keep-alive timer
-  m_KeepWorkerAliveTimer = std::make_unique<asio::steady_timer>(m_AsyncContext);
-  keepWorkerAlive(m_KeepWorkerAliveInterval);
+  m_KeepDeviceWorkerAliveTimer =
+      std::make_unique<asio::steady_timer>(m_AsyncDeviceContext);
+  keepDeviceWorkerAlive(m_KeepDeviceWorkerAliveInterval);
 }
 
-void AsyncDevice::keepWorkerAlive(std::chrono::milliseconds timeout) {
-  // Set a 5-second timer
-  m_KeepWorkerAliveTimer->expires_after(timeout);
+void AsyncDevice::keepDeviceWorkerAlive(std::chrono::milliseconds timeout) {
+  keepDeviceWorkerAlive(std::chrono::microseconds(timeout));
+}
 
-  m_KeepWorkerAliveTimer->async_wait([this](const asio::error_code &ec) {
+void AsyncDevice::keepDeviceWorkerAlive(std::chrono::microseconds timeout) {
+  // Set a timer that will call [pingDeviceWorker] every [timeout] milliseconds
+  m_KeepDeviceWorkerAliveTimer->expires_after(timeout);
+
+  m_KeepDeviceWorkerAliveTimer->async_wait([this](const asio::error_code &ec) {
     // If ec is not false, it means the timer was stopped to change the
     // interval, or the device was disconnected. In both cases, do nothing and
     // return
     if (ec)
       return;
+
     // Otherwise, send a PING command to the device
-    std::lock_guard<std::mutex> lock(m_AsyncMutex);
-    pingWorker();
+    std::lock_guard<std::mutex> lock(m_AsyncDeviceMutex);
+    pingDeviceWorker();
 
     // Once its done, repeat the process
-    keepWorkerAlive(m_KeepWorkerAliveInterval);
+    keepDeviceWorkerAlive(m_KeepDeviceWorkerAliveInterval);
   });
 }
 
-void AsyncDevice::pingWorker() {}
+void AsyncDevice::pingDeviceWorker() {}
 
 DeviceResponses AsyncDevice::parseSendCommand(const DeviceCommands &command,
                                               const std::any &data) {
@@ -113,9 +120,9 @@ DeviceResponses AsyncDevice::parseSendCommand(const DeviceCommands &command,
   std::promise<DeviceResponses> promise;
   std::future<DeviceResponses> future = promise.get_future();
   // Send a command to the worker to relay commands to the device
-  m_AsyncContext.post(
+  m_AsyncDeviceContext.post(
       [this, &command, data = data, p = &promise, ignoreResponse]() mutable {
-        std::lock_guard<std::mutex> lock(m_AsyncMutex);
+        std::lock_guard<std::mutex> lock(m_AsyncDeviceMutex);
 
         // Parse the command and get the response
         auto response = parseAsyncSendCommand(command, data);

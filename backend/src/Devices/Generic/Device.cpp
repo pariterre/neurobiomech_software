@@ -17,30 +17,30 @@ void Device::connect() {
   auto &logger = utils::Logger::getInstance();
 
   if (m_IsConnected) {
-    logger.warning(
-        "Cannot connect to the device because it is already connected");
+    logger.warning("Cannot connect to the " + deviceName() +
+                   " because it is already connected");
     return;
   }
 
   handleConnect();
 
   m_IsConnected = true;
-  logger.info("The device is now connected");
+  logger.info("The " + deviceName() + " is now connected");
 }
 
 void Device::disconnect() {
   auto &logger = utils::Logger::getInstance();
 
   if (!m_IsConnected) {
-    logger.warning(
-        "Cannot disconnect from the device because it is not connected");
+    logger.warning("Cannot disconnect from the " + deviceName() +
+                   " because it is not connected");
     return;
   }
 
   handleDisconnect();
 
   m_IsConnected = false;
-  logger.info("The device is now disconnected");
+  logger.info("The device " + deviceName() + " is now disconnected");
 }
 
 DeviceResponses Device::send(const DeviceCommands &command) {

@@ -7,8 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "Devices/Generic/AsyncDataCollector.h"
 #include "Devices/Generic/AsyncDevice.h"
-#include "Devices/Generic/DataCollector.h"
 #include "Devices/Generic/TcpDevice.h"
 #include "Utils/CppMacros.h"
 
@@ -40,12 +40,14 @@ protected:
   DelsysCommands() = delete;
 };
 
-class DelsysEmgDevice : public AsyncDevice, public DataCollector {
+class DelsysEmgDevice : public AsyncDevice, public AsyncDataCollector {
 protected:
   class CommandTcpDevice : public TcpDevice {
   public:
     CommandTcpDevice(const std::string &host, size_t port);
     CommandTcpDevice(const CommandTcpDevice &other) = delete;
+
+    std::string deviceName() const override;
 
   protected:
     DeviceResponses parseAsyncSendCommand(const DeviceCommands &command,
@@ -56,6 +58,8 @@ protected:
   public:
     DataTcpDevice(const std::string &host, size_t port);
     DataTcpDevice(const DataTcpDevice &other) = delete;
+
+    std::string deviceName() const override;
 
   protected:
     DeviceResponses parseAsyncSendCommand(const DeviceCommands &command,
@@ -81,13 +85,16 @@ public:
   /// @brief Destructor of the DelsysEmgDevice
   ~DelsysEmgDevice();
 
+  std::string deviceName() const override;
+  std::string dataCollectorName() const override;
+
   void disconnect() override;
 
 protected:
   void handleAsyncConnect() override;
   void handleAsyncDisconnect() override;
-  void handleStartRecording() override;
-  void handleStopRecording() override;
+  void handleAsyncStartRecording() override;
+  void handleAsyncStopRecording() override;
 
   /// @brief The command device
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<CommandTcpDevice>,
@@ -103,24 +110,18 @@ protected:
 
   /// DATA RELATED METHODS
 public: // protected:
-  /// @brief Read the data from the device. This is meant to be called in a loop
-  /// from a worker thread
-  /// @param bufferSize The size of the buffer to read
-  /// @return One frame of data read from the device
-  data::DataPoint readData();
+  void dataCheck() override;
 
 protected:
   /// @brief The length of the data buffer for each channel (4 for the Delsys)
   DECLARE_PROTECTED_MEMBER(size_t, BytesPerChannel)
-
-  /// @brief The number of channels (16 for the Delsys Trigno)
-  DECLARE_PROTECTED_MEMBER(size_t, ChannelCount)
 
   /// @brief The snample count for each frame (27 for the Delsys)
   DECLARE_PROTECTED_MEMBER(size_t, SampleCount)
 
   /// @brief The buffer to read the data from the device
   DECLARE_PROTECTED_MEMBER(std::vector<char>, DataBuffer)
+  void handleNewData(const data::DataPoint &data) override;
 };
 
 /// ------------ ///
@@ -129,14 +130,41 @@ protected:
 
 class DelsysEmgDeviceMock : public DelsysEmgDevice {
 protected:
+  class DelsysCommandsMock : public DelsysCommands {
+  public:
+    DelsysCommandsMock(int value) : DelsysCommands(value) {}
+    static DelsysCommandsMock fromString(const std::string &command) {
+      if (command == DelsysCommandsMock(NONE).toString()) {
+        return NONE;
+      } else if (command == DelsysCommandsMock(START).toString()) {
+        return START;
+      } else if (command == DelsysCommandsMock(STOP).toString()) {
+        return STOP;
+      } else {
+        throw UnknownCommandException("Unknown command in DelsysCommandsMock");
+      }
+    }
+
+    DECLARE_DEVICE_COMMAND(NONE, -1);
+
+    std::string toString() const override {
+      switch (m_Value) {
+      case NONE:
+        return NONE_AS_STRING + m_TerminaisonCharacters;
+      default:
+        return DelsysCommands::toString();
+      }
+    }
+  };
+
   class CommandTcpDeviceMock : public CommandTcpDevice {
   public:
     CommandTcpDeviceMock(const std::string &host, size_t port);
+    void write(const std::string &data) override;
     void read(std::vector<char> &buffer) override;
 
   protected:
-    DeviceResponses parseAsyncSendCommand(const DeviceCommands &command,
-                                     const std::any &data) override;
+    DECLARE_PROTECTED_MEMBER_NOGET(DelsysCommandsMock, LastCommand)
 
     void handleAsyncConnect() override;
   };
@@ -148,7 +176,7 @@ protected:
 
   protected:
     DeviceResponses parseAsyncSendCommand(const DeviceCommands &command,
-                                     const std::any &data) override;
+                                          const std::any &data) override;
 
     void handleAsyncConnect() override;
   };

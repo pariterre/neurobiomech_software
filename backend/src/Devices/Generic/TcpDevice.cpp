@@ -12,9 +12,17 @@
 
 using namespace STIMWALKER_NAMESPACE::devices;
 
-TcpDevice::TcpDevice(const std::string &host, size_t port)
+TcpDevice::TcpDevice(const std::string &host, size_t port,
+                     const std::chrono::milliseconds &keepAliveInterval)
     : m_Host(host), m_Port(port), m_TcpContext(),
-      m_TcpSocket(asio::ip::tcp::socket(m_TcpContext)), AsyncDevice() {}
+      m_TcpSocket(asio::ip::tcp::socket(m_TcpContext)),
+      AsyncDevice(keepAliveInterval) {}
+
+TcpDevice::TcpDevice(const std::string &host, size_t port,
+                     const std::chrono::microseconds &keepAliveInterval)
+    : m_Host(host), m_Port(port), m_TcpContext(),
+      m_TcpSocket(asio::ip::tcp::socket(m_TcpContext)),
+      AsyncDevice(keepAliveInterval) {}
 
 std::vector<char> TcpDevice::read(size_t bufferSize) {
   std::vector<char> buffer(bufferSize);

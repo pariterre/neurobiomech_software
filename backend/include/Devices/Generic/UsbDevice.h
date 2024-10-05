@@ -22,12 +22,14 @@ public:
             const std::string &pid);
   UsbDevice(const UsbDevice &other) = delete;
 
-  /// @brief Factory method to create a UsbDevice object from a vendor ID and
-  /// product ID. Throws an exception if the device is not found
+  std::string deviceName() const override;
+
+  /// @brief Factory method to create a UsbDevice object from a vendor ID
+  /// and product ID. Throws an exception if the device is not found
   /// @param vid The vendor ID of the device
   /// @param pid The product ID of the device
-  /// @return A UsbDevice object with the specified vendor ID and product ID.
-  /// Throws an exception if the device is not found
+  /// @return A UsbDevice object with the specified vendor ID and product
+  /// ID. Throws an exception if the device is not found
   static UsbDevice fromVidAndPid(const std::string &vid,
                                  const std::string &pid);
 

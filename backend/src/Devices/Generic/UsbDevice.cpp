@@ -16,7 +16,10 @@ using namespace STIMWALKER_NAMESPACE::devices;
 
 UsbDevice::UsbDevice(const std::string &port, const std::string &vid,
                      const std::string &pid)
-    : m_Vid(vid), m_Pid(pid), SerialPortDevice(port) {}
+    : m_Vid(vid), m_Pid(pid),
+      SerialPortDevice(port, std::chrono::milliseconds(1000)) {}
+
+std::string UsbDevice::deviceName() const { return "GenericUsbDevice"; }
 
 UsbDevice UsbDevice::fromVidAndPid(const std::string &vid,
                                    const std::string &pid) {

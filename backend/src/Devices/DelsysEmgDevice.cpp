@@ -12,7 +12,11 @@ using namespace STIMWALKER_NAMESPACE::devices;
 
 DelsysEmgDevice::CommandTcpDevice::CommandTcpDevice(const std::string &host,
                                                     size_t port)
-    : TcpDevice(host, port) {}
+    : TcpDevice(host, port, std::chrono::milliseconds(1000)) {}
+
+std::string DelsysEmgDevice::CommandTcpDevice::deviceName() const {
+  return "DelsysCommandTcpDevice";
+}
 
 DeviceResponses DelsysEmgDevice::CommandTcpDevice::parseAsyncSendCommand(
     const DeviceCommands &command, const std::any &data) {
@@ -25,7 +29,11 @@ DeviceResponses DelsysEmgDevice::CommandTcpDevice::parseAsyncSendCommand(
 
 DelsysEmgDevice::DataTcpDevice::DataTcpDevice(const std::string &host,
                                               size_t port)
-    : TcpDevice(host, port) {}
+    : TcpDevice(host, port, std::chrono::milliseconds(1000)) {}
+
+std::string DelsysEmgDevice::DataTcpDevice::deviceName() const {
+  return "DelsysDataTcpDevice";
+}
 
 DeviceResponses DelsysEmgDevice::DataTcpDevice::parseAsyncSendCommand(
     const DeviceCommands &command, const std::any &data) {
@@ -37,10 +45,10 @@ DelsysEmgDevice::DelsysEmgDevice(const std::string &host, size_t commandPort,
                                  size_t dataPort)
     : m_CommandDevice(std::make_unique<CommandTcpDevice>(host, commandPort)),
       m_DataDevice(std::make_unique<DataTcpDevice>(host, dataPort)),
-      m_BytesPerChannel(4), m_ChannelCount(16), m_SampleCount(27),
-      m_DataBuffer(std::vector<char>(m_ChannelCount * m_SampleCount *
-                                     m_BytesPerChannel)),
-      AsyncDevice(), DataCollector(16, 2000) {}
+      m_BytesPerChannel(4), m_SampleCount(27),
+      m_DataBuffer(std::vector<char>(16 * m_SampleCount * m_BytesPerChannel)),
+      AsyncDevice(std::chrono::milliseconds(1000)),
+      AsyncDataCollector(16, std::chrono::microseconds(500 * 27)) {}
 
 DelsysEmgDevice::DelsysEmgDevice(
     std::unique_ptr<DelsysEmgDevice::CommandTcpDevice> commandDevice,
@@ -48,10 +56,10 @@ DelsysEmgDevice::DelsysEmgDevice(
     const std::string &host, size_t commandPort, size_t dataPort)
     : m_CommandDevice(std::move(commandDevice)),
       m_DataDevice(std::move(dataDevice)), m_BytesPerChannel(4),
-      m_ChannelCount(16), m_SampleCount(27),
-      m_DataBuffer(std::vector<char>(m_ChannelCount * m_SampleCount *
-                                     m_BytesPerChannel)),
-      AsyncDevice(), DataCollector(16, 2000) {}
+      m_SampleCount(27),
+      m_DataBuffer(std::vector<char>(16 * m_SampleCount * m_BytesPerChannel)),
+      AsyncDevice(std::chrono::milliseconds(1000)),
+      AsyncDataCollector(16, std::chrono::microseconds(500 * 27)) {}
 
 DelsysEmgDevice::~DelsysEmgDevice() {
   if (m_IsRecording) {
@@ -61,6 +69,12 @@ DelsysEmgDevice::~DelsysEmgDevice() {
   if (m_IsConnected) {
     disconnect();
   }
+}
+
+std::string DelsysEmgDevice::deviceName() const { return "DelsysEmgDevice"; }
+
+std::string DelsysEmgDevice::dataCollectorName() const {
+  return "DelsysEmgDataCollector";
 }
 
 void DelsysEmgDevice::disconnect() {
@@ -92,13 +106,13 @@ void DelsysEmgDevice::handleAsyncDisconnect() {
   m_DataDevice->disconnect();
 }
 
-void DelsysEmgDevice::handleStartRecording() {
+void DelsysEmgDevice::handleAsyncStartRecording() {
   if (m_CommandDevice->send(DelsysCommands::START) != DeviceResponses::OK) {
     throw DeviceFailedToStartRecordingException("Command failed: START");
   }
 }
 
-void DelsysEmgDevice::handleStopRecording() {
+void DelsysEmgDevice::handleAsyncStopRecording() {
   if (m_CommandDevice->send(DelsysCommands::STOP) != DeviceResponses::OK) {
     throw DeviceFailedToStopRecordingException("Command failed: STOP");
   }
@@ -111,27 +125,30 @@ DelsysEmgDevice::parseAsyncSendCommand(const DeviceCommands &command,
       "This method should not be called for DelsysEmgDevice");
 }
 
-data::DataPoint DelsysEmgDevice::readData() {
+void DelsysEmgDevice::dataCheck() {
+  // Wait for some time
+  m_DataDevice->read(m_DataBuffer);
 
-  // // Wait for some time
-  // std::vector<std::vector<double>> allData;
-  // while (allData.size() < 1000) {
-  //   m_DataDevice.read(m_DataBuffer);
+  std::vector<float> dataAsFloat(m_DataChannelCount * m_SampleCount);
+  std::memcpy(dataAsFloat.data(), m_DataBuffer.data(),
+              m_DataChannelCount * m_SampleCount * m_BytesPerChannel);
 
-  //   std::vector<double> data(m_ChannelCount * m_SampleCount);
-  //   std::memcpy(data.data(), m_DataBuffer.data(),
-  //               m_ChannelCount * m_SampleCount * m_BytesPerChannel);
-  //   for (int i = 0; i < m_SampleCount; i++) {
-  //     std::vector<double> dataAsDouble(m_ChannelCount);
-  //     std::transform(data.begin() + i * m_ChannelCount,
-  //                    data.begin() + (i + 1) * m_ChannelCount,
-  //                    dataAsDouble.begin(),
-  //                    [](int x) { return static_cast<double>(x); });
-  //     allData.push_back(dataAsDouble);
-  //   }
-  // }
+  // Convert the data to double
+  std::vector<data::DataPoint> dataPoints;
+  for (int i = 0; i < m_SampleCount; i++) {
+    std::vector<double> dataAsDouble(m_DataChannelCount);
+    std::transform(dataAsFloat.begin() + i * m_DataChannelCount,
+                   dataAsFloat.begin() + (i + 1) * m_DataChannelCount,
+                   dataAsDouble.begin(),
+                   [](int x) { return static_cast<double>(x); });
 
-  return data::DataPoint(std::vector<double>(16, 0.0));
+    dataPoints.push_back(data::DataPoint(dataAsDouble));
+  }
+  addDataPoints(dataPoints);
+}
+
+void DelsysEmgDevice::handleNewData(const data::DataPoint &data) {
+  // Do nothing
 }
 
 /// ------------ ///
@@ -140,27 +157,42 @@ data::DataPoint DelsysEmgDevice::readData() {
 
 DelsysEmgDeviceMock::CommandTcpDeviceMock::CommandTcpDeviceMock(
     const std::string &host, size_t port)
-    : CommandTcpDevice(host, port) {}
+    : m_LastCommand(DelsysCommandsMock::NONE), CommandTcpDevice(host, port) {}
+
+void DelsysEmgDeviceMock::CommandTcpDeviceMock::write(const std::string &data) {
+  // Store the last command
+  m_LastCommand = DelsysCommandsMock::fromString(data);
+}
 
 void DelsysEmgDeviceMock::CommandTcpDeviceMock::read(
     std::vector<char> &buffer) {
-  // Write the welcome message followed by two new lines and fill the rest with
-  // a bunch of \0
-  std::string welcomeMessage =
-      "Delsys Trigno System Digital Protocol Version 3.6.0 \r\n\r\n";
-  std::copy(welcomeMessage.begin(), welcomeMessage.end(), buffer.begin());
-  std::fill(buffer.begin() + welcomeMessage.size(), buffer.end(), 0);
+  // Prepare a response with bunch of \0 characters of length buffer.size()
+  std::fill(buffer.begin(), buffer.end(), 0);
+
+  switch (m_LastCommand.getValue()) {
+  case DelsysCommandsMock::NONE: {
+    // Write the welcome message
+    std::string welcomeMessage =
+        "Delsys Trigno System Digital Protocol Version 3.6.0 \r\n\r\n";
+    std::copy(welcomeMessage.begin(), welcomeMessage.end(), buffer.begin());
+    break;
+  }
+  case DelsysCommands::START:
+  case DelsysCommands::STOP: {
+    // Write the OK message
+    std::string response = "OK\r\n\r\n";
+    std::copy(response.begin(), response.end(), buffer.begin());
+    break;
+  }
+
+  default: {
+    throw std::runtime_error("This command is not MOCK yet");
+  }
+  }
 }
 
 void DelsysEmgDeviceMock::CommandTcpDeviceMock::handleAsyncConnect() {
   m_IsConnected = true;
-}
-
-DeviceResponses
-DelsysEmgDeviceMock::CommandTcpDeviceMock::parseAsyncSendCommand(
-    const DeviceCommands &command, const std::any &data) {
-  m_IsConnected = true;
-  return DeviceResponses::OK;
 }
 
 DelsysEmgDeviceMock::DataTcpDeviceMock::DataTcpDeviceMock(
@@ -168,8 +200,16 @@ DelsysEmgDeviceMock::DataTcpDeviceMock::DataTcpDeviceMock(
     : DataTcpDevice(host, port) {}
 
 void DelsysEmgDeviceMock::DataTcpDeviceMock::read(std::vector<char> &buffer) {
-  // Write the value 1 at each element of the buffer
-  std::fill(buffer.begin(), buffer.end(), 1);
+  // Write the value float(1) to the buffer assuming 16 channels and 27 samples
+  // with 4 bytes per channel
+  float value = 1.0f;
+  unsigned char dataAsChar[4];
+  // Copy the 4-byte representation of the float into the byte array
+  std::memcpy(dataAsChar, &value, sizeof(float));
+
+  for (size_t i = 0; i < buffer.size(); i += 4) {
+    std::copy(dataAsChar, dataAsChar + 4, buffer.begin() + i);
+  }
 }
 
 void DelsysEmgDeviceMock::DataTcpDeviceMock::handleAsyncConnect() {

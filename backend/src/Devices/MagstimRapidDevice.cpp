@@ -23,7 +23,11 @@ MagstimRapidDevice::MagstimRapidDevice(const std::string &port)
     : m_IsArmed(false), m_ArmedPokeInterval(std::chrono::milliseconds(500)),
       m_DisarmedPokeInterval(std::chrono::milliseconds(5000)),
       UsbDevice(port, "067B", "2303") {
-  m_KeepWorkerAliveInterval = m_DisarmedPokeInterval;
+  m_KeepDeviceWorkerAliveInterval = m_DisarmedPokeInterval;
+}
+
+std::string MagstimRapidDevice::deviceName() const {
+  return "MagstimRapidDevice";
 }
 
 DeviceResponses
@@ -71,7 +75,8 @@ MagstimRapidDevice::parseAsyncSendCommand(const DeviceCommands &command,
 
       logger.info(std::string(m_IsArmed ? "Armed" : "Disarmed") +
                   " the system and changed poke interval to " +
-                  std::to_string(m_KeepWorkerAliveInterval.count()) + " ms");
+                  std::to_string(m_KeepDeviceWorkerAliveInterval.count()) +
+                  " ms");
       return DeviceResponses::OK;
 
     case MagstimRapidCommands::DISARM:
@@ -86,7 +91,8 @@ MagstimRapidDevice::parseAsyncSendCommand(const DeviceCommands &command,
 
       logger.info(std::string(m_IsArmed ? "Armed" : "Disarmed") +
                   " the system and changed poke interval to " +
-                  std::to_string(m_KeepWorkerAliveInterval.count()) + " ms");
+                  std::to_string(m_KeepDeviceWorkerAliveInterval.count()) +
+                  " ms");
       return DeviceResponses::OK;
     }
   } catch (const std::bad_any_cast &) {
@@ -101,7 +107,7 @@ MagstimRapidDevice::parseAsyncSendCommand(const DeviceCommands &command,
   return DeviceResponses::COMMAND_NOT_FOUND;
 }
 
-void MagstimRapidDevice::pingWorker() {
+void MagstimRapidDevice::pingDeviceWorker() {
   parseAsyncSendCommand(MagstimRapidCommands::POKE, std::string("POKE"));
 }
 
@@ -123,15 +129,16 @@ void MagstimRapidDevice::changePokeInterval(
   // Compute the remaining time before the next PING command was supposed to be
   // sent
   auto remainingTime = std::chrono::duration_cast<std::chrono::milliseconds>(
-      m_KeepWorkerAliveTimer->expiry() - asio::steady_timer::clock_type::now());
-  auto elapsedTime = m_KeepWorkerAliveInterval - remainingTime;
+      m_KeepDeviceWorkerAliveTimer->expiry() -
+      asio::steady_timer::clock_type::now());
+  auto elapsedTime = m_KeepDeviceWorkerAliveInterval - remainingTime;
 
   // Set the interval to the requested value
-  m_KeepWorkerAliveInterval = interval;
+  m_KeepDeviceWorkerAliveInterval = interval;
 
   // Send a keep alive command with the remaining time
-  m_KeepWorkerAliveTimer->cancel();
-  keepWorkerAlive(interval - elapsedTime);
+  m_KeepDeviceWorkerAliveTimer->cancel();
+  keepDeviceWorkerAlive(interval - elapsedTime);
 }
 
 // --- MOCKER SECTION --- //

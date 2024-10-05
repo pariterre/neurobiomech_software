@@ -2,6 +2,7 @@
 #define __STIMWALKER_DEVICES_REMOTE_DEVICE_H__
 
 #include "Devices/Generic/Device.h"
+#include <asio.hpp>
 
 namespace STIMWALKER_NAMESPACE::devices {
 
@@ -9,8 +10,10 @@ namespace STIMWALKER_NAMESPACE::devices {
 /// @note This class is only available on Windows and Linux
 class AsyncDevice : public Device {
 public:
-  /// Constructors
-  AsyncDevice();
+  /// @brief Constructor
+  /// @param keepAliveInterval The interval to keep the device alive
+  AsyncDevice(const std::chrono::milliseconds &keepAliveInterval);
+  AsyncDevice(const std::chrono::microseconds &keepAliveInterval);
   AsyncDevice(const AsyncDevice &other) = delete;
 
   /// @brief Send a command to the device without waiting for a response
@@ -25,23 +28,24 @@ protected:
 
   /// @brief Get the async context of the command loop
   /// @return The async context of the command loop
-  DECLARE_PROTECTED_MEMBER_NOGET(asio::io_context, AsyncContext)
+  DECLARE_PROTECTED_MEMBER_NOGET(asio::io_context, AsyncDeviceContext)
 
   /// @brief Get the mutex
   /// @return The mutex
-  DECLARE_PROTECTED_MEMBER_NOGET(std::mutex, AsyncMutex)
+  DECLARE_PROTECTED_MEMBER_NOGET(std::mutex, AsyncDeviceMutex)
 
   /// @brief Worker thread to keep the device alive
-  DECLARE_PROTECTED_MEMBER_NOGET(std::thread, AsyncWorker)
+  DECLARE_PROTECTED_MEMBER_NOGET(std::thread, AsyncDeviceWorker)
 
   /// @brief Get how long to wait before waking up the worker
   /// @return How long to wait before waking up the worker
-  DECLARE_PROTECTED_MEMBER(std::chrono::milliseconds, KeepWorkerAliveInterval)
+  DECLARE_PROTECTED_MEMBER(std::chrono::microseconds,
+                           KeepDeviceWorkerAliveInterval)
 
   /// @brief Get the keep-alive timer
   /// @return The keep-alive timer
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::steady_timer>,
-                                 KeepWorkerAliveTimer)
+                                 KeepDeviceWorkerAliveTimer)
 
 protected:
   void handleConnect() override;
@@ -66,23 +70,29 @@ protected:
   DeviceResponses parseSendCommand(const DeviceCommands &command,
                                    const std::any &data, bool ignoreResponse);
 
+  /// @brief This method replaces the [parseSendCommand] that should be
+  /// implemented by the inherited class. This method is called by the worker
+  /// thread to send a command to the device
+  /// @param command The command to send
+  /// @param data The data to send
   virtual DeviceResponses parseAsyncSendCommand(const DeviceCommands &command,
                                                 const std::any &data) = 0;
 
   /// @brief Start the keep-alive mechanism
-  virtual void startKeepWorkerAlive();
+  virtual void startKeepDeviceWorkerAlive();
 
   /// @brief Set a worker thread to keep the device alive
   /// @param timeout The time to wait before sending the next keep-alive
   /// command. This usually is the [KeepWorkerAliveInterval] value, but can be
   /// overridden
-  virtual void keepWorkerAlive(std::chrono::milliseconds timeout);
+  virtual void keepDeviceWorkerAlive(std::chrono::milliseconds timeout);
+  virtual void keepDeviceWorkerAlive(std::chrono::microseconds timeout);
 
   /// @brief Send a PING command to the device, if required. This method is
   /// called by the [keepWorkerAlive] method at regular intervals (see
   /// [KeepWorkerAliveInterval]) If this method is not overridden, it will do
   /// nothing, but still keep the worker alive
-  virtual void pingWorker();
+  virtual void pingDeviceWorker();
 };
 
 } // namespace STIMWALKER_NAMESPACE::devices

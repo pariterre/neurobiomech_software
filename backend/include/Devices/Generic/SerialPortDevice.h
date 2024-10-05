@@ -12,7 +12,11 @@ class SerialPortDevice : public AsyncDevice {
 public:
   /// @brief Constructor
   /// @param port The port name of the device
-  SerialPortDevice(const std::string &port);
+  /// @param keepAliveInterval The interval to keep the device alive
+  SerialPortDevice(const std::string &port,
+                   std::chrono::milliseconds keepAliveInterval);
+  SerialPortDevice(const std::string &port,
+                   std::chrono::microseconds keepAliveInterval);
   SerialPortDevice(const SerialPortDevice &other) = delete;
 
 protected:
@@ -52,17 +56,6 @@ public:
   /// @param other The other SerialPortDevice object to compare with
   /// @return True if the two objects are equal, false otherwise
   bool operator==(const SerialPortDevice &other) const;
-};
-
-class SerialPortDeviceMock : public SerialPortDevice {
-public:
-  SerialPortDeviceMock(const std::string &port);
-
-protected:
-  void handleAsyncConnect() override;
-  void handleAsyncDisconnect() override;
-
-  void setFastCommunication(bool isFast) override;
 };
 
 } // namespace STIMWALKER_NAMESPACE::devices

@@ -14,12 +14,16 @@ namespace STIMWALKER_NAMESPACE::devices {
 
 /// @brief Abstract class for devices
 class NidaqDevice : public AsyncDevice, public DataCollector {
+  // TODO Change DataCollector to AsyncDataCollector
 
 public:
   /// @brief Constructor
   /// @param channelCount The number of channels
-  /// @param frameRate The frame rate
-  NidaqDevice(size_t channelCount, size_t frameRate);
+  /// @param dataCheckIntervals The interval to check for new data
+  NidaqDevice(size_t channelCount,
+              std::chrono::milliseconds dataCheckIntervals);
+  NidaqDevice(size_t channelCount,
+              std::chrono::microseconds dataCheckIntervals);
 
   // Delete copy constructor and assignment operator, this class cannot be
   // copied because of the mutex member

@@ -12,7 +12,11 @@ public:
   /// @brief Constructor
   /// @param host The host name of the device
   /// @param port The port number of the device
-  TcpDevice(const std::string &host, size_t port);
+  /// @param keepAliveInterval The interval to keep the device alive
+  TcpDevice(const std::string &host, size_t port,
+            const std::chrono::milliseconds &keepAliveInterval);
+  TcpDevice(const std::string &host, size_t port,
+            const std::chrono::microseconds &keepAliveInterval);
   TcpDevice(const TcpDevice &other) = delete;
 
   /// @brief Read data from the tcp device

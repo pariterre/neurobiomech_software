@@ -5,7 +5,7 @@
 
 #include "Exceptions.h"
 #include "Utils/CppMacros.h"
-#include <asio.hpp>
+#include <any>
 #include <iostream>
 #include <vector>
 
@@ -95,6 +95,10 @@ public:
 
   /// @brief Destructor
   virtual ~Device();
+
+  /// @brief Get the name of the device
+  /// @return The name of the device
+  virtual std::string deviceName() const = 0;
 
   /// @brief Connect to the actual device
   virtual void connect();

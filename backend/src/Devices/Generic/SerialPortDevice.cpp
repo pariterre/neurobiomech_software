@@ -12,9 +12,15 @@
 
 using namespace STIMWALKER_NAMESPACE::devices;
 
-SerialPortDevice::SerialPortDevice(const std::string &port)
+SerialPortDevice::SerialPortDevice(const std::string &port,
+                                   std::chrono::milliseconds keepAliveInterval)
     : m_Port(port), m_SerialPortContext(std::make_unique<asio::io_context>()),
-      AsyncDevice() {}
+      AsyncDevice(keepAliveInterval) {}
+
+SerialPortDevice::SerialPortDevice(const std::string &port,
+                                   std::chrono::microseconds keepAliveInterval)
+    : m_Port(port), m_SerialPortContext(std::make_unique<asio::io_context>()),
+      AsyncDevice(keepAliveInterval) {}
 
 void SerialPortDevice::disconnect() {
   if (m_SerialPort != nullptr && m_SerialPort->is_open()) {
@@ -79,25 +85,4 @@ void SerialPortDevice::setFastCommunication(bool isFast) {
 
 bool SerialPortDevice::operator==(const SerialPortDevice &other) const {
   return m_Port == other.m_Port;
-}
-
-SerialPortDeviceMock::SerialPortDeviceMock(const std::string &port)
-    : SerialPortDevice(port) {}
-
-void SerialPortDeviceMock::handleAsyncConnect() {
-  // Do nothing
-}
-
-void SerialPortDeviceMock::handleAsyncDisconnect() {
-  // Do nothing
-}
-
-void SerialPortDeviceMock::setFastCommunication(bool isFast) {
-  auto &logger = utils::Logger::getInstance();
-
-  if (isFast) {
-    logger.info("RTS set to ON");
-  } else {
-    logger.info("RTS set to OFF");
-  }
 }

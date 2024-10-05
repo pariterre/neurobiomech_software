@@ -58,6 +58,8 @@ public:
   MagstimRapidDevice(const std::string &port);
   MagstimRapidDevice(const MagstimRapidDevice &other) = delete;
 
+  std::string deviceName() const override;
+
 protected:
   /// @brief Get the armed state of the device
   /// @return The armed state of the device
@@ -72,7 +74,7 @@ protected:
   DECLARE_PROTECTED_MEMBER(std::chrono::milliseconds, DisarmedPokeInterval)
 
 protected:
-  void pingWorker() override;
+  void pingDeviceWorker() override;
 
   /// @brief Parse a command received from the user and send to the device
   /// @param command The command to parse
