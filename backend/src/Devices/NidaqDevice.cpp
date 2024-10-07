@@ -23,6 +23,12 @@ NidaqDevice::~NidaqDevice() {
   }
 }
 
+std::string NidaqDevice::deviceName() const { return "NidaqDevice"; }
+
+std::string NidaqDevice::dataCollectorName() const {
+  return "NidaqDataCollector";
+}
+
 void NidaqDevice::disconnect() {
   if (!m_IsConnected) {
     throw DeviceIsNotConnectedException("The device is not connected");
@@ -39,12 +45,20 @@ void NidaqDevice::handleAsyncConnect() {
   // TODO Implement the connection to the device
 }
 
+void NidaqDevice::handleAsyncDisconnect() {
+  // TODO Implement the disconnection from the device
+}
+
 void NidaqDevice::handleStartRecording() {
   // TODO Implement the start recording
 }
 
 void NidaqDevice::handleStopRecording() {
   // TODO Implement the stop recording
+}
+
+void NidaqDevice::handleNewData(const data::DataPoint &data) {
+  // Do nothing
 }
 
 DeviceResponses

@@ -30,14 +30,19 @@ public:
   NidaqDevice(const NidaqDevice &) = delete;
   NidaqDevice &operator=(const NidaqDevice &) = delete;
 
+  std::string deviceName() const override;
+  std::string dataCollectorName() const override;
+
   ~NidaqDevice();
 
   void disconnect() override;
 
 protected:
   void handleAsyncConnect() override;
+  void handleAsyncDisconnect() override;
   void handleStartRecording() override;
   void handleStopRecording() override;
+  void handleNewData(const data::DataPoint &data) override;
 
   DeviceResponses parseAsyncSendCommand(const DeviceCommands &command,
                                         const std::any &data) override;

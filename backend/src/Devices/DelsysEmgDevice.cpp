@@ -140,7 +140,7 @@ void DelsysEmgDevice::dataCheck() {
     std::transform(dataAsFloat.begin() + i * m_DataChannelCount,
                    dataAsFloat.begin() + (i + 1) * m_DataChannelCount,
                    dataAsDouble.begin(),
-                   [](int x) { return static_cast<double>(x); });
+                   [](float x) { return static_cast<double>(x); });
 
     dataPoints.push_back(data::DataPoint(dataAsDouble));
   }

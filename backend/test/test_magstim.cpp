@@ -206,12 +206,12 @@ TEST(Magstim, automaticPokingDisarmed) {
   // Connect the system and wait at least one POKE time and close
   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
   ASSERT_EQ(magstim.getDisarmedPokeInterval(), std::chrono::milliseconds(5000));
-  ASSERT_EQ(magstim.getKeepWorkerAliveInterval(),
+  ASSERT_EQ(magstim.getKeepDeviceWorkerAliveInterval(),
             std::chrono::milliseconds(5000));
 
   magstim.connect();
   messagesToDevice.clear();
-  ASSERT_EQ(magstim.getKeepWorkerAliveInterval(),
+  ASSERT_EQ(magstim.getKeepDeviceWorkerAliveInterval(),
             std::chrono::milliseconds(5000));
 
   std::this_thread::sleep_for(std::chrono::milliseconds(4000));
@@ -237,7 +237,7 @@ TEST(Magstim, automaticPokingArmed) {
 
   magstim.connect();
   magstim.send(devices::MagstimRapidCommands::ARM);
-  ASSERT_EQ(magstim.getKeepWorkerAliveInterval(),
+  ASSERT_EQ(magstim.getKeepDeviceWorkerAliveInterval(),
             std::chrono::milliseconds(500));
   messagesToDevice.clear();
 
