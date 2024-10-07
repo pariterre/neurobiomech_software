@@ -29,18 +29,6 @@ std::string NidaqDevice::dataCollectorName() const {
   return "NidaqDataCollector";
 }
 
-void NidaqDevice::disconnect() {
-  if (!m_IsConnected) {
-    throw DeviceIsNotConnectedException("The device is not connected");
-  }
-
-  if (m_IsRecording) {
-    stopRecording();
-  }
-
-  AsyncDevice::disconnect();
-}
-
 void NidaqDevice::handleAsyncConnect() {
   // TODO Implement the connection to the device
 }

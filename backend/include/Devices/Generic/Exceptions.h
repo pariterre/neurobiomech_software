@@ -54,12 +54,6 @@ public:
       : DeviceException(filename) {}
 };
 
-class DeviceIsNotConnectedException : public DeviceException {
-public:
-  DeviceIsNotConnectedException(const std::string &filename)
-      : DeviceException(filename) {}
-};
-
 class DeviceIsRecordingException : public DeviceException {
 public:
   DeviceIsRecordingException(const std::string &message)

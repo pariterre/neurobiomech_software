@@ -35,8 +35,6 @@ public:
 
   ~NidaqDevice();
 
-  void disconnect() override;
-
 protected:
   void handleAsyncConnect() override;
   void handleAsyncDisconnect() override;

@@ -88,8 +88,6 @@ public:
   std::string deviceName() const override;
   std::string dataCollectorName() const override;
 
-  void disconnect() override;
-
 protected:
   void handleAsyncConnect() override;
   void handleAsyncDisconnect() override;

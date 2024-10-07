@@ -81,18 +81,6 @@ std::string DelsysEmgDevice::dataCollectorName() const {
   return "DelsysEmgDataCollector";
 }
 
-void DelsysEmgDevice::disconnect() {
-  if (!m_IsConnected) {
-    throw DeviceIsNotConnectedException("The device is not connected");
-  }
-
-  if (m_IsRecording) {
-    stopRecording();
-  }
-
-  AsyncDevice::disconnect();
-}
-
 void DelsysEmgDevice::handleAsyncConnect() {
   try {
     m_CommandDevice->connect();
@@ -106,6 +94,10 @@ void DelsysEmgDevice::handleAsyncConnect() {
 }
 
 void DelsysEmgDevice::handleAsyncDisconnect() {
+  if (m_IsRecording) {
+    stopRecording();
+  }
+
   m_CommandDevice->disconnect();
   m_DataDevice->disconnect();
 }

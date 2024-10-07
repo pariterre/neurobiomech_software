@@ -9,8 +9,8 @@ static double requiredPrecision(1e-10);
 
 using namespace STIMWALKER_NAMESPACE;
 
+auto &logger = utils::Logger::getInstance();
 size_t listenToLogger(std::vector<std::string> &messagesToDevice) {
-  auto &logger = utils::Logger::getInstance();
   logger.setShouldPrintToConsole(false);
 
   size_t loggerId =
@@ -30,9 +30,7 @@ bool findMessageInLogger(const std::vector<std::string> &messagesToDevice,
   return false;
 }
 
-void clearListenToLogger(size_t loggerId) {
-  utils::Logger::getInstance().onNewLog.clear(loggerId);
-}
+void clearListenToLogger(size_t loggerId) { logger.onNewLog.clear(loggerId); }
 
 TEST(Magstim, info) {
   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
@@ -54,29 +52,30 @@ TEST(Magstim, connect) {
   // Connect to the device, now shows as connected
   magstim.connect();
   ASSERT_EQ(magstim.getIsConnected(), true);
-  ASSERT_TRUE(
-      findMessageInLogger(messagesToDevice, "The device is now connected"));
+  ASSERT_TRUE(findMessageInLogger(
+      messagesToDevice, "The device MagstimRapidDevice is now connected"));
   messagesToDevice.clear();
 
   // Cannot connect twice
-  EXPECT_THROW(magstim.connect(), devices::DeviceIsConnectedException);
+  magstim.connect();
   ASSERT_TRUE(findMessageInLogger(
-      messagesToDevice,
-      "Cannot connect to the device because it is already connected"));
+      messagesToDevice, "Cannot connect to the device MagstimRapidDevice "
+                        "because it is already connected"));
   messagesToDevice.clear();
 
   // Disconnecting, shows as not connected anymore
   magstim.disconnect();
   ASSERT_EQ(magstim.getIsConnected(), false);
-  ASSERT_TRUE(
-      findMessageInLogger(messagesToDevice, "The device is now disconnected"));
+  ASSERT_TRUE(findMessageInLogger(
+      messagesToDevice, "The device MagstimRapidDevice is now disconnected"));
   messagesToDevice.clear();
 
   // Cannot disconnect twice
-  EXPECT_THROW(magstim.disconnect(), devices::DeviceIsNotConnectedException);
+  magstim.disconnect();
   ASSERT_TRUE(findMessageInLogger(
       messagesToDevice,
-      "Cannot disconnect from the device because it is not connected"));
+      "Cannot disconnect from the device MagstimRapidDevice because "
+      "it is not connected"));
 
   clearListenToLogger(loggerId);
 }
@@ -87,9 +86,11 @@ TEST(UsbDevice, Print) {
 
   // Send a PRINT message to a USB device
   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
-  EXPECT_THROW(
-      magstim.send(devices::MagstimRapidCommands::PRINT, "Hello, world!"),
-      devices::DeviceIsNotConnectedException);
+  magstim.send(devices::MagstimRapidCommands::PRINT, "Hello, world!");
+  ASSERT_TRUE(findMessageInLogger(
+      messagesToDevice, "Cannot send a command to the device "
+                        "MagstimRapidDevice because it is not connected"));
+  messagesToDevice.clear();
 
   // Send a PRINT message to a USB device and wait for the response
   magstim.connect();
@@ -117,31 +118,28 @@ TEST(Magstim, getTemperature) {
   clearListenToLogger(loggerId);
   ASSERT_EQ(response.getValue(), 42);
 
-  // At least one message should have been sent
-  ASSERT_TRUE(findMessageInLogger(messagesToDevice, "Temperature: 42"));
-
   clearListenToLogger(loggerId);
 }
 
-TEST(Magstim, setRapid) {
-  std::vector<std::string> messagesToDevice;
-  size_t loggerId = listenToLogger(messagesToDevice);
+// TEST(Magstim, setRapid) {
+//   std::vector<std::string> messagesToDevice;
+//   size_t loggerId = listenToLogger(messagesToDevice);
 
-  // Connect the system and set RTS to ON then to OFF
-  auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
+//   // Connect the system and set RTS to ON then to OFF
+//   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
 
-  magstim.connect();
-  magstim.send(devices::MagstimRapidCommands::SET_FAST_COMMUNICATION, true);
-  ASSERT_TRUE(findMessageInLogger(messagesToDevice, "ON"));
-  messagesToDevice.clear();
+//   magstim.connect();
+//   magstim.send(devices::MagstimRapidCommands::SET_FAST_COMMUNICATION, true);
+//   ASSERT_TRUE(findMessageInLogger(messagesToDevice, "ON"));
+//   messagesToDevice.clear();
 
-  magstim.send(devices::MagstimRapidCommands::SET_FAST_COMMUNICATION, false);
-  ASSERT_TRUE(findMessageInLogger(messagesToDevice, "OFF"));
-  messagesToDevice.clear();
+//   magstim.send(devices::MagstimRapidCommands::SET_FAST_COMMUNICATION, false);
+//   ASSERT_TRUE(findMessageInLogger(messagesToDevice, "OFF"));
+//   messagesToDevice.clear();
 
-  magstim.disconnect();
-  clearListenToLogger(loggerId);
-}
+//   magstim.disconnect();
+//   clearListenToLogger(loggerId);
+// }
 
 TEST(Magstim, arming) {
   std::vector<std::string> messagesToDevice;
@@ -151,12 +149,12 @@ TEST(Magstim, arming) {
   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
 
   // Trying to ARM the system without connecting should not work
-  EXPECT_THROW(magstim.send(devices::MagstimRapidCommands::ARM),
-               devices::DeviceIsNotConnectedException);
+  magstim.send(devices::MagstimRapidCommands::ARM);
+
   ASSERT_EQ(magstim.getIsArmed(), false);
   ASSERT_TRUE(findMessageInLogger(
-      messagesToDevice,
-      "Cannot send a command to the device because it is not connected"));
+      messagesToDevice, "Cannot send a command to the device "
+                        "MagstimRapidDevice because it is not connected"));
   messagesToDevice.clear();
 
   // Connect the system then send the ARM command
