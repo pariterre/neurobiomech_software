@@ -179,6 +179,10 @@ protected:
                                           const std::any &data) override;
 
     void handleAsyncConnect() override;
+
+    /// @brief The time at which the data started collecting
+    DECLARE_PROTECTED_MEMBER_NOGET(
+        std::chrono::time_point<std::chrono::system_clock>, StartTime)
   };
 
 public:

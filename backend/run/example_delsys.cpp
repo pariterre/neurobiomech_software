@@ -20,7 +20,8 @@ int main() {
     delsys.startRecording();
     logger.info("The system is now connected and is recording");
 
-    std::this_thread::sleep_for(std::chrono::seconds(4));
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    logger.info("The system has been recording for 1 seconds");
 
     delsys.stopRecording();
     delsys.disconnect();

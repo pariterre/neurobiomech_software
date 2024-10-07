@@ -27,7 +27,7 @@ public:
   /// @brief Get the data at a specific index
   /// @param index The index of the data
   /// @return The data at the given index
-  DataPoint &operator[](size_t index);
+  const DataPoint &operator[](size_t index) const;
 
   /// @brief Get the data in serialized form
   /// @return The data in serialized form

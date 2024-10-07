@@ -9,7 +9,9 @@ size_t TimeSeries::size() const { return static_cast<int>(m_Data.size()); }
 
 void TimeSeries::add(const DataPoint &data) { m_Data.push_back(data); }
 
-DataPoint &TimeSeries::operator[](size_t index) { return m_Data[index]; }
+const DataPoint &TimeSeries::operator[](size_t index) const {
+  return m_Data[index];
+}
 
 nlohmann::json TimeSeries::serialize() const {
   nlohmann::json json = nlohmann::json::array();

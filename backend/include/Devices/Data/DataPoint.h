@@ -22,6 +22,15 @@ public:
   /// @param data The data to store
   DataPoint(time_t timestamp, const std::vector<double> &data);
 
+  /// @brief Get the number of channels
+  /// @return The number of channels
+  size_t size() const;
+
+  /// @brief Get the specific data
+  /// @param index The index of the data
+  /// @return The data at the given index
+  double operator[](size_t index) const;
+
   /// @brief Convert the object to JSON
   /// @return The JSON object
   nlohmann::json serialize() const;

@@ -26,7 +26,6 @@ void DataCollector::stopRecording() {
   auto &logger = utils::Logger::getInstance();
 
   if (!m_IsRecording) {
-
     logger.warning("The data collector " + dataCollectorName() +
                    " is not recording");
   }

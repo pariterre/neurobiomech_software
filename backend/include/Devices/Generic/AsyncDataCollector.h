@@ -67,11 +67,17 @@ protected:
   virtual void keepDataWorkerAlive(std::chrono::milliseconds timeout);
   virtual void keepDataWorkerAlive(std::chrono::microseconds timeout);
 
-  /// @brief Send a PING command to the device, if required. This method is
-  /// called by the [keepWorkerAlive] method at regular intervals (see
-  /// [KeepWorkerAliveInterval]) If this method is not overridden, it will do
-  /// nothing, but still keep the worker alive
+  /// @brief This method is called by the [keepWorkerAlive] method at regular
+  /// intervals (see [KeepWorkerAliveInterval]) If this method is not
+  /// overridden, it will do nothing, but will keep the worker alive.
+  /// Otherwise, it can be used to get data from the device or to perform any
+  /// other action such as analyzing the data
   virtual void dataCheck();
+
+  /// @brief The [m_IgnoreTooSlowWarning] member can be set by an inherited
+  /// class to ignore the warning that is displayed when the [dataCheck] method
+  /// takes too long to execute compared to the [KeepWorkerAliveInterval]
+  DECLARE_PROTECTED_MEMBER(bool, IgnoreTooSlowWarning)
 };
 
 } // namespace STIMWALKER_NAMESPACE::devices

@@ -48,7 +48,9 @@ DelsysEmgDevice::DelsysEmgDevice(const std::string &host, size_t commandPort,
       m_BytesPerChannel(4), m_SampleCount(27),
       m_DataBuffer(std::vector<char>(16 * m_SampleCount * m_BytesPerChannel)),
       AsyncDevice(std::chrono::milliseconds(1000)),
-      AsyncDataCollector(16, std::chrono::microseconds(500 * 27)) {}
+      AsyncDataCollector(16, std::chrono::microseconds(1)) {
+  m_IgnoreTooSlowWarning = true;
+}
 
 DelsysEmgDevice::DelsysEmgDevice(
     std::unique_ptr<DelsysEmgDevice::CommandTcpDevice> commandDevice,
@@ -59,7 +61,9 @@ DelsysEmgDevice::DelsysEmgDevice(
       m_SampleCount(27),
       m_DataBuffer(std::vector<char>(16 * m_SampleCount * m_BytesPerChannel)),
       AsyncDevice(std::chrono::milliseconds(1000)),
-      AsyncDataCollector(16, std::chrono::microseconds(500 * 27)) {}
+      AsyncDataCollector(16, std::chrono::microseconds(1)) {
+  m_IgnoreTooSlowWarning = true;
+}
 
 DelsysEmgDevice::~DelsysEmgDevice() {
   if (m_IsRecording) {
@@ -110,6 +114,9 @@ void DelsysEmgDevice::handleAsyncStartRecording() {
   if (m_CommandDevice->send(DelsysCommands::START) != DeviceResponses::OK) {
     throw DeviceFailedToStartRecordingException("Command failed: START");
   }
+
+  // Wait until the data starts streaming
+  m_DataDevice->read(m_DataBuffer);
 }
 
 void DelsysEmgDevice::handleAsyncStopRecording() {
@@ -126,14 +133,13 @@ DelsysEmgDevice::parseAsyncSendCommand(const DeviceCommands &command,
 }
 
 void DelsysEmgDevice::dataCheck() {
-  // Wait for some time
   m_DataDevice->read(m_DataBuffer);
 
   std::vector<float> dataAsFloat(m_DataChannelCount * m_SampleCount);
   std::memcpy(dataAsFloat.data(), m_DataBuffer.data(),
               m_DataChannelCount * m_SampleCount * m_BytesPerChannel);
 
-  // Convert the data to double
+  // // Convert the data to double
   std::vector<data::DataPoint> dataPoints;
   for (int i = 0; i < m_SampleCount; i++) {
     std::vector<double> dataAsDouble(m_DataChannelCount);
@@ -144,6 +150,7 @@ void DelsysEmgDevice::dataCheck() {
 
     dataPoints.push_back(data::DataPoint(dataAsDouble));
   }
+
   addDataPoints(dataPoints);
 }
 
@@ -191,9 +198,7 @@ void DelsysEmgDeviceMock::CommandTcpDeviceMock::read(
   }
 }
 
-void DelsysEmgDeviceMock::CommandTcpDeviceMock::handleAsyncConnect() {
-  m_IsConnected = true;
-}
+void DelsysEmgDeviceMock::CommandTcpDeviceMock::handleAsyncConnect() {}
 
 DelsysEmgDeviceMock::DataTcpDeviceMock::DataTcpDeviceMock(
     const std::string &host, size_t port)
@@ -202,18 +207,25 @@ DelsysEmgDeviceMock::DataTcpDeviceMock::DataTcpDeviceMock(
 void DelsysEmgDeviceMock::DataTcpDeviceMock::read(std::vector<char> &buffer) {
   // Write the value float(1) to the buffer assuming 16 channels and 27 samples
   // with 4 bytes per channel
-  float value = 1.0f;
-  unsigned char dataAsChar[4];
-  // Copy the 4-byte representation of the float into the byte array
-  std::memcpy(dataAsChar, &value, sizeof(float));
 
+  // Wait for the next cycle of data
+  static size_t counter = 0;
+  std::this_thread::sleep_until(m_StartTime +
+                                std::chrono::microseconds(500 * 27 * counter));
+  counter++;
+
+  // Copy the 4-byte representation of the float into the byte array
+  unsigned char dataAsChar[4];
   for (size_t i = 0; i < buffer.size(); i += 4) {
+    float value =
+        std::sin(static_cast<float>(counter * buffer.size() + i) / 100.0f);
+    std::memcpy(dataAsChar, &value, sizeof(float));
     std::copy(dataAsChar, dataAsChar + 4, buffer.begin() + i);
   }
 }
 
 void DelsysEmgDeviceMock::DataTcpDeviceMock::handleAsyncConnect() {
-  m_IsConnected = true;
+  m_StartTime = std::chrono::system_clock::now();
 }
 
 DeviceResponses DelsysEmgDeviceMock::DataTcpDeviceMock::parseAsyncSendCommand(
