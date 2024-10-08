@@ -79,10 +79,13 @@ MagstimRapidDevice::parseAsyncSendCommand(const DeviceCommands &command,
       changePokeInterval(std::chrono::milliseconds(
           m_IsArmed ? m_ArmedPokeInterval : m_DisarmedPokeInterval));
 
-      logger.info(std::string(m_IsArmed ? "Armed" : "Disarmed") +
-                  " the system and changed poke interval to " +
-                  std::to_string(m_KeepDeviceWorkerAliveInterval.count()) +
-                  " ms");
+      logger.info(
+          std::string(m_IsArmed ? "Armed" : "Disarmed") +
+          " the system and changed poke interval to " +
+          std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
+                             m_KeepDeviceWorkerAliveInterval)
+                             .count()) +
+          " ms");
       return DeviceResponses::OK;
 
     case MagstimRapidCommands::DISARM:
@@ -95,10 +98,13 @@ MagstimRapidDevice::parseAsyncSendCommand(const DeviceCommands &command,
       changePokeInterval(std::chrono::milliseconds(
           m_IsArmed ? m_ArmedPokeInterval : m_DisarmedPokeInterval));
 
-      logger.info(std::string(m_IsArmed ? "Armed" : "Disarmed") +
-                  " the system and changed poke interval to " +
-                  std::to_string(m_KeepDeviceWorkerAliveInterval.count()) +
-                  " ms");
+      logger.info(
+          std::string(m_IsArmed ? "Armed" : "Disarmed") +
+          " the system and changed poke interval to " +
+          std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
+                             m_KeepDeviceWorkerAliveInterval)
+                             .count()) +
+          " ms");
       return DeviceResponses::OK;
     }
   } catch (const std::bad_any_cast &) {

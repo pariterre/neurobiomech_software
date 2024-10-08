@@ -9,7 +9,7 @@ static double requiredPrecision(1e-10);
 
 using namespace STIMWALKER_NAMESPACE;
 
-TEST(Magstim, info) {
+TEST(Magstim, Info) {
   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
 
   ASSERT_STREQ(magstim.getPort().c_str(), "MOCK");
@@ -17,7 +17,7 @@ TEST(Magstim, info) {
   ASSERT_STREQ(magstim.getPid().c_str(), "2303");
 }
 
-TEST(Magstim, connect) {
+TEST(Magstim, Connect) {
   auto logger = TestLogger();
   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
 
@@ -52,6 +52,18 @@ TEST(Magstim, connect) {
   logger.clear();
 }
 
+TEST(Magstim, Disconnect) {
+  // The Magstim disconnect automatically when the object is destroyed
+  auto logger = TestLogger();
+  {
+    auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
+    magstim.connect();
+  }
+  ASSERT_TRUE(
+      logger.contains("The device MagstimRapidDevice is now disconnected"));
+  logger.clear();
+}
+
 TEST(UsbDevice, Print) {
   auto logger = TestLogger();
 
@@ -73,7 +85,7 @@ TEST(UsbDevice, Print) {
   logger.clear();
 }
 
-TEST(Magstim, getTemperature) {
+TEST(Magstim, GetTemperature) {
   // Connect the system and wait at least one POKE time and close
   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
 
@@ -84,7 +96,7 @@ TEST(Magstim, getTemperature) {
   ASSERT_EQ(response.getValue(), 42);
 }
 
-TEST(Magstim, setRapid) {
+TEST(Magstim, SetRapid) {
   auto logger = TestLogger();
 
   // Connect the system and set RTS to ON then to OFF
@@ -102,7 +114,7 @@ TEST(Magstim, setRapid) {
   magstim.disconnect();
 }
 
-TEST(Magstim, arming) {
+TEST(Magstim, Arming) {
   auto logger = TestLogger();
 
   // Connect the system and wait at least one POKE time and close
@@ -152,7 +164,7 @@ TEST(Magstim, arming) {
 }
 
 #ifndef SKIP_LONG_TESTS
-TEST(Magstim, automaticPokingDisarmed) {
+TEST(Magstim, AutomaticPokingDisarmed) {
   auto logger = TestLogger();
 
   // Connect the system and wait at least one POKE time and close
@@ -177,7 +189,7 @@ TEST(Magstim, automaticPokingDisarmed) {
 #endif
 
 #ifndef SKIP_LONG_TESTS
-TEST(Magstim, automaticPokingArmed) {
+TEST(Magstim, AutomaticPokingArmed) {
   auto logger = TestLogger();
 
   // Connect the system and wait at least one POKE time and close
@@ -201,7 +213,7 @@ TEST(Magstim, automaticPokingArmed) {
 }
 #endif
 
-TEST(Magstim, computeCrc) {
+TEST(Magstim, ComputeCrc) {
   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
   ASSERT_EQ(magstim.computeCrcInterface("Hello, world!"), "v");
 }
