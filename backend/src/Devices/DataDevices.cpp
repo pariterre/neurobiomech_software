@@ -1,6 +1,6 @@
-#include "Devices/Data/DataDevices.h"
+#include "Devices/DataDevices.h"
 
-#include "Devices/Data/TimeSeries.h"
+#include "Data/TimeSeries.h"
 
 using namespace STIMWALKER_NAMESPACE::devices::data;
 

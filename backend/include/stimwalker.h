@@ -3,6 +3,7 @@
 
 #include "stimwalkerConfig.h"
 
+#include "Data/all.h"
 #include "Devices/all.h"
 #include "Utils/all.h"
 

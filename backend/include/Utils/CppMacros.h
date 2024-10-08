@@ -23,7 +23,7 @@ protected:                                                                     \
 // PascalCase names so the getter is in camelCase.
 #define DECLARE_PROTECTED_MEMBER(type, name)                                   \
 public:                                                                        \
-  type get##name() const { return m_##name; }                                  \
+  const type &get##name() const { return m_##name; }                           \
                                                                                \
 protected:                                                                     \
   type m_##name;

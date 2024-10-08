@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+#include "Devices/Exceptions.h"
 #include "Devices/Generic/AsyncDataCollector.h"
 #include "Devices/Generic/AsyncDevice.h"
 #include "Devices/Generic/TcpDevice.h"
@@ -91,7 +92,7 @@ public:
 protected:
   void handleAsyncConnect() override;
   void handleAsyncDisconnect() override;
-  void handleAsyncStartRecording() override;
+  bool handleAsyncStartRecording() override;
   void handleAsyncStopRecording() override;
 
   /// @brief The command device

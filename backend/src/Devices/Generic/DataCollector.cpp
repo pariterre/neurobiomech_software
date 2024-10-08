@@ -1,6 +1,6 @@
 #include "Devices/Generic/DataCollector.h"
 
-#include "Devices/Generic/Exceptions.h"
+#include "Devices/Exceptions.h"
 #include "Utils/Logger.h"
 
 using namespace STIMWALKER_NAMESPACE::devices;
@@ -14,7 +14,11 @@ void DataCollector::startRecording() {
     return;
   }
 
-  handleStartRecording();
+  if (!handleStartRecording()) {
+    logger.fatal("The data collector " + dataCollectorName() +
+                 " failed to start recording");
+    return;
+  }
 
   m_TimeSeries = data::TimeSeries();
   m_IsRecording = true;
@@ -28,6 +32,7 @@ void DataCollector::stopRecording() {
   if (!m_IsRecording) {
     logger.warning("The data collector " + dataCollectorName() +
                    " is not recording");
+    return;
   }
 
   handleStopRecording();
@@ -42,11 +47,19 @@ const data::TimeSeries &DataCollector::getTrialData() const {
 }
 
 void DataCollector::addDataPoint(const data::DataPoint &dataPoint) {
+  if (!m_IsRecording) {
+    return;
+  }
+
   m_TimeSeries.add(dataPoint);
   onNewData.notifyListeners(dataPoint);
 }
 
 void DataCollector::addDataPoints(const std::vector<data::DataPoint> &data) {
+  if (!m_IsRecording) {
+    return;
+  }
+
   for (auto d : data) {
     m_TimeSeries.add(d);
   }

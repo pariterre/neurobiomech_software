@@ -40,6 +40,7 @@ set(${STIMWALKER_NAME}_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 # Add linker
 add_subdirectory("src/Utils")
+add_subdirectory("src/Data")
 add_subdirectory("src/Devices")
 
 # Doc

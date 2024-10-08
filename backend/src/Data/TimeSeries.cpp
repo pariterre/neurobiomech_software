@@ -1,7 +1,4 @@
-#include "Devices/Data/TimeSeries.h"
-
-#include "Devices/Data/DataPoint.h"
-#include "Utils/String.h"
+#include "Data/TimeSeries.h"
 
 using namespace STIMWALKER_NAMESPACE::devices::data;
 

@@ -1,5 +1,5 @@
-#ifndef __STIMWALKER_DEVICES_REMOTE_DEVICE_H__
-#define __STIMWALKER_DEVICES_REMOTE_DEVICE_H__
+#ifndef __STIMWALKER_DEVICES_GENERIC_REMOTE_DEVICE_H__
+#define __STIMWALKER_DEVICES_GENERIC_REMOTE_DEVICE_H__
 
 #include "Devices/Generic/Device.h"
 #include <asio.hpp>

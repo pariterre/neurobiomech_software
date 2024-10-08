@@ -38,7 +38,7 @@ public:
 protected:
   void handleAsyncConnect() override;
   void handleAsyncDisconnect() override;
-  void handleStartRecording() override;
+  bool handleStartRecording() override;
   void handleStopRecording() override;
   void handleNewData(const data::DataPoint &data) override;
 

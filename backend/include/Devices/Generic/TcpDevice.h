@@ -1,5 +1,5 @@
-#ifndef __STIMWALKER_DEVICES_TCP_DEVICE_H__
-#define __STIMWALKER_DEVICES_TCP_DEVICE_H__
+#ifndef __STIMWALKER_DEVICES_GENERIC_TCP_DEVICE_H__
+#define __STIMWALKER_DEVICES_GENERIC_TCP_DEVICE_H__
 
 #include "Devices/Generic/AsyncDevice.h"
 
@@ -60,4 +60,4 @@ protected:
 };
 
 } // namespace STIMWALKER_NAMESPACE::devices
-#endif // __STIMWALKER_DEVICES_TCP_DEVICE_H__
+#endif // __STIMWALKER_DEVICES_GENERIC_TCP_DEVICE_H__

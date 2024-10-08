@@ -3,7 +3,6 @@
 
 #include "stimwalkerConfig.h"
 
-#include "Exceptions.h"
 #include "Utils/CppMacros.h"
 #include <any>
 #include <iostream>

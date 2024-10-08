@@ -1,5 +1,5 @@
-#ifndef __STIMWALKER_DEVICES_DATA_DATA_POINT_H__
-#define __STIMWALKER_DEVICES_DATA_DATA_POINT_H__
+#ifndef __STIMWALKER_DATA_DATA_POINT_H__
+#define __STIMWALKER_DATA_DATA_POINT_H__
 
 #include <map>
 #include <nlohmann/json.hpp>
@@ -54,4 +54,4 @@ protected:
 } // namespace data
 } // namespace STIMWALKER_NAMESPACE::devices
 
-#endif // __STIMWALKER_DEVICES_DATA_DATA_POINT_H__
+#endif // __STIMWALKER_DATA_DATA_POINT_H__

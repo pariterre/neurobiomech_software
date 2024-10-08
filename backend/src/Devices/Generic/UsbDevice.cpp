@@ -10,6 +10,7 @@
 #include <fstream>
 #endif // _WIN32
 
+#include "Devices/Exceptions.h"
 #include "Utils/Logger.h"
 
 using namespace STIMWALKER_NAMESPACE::devices;

@@ -1,4 +1,4 @@
-#include "Devices/Data/DataPoint.h"
+#include "Data/DataPoint.h"
 
 using namespace STIMWALKER_NAMESPACE::devices::data;
 

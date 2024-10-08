@@ -1,99 +1,101 @@
-// #include <gtest/gtest.h>
-// #include <iostream>
+#include <gtest/gtest.h>
+#include <iostream>
 
-// #include "Devices/Data/DataDevices.h"
-// #include "Devices/Data/TimeSeries.h"
-// #include "Devices/NidaqDevice.h"
+#include "Data/TimeSeries.h"
+#include "Devices/DataDevices.h"
 
-// #include "Utils/String.h"
+static double requiredPrecision(1e-10);
 
-// static double requiredPrecision(1e-10);
+using namespace STIMWALKER_NAMESPACE;
 
-// using namespace STIMWALKER_NAMESPACE;
+TEST(DataPoint, Constructors) {
+  auto data = devices::data::DataPoint({1.0, 2.0, 3.0});
+  ASSERT_EQ(data.getTimestamp(), -1);
+  ASSERT_EQ(data.size(), 3);
+  ASSERT_NEAR(data[0], 1.0, requiredPrecision);
+  ASSERT_NEAR(data[1], 2.0, requiredPrecision);
+  ASSERT_NEAR(data[2], 3.0, requiredPrecision);
 
-// // Start the tests
+  auto data2 = devices::data::DataPoint(1000, {4.0, 5.0, 6.0});
+  ASSERT_EQ(data2.getTimestamp(), 1000);
+  ASSERT_EQ(data2.size(), 3);
+  ASSERT_NEAR(data2[0], 4.0, requiredPrecision);
+  ASSERT_NEAR(data2[1], 5.0, requiredPrecision);
+  ASSERT_NEAR(data2[2], 6.0, requiredPrecision);
+}
 
-// TEST(Data, serialize) {
-//   auto devices = devices::data::DataDevices();
-//   devices.newDevice("0");
+TEST(DataPoint, Access) {
+  auto data = devices::data::DataPoint(1000, {1.0, 2.0, 3.0});
+  ASSERT_EQ(data.getTimestamp(), 1000);
+  ASSERT_EQ(data.size(), 3);
+  ASSERT_NEAR(data[0], 1.0, requiredPrecision);
+  ASSERT_NEAR(data[1], 2.0, requiredPrecision);
+  ASSERT_NEAR(data[2], 3.0, requiredPrecision);
 
-//   devices::data::DataPoint newData(1001, {1.0, 2.0, 3.0});
-//   devices["0"].add(newData);
+  // getData should return a const reference to the data, but we can use a const
+  // cast to modify it
+  { const_cast<double &>(data.getData()[0]) = 4.0; }
 
-//   auto json = devices.serialize();
-//   ASSERT_EQ(json.size(), 1);
-//   ASSERT_EQ(json["0"].size(), 1);
-//   ASSERT_EQ(json["0"][0]["timestamp"], 1001);
-//   ASSERT_EQ(json["0"][0]["data"].size(), 3);
-//   ASSERT_NEAR(json["0"][0]["data"][0], 1.0, requiredPrecision);
-//   ASSERT_NEAR(json["0"][0]["data"][1], 2.0, requiredPrecision);
-//   ASSERT_NEAR(json["0"][0]["data"][2], 3.0, requiredPrecision);
+  // The value should have changed in the original data
+  ASSERT_NEAR(data.getData()[0], 4.0, requiredPrecision);
+}
 
-//   auto jsonAsString = json.dump(2);
-//   ASSERT_STREQ(jsonAsString.c_str(), "{\n"
-//                                      "  \"0\": [\n"
-//                                      "    {\n"
-//                                      "      \"data\": [\n"
-//                                      "        1.0,\n"
-//                                      "        2.0,\n"
-//                                      "        3.0\n"
-//                                      "      ],\n"
-//                                      "      \"timestamp\": 1001\n"
-//                                      "    }\n"
-//                                      "  ]\n"
-//                                      "}");
-// }
+TEST(DataPoint, Copy) {
+  auto data = devices::data::DataPoint(1000, {1.0, 2.0, 3.0});
 
-// TEST(Data, deserialize) {
-//   nlohmann::json json = R"({
-//         "0": [
-//             {
-//                 "data": [4.0, 5.0, 6.0],
-//                 "timestamp": 2001
-//             },
-//             {
-//                 "data": [-7.0, 8.0, 9.0],
-//                 "timestamp": 2002
-//             }
-//         ]
-//     })"_json;
-//   devices::data::DataDevices devices =
-//       devices::data::DataDevices::deserialize(json);
+  // Copy should be similar to the original
+  auto copy = data.copy();
+  ASSERT_EQ(copy.getTimestamp(), 1000);
+  ASSERT_EQ(copy.size(), 3);
+  ASSERT_NEAR(copy[0], 1.0, requiredPrecision);
+  ASSERT_NEAR(copy[1], 2.0, requiredPrecision);
+  ASSERT_NEAR(copy[2], 3.0, requiredPrecision);
 
-//   ASSERT_EQ(devices.size(), 1);
-//   auto &timeSeries = devices["0"];
-//   ASSERT_EQ(timeSeries.size(), 2);
+  // But should be a deep copy
+  { const_cast<double &>(copy.getData()[0]) = 4.0; }
+  ASSERT_NEAR(data[0], 1.0, requiredPrecision);
+  ASSERT_NEAR(copy[0], 4.0, requiredPrecision);
+}
 
-//   ASSERT_EQ(timeSeries[0].getTimestamp(), 2001);
-//   ASSERT_EQ(timeSeries[0].getData().size(), 3);
-//   ASSERT_NEAR(timeSeries[0].getData()[0], 4.0, requiredPrecision);
-//   ASSERT_NEAR(timeSeries[0].getData()[1], 5.0, requiredPrecision);
-//   ASSERT_NEAR(timeSeries[0].getData()[2], 6.0, requiredPrecision);
+TEST(DataPoint, serialize) {
+  auto data = devices::data::DataPoint(1000, {1.0, 2.0, 3.0});
+  auto json = data.serialize();
+  ASSERT_EQ(json["timestamp"], 1000);
+  ASSERT_EQ(json["data"].size(), 3);
+  ASSERT_NEAR(json["data"][0], 1.0, requiredPrecision);
+  ASSERT_NEAR(json["data"][1], 2.0, requiredPrecision);
+  ASSERT_NEAR(json["data"][2], 3.0, requiredPrecision);
+  ASSERT_STREQ(json.dump().c_str(),
+               "{\"data\":[1.0,2.0,3.0],\"timestamp\":1000}");
+}
 
-//   ASSERT_EQ(timeSeries[1].getTimestamp(), 2002);
-//   ASSERT_EQ(timeSeries[1].getData().size(), 3);
-//   ASSERT_NEAR(timeSeries[1].getData()[0], -7.0, requiredPrecision);
-//   ASSERT_NEAR(timeSeries[1].getData()[1], 8.0, requiredPrecision);
-//   ASSERT_NEAR(timeSeries[1].getData()[2], 9.0, requiredPrecision);
-// }
+TEST(DataPoint, deserialize) {
+  nlohmann::json json = R"({"data":[1.0,2.0,3.0],"timestamp":1000})"_json;
+  auto data = devices::data::DataPoint::deserialize(json);
+  ASSERT_EQ(data.getTimestamp(), 1000);
+  ASSERT_EQ(data.size(), 3);
+  ASSERT_NEAR(data[0], 1.0, requiredPrecision);
+  ASSERT_NEAR(data[1], 2.0, requiredPrecision);
+  ASSERT_NEAR(data[2], 3.0, requiredPrecision);
+}
 
-// TEST(Data, acquire) {
-//   auto devices = devices::data::DataDevices();
-//   devices.newDevice("Dummy");
-//   std::this_thread::sleep_for(std::chrono::milliseconds(10));
+TEST(Data, acquire) {
+  //   auto devices = devices::data::DataDevices();
+  //   devices.newDevice("Dummy");
+  //   std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-//   auto callback = [&devices](const devices::data::DataPoint &newData) {
-//     devices["Dummy"].add(newData);
-//   };
+  //   auto callback = [&devices](const devices::data::DataPoint &newData) {
+  //     devices["Dummy"].add(newData);
+  //   };
 
-//   // TODO Redo the Mock
-//   auto nidaq = devices::NidaqDevice(4, 1000);
-//   nidaq.onNewData.listen(callback);
-//   nidaq.connect();
-//   nidaq.startRecording();
-//   std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  //   // TODO Redo the Mock
+  //   auto nidaq = devices::NidaqDevice(4, 1000);
+  //   nidaq.onNewData.listen(callback);
+  //   nidaq.connect();
+  //   nidaq.startRecording();
+  //   std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
-//   ASSERT_EQ(devices["Dummy"].size(), 1);
-//   const auto &dataFirstDeviceAfter = devices["Dummy"];
-//   ASSERT_GE(dataFirstDeviceAfter.size(), 1);
-// }
+  //   ASSERT_EQ(devices["Dummy"].size(), 1);
+  //   const auto &dataFirstDeviceAfter = devices["Dummy"];
+  //   ASSERT_GE(dataFirstDeviceAfter.size(), 1);
+}

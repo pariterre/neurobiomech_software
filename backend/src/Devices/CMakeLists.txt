@@ -4,9 +4,6 @@ project(${MODULE_DEVICES})
 
 # Add the relevant files
 set(SRC_LIST_MODULE
-    ${CMAKE_CURRENT_SOURCE_DIR}/Data/DataDevices.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/Data/DataPoint.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/Data/TimeSeries.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Generic/Device.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Generic/AsyncDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Generic/DataCollector.cpp
@@ -14,6 +11,7 @@ set(SRC_LIST_MODULE
     ${CMAKE_CURRENT_SOURCE_DIR}/Generic/TcpDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Generic/SerialPortDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Generic/UsbDevice.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/DataDevices.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/NidaqDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/DelsysEmgDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/MagstimRapidDevice.cpp

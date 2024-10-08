@@ -1,7 +1,7 @@
 #ifndef __STIMWALKER_DEVICES_MAGSTIM_RAPID_EXCEPTIONS_H__
 #define __STIMWALKER_DEVICES_MAGSTIM_RAPID_EXCEPTIONS_H__
 
-#include "Generic/Exceptions.h"
+#include "Devices/Exceptions.h"
 
 namespace STIMWALKER_NAMESPACE ::devices {
 

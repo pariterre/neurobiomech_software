@@ -42,12 +42,13 @@ protected:
                                  KeepDataWorkerAliveTimer)
 
 protected:
-  void handleStartRecording() override;
+  bool handleStartRecording() override;
 
   /// @brief Start collecting data asynchronously. This method replaces the
   /// [handleStartRecording] method that should be implemented by inherited
-  /// classes
-  virtual void handleAsyncStartRecording() = 0;
+  /// classes. If starting the recording fails, this method should return false.
+  /// @return True if the recording started successfully, false otherwise
+  virtual bool handleAsyncStartRecording() = 0;
 
   void handleStopRecording() override;
 

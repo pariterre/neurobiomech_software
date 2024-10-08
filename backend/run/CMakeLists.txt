@@ -24,10 +24,12 @@ foreach(SOURCE_FILE ${SOURCE_FILES})
     )
     add_dependencies(${EXECUTABLE_NAME} 
         ${MODULE_UTILS}
+        ${MODULE_DATA}
         ${MODULE_DEVICES}
     )
     target_link_libraries(${EXECUTABLE_NAME} PRIVATE
         ${MODULE_UTILS}
+        ${MODULE_DATA}
         ${MODULE_DEVICES}
         nlohmann_json::nlohmann_json
     )

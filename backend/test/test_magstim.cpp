@@ -5,13 +5,12 @@
 #include "Devices/MagstimRapidDevice.h"
 #include "test_utils.h"
 
-static double requiredPrecision(1e-10);
-
 using namespace STIMWALKER_NAMESPACE;
 
 TEST(Magstim, Info) {
   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
 
+  ASSERT_STREQ(magstim.deviceName().c_str(), "MagstimRapidDevice");
   ASSERT_STREQ(magstim.getPort().c_str(), "MOCK");
   ASSERT_STREQ(magstim.getVid().c_str(), "067B");
   ASSERT_STREQ(magstim.getPid().c_str(), "2303");
@@ -22,11 +21,11 @@ TEST(Magstim, Connect) {
   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
 
   // Is not connected when created
-  ASSERT_EQ(magstim.getIsConnected(), false);
+  ASSERT_FALSE(magstim.getIsConnected());
 
   // Connect to the device, now shows as connected
   magstim.connect();
-  ASSERT_EQ(magstim.getIsConnected(), true);
+  ASSERT_TRUE(magstim.getIsConnected());
   ASSERT_TRUE(
       logger.contains("The device MagstimRapidDevice is now connected"));
   logger.clear();
@@ -39,7 +38,7 @@ TEST(Magstim, Connect) {
 
   // Disconnecting, shows as not connected anymore
   magstim.disconnect();
-  ASSERT_EQ(magstim.getIsConnected(), false);
+  ASSERT_FALSE(magstim.getIsConnected());
   ASSERT_TRUE(
       logger.contains("The device MagstimRapidDevice is now disconnected"));
   logger.clear();
@@ -52,7 +51,7 @@ TEST(Magstim, Connect) {
   logger.clear();
 }
 
-TEST(Magstim, Disconnect) {
+TEST(Magstim, AutoDisconnect) {
   // The Magstim disconnect automatically when the object is destroyed
   auto logger = TestLogger();
   {
@@ -123,7 +122,7 @@ TEST(Magstim, Arming) {
   // Trying to ARM the system without connecting should not work
   magstim.send(devices::MagstimRapidCommands::ARM);
 
-  ASSERT_EQ(magstim.getIsArmed(), false);
+  ASSERT_FALSE(magstim.getIsArmed());
   ASSERT_TRUE(
       logger.contains("Cannot send a command to the device "
                       "MagstimRapidDevice because it is not connected"));
@@ -133,7 +132,7 @@ TEST(Magstim, Arming) {
   magstim.connect();
   auto response = magstim.send(devices::MagstimRapidCommands::ARM);
   ASSERT_EQ(response.getValue(), devices::DeviceResponses::OK);
-  ASSERT_EQ(magstim.getIsArmed(), true);
+  ASSERT_TRUE(magstim.getIsArmed());
   ASSERT_TRUE(
       logger.contains("Armed the system and changed poke interval to 500 ms"));
   logger.clear();
@@ -141,14 +140,14 @@ TEST(Magstim, Arming) {
   // Should not be able to ARM the system after it is already armed
   response = magstim.send(devices::MagstimRapidCommands::ARM);
   ASSERT_EQ(response.getValue(), devices::DeviceResponses::NOK);
-  ASSERT_EQ(magstim.getIsArmed(), true);
+  ASSERT_TRUE(magstim.getIsArmed());
   ASSERT_TRUE(logger.contains("Error: The device is already armed"));
   logger.clear();
 
   // Disarm the system
   response = magstim.send(devices::MagstimRapidCommands::DISARM);
   ASSERT_EQ(response.getValue(), devices::DeviceResponses::OK);
-  ASSERT_EQ(magstim.getIsArmed(), false);
+  ASSERT_FALSE(magstim.getIsArmed());
   ASSERT_TRUE(logger.contains(
       "Disarmed the system and changed poke interval to 5000 ms"));
   logger.clear();
@@ -156,7 +155,7 @@ TEST(Magstim, Arming) {
   // Should not be able to DISARM the system after it is already disarmed
   response = magstim.send(devices::MagstimRapidCommands::DISARM);
   ASSERT_EQ(response.getValue(), devices::DeviceResponses::NOK);
-  ASSERT_EQ(magstim.getIsArmed(), false);
+  ASSERT_FALSE(magstim.getIsArmed());
   ASSERT_TRUE(logger.contains("Error: The device is already disarmed"));
   logger.clear();
 

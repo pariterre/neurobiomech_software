@@ -16,14 +16,12 @@ AsyncDataCollector::AsyncDataCollector(
     : m_KeepDataWorkerAliveInterval(dataCheckIntervals),
       DataCollector(channelCount) {}
 
-void AsyncDataCollector::handleStartRecording() {
+bool AsyncDataCollector::handleStartRecording() {
   bool isStartRecordingHandled = false;
   bool hasFailed = false;
   m_AsyncDataWorker =
       std::thread([this, &isStartRecordingHandled, &hasFailed]() {
-        try {
-          handleAsyncStartRecording();
-        } catch (std::exception &) {
+        if (!handleAsyncStartRecording()) {
           hasFailed = true;
           return;
         }
@@ -39,16 +37,19 @@ void AsyncDataCollector::handleStartRecording() {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     if (hasFailed) {
       m_AsyncDataWorker.join();
-      throw DeviceFailedToStartRecordingException(
-          "Error while starting to record data");
+      return false;
     }
   }
+
+  return true;
 }
 
 void AsyncDataCollector::handleStopRecording() {
   // Cancel the timer first to ensure that it does not keep the io_context alive
-  std::lock_guard<std::mutex> lock(m_AsyncDataMutex);
-  m_IsRecording = false;
+  {
+    std::lock_guard<std::mutex> lock(m_AsyncDataMutex);
+    m_IsRecording = false;
+  }
   std::this_thread::sleep_for(m_KeepDataWorkerAliveInterval);
 
   // Stop the worker thread

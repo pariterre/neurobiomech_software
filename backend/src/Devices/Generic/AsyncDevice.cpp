@@ -1,5 +1,6 @@
 #include "Devices/Generic/AsyncDevice.h"
 
+#include "Devices/Exceptions.h"
 #include "Utils/Logger.h"
 #include <regex>
 #include <thread>

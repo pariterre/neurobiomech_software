@@ -1,262 +1,178 @@
-// #include <gtest/gtest.h>
-// #include <iostream>
-// #include <thread>
+#include <gtest/gtest.h>
+#include <iostream>
+#include <thread>
 
-// #include "Devices/DelsysEmgDevice.h"
-// #include "Utils/Logger.h"
+#include "Devices/DelsysEmgDevice.h"
+#include "test_utils.h"
 
-// static double requiredPrecision(1e-10);
+static double requiredPrecision(1e-6);
 
-// using namespace STIMWALKER_NAMESPACE;
+using namespace STIMWALKER_NAMESPACE;
 
-// size_t listenToLogger(std::vector<std::string> &messagesToDevice) {
-//   auto &logger = utils::Logger::getInstance();
-//   logger.setShouldPrintToConsole(false);
+TEST(Delsys, Info) {
+  auto delsys = devices::DelsysEmgDeviceMock();
 
-//   size_t loggerId =
-//       logger.onNewLog.listen([&messagesToDevice](const std::string &message)
-//       {
-//         messagesToDevice.push_back(message);
-//       });
-//   return loggerId;
-// }
+  ASSERT_STREQ(delsys.deviceName().c_str(), "DelsysEmgDevice");
+}
 
-// bool findMessageInLogger(const std::vector<std::string> &messagesToDevice,
-//                          const std::string &message) {
-//   for (const auto &msg : messagesToDevice) {
-//     if (msg.find(message) != std::string::npos) {
-//       return true;
-//     }
-//   }
-//   return false;
-// }
+TEST(Delsys, Connect) {
+  auto logger = TestLogger();
+  auto delsys = devices::DelsysEmgDeviceMock();
 
-// void clearListenToLogger(size_t loggerId) {
-//   utils::Logger::getInstance().onNewLog.clear(loggerId);
-// }
+  // Is not connected when created
+  ASSERT_FALSE(delsys.getIsConnected());
 
-// TEST(Delsys, connect) {
-//   std::vector<std::string> messagesToDevice;
-//   size_t loggerId = listenToLogger(messagesToDevice);
+  // Connect to the device, now shows as connected
+  delsys.connect();
+  ASSERT_TRUE(delsys.getIsConnected());
+  ASSERT_TRUE(logger.contains("The device DelsysEmgDevice is now connected"));
+  logger.clear();
 
-//   auto delsys = devices::DelsysEmgDevice();
+  // Cannot connect twice
+  delsys.connect();
+  ASSERT_TRUE(logger.contains("Cannot connect to the device DelsysEmgDevice "
+                              "because it is already connected"));
+  logger.clear();
 
-//   // Is not connected when created
-//   ASSERT_EQ(delsys.getIsConnected(), false);
+  // Disconnecting, shows as not connected anymore
+  delsys.disconnect();
+  ASSERT_FALSE(delsys.getIsConnected());
+  ASSERT_TRUE(
+      logger.contains("The device DelsysEmgDevice is now disconnected"));
+  logger.clear();
 
-//   // Connect to the device, now shows as connected
-//   delsys.connect();
-//   ASSERT_EQ(delsys.getIsConnected(), true);
-//   ASSERT_TRUE(
-//       findMessageInLogger(messagesToDevice, "The device is now connected"));
-//   messagesToDevice.clear();
+  // Cannot disconnect twice
+  delsys.disconnect();
+  ASSERT_TRUE(logger.contains(
+      "Cannot disconnect from the device DelsysEmgDevice because "
+      "it is not connected"));
+  logger.clear();
+}
 
-//   // Cannot connect twice
-//   EXPECT_THROW(magstim.connect(), devices::DeviceIsConnectedException);
-//   ASSERT_TRUE(findMessageInLogger(
-//       messagesToDevice,
-//       "Cannot connect to the device because it is already connected"));
-//   messagesToDevice.clear();
+TEST(Delsys, AutoDisconnect) {
+  // The Delsys disconnect automatically when the object is destroyed
+  auto logger = TestLogger();
+  {
+    auto delsys = devices::DelsysEmgDeviceMock();
+    delsys.connect();
+  }
+  ASSERT_TRUE(
+      logger.contains("The device DelsysEmgDevice is now disconnected"));
+  logger.clear();
+}
 
-//   // Disconnecting, shows as not connected anymore
-//   magstim.disconnect();
-//   ASSERT_EQ(magstim.getIsConnected(), false);
-//   ASSERT_TRUE(
-//       findMessageInLogger(messagesToDevice, "The device is now
-//       disconnected"));
-//   messagesToDevice.clear();
+TEST(Delsys, StartRecording) {
+  auto logger = TestLogger();
+  auto delsys = devices::DelsysEmgDeviceMock();
 
-//   // Cannot disconnect twice
-//   EXPECT_THROW(magstim.disconnect(), devices::DeviceIsNotConnectedException);
-//   ASSERT_TRUE(findMessageInLogger(
-//       messagesToDevice,
-//       "Cannot disconnect from the device because it is not connected"));
+  // The system cannot start recording if it is not connected
+  delsys.startRecording();
+  ASSERT_FALSE(delsys.getIsRecording());
+  ASSERT_TRUE(
+      logger.contains("Cannot send a command to the device "
+                      "DelsysCommandTcpDevice because it is not connected"));
+  ASSERT_TRUE(logger.contains(
+      "The data collector DelsysEmgDataCollector failed to start recording"));
+  logger.clear();
 
-//   clearListenToLogger(loggerId);
-// }
+  // Connect the system and start recording
+  delsys.connect();
+  delsys.startRecording();
+  ASSERT_TRUE(delsys.getIsRecording());
+  ASSERT_TRUE(logger.contains(
+      "The data collector DelsysEmgDataCollector is now recording"));
+  logger.clear();
 
-// TEST(UsbDevice, Print) {
-//   std::vector<std::string> messagesToDevice;
-//   size_t loggerId = listenToLogger(messagesToDevice);
+  // The system cannot start recording if it is already recording
+  delsys.startRecording();
+  ASSERT_TRUE(delsys.getIsRecording());
+  ASSERT_TRUE(logger.contains(
+      "The data collector DelsysEmgDataCollector is already recording"));
+  logger.clear();
 
-//   // Send a PRINT message to a USB device
-//   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
-//   EXPECT_THROW(
-//       magstim.send(devices::MagstimRapidCommands::PRINT, "Hello, world!"),
-//       devices::DeviceIsNotConnectedException);
+  // Stop recording
+  delsys.stopRecording();
+  ASSERT_FALSE(delsys.getIsRecording());
+  ASSERT_TRUE(logger.contains(
+      "The data collector DelsysEmgDataCollector has stopped recording"));
+  logger.clear();
 
-//   // Send a PRINT message to a USB device and wait for the response
-//   magstim.connect();
-//   magstim.send(devices::MagstimRapidCommands::PRINT, "Hello, world!");
-//   magstim.disconnect();
-//   clearListenToLogger(loggerId);
+  // The system cannot stop recording if it is not recording
+  delsys.stopRecording();
+  ASSERT_FALSE(delsys.getIsRecording());
+  ASSERT_TRUE(logger.contains(
+      "The data collector DelsysEmgDataCollector is not recording"));
+  logger.clear();
 
-//   // At least one message should have been sent
-//   ASSERT_TRUE(findMessageInLogger(messagesToDevice, "Hello, world!"));
+  // Disconnect the system
+  delsys.disconnect();
+}
 
-//   clearListenToLogger(loggerId);
-// }
+TEST(Delsys, AutoStopRecording) {
+  // The system auto stop recording when the object is destroyed
+  auto logger = TestLogger();
+  {
+    auto delsys = devices::DelsysEmgDeviceMock();
+    delsys.connect();
+    delsys.startRecording();
+  }
+  ASSERT_TRUE(logger.contains(
+      "The data collector DelsysEmgDataCollector has stopped recording"));
+  logger.clear();
 
-// TEST(Magstim, getTemperature) {
-//   std::vector<std::string> messagesToDevice;
-//   size_t loggerId = listenToLogger(messagesToDevice);
+  // The system auto stop if disconnect is called
+  {
+    auto delsys = devices::DelsysEmgDeviceMock();
+    delsys.connect();
+    delsys.startRecording();
+    delsys.disconnect();
 
-//   // Connect the system and wait at least one POKE time and close
-//   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
+    ASSERT_FALSE(delsys.getIsRecording());
+    ASSERT_TRUE(logger.contains(
+        "The data collector DelsysEmgDataCollector has stopped recording"));
+  }
+}
 
-//   // Get the temperature
-//   magstim.connect();
-//   auto response =
-//   magstim.send(devices::MagstimRapidCommands::GET_TEMPERATURE);
-//   magstim.disconnect();
-//   clearListenToLogger(loggerId);
-//   ASSERT_EQ(response.getValue(), 42);
+TEST(Delsys, Data) {
+  auto delsys = devices::DelsysEmgDeviceMock();
+  delsys.connect();
 
-//   // At least one message should have been sent
-//   ASSERT_TRUE(findMessageInLogger(messagesToDevice, "Temperature: 42"));
+  // Wait for the data to be collected
+  delsys.startRecording();
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  delsys.stopRecording();
 
-//   clearListenToLogger(loggerId);
-// }
+  // Get the data
+  const auto &data = delsys.getTrialData();
+  // Technically it should have recorded be exactly 200 (2000Hz). But the
+  // material is not that precise. So we just check that it is at least 150
+  ASSERT_GE(data.size(), 150);
 
-// TEST(Magstim, setRapid) {
-//   std::vector<std::string> messagesToDevice;
-//   size_t loggerId = listenToLogger(messagesToDevice);
-
-//   // Connect the system and set RTS to ON then to OFF
-//   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
-
-//   magstim.connect();
-//   magstim.send(devices::MagstimRapidCommands::SET_FAST_COMMUNICATION, true);
-//   ASSERT_TRUE(findMessageInLogger(messagesToDevice, "ON"));
-//   messagesToDevice.clear();
-
-//   magstim.send(devices::MagstimRapidCommands::SET_FAST_COMMUNICATION, false);
-//   ASSERT_TRUE(findMessageInLogger(messagesToDevice, "OFF"));
-//   messagesToDevice.clear();
-
-//   magstim.disconnect();
-//   clearListenToLogger(loggerId);
-// }
-
-// TEST(Magstim, arming) {
-//   std::vector<std::string> messagesToDevice;
-//   size_t loggerId = listenToLogger(messagesToDevice);
-
-//   // Connect the system and wait at least one POKE time and close
-//   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
-
-//   // Trying to ARM the system without connecting should not work
-//   EXPECT_THROW(magstim.send(devices::MagstimRapidCommands::ARM),
-//                devices::DeviceIsNotConnectedException);
-//   ASSERT_EQ(magstim.getIsArmed(), false);
-//   ASSERT_TRUE(findMessageInLogger(
-//       messagesToDevice,
-//       "Cannot send a command to the device because it is not connected"));
-//   messagesToDevice.clear();
-
-//   // Connect the system then send the ARM command
-//   magstim.connect();
-//   auto response = magstim.send(devices::MagstimRapidCommands::ARM);
-//   ASSERT_EQ(response.getValue(), devices::DeviceResponses::OK);
-//   ASSERT_EQ(magstim.getIsArmed(), true);
-//   ASSERT_TRUE(findMessageInLogger(
-//       messagesToDevice,
-//       "Armed the system and changed poke interval to 500 ms"));
-//   messagesToDevice.clear();
-
-//   // Should not be able to ARM the system after it is already armed
-//   response = magstim.send(devices::MagstimRapidCommands::ARM);
-//   ASSERT_EQ(response.getValue(), devices::DeviceResponses::NOK);
-//   ASSERT_EQ(magstim.getIsArmed(), true);
-//   ASSERT_TRUE(findMessageInLogger(messagesToDevice,
-//                                   "Error: The device is already armed"));
-//   messagesToDevice.clear();
-
-//   // Disarm the system
-//   response = magstim.send(devices::MagstimRapidCommands::DISARM);
-//   ASSERT_EQ(response.getValue(), devices::DeviceResponses::OK);
-//   ASSERT_EQ(magstim.getIsArmed(), false);
-//   ASSERT_TRUE(findMessageInLogger(
-//       messagesToDevice,
-//       "Disarmed the system and changed poke interval to 5000 ms"));
-//   messagesToDevice.clear();
-
-//   // Should not be able to DISARM the system after it is already disarmed
-//   response = magstim.send(devices::MagstimRapidCommands::DISARM);
-//   ASSERT_EQ(response.getValue(), devices::DeviceResponses::NOK);
-//   ASSERT_EQ(magstim.getIsArmed(), false);
-//   ASSERT_TRUE(findMessageInLogger(messagesToDevice,
-//                                   "Error: The device is already disarmed"));
-//   messagesToDevice.clear();
-
-//   magstim.disconnect();
-//   clearListenToLogger(loggerId);
-// }
-
-// #ifndef SKIP_LONG_TESTS
-// TEST(Magstim, automaticPokingDisarmed) {
-//   std::vector<std::string> messagesToDevice;
-//   size_t loggerId = listenToLogger(messagesToDevice);
-
-//   // Connect the system and wait at least one POKE time and close
-//   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
-//   ASSERT_EQ(magstim.getDisarmedPokeInterval(),
-//   std::chrono::milliseconds(5000));
-//   ASSERT_EQ(magstim.getKeepDeviceWorkerAliveInterval(),
-//             std::chrono::milliseconds(5000));
-
-//   magstim.connect();
-//   messagesToDevice.clear();
-//   ASSERT_EQ(magstim.getKeepDeviceWorkerAliveInterval(),
-//             std::chrono::milliseconds(5000));
-
-//   std::this_thread::sleep_for(std::chrono::milliseconds(4000));
-//   ASSERT_EQ(messagesToDevice.size(), 0);
-
-//   std::this_thread::sleep_for(std::chrono::milliseconds(1500));
-//   ASSERT_EQ(messagesToDevice.size(), 1);
-//   ASSERT_TRUE(findMessageInLogger(messagesToDevice, "POKE"));
-
-//   magstim.disconnect();
-//   clearListenToLogger(loggerId);
-// }
-// #endif
-
-// #ifndef SKIP_LONG_TESTS
-// TEST(Magstim, automaticPokingArmed) {
-//   std::vector<std::string> messagesToDevice;
-//   size_t loggerId = listenToLogger(messagesToDevice);
-
-//   // Connect the system and wait at least one POKE time and close
-//   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
-//   ASSERT_EQ(magstim.getArmedPokeInterval(), std::chrono::milliseconds(500));
-
-//   magstim.connect();
-//   magstim.send(devices::MagstimRapidCommands::ARM);
-//   ASSERT_EQ(magstim.getKeepDeviceWorkerAliveInterval(),
-//             std::chrono::milliseconds(500));
-//   messagesToDevice.clear();
-
-//   std::this_thread::sleep_for(std::chrono::milliseconds(200));
-//   ASSERT_EQ(messagesToDevice.size(), 0);
-
-//   std::this_thread::sleep_for(std::chrono::milliseconds(2200));
-//   ASSERT_GE(messagesToDevice.size(), 4); // 4 pokes in 2 seconds
-//   magstim.disconnect();
-//   clearListenToLogger(loggerId);
-
-//   // The messagesToDevices should have be called at least five times
-//   size_t pokeCount = 0;
-//   for (const auto &message : messagesToDevice) {
-//     if (message.find("POKE") != std::string::npos) {
-//       pokeCount++;
-//     }
-//   }
-//   ASSERT_GE(pokeCount, 4);
-// }
-// #endif
-
-// TEST(Magstim, computeCrc) {
-//   auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
-//   ASSERT_EQ(magstim.computeCrcInterface("Hello, world!"), "v");
-// }
+  // Check the data. The fake data are based on a sine wave but offset by the
+  // number of data previously taken in any of the test. We therefore search for
+  // this offset first, then it should be a sine wave. The offset is found when
+  // a value is exact and the next one is also exact (determining the direction
+  // of the sine wave).
+  size_t offset = 0;
+  while (true) {
+    float value = std::sin(static_cast<float>(offset) / 2000.0f * 2 * M_PI);
+    float nextValue =
+        std::sin(static_cast<float>(offset + 1) / 2000.0f * 2 * M_PI);
+    if ((std::abs(data[0][0] - value) < requiredPrecision) &&
+        (std::abs(data[1][0] - nextValue) < requiredPrecision)) {
+      break;
+    }
+    if (offset > 2000) {
+      // But we know for sure it will never be that far in (as the wave has
+      // looped)
+      FAIL() << "Could not find the offset in the data";
+    }
+    offset++;
+  }
+  for (size_t i = 0; i < data.size(); i++) {
+    for (size_t j = 0; j < data[i].size(); j++) {
+      float value = std::sin((i + offset) / 2000.0 * 2 * M_PI);
+      ASSERT_NEAR(data[i][j], value, requiredPrecision);
+    }
+  }
+}

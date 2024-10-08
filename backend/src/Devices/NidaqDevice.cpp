@@ -1,6 +1,6 @@
 #include "Devices/NidaqDevice.h"
 
-#include "Devices/Generic/Exceptions.h"
+#include "Devices/Exceptions.h"
 
 #include <iostream>
 using namespace STIMWALKER_NAMESPACE::devices;
@@ -37,8 +37,9 @@ void NidaqDevice::handleAsyncDisconnect() {
   // TODO Implement the disconnection from the device
 }
 
-void NidaqDevice::handleStartRecording() {
+bool NidaqDevice::handleStartRecording() {
   // TODO Implement the start recording
+  return false;
 }
 
 void NidaqDevice::handleStopRecording() {

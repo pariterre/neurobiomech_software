@@ -42,12 +42,6 @@ public:
       : DeviceException(filename) {}
 };
 
-class DeviceFailedToStartRecordingException : public DeviceException {
-public:
-  DeviceFailedToStartRecordingException(const std::string &filename)
-      : DeviceException(filename) {}
-};
-
 class DeviceFailedToStopRecordingException : public DeviceException {
 public:
   DeviceFailedToStopRecordingException(const std::string &filename)

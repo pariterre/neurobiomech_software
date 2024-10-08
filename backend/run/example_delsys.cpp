@@ -13,7 +13,6 @@ int main() {
   logger.info("Starting the application");
 
   try {
-    // TODO Implement the tests
     auto delsys = devices::DelsysEmgDeviceMock();
 
     delsys.connect();

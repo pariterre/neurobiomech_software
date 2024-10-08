@@ -1,5 +1,5 @@
-#ifndef __STIMWALKER_DEVICES_USB_DEVICE_H__
-#define __STIMWALKER_DEVICES_USB_DEVICE_H__
+#ifndef __STIMWALKER_DEVICES_GENERIC_USB_DEVICE_H__
+#define __STIMWALKER_DEVICES_GENERIC_USB_DEVICE_H__
 
 #include "stimwalkerConfig.h"
 
@@ -59,4 +59,4 @@ public:
 };
 
 } // namespace STIMWALKER_NAMESPACE::devices
-#endif // __STIMWALKER_DEVICES_USB_DEVICE_H__
+#endif // __STIMWALKER_DEVICES_GENERIC_USB_DEVICE_H__

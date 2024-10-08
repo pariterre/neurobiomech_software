@@ -5,8 +5,8 @@
 #include <stdexcept>
 #include <thread>
 
-#include "Devices/Data/DataPoint.h"
-#include "Devices/Generic/Exceptions.h"
+#include "Data/DataPoint.h"
+#include "Devices/Exceptions.h"
 #include "Utils/Logger.h"
 
 using namespace STIMWALKER_NAMESPACE::devices;
@@ -103,13 +103,14 @@ void DelsysEmgDevice::handleAsyncDisconnect() {
   m_DataDevice->disconnect();
 }
 
-void DelsysEmgDevice::handleAsyncStartRecording() {
+bool DelsysEmgDevice::handleAsyncStartRecording() {
   if (m_CommandDevice->send(DelsysCommands::START) != DeviceResponses::OK) {
-    throw DeviceFailedToStartRecordingException("Command failed: START");
+    return false;
   }
 
   // Wait until the data starts streaming
   m_DataDevice->read(m_DataBuffer);
+  return true;
 }
 
 void DelsysEmgDevice::handleAsyncStopRecording() {
@@ -201,20 +202,28 @@ void DelsysEmgDeviceMock::DataTcpDeviceMock::read(std::vector<char> &buffer) {
   // Write the value float(1) to the buffer assuming 16 channels and 27 samples
   // with 4 bytes per channel
 
+  size_t bytesPerChannel(4);
+  size_t channelCount(16);
+  size_t sampleCount(27);
+
   // Wait for the next cycle of data
   static size_t counter = 0;
-  std::this_thread::sleep_until(m_StartTime +
-                                std::chrono::microseconds(500 * 27 * counter));
-  counter++;
+  std::this_thread::sleep_until(
+      m_StartTime + std::chrono::microseconds(500 * sampleCount * counter));
 
   // Copy the 4-byte representation of the float into the byte array
   unsigned char dataAsChar[4];
-  for (size_t i = 0; i < buffer.size(); i += 4) {
-    float value =
-        std::sin(static_cast<float>(counter * buffer.size() + i) / 100.0f);
+  for (size_t i = 0; i < sampleCount; i++) {
+    float value = std::sin(static_cast<float>(counter * sampleCount + i) /
+                           2000.0f * 2 * M_PI);
     std::memcpy(dataAsChar, &value, sizeof(float));
-    std::copy(dataAsChar, dataAsChar + 4, buffer.begin() + i);
+    for (size_t j = 0; j < channelCount; j++)
+      std::copy(dataAsChar, dataAsChar + 4,
+                buffer.begin() + i * bytesPerChannel * channelCount +
+                    j * bytesPerChannel);
   }
+
+  counter++;
 }
 
 void DelsysEmgDeviceMock::DataTcpDeviceMock::handleAsyncConnect() {
