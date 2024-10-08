@@ -57,6 +57,7 @@ public:
   /// @param port The port name of the device
   MagstimRapidDevice(const std::string &port);
   MagstimRapidDevice(const MagstimRapidDevice &other) = delete;
+  ~MagstimRapidDevice() override;
 
   std::string deviceName() const override;
 

@@ -7,11 +7,7 @@
 
 using namespace STIMWALKER_NAMESPACE::devices;
 
-Device::~Device() {
-  if (m_IsConnected) {
-    disconnect();
-  }
-}
+Device::~Device() {}
 
 void Device::connect() {
   auto &logger = utils::Logger::getInstance();

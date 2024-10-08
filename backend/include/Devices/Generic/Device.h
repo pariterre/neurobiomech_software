@@ -93,7 +93,9 @@ public:
   Device() = default;
   Device(const Device &other) = delete;
 
-  /// @brief Destructor
+  /// @brief Destructor. For technical reasons, every classes that inherit from
+  /// this class should have a virtual destructor that calls [disconnect] by
+  /// themselves
   virtual ~Device();
 
   /// @brief Get the name of the device

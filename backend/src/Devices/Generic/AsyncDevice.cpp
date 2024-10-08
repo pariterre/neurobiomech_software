@@ -12,6 +12,12 @@ AsyncDevice::AsyncDevice(const std::chrono::milliseconds &keepAliveInterval)
 AsyncDevice::AsyncDevice(const std::chrono::microseconds &keepAliveInterval)
     : m_KeepDeviceWorkerAliveInterval(keepAliveInterval), Device() {}
 
+AsyncDevice::~AsyncDevice() {
+  if (m_AsyncDeviceWorker.joinable()) {
+    m_AsyncDeviceContext.stop();
+    m_AsyncDeviceWorker.join();
+  }
+}
 void AsyncDevice::handleConnect() {
   bool isConnectionHandled = false;
   bool hasFailed = false;

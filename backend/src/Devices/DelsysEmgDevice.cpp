@@ -3,6 +3,7 @@
 #include <cstring>
 #include <iostream>
 #include <stdexcept>
+#include <thread>
 
 #include "Devices/Data/DataPoint.h"
 #include "Devices/Generic/Exceptions.h"

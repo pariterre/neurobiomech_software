@@ -26,6 +26,12 @@ MagstimRapidDevice::MagstimRapidDevice(const std::string &port)
   m_KeepDeviceWorkerAliveInterval = m_DisarmedPokeInterval;
 }
 
+MagstimRapidDevice::~MagstimRapidDevice() {
+  if (m_IsConnected) {
+    disconnect();
+  }
+}
+
 std::string MagstimRapidDevice::deviceName() const {
   return "MagstimRapidDevice";
 }
