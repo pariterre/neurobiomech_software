@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
   auto lokomatPtr = devices::makeLokomatDevice(isMock);
   devices::NidaqDevice &lokomat = *lokomatPtr;
 
-  devices::data::DataDevices devices;
+  devices::data::DevicesData devices;
   devices.newDevice("lokomat");
 
   lokomat.connect();

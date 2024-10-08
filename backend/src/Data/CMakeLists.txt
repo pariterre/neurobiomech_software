@@ -6,6 +6,7 @@ project(${MODULE_DATA})
 set(SRC_LIST_MODULE
     ${CMAKE_CURRENT_SOURCE_DIR}/DataPoint.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/TimeSeries.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/FixedTimeSeries.cpp
 )
 
 # Create the library

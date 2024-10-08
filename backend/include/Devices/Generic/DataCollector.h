@@ -17,8 +17,11 @@ class DataCollector {
 public:
   /// @brief Constructor
   /// @param channelCount The number of channels
-  DataCollector(size_t channelCount)
-      : m_DataChannelCount(channelCount), m_IsRecording(false) {}
+  /// @param timeSeries The time series to store the data
+  DataCollector(size_t channelCount,
+                std::unique_ptr<data::TimeSeries> timeSeries)
+      : m_DataChannelCount(channelCount), m_IsRecording(false),
+        m_TimeSeries(std::move(timeSeries)) {}
 
   /// @brief Destructor
   virtual ~DataCollector() = default;
@@ -53,7 +56,7 @@ protected:
   DECLARE_PROTECTED_MEMBER(bool, IsRecording)
 
   /// @brief The timeseries data of the previous/current recording
-  DECLARE_PROTECTED_MEMBER_NOGET(data::TimeSeries, TimeSeries)
+  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<data::TimeSeries>, TimeSeries)
 
 public:
   const data::TimeSeries &getTrialData() const;

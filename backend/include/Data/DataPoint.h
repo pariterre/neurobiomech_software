@@ -7,8 +7,7 @@
 #include "Utils/CppMacros.h"
 #include "stimwalkerConfig.h"
 
-namespace STIMWALKER_NAMESPACE::devices {
-namespace data {
+namespace STIMWALKER_NAMESPACE::data {
 
 /// @brief Class to store data
 class DataPoint {
@@ -20,7 +19,20 @@ public:
   /// @brief Constructor
   /// @param timestamp The timestamp of the data
   /// @param data The data to store
-  DataPoint(time_t timestamp, const std::vector<double> &data);
+  DataPoint(std::chrono::system_clock::time_point timestamp,
+            const std::vector<double> &data);
+
+  /// @brief Constructor from milliseconds
+  /// @param timestamp The timestamp in milliseconds
+  /// @param data The data to store
+  DataPoint(std::chrono::milliseconds timestamp,
+            const std::vector<double> &data);
+
+  /// @brief Constructor from microseconds
+  /// @param timestamp The timestamp in microseconds
+  /// @param data The data to store
+  DataPoint(std::chrono::microseconds timestamp,
+            const std::vector<double> &data);
 
   /// @brief Get the number of channels
   /// @return The number of channels
@@ -45,13 +57,12 @@ public:
 
 protected:
   /// @brief The data timestamp
-  DECLARE_PROTECTED_MEMBER(time_t, Timestamp);
+  DECLARE_PROTECTED_MEMBER(std::chrono::system_clock::time_point, Timestamp);
 
   /// @brief The data
   DECLARE_PROTECTED_MEMBER(std::vector<double>, Data);
 };
 
-} // namespace data
-} // namespace STIMWALKER_NAMESPACE::devices
+} // namespace STIMWALKER_NAMESPACE::data
 
 #endif // __STIMWALKER_DATA_DATA_POINT_H__

@@ -1,8 +1,9 @@
-#include "Devices/DataDevices.h"
+#include "Devices/DevicesData.h"
 
 #include "Data/TimeSeries.h"
 
-using namespace STIMWALKER_NAMESPACE::devices::data;
+using namespace STIMWALKER_NAMESPACE::data;
+using namespace STIMWALKER_NAMESPACE::devices;
 
 size_t DevicesData::size() const {
   return static_cast<int>(m_AllDevices.size());

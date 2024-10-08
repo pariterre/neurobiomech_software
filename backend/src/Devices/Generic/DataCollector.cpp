@@ -3,6 +3,7 @@
 #include "Devices/Exceptions.h"
 #include "Utils/Logger.h"
 
+using namespace STIMWALKER_NAMESPACE;
 using namespace STIMWALKER_NAMESPACE::devices;
 
 void DataCollector::startRecording() {
@@ -20,7 +21,7 @@ void DataCollector::startRecording() {
     return;
   }
 
-  m_TimeSeries = data::TimeSeries();
+  m_TimeSeries->clear();
   m_IsRecording = true;
   logger.info("The data collector " + dataCollectorName() +
               " is now recording");
@@ -43,7 +44,7 @@ void DataCollector::stopRecording() {
 }
 
 const data::TimeSeries &DataCollector::getTrialData() const {
-  return m_TimeSeries;
+  return *m_TimeSeries;
 }
 
 void DataCollector::addDataPoint(const data::DataPoint &dataPoint) {
@@ -51,7 +52,7 @@ void DataCollector::addDataPoint(const data::DataPoint &dataPoint) {
     return;
   }
 
-  m_TimeSeries.add(dataPoint);
+  m_TimeSeries->add(dataPoint);
   onNewData.notifyListeners(dataPoint);
 }
 
@@ -61,7 +62,7 @@ void DataCollector::addDataPoints(const std::vector<data::DataPoint> &data) {
   }
 
   for (auto d : data) {
-    m_TimeSeries.add(d);
+    m_TimeSeries->add(d);
   }
   onNewData.notifyListeners(data.back());
 }

@@ -6,6 +6,7 @@
 #include <thread>
 
 #include "Data/DataPoint.h"
+#include "Data/FixedTimeSeries.h"
 #include "Devices/Exceptions.h"
 #include "Utils/Logger.h"
 
@@ -49,7 +50,9 @@ DelsysEmgDevice::DelsysEmgDevice(const std::string &host, size_t commandPort,
       m_BytesPerChannel(4), m_SampleCount(27),
       m_DataBuffer(std::vector<char>(16 * m_SampleCount * m_BytesPerChannel)),
       AsyncDevice(std::chrono::milliseconds(1000)),
-      AsyncDataCollector(16, std::chrono::microseconds(1)) {
+      AsyncDataCollector(16, std::chrono::microseconds(1),
+                         std::make_unique<data::FixedTimeSeries>(
+                             std::chrono::microseconds(500))) {
   m_IgnoreTooSlowWarning = true;
 }
 
@@ -62,7 +65,9 @@ DelsysEmgDevice::DelsysEmgDevice(
       m_SampleCount(27),
       m_DataBuffer(std::vector<char>(16 * m_SampleCount * m_BytesPerChannel)),
       AsyncDevice(std::chrono::milliseconds(1000)),
-      AsyncDataCollector(16, std::chrono::microseconds(1)) {
+      AsyncDataCollector(16, std::chrono::microseconds(1),
+                         std::make_unique<data::FixedTimeSeries>(
+                             std::chrono::microseconds(500))) {
   m_IgnoreTooSlowWarning = true;
 }
 

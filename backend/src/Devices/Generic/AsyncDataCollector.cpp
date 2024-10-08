@@ -7,14 +7,16 @@
 using namespace STIMWALKER_NAMESPACE::devices;
 
 AsyncDataCollector::AsyncDataCollector(
-    size_t channelCount, const std::chrono::milliseconds &dataCheckIntervals)
+    size_t channelCount, const std::chrono::milliseconds &dataCheckIntervals,
+    std::unique_ptr<data::TimeSeries> timeSeries)
     : m_KeepDataWorkerAliveInterval(dataCheckIntervals),
-      DataCollector(channelCount) {}
+      DataCollector(channelCount, std::move(timeSeries)) {}
 
 AsyncDataCollector::AsyncDataCollector(
-    size_t channelCount, const std::chrono::microseconds &dataCheckIntervals)
+    size_t channelCount, const std::chrono::microseconds &dataCheckIntervals,
+    std::unique_ptr<data::TimeSeries> timeSeries)
     : m_KeepDataWorkerAliveInterval(dataCheckIntervals),
-      DataCollector(channelCount) {}
+      DataCollector(channelCount, std::move(timeSeries)) {}
 
 bool AsyncDataCollector::handleStartRecording() {
   bool isStartRecordingHandled = false;

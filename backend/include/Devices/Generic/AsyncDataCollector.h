@@ -12,10 +12,13 @@ public:
   /// @brief Constructor
   /// @param frameRate The frame rate of the device
   /// @param dataCheckIntervals The interval to check for new data
+  /// @param timeSeries The time series to store the data
   AsyncDataCollector(size_t channelCount,
-                     const std::chrono::milliseconds &dataCheckIntervals);
+                     const std::chrono::milliseconds &dataCheckIntervals,
+                     std::unique_ptr<data::TimeSeries> timeSeries);
   AsyncDataCollector(size_t channelCount,
-                     const std::chrono::microseconds &dataCheckIntervals);
+                     const std::chrono::microseconds &dataCheckIntervals,
+                     std::unique_ptr<data::TimeSeries> timeSeries);
 
 protected:
   /// Protected members without Get accessors

@@ -10,19 +10,28 @@
 #include "Data/DataPoint.h"
 #include "Utils/CppMacros.h"
 
-namespace STIMWALKER_NAMESPACE::devices {
-namespace data {
+namespace STIMWALKER_NAMESPACE::data {
 
 /// @brief Class to store data
 class TimeSeries {
 public:
+  TimeSeries() = default;
+  virtual ~TimeSeries() = default;
+
   /// @brief Get the number of data in the collection
   /// @return The number of data in the collection
   size_t size() const;
 
-  /// @brief Add new data to the collection
+  /// @brief Clear the data in the collection
+  void clear();
+
+  /// @brief Add new data to the collection.
   /// @param data The data to add
-  void add(const DataPoint &data);
+  virtual void add(const DataPoint &data);
+
+  /// @brief Add new data to the collection.
+  /// @param data The data to add
+  virtual void add(const std::vector<double> &data);
 
   /// @brief Get the data at a specific index
   /// @param index The index of the data
@@ -42,7 +51,6 @@ protected:
   DECLARE_PROTECTED_MEMBER(std::vector<DataPoint>, Data);
 };
 
-} // namespace data
-} // namespace STIMWALKER_NAMESPACE::devices
+} // namespace STIMWALKER_NAMESPACE::data
 
 #endif // __STIMWALKER_DATA_TIME_SERIES_H__

@@ -11,7 +11,7 @@ set(SRC_LIST_MODULE
     ${CMAKE_CURRENT_SOURCE_DIR}/Generic/TcpDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Generic/SerialPortDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Generic/UsbDevice.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/DataDevices.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/DevicesData.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/NidaqDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/DelsysEmgDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/MagstimRapidDevice.cpp
@@ -20,7 +20,7 @@ set(SRC_LIST_MODULE
 # Create the library
 add_library(${MODULE_DEVICES} STATIC ${SRC_LIST_MODULE})
 set_target_properties(${MODULE_DEVICES} PROPERTIES DEBUG_POSTFIX "_debug")
-add_dependencies(${MODULE_DEVICES} ${MODULE_UTILS})
+add_dependencies(${MODULE_DEVICES} ${MODULE_DATA} ${MODULE_UTILS})
 
 # Add the include
 target_include_directories(${MODULE_DEVICES} PRIVATE 
@@ -32,6 +32,7 @@ target_include_directories(${MODULE_DEVICES} PRIVATE
 
 # Link the library
 target_link_libraries(${MODULE_DEVICES} PRIVATE
+    ${MODULE_DATA}
     ${MODULE_UTILS}
     nlohmann_json::nlohmann_json
 )
