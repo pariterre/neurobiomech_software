@@ -7,9 +7,6 @@
 
 using namespace STIMWALKER_NAMESPACE::utils;
 
-// Define the log levels
-enum Level { INFO, WARNING, ERROR };
-
 // Get the singleton instance of the Logger
 Logger &Logger::getInstance() {
   static Logger instance;
@@ -96,8 +93,8 @@ std::string Logger::getLabel(Level level) {
     return "[INFO]: ";
   case WARNING:
     return "[WARNING]: ";
-  case ERROR:
-    return "[ERROR]: ";
+  case FATAL:
+    return "[FATAL]: ";
   default:
     return "[UNKNOWN]: ";
   }

@@ -3,7 +3,7 @@
 #include <thread>
 
 #include "Devices/DelsysEmgDevice.h"
-#include "test_utils.h"
+#include "utils.h"
 
 static double requiredPrecision(1e-6);
 

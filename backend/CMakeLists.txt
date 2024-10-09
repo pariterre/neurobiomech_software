@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 
-project(stimwalker VERSION 1.11.2)
+project(stimwalker VERSION 0.1.0)
 set(STIMWALKER_ROOT_FOLDER ${PROJECT_SOURCE_DIR})
 set (CMAKE_CXX_STANDARD 17)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)

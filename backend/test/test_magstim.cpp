@@ -3,7 +3,7 @@
 #include <thread>
 
 #include "Devices/MagstimRapidDevice.h"
-#include "test_utils.h"
+#include "utils.h"
 
 using namespace STIMWALKER_NAMESPACE;
 
