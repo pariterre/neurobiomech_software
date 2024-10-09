@@ -2,8 +2,7 @@
 
 using namespace STIMWALKER_NAMESPACE;
 
-void onNewData(devices::data::TimeSeries &timeSeries,
-               const devices::data::DataPoint &newData) {
+void onNewData(data::TimeSeries &timeSeries, const data::DataPoint &newData) {
   timeSeries.add(newData);
 }
 
@@ -33,12 +32,12 @@ int main(int argc, char **argv) {
   auto lokomatPtr = devices::makeLokomatDevice(isMock);
   devices::NidaqDevice &lokomat = *lokomatPtr;
 
-  devices::data::DevicesData devices;
-  devices.newDevice("lokomat");
+  devices::DevicesData deviceDatas;
+  deviceDatas.newDevice("lokomat");
 
   lokomat.connect();
-  lokomat.onNewData.listen([&devices](const devices::data::DataPoint &newData) {
-    onNewData(devices["lokomat"], newData);
+  lokomat.onNewData.listen([&deviceDatas](const data::DataPoint &newData) {
+    onNewData(deviceDatas["lokomat"], newData);
   });
 
   lokomat.startRecording();

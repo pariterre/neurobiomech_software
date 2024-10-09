@@ -219,8 +219,8 @@ void DelsysEmgDeviceMock::DataTcpDeviceMock::read(std::vector<char> &buffer) {
   // Copy the 4-byte representation of the float into the byte array
   unsigned char dataAsChar[4];
   for (size_t i = 0; i < sampleCount; i++) {
-    float value = std::sin(static_cast<float>(counter * sampleCount + i) /
-                           2000.0f * 2 * M_PI);
+    float value = static_cast<float>(std::sin(
+        static_cast<float>(counter * sampleCount + i) / 2000.0f * 2 * M_PI));
     std::memcpy(dataAsChar, &value, sizeof(float));
     for (size_t j = 0; j < channelCount; j++)
       std::copy(dataAsChar, dataAsChar + 4,

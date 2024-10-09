@@ -3,48 +3,70 @@
 using namespace STIMWALKER_NAMESPACE::data;
 
 FixedTimeSeries::FixedTimeSeries(const std::chrono::microseconds &deltaTime)
-    : m_DeltaTime(deltaTime), m_StartingTime(std::chrono::system_clock::now()),
+    : m_StartingTime(std::chrono::system_clock::now()), m_DeltaTime(deltaTime),
       TimeSeries() {}
 
 FixedTimeSeries::FixedTimeSeries(const std::chrono::milliseconds &deltaTime)
-    : m_DeltaTime(deltaTime), m_StartingTime(std::chrono::system_clock::now()),
+    : m_StartingTime(std::chrono::system_clock::now()), m_DeltaTime(deltaTime),
       TimeSeries() {}
 
+FixedTimeSeries::FixedTimeSeries(
+    const std::chrono::system_clock::time_point &startingTime,
+    const std::chrono::microseconds &deltaTime)
+    : m_StartingTime(startingTime), m_DeltaTime(deltaTime), TimeSeries() {}
+
+FixedTimeSeries::FixedTimeSeries(
+    const std::chrono::system_clock::time_point &startingTime,
+    const std::chrono::milliseconds &deltaTime)
+    : m_StartingTime(startingTime), m_DeltaTime(deltaTime), TimeSeries() {}
+
+FixedTimeSeries::FixedTimeSeries(const std::chrono::milliseconds &startingTime,
+                                 const std::chrono::microseconds &deltaTime)
+    : m_StartingTime(std::chrono::system_clock::time_point(startingTime)),
+      m_DeltaTime(deltaTime), TimeSeries() {}
+
+FixedTimeSeries::FixedTimeSeries(const std::chrono::milliseconds &startingTime,
+                                 const std::chrono::milliseconds &deltaTime)
+    : m_StartingTime(std::chrono::system_clock::time_point(startingTime)),
+      m_DeltaTime(deltaTime), TimeSeries() {}
+FixedTimeSeries::FixedTimeSeries(const std::chrono::microseconds &startingTime,
+                                 const std::chrono::microseconds &deltaTime)
+    : m_StartingTime(std::chrono::system_clock::time_point(startingTime)),
+      m_DeltaTime(deltaTime), TimeSeries() {}
+
+FixedTimeSeries::FixedTimeSeries(const std::chrono::microseconds &startingTime,
+                                 const std::chrono::milliseconds &deltaTime)
+    : m_StartingTime(std::chrono::system_clock::time_point(startingTime)),
+      m_DeltaTime(deltaTime), TimeSeries() {}
+
 void FixedTimeSeries::add(const DataPoint &data) {
-  if (m_Data.empty()) {
-    m_Data.push_back(DataPoint(m_StartingTime, data.getData()));
-  } else {
-    auto lastTimestamp = std::chrono::duration_cast<std::chrono::microseconds>(
-        m_Data.back().getTimestamp().time_since_epoch());
-    m_Data.push_back(DataPoint(lastTimestamp + m_DeltaTime, data.getData()));
-  }
+  m_Data.push_back(DataPoint(m_StartingTime + (m_DeltaTime * m_Data.size()),
+                             data.getData()));
 }
 
 void FixedTimeSeries::add(const std::vector<double> &data) {
-  if (m_Data.empty()) {
-    m_Data.push_back(DataPoint(m_StartingTime, data));
-  } else {
-    auto lastTimestamp = std::chrono::duration_cast<std::chrono::microseconds>(
-        m_Data.back().getTimestamp().time_since_epoch());
-    m_Data.push_back(DataPoint(lastTimestamp + m_DeltaTime, data));
-  }
+  m_Data.push_back(
+      DataPoint(m_StartingTime + (m_DeltaTime * m_Data.size()), data));
 }
 
 void FixedTimeSeries::setStartingTime(
     const std::chrono::system_clock::time_point &time) {
   m_StartingTime = time;
-  if (m_Data.empty()) {
-    return;
-  }
 
-  // We have to const cast the timestamp to modify it
-  const_cast<std::chrono::system_clock::time_point &>(
-      m_Data[0].getTimestamp()) = time;
-
-  for (size_t i = 1; i < m_Data.size(); i++) {
+  // Retroactively set the time of the data relative to the new starting time
+  for (size_t i = 0; i < m_Data.size(); i++) {
+    // We have to const_cast the timestamp to modify it
     const_cast<std::chrono::system_clock::time_point &>(
         m_Data[i].getTimestamp()) =
         std::chrono::system_clock::time_point(m_StartingTime +
                                               (m_DeltaTime * i));
   }
+}
+
+void FixedTimeSeries::setStartingTime(const std::chrono::milliseconds &time) {
+  setStartingTime(std::chrono::system_clock::time_point(time));
+}
+
+void FixedTimeSeries::setStartingTime(const std::chrono::microseconds &time) {
+  setStartingTime(std::chrono::system_clock::time_point(time));
 }

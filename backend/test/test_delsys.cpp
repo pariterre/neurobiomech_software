@@ -155,9 +155,10 @@ TEST(Delsys, Data) {
   // of the sine wave).
   size_t offset = 0;
   while (true) {
-    float value = std::sin(static_cast<float>(offset) / 2000.0f * 2 * M_PI);
-    float nextValue =
-        std::sin(static_cast<float>(offset + 1) / 2000.0f * 2 * M_PI);
+    float value = static_cast<float>(
+        std::sin(static_cast<float>(offset) / 2000.0f * 2 * M_PI));
+    float nextValue = static_cast<float>(
+        std::sin(static_cast<float>(offset + 1) / 2000.0f * 2 * M_PI));
     if ((std::abs(data[0][0] - value) < requiredPrecision) &&
         (std::abs(data[1][0] - nextValue) < requiredPrecision)) {
       break;
@@ -171,7 +172,8 @@ TEST(Delsys, Data) {
   }
   for (size_t i = 0; i < data.size(); i++) {
     for (size_t j = 0; j < data[i].size(); j++) {
-      float value = std::sin((i + offset) / 2000.0 * 2 * M_PI);
+      float value =
+          static_cast<float>(std::sin((i + offset) / 2000.0 * 2 * M_PI));
       ASSERT_NEAR(data[i][j], value, requiredPrecision);
     }
   }

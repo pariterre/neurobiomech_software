@@ -14,10 +14,22 @@ public:
   /// @param deltaTime The time frequency of the data
   FixedTimeSeries(const std::chrono::microseconds &deltaTime);
   FixedTimeSeries(const std::chrono::milliseconds &deltaTime);
-  FixedTimeSeries(const std::chrono::microseconds &deltaTime,
-                  std::chrono::system_clock::time_point startingTime);
-  FixedTimeSeries(const std::chrono::milliseconds &deltaTime,
-                  std::chrono::system_clock::time_point startingTime);
+
+  /// @brief Constructor
+  /// @param startingTime The timestamp of the first data point
+  /// @param deltaTime The time frequency of the data
+  FixedTimeSeries(const std::chrono::system_clock::time_point &startingTime,
+                  const std::chrono::microseconds &deltaTime);
+  FixedTimeSeries(const std::chrono::system_clock::time_point &startingTime,
+                  const std::chrono::milliseconds &deltaTime);
+  FixedTimeSeries(const std::chrono::milliseconds &startingTime,
+                  const std::chrono::microseconds &deltaTime);
+  FixedTimeSeries(const std::chrono::milliseconds &startingTime,
+                  const std::chrono::milliseconds &deltaTime);
+  FixedTimeSeries(const std::chrono::microseconds &startingTime,
+                  const std::chrono::microseconds &deltaTime);
+  FixedTimeSeries(const std::chrono::microseconds &startingTime,
+                  const std::chrono::milliseconds &deltaTime);
   ~FixedTimeSeries() = default;
 
   /// @brief This method should not be called as it would compute the timestamp
@@ -33,12 +45,12 @@ public:
   void add(const std::vector<double> &data) override;
 
 protected:
+  /// @brief The timestamp of the starting point. See [setStartingTime](@ref
+  /// setStartingTime) for more information on how to change the starting time
+  DECLARE_PROTECTED_MEMBER(std::chrono::system_clock::time_point, StartingTime);
+
   /// @brief The time frequency of the data
   DECLARE_PROTECTED_MEMBER(std::chrono::microseconds, DeltaTime);
-
-  /// @brief The timestamp of the starting point.
-  DECLARE_PROTECTED_MEMBER_NOGET(std::chrono::system_clock::time_point,
-                                 StartingTime);
 
 public:
   /// @brief Set the starting time of the data. If no data are recorded yet,
@@ -46,6 +58,8 @@ public:
   /// recorded, it will retroactively set the first data point to StartingTime
   /// and change the timestamp of the other data points accordingly
   void setStartingTime(const std::chrono::system_clock::time_point &time);
+  void setStartingTime(const std::chrono::milliseconds &time);
+  void setStartingTime(const std::chrono::microseconds &time);
 };
 
 } // namespace STIMWALKER_NAMESPACE::data
