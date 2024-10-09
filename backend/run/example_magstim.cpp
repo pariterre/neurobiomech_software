@@ -1,6 +1,5 @@
-#include <Devices/MagstimRapidDevice.h>
-#include <Utils/Logger.h>
-
+#include "Devices/Concrete/MagstimRapidDevice.h"
+#include "Utils/Logger.h"
 #include <chrono>
 #include <thread>
 

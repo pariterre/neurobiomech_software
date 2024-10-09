@@ -3,7 +3,6 @@
 
 #include "Data/FixedTimeSeries.h"
 #include "Data/TimeSeries.h"
-#include "Devices/DevicesData.h"
 
 static double requiredPrecision(1e-10);
 

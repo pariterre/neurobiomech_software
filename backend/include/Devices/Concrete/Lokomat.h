@@ -1,8 +1,9 @@
 #ifndef __STIMWALKER_DEVICES_LOCOMAT_H__
 #define __STIMWALKER_DEVICES_LOCOMAT_H__
 
-#include "Devices/NidaqDevice.h"
 #include "stimwalkerConfig.h"
+
+#include "Devices/Concrete/NidaqDevice.h"
 
 namespace STIMWALKER_NAMESPACE::devices {
 std::unique_ptr<NidaqDevice> makeLokomatDevice(bool isMock) {

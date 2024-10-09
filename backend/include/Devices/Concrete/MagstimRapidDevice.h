@@ -1,8 +1,8 @@
 #ifndef __STIMWALKER_DEVICES_MAGSTIM_RAPID_DEVICE_H__
 #define __STIMWALKER_DEVICES_MAGSTIM_RAPID_DEVICE_H__
 
+#include "Devices/Concrete/MagstimRapidExceptions.h"
 #include "Devices/Generic/UsbDevice.h"
-#include "MagstimRapidExceptions.h"
 
 // https://github.com/nicolasmcnair/magpy/blob/master/magpy/magstim.py#L129
 // https://github.com/nigelrogasch/MAGIC/blob/master/magstim.m#L301

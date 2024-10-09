@@ -1,4 +1,4 @@
-#include "Devices/MagstimRapidDevice.h"
+#include "Devices/Concrete/MagstimRapidDevice.h"
 
 #if defined(_WIN32)
 #include <cfgmgr32.h>

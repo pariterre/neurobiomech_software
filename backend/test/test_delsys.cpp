@@ -2,7 +2,7 @@
 #include <iostream>
 #include <thread>
 
-#include "Devices/DelsysEmgDevice.h"
+#include "Devices/Concrete/DelsysEmgDevice.h"
 #include "utils.h"
 
 static double requiredPrecision(1e-6);

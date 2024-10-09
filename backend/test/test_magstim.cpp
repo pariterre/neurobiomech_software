@@ -2,7 +2,7 @@
 #include <iostream>
 #include <thread>
 
-#include "Devices/MagstimRapidDevice.h"
+#include "Devices/Concrete/MagstimRapidDevice.h"
 #include "utils.h"
 
 using namespace STIMWALKER_NAMESPACE;

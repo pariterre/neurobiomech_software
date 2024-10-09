@@ -1,6 +1,8 @@
 #ifndef __STIMWALKER_DEVICES_NI_DAQ_DEVICE_H__
 #define __STIMWALKER_DEVICES_NI_DAQ_DEVICE_H__
 
+#include "stimwalkerConfig.h"
+
 #include <map>
 #include <memory>
 #include <mutex>
@@ -8,7 +10,6 @@
 
 #include "Devices/Generic/AsyncDevice.h"
 #include "Devices/Generic/DataCollector.h"
-#include "stimwalkerConfig.h"
 
 namespace STIMWALKER_NAMESPACE::devices {
 

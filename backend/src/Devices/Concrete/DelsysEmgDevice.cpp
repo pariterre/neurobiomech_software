@@ -1,4 +1,4 @@
-#include "Devices/DelsysEmgDevice.h"
+#include "Devices/Concrete/DelsysEmgDevice.h"
 
 #include <cstring>
 #include <iostream>

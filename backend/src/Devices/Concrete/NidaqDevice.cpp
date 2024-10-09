@@ -1,4 +1,4 @@
-#include "Devices/NidaqDevice.h"
+#include "Devices/Concrete/NidaqDevice.h"
 
 #include "Devices/Exceptions.h"
 
