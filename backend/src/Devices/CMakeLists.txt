@@ -4,7 +4,7 @@ project(${MODULE_DEVICES})
 
 # Add the relevant files
 set(SRC_LIST_MODULE
-    ${CMAKE_CURRENT_SOURCE_DIR}/DevicesData.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Devices.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Generic/Device.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Generic/AsyncDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Generic/DataCollector.cpp
