@@ -3,6 +3,9 @@
 
 #include "utils.h"
 
+#include "Utils/Logger.h"
+#include "Utils/StimwalkerEvent.h"
+
 using namespace STIMWALKER_NAMESPACE;
 
 TEST(Stimwalker, Version) { ASSERT_STREQ(STIMWALKER_VERSION, "0.1.0"); }
@@ -119,4 +122,20 @@ TEST(Logger, LogFile) {
 
     file.close();
   }
+}
+
+TEST(StimwalkerEvent, Calling) {
+  // Setup a listener that changes a value to test if it is properly called
+  StimwalkerEvent<int> event;
+  int result = 0;
+  auto id = event.listen([&result](int value) { result = value; });
+
+  // Test that the listener is called
+  event.notifyListeners(42);
+  ASSERT_EQ(result, 42);
+
+  // Remove the listener and test that it is not called anymore
+  event.clear(id);
+  event.notifyListeners(24);
+  ASSERT_EQ(result, 42);
 }
