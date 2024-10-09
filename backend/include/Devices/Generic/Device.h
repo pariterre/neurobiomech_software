@@ -124,6 +124,7 @@ public:
   /// @param command The command to send to the device
   /// @param data The optional data to send to the device
   DeviceResponses send(const DeviceCommands &command);
+  DeviceResponses send(const DeviceCommands &command, bool data);
   DeviceResponses send(const DeviceCommands &command, const char *data);
   DeviceResponses send(const DeviceCommands &command, const std::any &data);
 

@@ -40,7 +40,10 @@ void Device::disconnect() {
 }
 
 DeviceResponses Device::send(const DeviceCommands &command) {
-  return sendInternal(command, nullptr);
+  return sendInternal(command, std::any(nullptr));
+}
+DeviceResponses Device::send(const DeviceCommands &command, bool data) {
+  return sendInternal(command, std::any(data));
 }
 DeviceResponses Device::send(const DeviceCommands &command, const char *data) {
   return sendInternal(command, std::string(data));
