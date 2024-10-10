@@ -9,10 +9,11 @@ int main() {
 
   try {
     auto devices = devices::Devices();
-    devices.add(std::make_unique<devices::DelsysEmgDeviceMock>());
+    int delsysId =
+        devices.add(std::make_unique<devices::DelsysEmgDeviceMock>());
 
-    auto &delsys = devices.getDevice("DelsysEmgDevice");
-    auto &delsysData = devices.getDataCollector("DelsysEmgDevice");
+    auto &delsys = devices.getDevice(delsysId);
+    auto &delsysData = devices.getDataCollector(delsysId);
 
     delsys.connect();
     delsysData.startRecording();

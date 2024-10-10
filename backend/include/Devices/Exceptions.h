@@ -6,16 +6,24 @@
 #include <exception>
 #include <string>
 
+#include "Utils/CppMacros.h"
+
 namespace STIMWALKER_NAMESPACE ::devices {
 
 class DeviceException : public std::exception {
 public:
-  DeviceException(const std::string &message) : m_message(message) {}
+  DeviceException(const std::string &message) : m_Message(message) {}
 
-  const char *what() const noexcept override { return m_message.c_str(); }
+  const char *what() const noexcept override { return m_Message.c_str(); }
 
 protected:
-  std::string m_message;
+  DECLARE_PROTECTED_MEMBER_NOGET(std::string, Message);
+};
+
+class DeviceNotExistsException : public DeviceException {
+public:
+  DeviceNotExistsException(const std::string &filename)
+      : DeviceException(filename) {}
 };
 
 class UnknownCommandException : public DeviceException {
@@ -67,12 +75,12 @@ public:
 
 class SerialPortGenericException : public std::exception {
 public:
-  SerialPortGenericException(const std::string &message) : m_message(message) {}
+  SerialPortGenericException(const std::string &message) : m_Message(message) {}
 
-  const char *what() const noexcept override { return m_message.c_str(); }
+  const char *what() const noexcept override { return m_Message.c_str(); }
 
 protected:
-  std::string m_message;
+  DECLARE_PROTECTED_MEMBER_NOGET(std::string, Message);
 };
 
 class SerialPortDeviceNotFoundException : public SerialPortGenericException {

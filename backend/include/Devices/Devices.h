@@ -3,10 +3,8 @@
 
 #include "stimwalkerConfig.h"
 
-#include <map>
-#include <memory>
+#include "Utils/CppMacros.h"
 #include <nlohmann/json.hpp>
-#include <vector>
 
 namespace STIMWALKER_NAMESPACE {
 namespace devices {
@@ -17,28 +15,30 @@ class Device;
 class Devices {
 public:
   /// @brief Create a new device in the collection
-  /// @param deviceName The name of the device
-  void add(std::unique_ptr<Device> device);
+  /// @param device The device to add
+  /// @return The id of the device in the collection so it can be accessed or
+  /// removed later
+  int add(std::unique_ptr<Device> device);
 
   /// @brief Get the requested device
-  /// @param deviceName The name of the device
+  /// @param deviceId The id of the device (the one returned by the add method)
   /// @return The requested device
-  Device &getDevice(const std::string &deviceName);
+  Device &getDevice(int deviceId);
 
   /// @brief Get the requested device
-  /// @param deviceName The name of the device
+  /// @param deviceId The id of the device (the one returned by the add method)
   /// @return The requested device
-  const Device &getDevice(const std::string &deviceName) const;
+  const Device &getDevice(int deviceId) const;
 
   /// @brief Get the requested data collector
-  /// @param deviceName The name of the data collector
+  /// @param deviceId The id of the data collector
   /// @return The requested data collector
-  DataCollector &getDataCollector(const std::string &deviceName);
+  DataCollector &getDataCollector(int deviceId);
 
   /// @brief Get the requested data collector
-  /// @param deviceName The name of the data collector
+  /// @param deviceId The id of the data collector
   /// @return The requested data collector
-  const DataCollector &getDataCollector(const std::string &deviceName) const;
+  const DataCollector &getDataCollector(int deviceId) const;
 
   /// @brief Get the data in serialized form
   /// @return The data in serialized form
@@ -46,10 +46,10 @@ public:
 
 protected:
   /// @brief The collection of devices
-  std::map<std::string, std::shared_ptr<Device>> m_Devices;
+  std::map<int, std::shared_ptr<Device>> m_Devices;
 
   /// @brief The collection of data collectors
-  std::map<std::string, std::shared_ptr<DataCollector>> m_DataCollectors;
+  std::map<int, std::shared_ptr<DataCollector>> m_DataCollectors;
 };
 
 } // namespace devices
