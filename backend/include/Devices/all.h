@@ -2,7 +2,7 @@
 #define __STIMWALKER_DEVICES_ALL_H__
 
 #include "Devices/Concrete/all.h"
-#include "Devices/DevicesData.h"
+#include "Devices/Devices.h"
 #include "Devices/Exceptions.h"
 #include "Devices/Generic/all.h"
 

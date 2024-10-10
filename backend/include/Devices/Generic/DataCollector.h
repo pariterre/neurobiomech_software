@@ -19,9 +19,7 @@ public:
   /// @param channelCount The number of channels
   /// @param timeSeries The time series to store the data
   DataCollector(size_t channelCount,
-                std::unique_ptr<data::TimeSeries> timeSeries)
-      : m_DataChannelCount(channelCount), m_IsRecording(false),
-        m_TimeSeries(std::move(timeSeries)) {}
+                std::unique_ptr<data::TimeSeries> timeSeries);
 
   /// @brief Destructor
   virtual ~DataCollector() = default;

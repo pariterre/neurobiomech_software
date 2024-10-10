@@ -18,22 +18,38 @@ class Devices {
 public:
   /// @brief Create a new device in the collection
   /// @param deviceName The name of the device
-  void add(Device &device);
+  void add(std::unique_ptr<Device> device);
 
-  /// @brief Create a new data collector in the collection
-  /// @param dataCollector The data collector to add
-  void add(DataCollector &dataCollector);
+  /// @brief Get the requested device
+  /// @param deviceName The name of the device
+  /// @return The requested device
+  Device &getDevice(const std::string &deviceName);
+
+  /// @brief Get the requested device
+  /// @param deviceName The name of the device
+  /// @return The requested device
+  const Device &getDevice(const std::string &deviceName) const;
+
+  /// @brief Get the requested data collector
+  /// @param deviceName The name of the data collector
+  /// @return The requested data collector
+  DataCollector &getDataCollector(const std::string &deviceName);
+
+  /// @brief Get the requested data collector
+  /// @param deviceName The name of the data collector
+  /// @return The requested data collector
+  const DataCollector &getDataCollector(const std::string &deviceName) const;
 
   /// @brief Get the data in serialized form
   /// @return The data in serialized form
   nlohmann::json serialize() const;
 
 protected:
-  /// @brief The collection of data collectors
-  std::map<std::string, DataCollector &> m_DataCollectors;
-
   /// @brief The collection of devices
-  std::map<std::string, Device &> m_Devices;
+  std::map<std::string, std::shared_ptr<Device>> m_Devices;
+
+  /// @brief The collection of data collectors
+  std::map<std::string, std::shared_ptr<DataCollector>> m_DataCollectors;
 };
 
 } // namespace devices

@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Add the executable
 set(SOURCE_FILES 
     example_delsys.cpp
+    example_devices.cpp
     example_magstim.cpp
     main_rehastim.cpp
     main_lokomat.cpp

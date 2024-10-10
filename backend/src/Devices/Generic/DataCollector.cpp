@@ -3,8 +3,13 @@
 #include "Devices/Exceptions.h"
 #include "Utils/Logger.h"
 
-using namespace STIMWALKER_NAMESPACE;
+using namespace STIMWALKER_NAMESPACE::data;
 using namespace STIMWALKER_NAMESPACE::devices;
+
+DataCollector::DataCollector(size_t channelCount,
+                             std::unique_ptr<data::TimeSeries> timeSeries)
+    : m_DataChannelCount(channelCount), m_IsRecording(false),
+      m_TimeSeries(std::move(timeSeries)) {}
 
 void DataCollector::startRecording() {
   auto &logger = utils::Logger::getInstance();
@@ -43,11 +48,9 @@ void DataCollector::stopRecording() {
               " has stopped recording");
 }
 
-const data::TimeSeries &DataCollector::getTrialData() const {
-  return *m_TimeSeries;
-}
+const TimeSeries &DataCollector::getTrialData() const { return *m_TimeSeries; }
 
-void DataCollector::addDataPoint(const data::DataPoint &dataPoint) {
+void DataCollector::addDataPoint(const DataPoint &dataPoint) {
   if (!m_IsRecording) {
     return;
   }
@@ -56,7 +59,7 @@ void DataCollector::addDataPoint(const data::DataPoint &dataPoint) {
   onNewData.notifyListeners(dataPoint);
 }
 
-void DataCollector::addDataPoints(const std::vector<data::DataPoint> &data) {
+void DataCollector::addDataPoints(const std::vector<DataPoint> &data) {
   if (!m_IsRecording) {
     return;
   }
