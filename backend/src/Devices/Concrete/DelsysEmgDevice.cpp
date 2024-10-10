@@ -108,7 +108,7 @@ void DelsysEmgDevice::handleAsyncDisconnect() {
   m_DataDevice->disconnect();
 }
 
-bool DelsysEmgDevice::handleAsyncStartRecording() {
+bool DelsysEmgDevice::handleStartRecording() {
   if (m_CommandDevice->send(DelsysCommands::START) != DeviceResponses::OK) {
     return false;
   }
@@ -118,7 +118,7 @@ bool DelsysEmgDevice::handleAsyncStartRecording() {
   return true;
 }
 
-void DelsysEmgDevice::handleAsyncStopRecording() {
+void DelsysEmgDevice::handleStopRecording() {
   if (m_CommandDevice->send(DelsysCommands::STOP) != DeviceResponses::OK) {
     throw DeviceFailedToStopRecordingException("Command failed: STOP");
   }

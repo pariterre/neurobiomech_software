@@ -20,16 +20,17 @@ void DataCollector::startRecording() {
     return;
   }
 
-  if (!handleStartRecording()) {
+  m_IsRecording = handleStartRecording();
+  m_HasFailedToStartRecording = !m_IsRecording;
+  m_TimeSeries->clear();
+
+  if (m_IsRecording) {
+    logger.info("The data collector " + dataCollectorName() +
+                " is now recording");
+  } else {
     logger.fatal("The data collector " + dataCollectorName() +
                  " failed to start recording");
-    return;
   }
-
-  m_TimeSeries->clear();
-  m_IsRecording = true;
-  logger.info("The data collector " + dataCollectorName() +
-              " is now recording");
 }
 
 void DataCollector::stopRecording() {
@@ -50,7 +51,7 @@ void DataCollector::stopRecording() {
 
 const TimeSeries &DataCollector::getTrialData() const { return *m_TimeSeries; }
 
-void DataCollector::addDataPoint(const DataPoint &dataPoint) {
+void DataCollector::addDataPoint(DataPoint &dataPoint) {
   if (!m_IsRecording) {
     return;
   }
@@ -59,7 +60,7 @@ void DataCollector::addDataPoint(const DataPoint &dataPoint) {
   onNewData.notifyListeners(dataPoint);
 }
 
-void DataCollector::addDataPoints(const std::vector<DataPoint> &data) {
+void DataCollector::addDataPoints(std::vector<DataPoint> &data) {
   if (!m_IsRecording) {
     return;
   }

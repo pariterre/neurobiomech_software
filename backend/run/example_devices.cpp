@@ -9,26 +9,26 @@ int main() {
 
   try {
     auto devices = devices::Devices();
-    int delsysId =
-        devices.add(std::make_unique<devices::DelsysEmgDeviceMock>());
+    devices.add(std::make_unique<devices::DelsysEmgDeviceMock>());
+    devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice());
 
-    auto &delsys = devices.getDevice(delsysId);
-    auto &delsysData = devices.getDataCollector(delsysId);
-
-    delsys.connect();
-    delsysData.startRecording();
+    devices.connect();
+    devices.startRecording();
     logger.info("The system is now connected and is recording");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
     logger.info("The system has been recording for 1 seconds");
 
-    delsysData.stopRecording();
-    delsys.disconnect();
+    devices.stopRecording();
+    devices.disconnect();
     logger.info("The system has stopped recording and is now disconnected");
 
-    const auto &data = delsysData.getTrialData();
-    logger.info("The data has been collected: " + std::to_string(data.size()) +
-                " data points");
+    auto &data = devices.getTrialData();
+    for (auto &[deviceId, dataCollector] : data) {
+      logger.info("The device " + devices.getDevice(deviceId).deviceName() +
+                  " has collected " + std::to_string(dataCollector.size()) +
+                  " data points");
+    }
 
   } catch (std::exception &e) {
     logger.fatal(e.what());

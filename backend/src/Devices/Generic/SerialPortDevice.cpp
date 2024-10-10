@@ -12,15 +12,9 @@
 
 using namespace STIMWALKER_NAMESPACE::devices;
 
-SerialPortDevice::SerialPortDevice(const std::string &port,
-                                   std::chrono::milliseconds keepAliveInterval)
-    : m_Port(port), m_SerialPortContext(std::make_unique<asio::io_context>()),
-      AsyncDevice(keepAliveInterval) {}
-
-SerialPortDevice::SerialPortDevice(const std::string &port,
-                                   std::chrono::microseconds keepAliveInterval)
-    : m_Port(port), m_SerialPortContext(std::make_unique<asio::io_context>()),
-      AsyncDevice(keepAliveInterval) {}
+SerialPortDevice::SerialPortDevice(const std::string &port, const std::chrono::microseconds &keepAliveInterval)
+      : m_Port(port), m_SerialPortContext(std::make_unique<asio::io_context>()),
+        AsyncDevice(keepAliveInterval) {}
 
 void SerialPortDevice::disconnect() {
   if (m_SerialPort != nullptr && m_SerialPort->is_open()) {

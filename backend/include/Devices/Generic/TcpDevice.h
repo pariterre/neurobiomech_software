@@ -14,8 +14,6 @@ public:
   /// @param port The port number of the device
   /// @param keepAliveInterval The interval to keep the device alive
   TcpDevice(const std::string &host, size_t port,
-            const std::chrono::milliseconds &keepAliveInterval);
-  TcpDevice(const std::string &host, size_t port,
             const std::chrono::microseconds &keepAliveInterval);
   TcpDevice(const TcpDevice &other) = delete;
 

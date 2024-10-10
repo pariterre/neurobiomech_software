@@ -7,9 +7,6 @@
 
 using namespace STIMWALKER_NAMESPACE::devices;
 
-AsyncDevice::AsyncDevice(const std::chrono::milliseconds &keepAliveInterval)
-    : m_KeepDeviceWorkerAliveInterval(keepAliveInterval), Device() {}
-
 AsyncDevice::AsyncDevice(const std::chrono::microseconds &keepAliveInterval)
     : m_KeepDeviceWorkerAliveInterval(keepAliveInterval), Device() {}
 

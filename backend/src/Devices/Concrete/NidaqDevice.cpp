@@ -6,12 +6,7 @@
 using namespace STIMWALKER_NAMESPACE::devices;
 
 NidaqDevice::NidaqDevice(size_t channelCount,
-                         std::chrono::milliseconds dataCheckIntervals)
-    : AsyncDevice(dataCheckIntervals),
-      DataCollector(channelCount, std::make_unique<data::TimeSeries>()) {}
-
-NidaqDevice::NidaqDevice(size_t channelCount,
-                         std::chrono::microseconds dataCheckIntervals)
+                         const std::chrono::microseconds &dataCheckIntervals)
     : AsyncDevice(dataCheckIntervals),
       DataCollector(channelCount, std::make_unique<data::TimeSeries>()) {}
 

@@ -7,46 +7,47 @@
 using namespace STIMWALKER_NAMESPACE::devices;
 
 AsyncDataCollector::AsyncDataCollector(
-    size_t channelCount, const std::chrono::milliseconds &dataCheckIntervals,
-    std::unique_ptr<data::TimeSeries> timeSeries)
-    : m_KeepDataWorkerAliveInterval(dataCheckIntervals),
-      DataCollector(channelCount, std::move(timeSeries)) {}
-
-AsyncDataCollector::AsyncDataCollector(
     size_t channelCount, const std::chrono::microseconds &dataCheckIntervals,
     std::unique_ptr<data::TimeSeries> timeSeries)
     : m_KeepDataWorkerAliveInterval(dataCheckIntervals),
       DataCollector(channelCount, std::move(timeSeries)) {}
 
-bool AsyncDataCollector::handleStartRecording() {
-  bool isStartRecordingHandled = false;
-  bool hasFailed = false;
-  m_AsyncDataWorker =
-      std::thread([this, &isStartRecordingHandled, &hasFailed]() {
-        if (!handleAsyncStartRecording()) {
-          hasFailed = true;
-          return;
-        }
-
-        m_IsRecording = true;
-        startKeepDataWorkerAlive();
-        isStartRecordingHandled = true;
-        m_AsyncDataContext.run();
-      });
-
-  // Wait until the connection is established
-  while (!isStartRecordingHandled) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    if (hasFailed) {
-      m_AsyncDataWorker.join();
-      return false;
-    }
+void AsyncDataCollector::startRecording() {
+  if (m_IsRecording) {
+    utils::Logger::getInstance().warning(
+        "The data collector " + dataCollectorName() + " is already recording");
+    return;
   }
 
-  return true;
+  m_HasFailedToStartRecording = false;
+  m_AsyncDataWorker = std::thread([this]() {
+    auto &logger = utils::Logger::getInstance();
+    m_IsRecording = handleStartRecording();
+    m_HasFailedToStartRecording = !m_IsRecording;
+
+    if (m_HasFailedToStartRecording) {
+      logger.fatal("The data collector " + dataCollectorName() +
+                   " failed to start recording");
+      return;
+    }
+
+    m_TimeSeries->clear();
+    startKeepDataWorkerAlive();
+    logger.info("The data collector " + dataCollectorName() +
+                " is now recording");
+    m_AsyncDataContext.run();
+  });
 }
 
-void AsyncDataCollector::handleStopRecording() {
+void AsyncDataCollector::stopRecording() {
+  auto &logger = utils::Logger::getInstance();
+
+  if (!m_IsRecording) {
+    logger.warning("The data collector " + dataCollectorName() +
+                   " is not recording");
+    return;
+  }
+
   // Cancel the timer first to ensure that it does not keep the io_context alive
   {
     std::lock_guard<std::mutex> lock(m_AsyncDataMutex);
@@ -59,7 +60,9 @@ void AsyncDataCollector::handleStopRecording() {
   m_AsyncDataWorker.join();
 
   // Give the hand to inherited classes to clean up some stuff
-  handleAsyncStopRecording();
+  handleStopRecording();
+  logger.info("The data collector " + dataCollectorName() +
+              " has stopped recording");
 }
 
 void AsyncDataCollector::startKeepDataWorkerAlive() {

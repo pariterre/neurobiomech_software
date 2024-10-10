@@ -8,7 +8,7 @@
 using namespace STIMWALKER_NAMESPACE;
 
 TEST(Magstim, Info) {
-  auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
+  auto &magstim = *devices::MagstimRapidDeviceMock::findMagstimDevice();
 
   ASSERT_STREQ(magstim.deviceName().c_str(), "MagstimRapidDevice");
   ASSERT_STREQ(magstim.getPort().c_str(), "MOCK");
@@ -18,7 +18,7 @@ TEST(Magstim, Info) {
 
 TEST(Magstim, Connect) {
   auto logger = TestLogger();
-  auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
+  auto &magstim = *devices::MagstimRapidDeviceMock::findMagstimDevice();
 
   // Is not connected when created
   ASSERT_FALSE(magstim.getIsConnected());
@@ -55,7 +55,7 @@ TEST(Magstim, AutoDisconnect) {
   // The Magstim disconnect automatically when the object is destroyed
   auto logger = TestLogger();
   {
-    auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
+    auto &magstim = *devices::MagstimRapidDeviceMock::findMagstimDevice();
     magstim.connect();
   }
   ASSERT_TRUE(
@@ -67,7 +67,7 @@ TEST(UsbDevice, Print) {
   auto logger = TestLogger();
 
   // Send a PRINT message to a USB device
-  auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
+  auto &magstim = *devices::MagstimRapidDeviceMock::findMagstimDevice();
   magstim.send(devices::MagstimRapidCommands::PRINT, "Hello, world!");
   ASSERT_TRUE(
       logger.contains("Cannot send a command to the device "
@@ -86,7 +86,7 @@ TEST(UsbDevice, Print) {
 
 TEST(Magstim, GetTemperature) {
   // Connect the system and wait at least one POKE time and close
-  auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
+  auto &magstim = *devices::MagstimRapidDeviceMock::findMagstimDevice();
 
   // Get the temperature
   magstim.connect();
@@ -99,7 +99,7 @@ TEST(Magstim, SetRapid) {
   auto logger = TestLogger();
 
   // Connect the system and set RTS to ON then to OFF
-  auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
+  auto &magstim = *devices::MagstimRapidDeviceMock::findMagstimDevice();
 
   magstim.connect();
   magstim.send(devices::MagstimRapidCommands::SET_FAST_COMMUNICATION, true);
@@ -117,7 +117,7 @@ TEST(Magstim, Arming) {
   auto logger = TestLogger();
 
   // Connect the system and wait at least one POKE time and close
-  auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
+  auto &magstim = *devices::MagstimRapidDeviceMock::findMagstimDevice();
 
   // Trying to ARM the system without connecting should not work
   magstim.send(devices::MagstimRapidCommands::ARM);
@@ -167,7 +167,7 @@ TEST(Magstim, AutomaticPokingDisarmed) {
   auto logger = TestLogger();
 
   // Connect the system and wait at least one POKE time and close
-  auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
+  auto &magstim = *devices::MagstimRapidDeviceMock::findMagstimDevice();
   ASSERT_EQ(magstim.getDisarmedPokeInterval(), std::chrono::milliseconds(5000));
   ASSERT_EQ(magstim.getKeepDeviceWorkerAliveInterval(),
             std::chrono::milliseconds(5000));
@@ -192,7 +192,7 @@ TEST(Magstim, AutomaticPokingArmed) {
   auto logger = TestLogger();
 
   // Connect the system and wait at least one POKE time and close
-  auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
+  auto &magstim = *devices::MagstimRapidDeviceMock::findMagstimDevice();
   ASSERT_EQ(magstim.getArmedPokeInterval(), std::chrono::milliseconds(500));
 
   magstim.connect();
@@ -213,6 +213,6 @@ TEST(Magstim, AutomaticPokingArmed) {
 #endif
 
 TEST(Magstim, ComputeCrc) {
-  auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
+  auto &magstim = *devices::MagstimRapidDeviceMock::findMagstimDevice();
   ASSERT_EQ(magstim.computeCrcInterface("Hello, world!"), "v");
 }

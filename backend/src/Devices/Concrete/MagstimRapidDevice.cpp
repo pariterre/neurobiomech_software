@@ -15,8 +15,9 @@
 using namespace STIMWALKER_NAMESPACE;
 using namespace STIMWALKER_NAMESPACE::devices;
 
-MagstimRapidDevice MagstimRapidDevice::FindMagstimDevice() {
-  return MagstimRapidDevice(UsbDevice::fromVidAndPid("067B", "2303").getPort());
+std::unique_ptr<MagstimRapidDevice> MagstimRapidDevice::findMagstimDevice() {
+  return std::make_unique<MagstimRapidDevice>(
+      UsbDevice::fromVidAndPid("067B", "2303").getPort());
 }
 
 MagstimRapidDevice::MagstimRapidDevice(const std::string &port)
@@ -157,8 +158,9 @@ void MagstimRapidDevice::changePokeInterval(
 MagstimRapidDeviceMock::MagstimRapidDeviceMock(const std::string &port)
     : MagstimRapidDevice(port) {}
 
-MagstimRapidDeviceMock MagstimRapidDeviceMock::FindMagstimDevice() {
-  return MagstimRapidDeviceMock("MOCK");
+std::unique_ptr<MagstimRapidDeviceMock>
+MagstimRapidDeviceMock::findMagstimDevice() {
+  return std::make_unique<MagstimRapidDeviceMock>("MOCK");
 }
 
 std::string

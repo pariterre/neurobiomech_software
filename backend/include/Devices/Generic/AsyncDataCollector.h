@@ -14,9 +14,6 @@ public:
   /// @param dataCheckIntervals The interval to check for new data
   /// @param timeSeries The time series to store the data
   AsyncDataCollector(size_t channelCount,
-                     const std::chrono::milliseconds &dataCheckIntervals,
-                     std::unique_ptr<data::TimeSeries> timeSeries);
-  AsyncDataCollector(size_t channelCount,
                      const std::chrono::microseconds &dataCheckIntervals,
                      std::unique_ptr<data::TimeSeries> timeSeries);
 
@@ -44,21 +41,16 @@ protected:
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::steady_timer>,
                                  KeepDataWorkerAliveTimer)
 
-protected:
-  bool handleStartRecording() override;
+public:
+  /// @brief Start collecting data in a asynchronous way (non-blocking). It is
+  /// the responsability of the caller to wait for the recording to start before
+  /// continuing
+  void startRecording() override;
 
-  /// @brief Start collecting data asynchronously. This method replaces the
-  /// [handleStartRecording] method that should be implemented by inherited
-  /// classes. If starting the recording fails, this method should return false.
-  /// @return True if the recording started successfully, false otherwise
-  virtual bool handleAsyncStartRecording() = 0;
-
-  void handleStopRecording() override;
-
-  /// @brief Stop collecting data asynchronously. This method replaces the
-  /// [handleStopRecording] method that should be implemented by inherited
-  /// classes
-  virtual void handleAsyncStopRecording() = 0;
+  /// @brief Stop collecting data in a asynchronous way (non-blocking). It is
+  /// the responsability of the caller to wait for the recording to stop before
+  /// continuing
+  void stopRecording() override;
 
 protected:
   /// @brief Start the keep-alive mechanism

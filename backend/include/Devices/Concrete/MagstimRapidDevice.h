@@ -51,7 +51,7 @@ public:
   /// Constructors
 public:
   /// @brief Constructor when the port is unknown (will scan for it)
-  static MagstimRapidDevice FindMagstimDevice();
+  static std::unique_ptr<MagstimRapidDevice> findMagstimDevice();
 
   /// @brief Constructor for a known port
   /// @param port The port name of the device
@@ -96,7 +96,7 @@ class MagstimRapidDeviceMock : public MagstimRapidDevice {
 public:
   MagstimRapidDeviceMock(const std::string &port);
 
-  static MagstimRapidDeviceMock FindMagstimDevice();
+  static std::unique_ptr<MagstimRapidDeviceMock> findMagstimDevice();
 
   std::string computeCrcInterface(const std::string &data);
 

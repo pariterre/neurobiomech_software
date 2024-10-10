@@ -12,7 +12,6 @@ class AsyncDevice : public Device {
 public:
   /// @brief Constructor
   /// @param keepAliveInterval The interval to keep the device alive
-  AsyncDevice(const std::chrono::milliseconds &keepAliveInterval);
   AsyncDevice(const std::chrono::microseconds &keepAliveInterval);
   AsyncDevice(const AsyncDevice &other) = delete;
   ~AsyncDevice() override;

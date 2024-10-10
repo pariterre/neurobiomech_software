@@ -12,7 +12,7 @@ int main() {
   logger.info("Starting the application");
 
   try {
-    auto magstim = devices::MagstimRapidDeviceMock::FindMagstimDevice();
+    auto &magstim = *devices::MagstimRapidDeviceMock::findMagstimDevice();
 
     magstim.connect();
     logger.info("Opened port: " + magstim.getPort());

@@ -92,8 +92,8 @@ public:
 protected:
   void handleAsyncConnect() override;
   void handleAsyncDisconnect() override;
-  bool handleAsyncStartRecording() override;
-  void handleAsyncStopRecording() override;
+  bool handleStartRecording() override;
+  void handleStopRecording() override;
 
   /// @brief The command device
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<CommandTcpDevice>,

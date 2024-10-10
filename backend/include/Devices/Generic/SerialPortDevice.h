@@ -14,9 +14,7 @@ public:
   /// @param port The port name of the device
   /// @param keepAliveInterval The interval to keep the device alive
   SerialPortDevice(const std::string &port,
-                   std::chrono::milliseconds keepAliveInterval);
-  SerialPortDevice(const std::string &port,
-                   std::chrono::microseconds keepAliveInterval);
+                   const std::chrono::microseconds &keepAliveInterval);
   SerialPortDevice(const SerialPortDevice &other) = delete;
 
 protected:

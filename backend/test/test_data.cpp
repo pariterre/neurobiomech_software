@@ -25,27 +25,30 @@ void ASSERT_ALMOST_NOW(const std::chrono::system_clock::time_point &time,
 TEST(DataPoint, Constructors) {
   auto now = std::chrono::system_clock::now();
 
-  auto data = data::DataPoint({1.0, 2.0, 3.0});
-  ASSERT_ALMOST_NOW(data.getTimestamp(), now);
+  {
+    auto data = data::DataPoint({1.0, 2.0, 3.0});
+    ASSERT_EQ(data.getTimestamp(), std::chrono::microseconds(-1));
 
-  ASSERT_EQ(data.size(), 3);
-  ASSERT_NEAR(data[0], 1.0, requiredPrecision);
-  ASSERT_NEAR(data[1], 2.0, requiredPrecision);
-  ASSERT_NEAR(data[2], 3.0, requiredPrecision);
+    ASSERT_EQ(data.size(), 3);
+    ASSERT_NEAR(data[0], 1.0, requiredPrecision);
+    ASSERT_NEAR(data[1], 2.0, requiredPrecision);
+    ASSERT_NEAR(data[2], 3.0, requiredPrecision);
+  }
 
-  auto data2 = data::DataPoint(std::chrono::milliseconds(100), {4.0, 5.0, 6.0});
-  ASSERT_EQ(data2.getTimestamp(), std::chrono::system_clock::time_point(
-                                      std::chrono::milliseconds(100)));
-  ASSERT_EQ(data2.size(), 3);
-  ASSERT_NEAR(data2[0], 4.0, requiredPrecision);
-  ASSERT_NEAR(data2[1], 5.0, requiredPrecision);
-  ASSERT_NEAR(data2[2], 6.0, requiredPrecision);
+  {
+    auto data =
+        data::DataPoint(std::chrono::milliseconds(100), {4.0, 5.0, 6.0});
+    ASSERT_EQ(data.getTimestamp(), std::chrono::milliseconds(100));
+    ASSERT_EQ(data.size(), 3);
+    ASSERT_NEAR(data[0], 4.0, requiredPrecision);
+    ASSERT_NEAR(data[1], 5.0, requiredPrecision);
+    ASSERT_NEAR(data[2], 6.0, requiredPrecision);
+  }
 }
 
 TEST(DataPoint, Access) {
   auto data = data::DataPoint(std::chrono::milliseconds(100), {1.0, 2.0, 3.0});
-  ASSERT_EQ(data.getTimestamp(), std::chrono::system_clock::time_point(
-                                     std::chrono::milliseconds(100)));
+  ASSERT_EQ(data.getTimestamp(), std::chrono::milliseconds(100));
   ASSERT_EQ(data.size(), 3);
   ASSERT_NEAR(data[0], 1.0, requiredPrecision);
   ASSERT_NEAR(data[1], 2.0, requiredPrecision);
@@ -64,8 +67,7 @@ TEST(DataPoint, Copy) {
 
   // Copy should be similar to the original
   auto copy = data.copy();
-  ASSERT_EQ(copy.getTimestamp(), std::chrono::system_clock::time_point(
-                                     std::chrono::milliseconds(100)));
+  ASSERT_EQ(copy.getTimestamp(), std::chrono::milliseconds(100));
   ASSERT_EQ(copy.size(), 3);
   ASSERT_NEAR(copy[0], 1.0, requiredPrecision);
   ASSERT_NEAR(copy[1], 2.0, requiredPrecision);
@@ -92,8 +94,7 @@ TEST(DataPoint, Serialize) {
 TEST(DataPoint, Deserialize) {
   nlohmann::json json = R"({"data":[1.0,2.0,3.0],"timestamp":100000})"_json;
   auto data = data::DataPoint::deserialize(json);
-  ASSERT_EQ(data.getTimestamp(), std::chrono::system_clock::time_point(
-                                     std::chrono::milliseconds(100)));
+  ASSERT_EQ(data.getTimestamp(), std::chrono::milliseconds(100));
   ASSERT_EQ(data.size(), 3);
   ASSERT_NEAR(data[0], 1.0, requiredPrecision);
   ASSERT_NEAR(data[1], 2.0, requiredPrecision);
@@ -118,15 +119,14 @@ TEST(TimeSeries, Access) {
   ASSERT_EQ(data.size(), 5);
 
   // The data should be accessible and correct
-  ASSERT_EQ(data[0].getTimestamp(), std::chrono::system_clock::time_point(
-                                        std::chrono::milliseconds(100)));
+  ASSERT_EQ(data[0].getTimestamp(), std::chrono::milliseconds(100));
   ASSERT_EQ(data[0].size(), 3);
   ASSERT_NEAR(data[0][0], 1.0, requiredPrecision);
   ASSERT_NEAR(data[0][1], 2.0, requiredPrecision);
   ASSERT_NEAR(data[0][2], 3.0, requiredPrecision);
-  ASSERT_EQ(data[1].getTimestamp(), std::chrono::system_clock::time_point(
-                                        std::chrono::milliseconds(200)));
-  ASSERT_ALMOST_NOW(data[4].getTimestamp(), now);
+  ASSERT_EQ(data[1].getTimestamp(), std::chrono::milliseconds(200));
+  ASSERT_GE(data[4].getTimestamp(), std::chrono::microseconds(0));
+  ASSERT_LE(data[4].getTimestamp(), std::chrono::microseconds(100));
 
   // Getting the data using the [] operator should return a const reference
   // To make sure, let's const cast and modify the data
@@ -151,9 +151,8 @@ TEST(TimeSeries, NewData) {
 
   // The first data point should have the timestamp set to 100, the second
   // should have the timestamp set to now or slightly after now
-  ASSERT_EQ(data[0].getTimestamp(), std::chrono::system_clock::time_point(
-                                        std::chrono::milliseconds(100)));
-  ASSERT_ALMOST_NOW(data[1].getTimestamp(), now);
+  ASSERT_EQ(data[0].getTimestamp(), std::chrono::milliseconds(100));
+  ASSERT_EQ(data[1].getTimestamp(), std::chrono::microseconds(-1));
 }
 
 TEST(TimeSeries, Serialize) {
@@ -184,14 +183,12 @@ TEST(TimeSeries, Deserialize) {
       R"([{"data":[1.0,2.0,3.0],"timestamp":100000},{"data":[4.0,5.0,6.0],"timestamp":200000},{"data":[7.0,8.0,9.0],"timestamp":300000},{"data":[10.0,11.0,12.0],"timestamp":400000},{"data":[13.0,14.0,15.0],"timestamp":500000}])"_json;
   auto data = data::TimeSeries::deserialize(json);
   ASSERT_EQ(data.size(), 5);
-  ASSERT_EQ(data[0].getTimestamp(), std::chrono::system_clock::time_point(
-                                        std::chrono::milliseconds(100)));
+  ASSERT_EQ(data[0].getTimestamp(), std::chrono::milliseconds(100));
   ASSERT_EQ(data[0].size(), 3);
   ASSERT_NEAR(data[0][0], 1.0, requiredPrecision);
   ASSERT_NEAR(data[0][1], 2.0, requiredPrecision);
   ASSERT_NEAR(data[0][2], 3.0, requiredPrecision);
-  ASSERT_EQ(data[1].getTimestamp(), std::chrono::system_clock::time_point(
-                                        std::chrono::milliseconds(200)));
+  ASSERT_EQ(data[1].getTimestamp(), std::chrono::milliseconds(200));
 }
 
 TEST(FixedTimeSeries, Constructors) {
@@ -201,179 +198,76 @@ TEST(FixedTimeSeries, Constructors) {
     auto data = data::FixedTimeSeries(std::chrono::microseconds(100));
     ASSERT_EQ(data.getDeltaTime(), std::chrono::microseconds(100));
 
-    data.add({1.0, 2.0, 3.0});
-    data.add({4.0, 5.0, 6.0});
+    data.add(data::DataPoint({1.0, 2.0, 3.0}));
+    data.add(data::DataPoint({4.0, 5.0, 6.0}));
     ASSERT_ALMOST_NOW(data.getStartingTime(), now);
-    ASSERT_ALMOST_NOW(data[0].getTimestamp(), now);
-    ASSERT_ALMOST_NOW(data[1].getTimestamp(), now + data.getDeltaTime());
+    ASSERT_EQ(data[0].getTimestamp(), std::chrono::microseconds(0));
+    ASSERT_EQ(data[1].getTimestamp(),
+              std::chrono::microseconds(0) + data.getDeltaTime());
   }
   {
     auto now = std::chrono::system_clock::now();
     auto data = data::FixedTimeSeries(std::chrono::milliseconds(100));
     ASSERT_EQ(data.getDeltaTime(), std::chrono::milliseconds(100));
 
-    data.add({1.0, 2.0, 3.0});
-    data.add({4.0, 5.0, 6.0});
+    data.add(data::DataPoint({1.0, 2.0, 3.0}));
+    data.add(data::DataPoint({4.0, 5.0, 6.0}));
     ASSERT_ALMOST_NOW(data.getStartingTime(), now);
-    ASSERT_ALMOST_NOW(data[0].getTimestamp(), now);
-    ASSERT_ALMOST_NOW(data[1].getTimestamp(), now + data.getDeltaTime());
+    ASSERT_EQ(data[0].getTimestamp(), std::chrono::microseconds(0));
+    ASSERT_EQ(data[1].getTimestamp(),
+              std::chrono::microseconds(0) + data.getDeltaTime());
   }
 
   // Testing the constructor that specify a starting time
   {
-    auto data = data::FixedTimeSeries(std::chrono::microseconds(300),
-                                      std::chrono::microseconds(100));
+    auto data = data::FixedTimeSeries(
+        std::chrono::system_clock::time_point(std::chrono::microseconds(300)),
+        std::chrono::microseconds(100));
     ASSERT_EQ(data.getDeltaTime(), std::chrono::microseconds(100));
 
-    data.add({1.0, 2.0, 3.0});
-    data.add({4.0, 5.0, 6.0});
+    data.add(data::DataPoint({1.0, 2.0, 3.0}));
+    data.add(data::DataPoint({4.0, 5.0, 6.0}));
     ASSERT_EQ(std::chrono::duration_cast<std::chrono::microseconds>(
                   data.getStartingTime().time_since_epoch()),
               std::chrono::microseconds(300));
-    ASSERT_EQ(std::chrono::duration_cast<std::chrono::microseconds>(
-                  data[0].getTimestamp().time_since_epoch()),
-              std::chrono::microseconds(300));
-    ASSERT_EQ(std::chrono::duration_cast<std::chrono::microseconds>(
-                  data[1].getTimestamp().time_since_epoch()),
-              std::chrono::microseconds(300) + std::chrono::microseconds(100));
-  }
-  {
-    auto data = data::FixedTimeSeries(std::chrono::milliseconds(300),
-                                      std::chrono::microseconds(100));
-    ASSERT_EQ(data.getDeltaTime(), std::chrono::microseconds(100));
-
-    data.add({1.0, 2.0, 3.0});
-    data.add({4.0, 5.0, 6.0});
-    ASSERT_EQ(std::chrono::duration_cast<std::chrono::milliseconds>(
-                  data.getStartingTime().time_since_epoch()),
-              std::chrono::milliseconds(300));
-    ASSERT_EQ(std::chrono::duration_cast<std::chrono::milliseconds>(
-                  data[0].getTimestamp().time_since_epoch()),
-              std::chrono::milliseconds(300));
-    ASSERT_EQ(std::chrono::duration_cast<std::chrono::microseconds>(
-                  data[1].getTimestamp().time_since_epoch()),
-              std::chrono::milliseconds(300) + std::chrono::microseconds(100));
-  }
-
-  {
-    auto data = data::FixedTimeSeries(std::chrono::microseconds(300),
-                                      std::chrono::milliseconds(100));
-    ASSERT_EQ(data.getDeltaTime(), std::chrono::milliseconds(100));
-
-    data.add({1.0, 2.0, 3.0});
-    data.add({4.0, 5.0, 6.0});
-    ASSERT_EQ(std::chrono::duration_cast<std::chrono::microseconds>(
-                  data.getStartingTime().time_since_epoch()),
-              std::chrono::microseconds(300));
-    ASSERT_EQ(std::chrono::duration_cast<std::chrono::microseconds>(
-                  data[0].getTimestamp().time_since_epoch()),
-              std::chrono::microseconds(300));
-    ASSERT_EQ(std::chrono::duration_cast<std::chrono::microseconds>(
-                  data[1].getTimestamp().time_since_epoch()),
-              std::chrono::microseconds(300) + std::chrono::milliseconds(100));
-  }
-  {
-    auto data = data::FixedTimeSeries(std::chrono::milliseconds(300),
-                                      std::chrono::milliseconds(100));
-    ASSERT_EQ(data.getDeltaTime(), std::chrono::milliseconds(100));
-
-    data.add({1.0, 2.0, 3.0});
-    data.add({4.0, 5.0, 6.0});
-    ASSERT_EQ(std::chrono::duration_cast<std::chrono::milliseconds>(
-                  data.getStartingTime().time_since_epoch()),
-              std::chrono::milliseconds(300));
-    ASSERT_EQ(std::chrono::duration_cast<std::chrono::milliseconds>(
-                  data[0].getTimestamp().time_since_epoch()),
-              std::chrono::milliseconds(300));
-    ASSERT_EQ(std::chrono::duration_cast<std::chrono::milliseconds>(
-                  data[1].getTimestamp().time_since_epoch()),
-              std::chrono::milliseconds(300) + std::chrono::milliseconds(100));
+    ASSERT_EQ(data[0].getTimestamp(), std::chrono::microseconds(0));
+    ASSERT_EQ(data[1].getTimestamp(), std::chrono::microseconds(0 + 100));
   }
 }
 
 TEST(FixedTimeSeries, NewData) {
   // Test the setters
   {
+    auto now = std::chrono::system_clock::now();
     auto data = data::FixedTimeSeries(std::chrono::milliseconds(100));
-    data.setStartingTime(std::chrono::milliseconds(500));
-    ASSERT_EQ(data.getStartingTime(), std::chrono::system_clock::time_point(
-                                          std::chrono::milliseconds(500)));
-  }
-  {
-    auto data = data::FixedTimeSeries(std::chrono::milliseconds(100));
-    data.setStartingTime(std::chrono::microseconds(500));
-    ASSERT_EQ(data.getStartingTime(), std::chrono::system_clock::time_point(
-                                          std::chrono::microseconds(500)));
-  }
-  {
-    auto data = data::FixedTimeSeries(std::chrono::milliseconds(100));
-    data.setStartingTime(
-        std::chrono::system_clock::time_point(std::chrono::milliseconds(500)));
-    ASSERT_EQ(data.getStartingTime(), std::chrono::system_clock::time_point(
-                                          std::chrono::milliseconds(500)));
+    // Wait for a bit to make sure the time is different
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    ASSERT_ALMOST_NOW(data.getStartingTime(), now);
+
+    data.reset();
+    ASSERT_GT(data.getStartingTime(), now);
   }
 
   // Test that setting the time before adding data works properly, using
   // non-timed data
   {
+    auto now = std::chrono::system_clock::now();
     auto data = data::FixedTimeSeries(std::chrono::milliseconds(100));
-    data.setStartingTime(std::chrono::milliseconds(500));
 
-    data.add({1.0, 2.0, 3.0});
-    data.add({4.0, 5.0, 6.0});
-    ASSERT_EQ(data[0].getTimestamp(), std::chrono::system_clock::time_point(
-                                          std::chrono::milliseconds(500)));
-    ASSERT_EQ(data[1].getTimestamp(),
-              std::chrono::system_clock::time_point(
-                  std::chrono::milliseconds(500) + data.getDeltaTime()));
-  }
-  // Test that setting the time before adding data works properly, using
-  // timed data
-  {
-    auto data = data::FixedTimeSeries(std::chrono::milliseconds(100));
-    data.setStartingTime(std::chrono::milliseconds(500));
+    data.add(data::DataPoint({1.0, 2.0, 3.0}));
+    data.add(data::DataPoint({4.0, 5.0, 6.0}));
+    ASSERT_ALMOST_NOW(data.getStartingTime(), now);
 
-    // Deliberately put wrong timestamps to test if it properly ignores it
-    data.add(data::DataPoint(std::chrono::milliseconds(150), {1.0, 2.0, 3.0}));
-    data.add(data::DataPoint(std::chrono::milliseconds(150), {4.0, 5.0, 6.0}));
-    ASSERT_EQ(data[0].getTimestamp(), std::chrono::system_clock::time_point(
-                                          std::chrono::milliseconds(500)));
-    ASSERT_EQ(data[1].getTimestamp(),
-              std::chrono::system_clock::time_point(
-                  std::chrono::milliseconds(500) + data.getDeltaTime()));
-
-    // Clearing should reset the timer to the first frame
+    // Clearing should reset data, but not the timer
     data.clear();
-    data.add(data::DataPoint(std::chrono::milliseconds(150), {1.0, 2.0, 3.0}));
-    data.add(data::DataPoint(std::chrono::milliseconds(150), {4.0, 5.0, 6.0}));
-    ASSERT_EQ(data[0].getTimestamp(), std::chrono::system_clock::time_point(
-                                          std::chrono::milliseconds(500)));
-    ASSERT_EQ(data[1].getTimestamp(),
-              std::chrono::system_clock::time_point(
-                  std::chrono::milliseconds(500) + data.getDeltaTime()));
-  }
-  // Test retroactively changing the starting time
-  {
-    auto data = data::FixedTimeSeries(std::chrono::milliseconds(100));
-    data.add(data::DataPoint(std::chrono::milliseconds(150), {1.0, 2.0, 3.0}));
-    data.add(data::DataPoint(std::chrono::milliseconds(150), {4.0, 5.0, 6.0}));
+    ASSERT_ALMOST_NOW(data.getStartingTime(), now);
+    ASSERT_EQ(data.size(), 0);
 
-    // Changing the starting time should retroactively change the timestamp of
-    data.setStartingTime(std::chrono::milliseconds(1000));
-    ASSERT_EQ(data[0].getTimestamp(), std::chrono::system_clock::time_point(
-                                          std::chrono::milliseconds(1000)));
-    ASSERT_EQ(data[1].getTimestamp(),
-              std::chrono::system_clock::time_point(
-                  std::chrono::milliseconds(1000) + data.getDeltaTime()));
-
-    // Clearing should reset the timer to the first frame
-    data.clear();
-    data.add(data::DataPoint(std::chrono::milliseconds(150), {1.0, 2.0, 3.0}));
-    data.add(data::DataPoint(std::chrono::milliseconds(150), {4.0, 5.0, 6.0}));
-    ASSERT_EQ(data[0].getTimestamp(), std::chrono::system_clock::time_point(
-                                          std::chrono::milliseconds(1000)));
-    ASSERT_EQ(data[1].getTimestamp(),
-              std::chrono::system_clock::time_point(
-                  std::chrono::milliseconds(1000) + data.getDeltaTime()));
+    // Reset should clear the data and reset the timer
+    data.add(data::DataPoint({1.0, 2.0, 3.0}));
+    data.add(data::DataPoint({4.0, 5.0, 6.0}));
+    data.reset();
+    ASSERT_GT(data.getStartingTime(), now);
+    ASSERT_EQ(data.size(), 0);
   }
 }

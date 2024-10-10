@@ -22,9 +22,7 @@ public:
   /// @param channelCount The number of channels
   /// @param dataCheckIntervals The interval to check for new data
   NidaqDevice(size_t channelCount,
-              std::chrono::milliseconds dataCheckIntervals);
-  NidaqDevice(size_t channelCount,
-              std::chrono::microseconds dataCheckIntervals);
+              const std::chrono::microseconds &dataCheckIntervals);
 
   // Delete copy constructor and assignment operator, this class cannot be
   // copied because of the mutex member
