@@ -25,7 +25,7 @@ int main() {
 
     const auto &dataCollectors = devices.getDataCollectors();
     for (auto &[deviceId, dataCollector] : dataCollectors) {
-      logger.info("The device " + devices.getDevice(deviceId).deviceName() +
+      logger.info("The device " + devices[deviceId].deviceName() +
                   " has collected " +
                   std::to_string(dataCollector->getTrialData().size()) +
                   " data points");

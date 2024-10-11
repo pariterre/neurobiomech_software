@@ -30,8 +30,8 @@ void AsyncDevice::connectAsync() {
       return;
     }
 
-    startKeepDeviceWorkerAlive();
     logger.info("The device " + deviceName() + " is now connected");
+    startKeepDeviceWorkerAlive();
     m_AsyncDeviceContext.run();
   });
 }

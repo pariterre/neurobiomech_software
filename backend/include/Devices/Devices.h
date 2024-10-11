@@ -20,6 +20,8 @@ class Devices {
 
   /// DEVICE MANAGEMENT METHODS ///
 public:
+  ~Devices();
+
   /// @brief Create a new device in the collection
   /// @param device The device to add
   /// @return The id of the device in the collection so it can be accessed or
@@ -30,8 +32,17 @@ public:
   /// @param deviceId The id of the device (the one returned by the add method)
   void remove(int deviceId);
 
+  /// @brief Get the number of devices in the collection
+  /// @return The number of devices in the collection
+  size_t size() const;
+
   /// @brief Remove all the devices from the collection
   void clear();
+
+  /// @brief Get the requested device
+  /// @param deviceId The id of the device (the one returned by the add method)
+  /// @return The requested device
+  const Device &operator[](int deviceId) const;
 
   /// @brief Get the requested device
   /// @param deviceId The id of the device (the one returned by the add method)

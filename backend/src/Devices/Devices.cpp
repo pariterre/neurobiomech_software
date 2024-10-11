@@ -11,6 +11,16 @@
 using namespace STIMWALKER_NAMESPACE;
 using namespace STIMWALKER_NAMESPACE::devices;
 
+Devices::~Devices() {
+  if (m_IsRecording) {
+    stopRecording();
+  }
+
+  if (m_IsConnected) {
+    disconnect();
+  }
+}
+
 int Devices::add(std::unique_ptr<Device> device) {
   std::string deviceName = device->deviceName();
   static int deviceId = 0;
@@ -33,9 +43,22 @@ void Devices::remove(int deviceId) {
   m_DataCollectors.erase(deviceId);
 }
 
+size_t Devices::size() const { return m_Devices.size(); }
+
 void Devices::clear() {
   m_Devices.clear();
   m_DataCollectors.clear();
+}
+
+const Device &Devices::operator[](int deviceId) const {
+  try {
+    return *m_Devices.at(deviceId);
+  } catch (const std::out_of_range &) {
+    std::string message =
+        "Device with id " + std::to_string(deviceId) + " does not exist";
+    utils::Logger::getInstance().fatal(message);
+    throw DeviceNotFoundException(message);
+  }
 }
 
 const Device &Devices::getDevice(int deviceId) const {
@@ -61,6 +84,8 @@ const DataCollector &Devices::getDataCollector(int deviceId) const {
 }
 
 bool Devices::connect() {
+  m_IsConnected = false;
+
   for (auto &[deviceId, device] : m_Devices) {
     // Try to connect the device asynchronously so it takes less time
     try {
@@ -102,6 +127,8 @@ bool Devices::connect() {
     return false;
   }
 
+  utils::Logger::getInstance().info("All devices are now connected");
+  m_IsConnected = true;
   return true;
 }
 
@@ -110,10 +137,14 @@ bool Devices::disconnect() {
   for (auto &[deviceId, device] : m_Devices) {
     allDisconnected = allDisconnected && device->disconnect();
   }
+
+  utils::Logger::getInstance().info("All devices are now disconnected");
+  m_IsConnected = !allDisconnected;
   return allDisconnected;
 }
 
 bool Devices::startRecording() {
+  m_IsRecording = false;
 
   for (auto &[deviceId, dataCollector] : m_DataCollectors) {
     // Prevent the device to start recording when it is started
@@ -170,10 +201,14 @@ bool Devices::startRecording() {
   for (auto &[deviceId, dataCollector] : m_DataCollectors) {
     dataCollector->resumeRecording();
   }
+
+  utils::Logger::getInstance().info("All devices are now recording");
+  m_IsRecording = true;
   return true;
 }
 
 bool Devices::stopRecording() {
+
   // Put all the devices in pause mode as it is faster than stopping them
   for (auto &[deviceId, dataCollector] : m_DataCollectors) {
     dataCollector->pauseRecording();
@@ -184,6 +219,8 @@ bool Devices::stopRecording() {
     allStopped = allStopped && dataCollector->stopRecording();
   }
 
+  utils::Logger::getInstance().info("All devices have stopped recording");
+  m_IsRecording = !allStopped;
   return allStopped;
 }
 

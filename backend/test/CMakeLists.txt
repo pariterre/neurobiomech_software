@@ -51,6 +51,7 @@ enable_testing()
 set(TEST_SRC_FILES
     ${CMAKE_SOURCE_DIR}/test/test_data.cpp
     ${CMAKE_SOURCE_DIR}/test/test_delsys.cpp
+    ${CMAKE_SOURCE_DIR}/test/test_devices.cpp
     ${CMAKE_SOURCE_DIR}/test/test_lokomat.cpp
     ${CMAKE_SOURCE_DIR}/test/test_magstim.cpp
     ${CMAKE_SOURCE_DIR}/test/test_nidaq.cpp
