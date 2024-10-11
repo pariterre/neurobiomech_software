@@ -52,27 +52,31 @@ TEST(Magstim, Connect) {
   ASSERT_FALSE(magstim->getIsConnected());
 
   // Connect to the device, now shows as connected
-  magstim->connect();
+  bool isConnected = magstim->connect();
+  ASSERT_TRUE(isConnected);
   ASSERT_TRUE(magstim->getIsConnected());
   ASSERT_TRUE(
       logger.contains("The device MagstimRapidDevice is now connected"));
   logger.clear();
 
   // Cannot connect twice
-  magstim->connect();
+  isConnected = magstim->connect();
+  ASSERT_TRUE(isConnected);
   ASSERT_TRUE(logger.contains("Cannot connect to the device MagstimRapidDevice "
                               "because it is already connected"));
   logger.clear();
 
   // Disconnecting, shows as not connected anymore
-  magstim->disconnect();
+  bool isDisconnected = magstim->disconnect();
+  ASSERT_TRUE(isDisconnected);
   ASSERT_FALSE(magstim->getIsConnected());
   ASSERT_TRUE(
       logger.contains("The device MagstimRapidDevice is now disconnected"));
   logger.clear();
 
   // Cannot disconnect twice
-  magstim->disconnect();
+  isDisconnected = magstim->disconnect();
+  ASSERT_TRUE(isDisconnected);
   ASSERT_TRUE(logger.contains(
       "Cannot disconnect from the device MagstimRapidDevice because "
       "it is not connected"));
@@ -96,7 +100,8 @@ TEST(Magstim, ConnectFailed) {
   auto magstim = devices::MagstimRapidDeviceMock::findMagstimDevice();
 
   magstim->shouldFailToConnect = true;
-  magstim->connect();
+  bool isConnected = magstim->connect();
+  ASSERT_FALSE(isConnected);
   ASSERT_FALSE(magstim->getIsConnected());
   ASSERT_TRUE(magstim->getHasFailedToConnect());
   ASSERT_TRUE(
@@ -181,7 +186,7 @@ TEST(Magstim, Arming) {
   response = magstim->send(devices::MagstimRapidCommands::ARM);
   ASSERT_EQ(response.getValue(), devices::DeviceResponses::NOK);
   ASSERT_TRUE(magstim->getIsArmed());
-  ASSERT_TRUE(logger.contains("Error: The device is already armed"));
+  ASSERT_TRUE(logger.contains("The device is already armed"));
   logger.clear();
 
   // Disarm the system
@@ -196,7 +201,7 @@ TEST(Magstim, Arming) {
   response = magstim->send(devices::MagstimRapidCommands::DISARM);
   ASSERT_EQ(response.getValue(), devices::DeviceResponses::NOK);
   ASSERT_FALSE(magstim->getIsArmed());
-  ASSERT_TRUE(logger.contains("Error: The device is already disarmed"));
+  ASSERT_TRUE(logger.contains("The device is already disarmed"));
   logger.clear();
 
   magstim->disconnect();

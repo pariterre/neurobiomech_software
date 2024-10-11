@@ -11,13 +11,13 @@ DataCollector::DataCollector(size_t channelCount,
     : m_DataChannelCount(channelCount), m_IsRecording(false),
       m_TimeSeries(std::move(timeSeries)) {}
 
-void DataCollector::startRecording() {
+bool DataCollector::startRecording() {
   auto &logger = utils::Logger::getInstance();
 
   if (m_IsRecording) {
     logger.warning("The data collector " + dataCollectorName() +
                    " is already recording");
-    return;
+    return true;
   }
 
   m_IsRecording = handleStartRecording();
@@ -27,19 +27,21 @@ void DataCollector::startRecording() {
   if (m_IsRecording) {
     logger.info("The data collector " + dataCollectorName() +
                 " is now recording");
+    return true;
   } else {
     logger.fatal("The data collector " + dataCollectorName() +
                  " failed to start recording");
+    return false;
   }
 }
 
-void DataCollector::stopRecording() {
+bool DataCollector::stopRecording() {
   auto &logger = utils::Logger::getInstance();
 
   if (!m_IsRecording) {
     logger.warning("The data collector " + dataCollectorName() +
                    " is not recording");
-    return;
+    return true;
   }
 
   m_IsRecording = !handleStopRecording();
@@ -47,16 +49,22 @@ void DataCollector::stopRecording() {
   if (m_IsRecording) {
     logger.fatal("The data collector " + dataCollectorName() +
                  " failed to stop recording");
+    return false;
   } else {
     logger.info("The data collector " + dataCollectorName() +
                 " has stopped recording");
+    return true;
   }
 }
+
+void DataCollector::pauseRecording() { m_IsPaused = true; }
+
+void DataCollector::resumeRecording() { m_IsPaused = false; }
 
 const TimeSeries &DataCollector::getTrialData() const { return *m_TimeSeries; }
 
 void DataCollector::addDataPoint(DataPoint &dataPoint) {
-  if (!m_IsRecording) {
+  if (!m_IsRecording || m_IsPaused) {
     return;
   }
 
@@ -65,7 +73,7 @@ void DataCollector::addDataPoint(DataPoint &dataPoint) {
 }
 
 void DataCollector::addDataPoints(std::vector<DataPoint> &data) {
-  if (!m_IsRecording) {
+  if (!m_IsRecording || m_IsPaused) {
     return;
   }
 

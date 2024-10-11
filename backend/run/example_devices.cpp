@@ -23,10 +23,11 @@ int main() {
     devices.disconnect();
     logger.info("The system has stopped recording and is now disconnected");
 
-    auto &data = devices.getTrialData();
-    for (auto &[deviceId, dataCollector] : data) {
+    const auto &dataCollectors = devices.getDataCollectors();
+    for (auto &[deviceId, dataCollector] : dataCollectors) {
       logger.info("The device " + devices.getDevice(deviceId).deviceName() +
-                  " has collected " + std::to_string(dataCollector.size()) +
+                  " has collected " +
+                  std::to_string(dataCollector->getTrialData().size()) +
                   " data points");
     }
 

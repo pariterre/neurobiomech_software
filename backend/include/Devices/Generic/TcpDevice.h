@@ -22,14 +22,15 @@ public:
   /// @return The data read from the device
   virtual std::vector<char> read(size_t bufferSize);
 
-  /// @brief Write data to the tcp device. Uses the buffer.size() as the size of
-  /// the data to write and fills the pre-allocated buffer with the data
-  /// @param buffer The buffer to write to the device
-  virtual void read(std::vector<char> &buffer);
+  /// @brief Read data from the tcp device
+  /// @param buffer The buffer to read the data into
+  /// @return True if the read was successful, false otherwise
+  virtual bool read(std::vector<char> &buffer);
 
   /// @brief Write data to the tcp device
   /// @param data The data to write to the device
-  virtual void write(const std::string &data);
+  /// @return True if the write was successful, false otherwise
+  virtual bool write(const std::string &data);
 
 protected:
   /// Protected members with Get accessors

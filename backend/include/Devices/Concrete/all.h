@@ -4,7 +4,6 @@
 #include "Devices/Concrete/DelsysEmgDevice.h"
 #include "Devices/Concrete/LokomatDevice.h"
 #include "Devices/Concrete/MagstimRapidDevice.h"
-#include "Devices/Concrete/MagstimRapidExceptions.h"
 #include "Devices/Concrete/NidaqDevice.h"
 
 #endif // __STIMWALKER_DEVICES_CONCRETE_ALL_H__

@@ -36,7 +36,7 @@ void AsyncDevice::connectAsync() {
   });
 }
 
-void AsyncDevice::connect() {
+bool AsyncDevice::connect() {
   connectAsync();
   while (!m_IsConnected && !m_HasFailedToConnect) {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -44,16 +44,18 @@ void AsyncDevice::connect() {
 
   if (m_HasFailedToConnect) {
     stopDeviceWorkers();
+    return false;
   }
+  return true;
 }
 
-void AsyncDevice::disconnect() {
+bool AsyncDevice::disconnect() {
   auto &logger = utils::Logger::getInstance();
 
   if (!m_IsConnected) {
     logger.warning("Cannot disconnect from the device " + deviceName() +
                    " because it is not connected");
-    return;
+    return true;
   }
 
   // Just leave a bit of time if there are any pending commands to process
@@ -63,11 +65,12 @@ void AsyncDevice::disconnect() {
   m_IsConnected = !handleDisconnect();
   if (m_IsConnected) {
     logger.fatal("Could not disconnect from the device " + deviceName());
-    return;
+    return false;
   }
 
   stopDeviceWorkers();
   logger.info("The device " + deviceName() + " is now disconnected");
+  return true;
 }
 
 void AsyncDevice::stopDeviceWorkers() {

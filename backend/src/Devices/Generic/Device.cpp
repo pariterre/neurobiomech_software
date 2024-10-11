@@ -9,13 +9,13 @@ using namespace STIMWALKER_NAMESPACE::devices;
 
 Device::~Device() {}
 
-void Device::connect() {
+bool Device::connect() {
   auto &logger = utils::Logger::getInstance();
 
   if (m_IsConnected) {
     logger.warning("Cannot connect to the device " + deviceName() +
                    " because it is already connected");
-    return;
+    return true;
   }
 
   m_IsConnected = handleConnect();
@@ -23,27 +23,30 @@ void Device::connect() {
 
   if (m_IsConnected) {
     logger.info("The device " + deviceName() + " is now connected");
+    return true;
   } else {
     logger.fatal("Could not connect to the device " + deviceName());
+    return false;
   }
 }
 
-void Device::disconnect() {
+bool Device::disconnect() {
   auto &logger = utils::Logger::getInstance();
 
   if (!m_IsConnected) {
     logger.warning("Cannot disconnect from the device " + deviceName() +
                    " because it is not connected");
-    return;
+    return true;
   }
 
   m_IsConnected = !handleDisconnect();
 
   if (m_IsConnected) {
     logger.fatal("Could not disconnect from the device " + deviceName());
-
+    return false;
   } else {
     logger.info("The device " + deviceName() + " is now disconnected");
+    return true;
   }
 }
 

@@ -39,7 +39,7 @@ void AsyncDataCollector::startRecordingAsync() {
   });
 }
 
-void AsyncDataCollector::startRecording() {
+bool AsyncDataCollector::startRecording() {
   startRecordingAsync();
   while (!m_IsRecording && !m_HasFailedToStartRecording) {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -47,16 +47,18 @@ void AsyncDataCollector::startRecording() {
 
   if (m_HasFailedToStartRecording) {
     stopDataCollectorWorkers();
+    return false;
   }
+  return true;
 }
 
-void AsyncDataCollector::stopRecording() {
+bool AsyncDataCollector::stopRecording() {
   auto &logger = utils::Logger::getInstance();
 
   if (!m_IsRecording) {
     logger.warning("The data collector " + dataCollectorName() +
                    " is not recording");
-    return;
+    return true;
   }
 
   // Cancel the timer first to ensure that it does not keep the io_context alive
@@ -71,12 +73,13 @@ void AsyncDataCollector::stopRecording() {
   if (m_IsRecording) {
     logger.fatal("The data collector " + dataCollectorName() +
                  " failed to stop recording");
-    return;
+    return false;
   }
 
   stopDataCollectorWorkers();
   logger.info("The data collector " + dataCollectorName() +
               " has stopped recording");
+  return true;
 }
 
 void AsyncDataCollector::stopDataCollectorWorkers() {

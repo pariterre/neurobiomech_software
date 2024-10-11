@@ -48,10 +48,10 @@ public:
   void startRecordingAsync();
 
   /// @brief Start recording in a synchronous way (blocking)
-  void startRecording() override;
+  bool startRecording() override;
 
   /// @brief Stop collecting data in a synchronous way (blocking).
-  void stopRecording() override;
+  bool stopRecording() override;
 
 protected:
   /// @brief Stop the worker threads. This can be called by the destructor of

@@ -17,12 +17,12 @@ SerialPortDevice::SerialPortDevice(
     : m_Port(port), m_SerialPortContext(std::make_unique<asio::io_context>()),
       AsyncDevice(keepAliveInterval) {}
 
-void SerialPortDevice::disconnect() {
+bool SerialPortDevice::disconnect() {
   if (m_SerialPort != nullptr && m_SerialPort->is_open()) {
     m_SerialPort->close();
   }
 
-  AsyncDevice::disconnect();
+  return AsyncDevice::disconnect();
 }
 
 bool SerialPortDevice::handleConnect() {

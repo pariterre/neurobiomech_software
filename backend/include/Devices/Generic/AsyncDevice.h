@@ -53,10 +53,10 @@ public:
   void connectAsync();
 
   /// @brief  Start the connection in a synchronous way (blocking)
-  void connect() override;
+  bool connect() override;
 
   /// @brief Start the disconnection in a synchronous way (blocking).
-  void disconnect() override;
+  bool disconnect() override;
 
 protected:
   /// @brief Stop the worker threads. This can be called by the destructor of

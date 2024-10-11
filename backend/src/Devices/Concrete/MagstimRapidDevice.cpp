@@ -70,7 +70,8 @@ MagstimRapidDevice::parseAsyncSendCommand(const DeviceCommands &command,
 
     case MagstimRapidCommands::ARM:
       if (m_IsArmed) {
-        throw MagsimRapidAlreadyArmedException("The device is already armed");
+        logger.warning("The device is already armed");
+        return DeviceResponses::NOK;
       }
       m_IsArmed = command.getValue() == MagstimRapidCommands::ARM;
 
@@ -88,7 +89,8 @@ MagstimRapidDevice::parseAsyncSendCommand(const DeviceCommands &command,
 
     case MagstimRapidCommands::DISARM:
       if (!m_IsArmed) {
-        throw MagsimRapidNotArmedException("The device is already disarmed");
+        logger.warning("The device is already disarmed");
+        return DeviceResponses::NOK;
       }
 
       m_IsArmed = command.getValue() == MagstimRapidCommands::ARM;
@@ -105,10 +107,6 @@ MagstimRapidDevice::parseAsyncSendCommand(const DeviceCommands &command,
           " ms");
       return DeviceResponses::OK;
     }
-  } catch (const std::bad_any_cast &) {
-    logger.fatal("The data you provided with the command (" +
-                 command.toString() + ") is invalid");
-    return DeviceResponses::NOK;
   } catch (const std::exception &e) {
     logger.fatal("Error: " + std::string(e.what()));
     return DeviceResponses::NOK;

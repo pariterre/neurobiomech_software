@@ -36,7 +36,7 @@ protected:
 
   /// Methods
 public:
-  void disconnect() override;
+  bool disconnect() override;
 
 protected:
   bool handleConnect() override;

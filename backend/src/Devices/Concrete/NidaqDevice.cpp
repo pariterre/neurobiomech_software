@@ -53,7 +53,7 @@ void NidaqDevice::handleNewData(const data::DataPoint &data) {
 DeviceResponses
 NidaqDevice::parseAsyncSendCommand(const DeviceCommands &command,
                                    const std::any &data) {
-  throw DeviceShouldNotUseSendException(
+  throw InvalidMethodException(
       "This method should not be called for NidaqDevice");
 }
 

@@ -36,17 +36,7 @@ public:
   /// @brief Get the requested device
   /// @param deviceId The id of the device (the one returned by the add method)
   /// @return The requested device
-  Device &getDevice(int deviceId);
-
-  /// @brief Get the requested device
-  /// @param deviceId The id of the device (the one returned by the add method)
-  /// @return The requested device
   const Device &getDevice(int deviceId) const;
-
-  /// @brief Get the requested data collector
-  /// @param deviceId The id of the data collector
-  /// @return The requested data collector
-  DataCollector &getDataCollector(int deviceId);
 
   /// @brief Get the requested data collector
   /// @param deviceId The id of the data collector
@@ -57,26 +47,22 @@ public:
 public:
   /// @brief Connect all the devices in a blocking way (wait for all the devices
   /// to be connected before returning)
-  void connect();
+  bool connect();
 
   /// @brief Disconnect all the devices in a blocking way (wait for all the
   /// devices to be disconnected before returning)
-  void disconnect();
+  bool disconnect();
 
   /// @brief Start recording on all the devices in a blocking way (wait for all
   /// the devices to start recording before returning). Additionally, it sets
   /// all the starting reconding time of all device to "now" as of the time of
-  /// the when all the devices are started
-  void startRecording();
+  /// the when all the devices are started.
+  /// @return True if all the devices started recording, false otherwise
+  bool startRecording();
 
   /// @brief Stop recording on all the devices in a blocking way (wait for all
   /// the devices to stop recording before returning)
-  void stopRecording();
-
-  /// @brief Get the data from all the devices
-  /// @return The data from all the devices in a map with the device id as the
-  /// key
-  std::map<int, data::TimeSeries> getTrialData() const;
+  bool stopRecording();
 
   /// DATA SPECIFIC METHODS ///
 public:
@@ -96,7 +82,12 @@ protected:
   /// @brief The collection of devices
   std::map<int, std::shared_ptr<Device>> m_Devices;
 
+public:
   /// @brief The collection of data collectors
+  const std::map<int, std::shared_ptr<DataCollector>> &
+  getDataCollectors() const {
+    return m_DataCollectors;
+  }
   std::map<int, std::shared_ptr<DataCollector>> m_DataCollectors;
 };
 

@@ -159,8 +159,8 @@ protected:
   class CommandTcpDeviceMock : public CommandTcpDevice {
   public:
     CommandTcpDeviceMock(const std::string &host, size_t port);
-    void write(const std::string &data) override;
-    void read(std::vector<char> &buffer) override;
+    bool write(const std::string &data) override;
+    bool read(std::vector<char> &buffer) override;
 
   protected:
     DECLARE_PROTECTED_MEMBER_NOGET(DelsysCommandsMock, LastCommand)
@@ -171,7 +171,7 @@ protected:
   class DataTcpDeviceMock : public DataTcpDevice {
   public:
     DataTcpDeviceMock(const std::string &host, size_t port);
-    void read(std::vector<char> &buffer) override;
+    bool read(std::vector<char> &buffer) override;
 
   protected:
     DeviceResponses parseAsyncSendCommand(const DeviceCommands &command,

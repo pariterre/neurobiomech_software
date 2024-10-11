@@ -51,26 +51,30 @@ TEST(Delsys, Connect) {
   ASSERT_FALSE(delsys.getIsConnected());
 
   // Connect to the device, now shows as connected
-  delsys.connect();
+  bool isConnected = delsys.connect();
+  ASSERT_TRUE(isConnected);
   ASSERT_TRUE(delsys.getIsConnected());
   ASSERT_TRUE(logger.contains("The device DelsysEmgDevice is now connected"));
   logger.clear();
 
   // Cannot connect twice
-  delsys.connect();
+  isConnected = delsys.connect();
+  ASSERT_TRUE(isConnected);
   ASSERT_TRUE(logger.contains("Cannot connect to the device DelsysEmgDevice "
                               "because it is already connected"));
   logger.clear();
 
   // Disconnecting, shows as not connected anymore
-  delsys.disconnect();
+  bool isDisconnected = delsys.disconnect();
+  ASSERT_TRUE(isDisconnected);
   ASSERT_FALSE(delsys.getIsConnected());
   ASSERT_TRUE(
       logger.contains("The device DelsysEmgDevice is now disconnected"));
   logger.clear();
 
   // Cannot disconnect twice
-  delsys.disconnect();
+  isDisconnected = delsys.disconnect();
+  ASSERT_TRUE(isDisconnected);
   ASSERT_TRUE(logger.contains(
       "Cannot disconnect from the device DelsysEmgDevice because "
       "it is not connected"));
@@ -94,7 +98,8 @@ TEST(Delsys, ConnectFailed) {
   auto delsys = devices::DelsysEmgDeviceMock();
 
   delsys.shouldFailToConnect = true;
-  delsys.connect();
+  bool isConnected = delsys.connect();
+  ASSERT_FALSE(isConnected);
   ASSERT_FALSE(delsys.getIsConnected());
   ASSERT_TRUE(delsys.getHasFailedToConnect());
   ASSERT_TRUE(
@@ -117,9 +122,9 @@ TEST(Delsys, StartRecordingAsync) {
 TEST(Delsys, StartRecordingFailedAsync) {
   auto logger = TestLogger();
   auto delsys = devices::DelsysEmgDeviceMock();
+  delsys.shouldFailToStartRecording = true;
 
   delsys.connect();
-  delsys.shouldFailToStartRecording = true;
   delsys.startRecordingAsync();
   ASSERT_FALSE(delsys.getIsRecording());
 
@@ -136,7 +141,8 @@ TEST(Delsys, StartRecording) {
   auto delsys = devices::DelsysEmgDeviceMock();
 
   // The system cannot start recording if it is not connected
-  delsys.startRecording();
+  bool isRecording = delsys.startRecording();
+  ASSERT_FALSE(isRecording);
   ASSERT_FALSE(delsys.getIsRecording());
   ASSERT_TRUE(
       logger.contains("Cannot send a command to the device "
@@ -147,28 +153,32 @@ TEST(Delsys, StartRecording) {
 
   // Connect the system and start recording
   delsys.connect();
-  delsys.startRecording();
+  isRecording = delsys.startRecording();
+  ASSERT_TRUE(isRecording);
   ASSERT_TRUE(delsys.getIsRecording());
   ASSERT_TRUE(logger.contains(
       "The data collector DelsysEmgDataCollector is now recording"));
   logger.clear();
 
   // The system cannot start recording if it is already recording
-  delsys.startRecording();
+  isRecording = delsys.startRecording();
+  ASSERT_TRUE(isRecording);
   ASSERT_TRUE(delsys.getIsRecording());
   ASSERT_TRUE(logger.contains(
       "The data collector DelsysEmgDataCollector is already recording"));
   logger.clear();
 
   // Stop recording
-  delsys.stopRecording();
+  bool isNotRecording = delsys.stopRecording();
+  ASSERT_TRUE(isNotRecording);
   ASSERT_FALSE(delsys.getIsRecording());
   ASSERT_TRUE(logger.contains(
       "The data collector DelsysEmgDataCollector has stopped recording"));
   logger.clear();
 
   // The system cannot stop recording if it is not recording
-  delsys.stopRecording();
+  isNotRecording = delsys.stopRecording();
+  ASSERT_TRUE(isNotRecording);
   ASSERT_FALSE(delsys.getIsRecording());
   ASSERT_TRUE(logger.contains(
       "The data collector DelsysEmgDataCollector is not recording"));
@@ -206,13 +216,48 @@ TEST(Delsys, AutoStopRecording) {
 TEST(Delsys, StartRecordingFailed) {
   auto logger = TestLogger();
   auto delsys = devices::DelsysEmgDeviceMock();
-
   delsys.shouldFailToStartRecording = true;
+
   delsys.connect();
-  delsys.startRecording();
+  bool isRecording = delsys.startRecording();
+  ASSERT_FALSE(isRecording);
   ASSERT_FALSE(delsys.getIsRecording());
   ASSERT_TRUE(logger.contains(
       "The data collector DelsysEmgDataCollector failed to start recording"));
+}
+
+TEST(Delsys, PauseRecording) {
+  auto logger = TestLogger();
+  auto delsys = devices::DelsysEmgDeviceMock();
+
+  // Pause the system prior to recording
+  delsys.pauseRecording();
+  ASSERT_TRUE(delsys.getIsPaused());
+
+  // Start the recording
+  delsys.connect();
+  delsys.startRecording();
+
+  // Wait for a bit. There should not be any data
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  ASSERT_EQ(delsys.getTrialData().size(), 0);
+
+  // Resume the recording
+  delsys.resumeRecording();
+  ASSERT_FALSE(delsys.getIsPaused());
+
+  // Wait for a bit. There should be data
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  size_t dataCount = delsys.getTrialData().size();
+  ASSERT_GT(dataCount, 0);
+
+  // Pause the recording again
+  delsys.pauseRecording();
+  ASSERT_TRUE(delsys.getIsPaused());
+
+  // Wait for a bit. There should not be any new data
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  ASSERT_EQ(delsys.getTrialData().size(), dataCount);
 }
 
 TEST(Delsys, Data) {
@@ -220,7 +265,8 @@ TEST(Delsys, Data) {
   delsys.connect();
 
   // Wait for the data to be collected
-  delsys.startRecording();
+  bool isRecording = delsys.startRecording();
+  ASSERT_TRUE(isRecording);
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
   delsys.stopRecording();
 

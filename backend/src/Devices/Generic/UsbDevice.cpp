@@ -30,7 +30,7 @@ UsbDevice UsbDevice::fromVidAndPid(const std::string &vid,
       return UsbDevice(device->m_Port, vid, pid);
     }
   }
-  throw SerialPortDeviceNotFoundException("USB device not found");
+  throw DeviceNotFoundException("USB device not found");
 }
 
 DeviceResponses UsbDevice::parseAsyncSendCommand(const DeviceCommands &command,

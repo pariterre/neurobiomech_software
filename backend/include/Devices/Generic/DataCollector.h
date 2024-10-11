@@ -30,21 +30,31 @@ public:
   /// @return The name of the DataCollector
   virtual std::string dataCollectorName() const = 0;
 
-  /// @brief Start collecting data
-  virtual void startRecording();
+  /// @brief Start collecting data.
+  /// @return True if is recording, false otherwise
+  virtual bool startRecording();
 
   /// @brief Stop collecting data
-  virtual void stopRecording();
+  /// @return True if the recording is stopped, false otherwise
+  virtual bool stopRecording();
+
+  /// @brief Pause collecting data. If this is called before the recording, it
+  /// will pause the recording when it starts
+  virtual void pauseRecording();
+
+  /// @brief Resume collecting data. If this is called before the recording, it
+  /// will resume the recording when it starts
+  virtual void resumeRecording();
 
 protected:
   /// @brief Method to handle the start recording command. This is called on the
-  /// thread recording the data before starting the recording. If something goes
-  /// wrong, an exception should be thrown
+  /// thread recording the data before starting the recording.
+  /// @return True if the recording started successfully, false otherwise
   virtual bool handleStartRecording() = 0;
 
   /// @brief Method to handle the stop recording command. This is called on the
-  /// thread recording the data before stopping the recording. If something goes
-  /// wrong, an exception should be thrown
+  /// thread recording the data before stopping the recording.
+  /// @return True if the recording stopped successfully, false otherwise
   virtual bool handleStopRecording() = 0;
 
   /// @brief Get the number of channels
@@ -54,6 +64,10 @@ protected:
   /// @brief Get if the device is currently recording
   /// @return True if the device is recording, false otherwise
   DECLARE_PROTECTED_MEMBER(bool, IsRecording)
+
+  /// @brief Get if the device is currently paused
+  /// @return True if the device is paused, false otherwise
+  DECLARE_PROTECTED_MEMBER(bool, IsPaused)
 
   /// @brief Has failed to start recording. This is always false unless the
   /// it actually failed to start recording

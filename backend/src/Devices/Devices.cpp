@@ -3,6 +3,7 @@
 #include "Data/TimeSeries.h"
 #include "Devices/Exceptions.h"
 #include "Devices/Generic/AsyncDataCollector.h"
+#include "Devices/Generic/AsyncDevice.h"
 #include "Devices/Generic/DataCollector.h"
 #include "Utils/Logger.h"
 #include <thread>
@@ -37,17 +38,6 @@ void Devices::clear() {
   m_DataCollectors.clear();
 }
 
-Device &Devices::getDevice(int deviceId) {
-  try {
-    return *m_Devices.at(deviceId);
-  } catch (const std::out_of_range &) {
-    std::string message =
-        "Device with id " + std::to_string(deviceId) + " does not exist";
-    utils::Logger::getInstance().fatal(message);
-    throw DeviceNotExistsException(message);
-  }
-}
-
 const Device &Devices::getDevice(int deviceId) const {
   try {
     return *m_Devices.at(deviceId);
@@ -55,18 +45,7 @@ const Device &Devices::getDevice(int deviceId) const {
     std::string message =
         "Device with id " + std::to_string(deviceId) + " does not exist";
     utils::Logger::getInstance().fatal(message);
-    throw DeviceNotExistsException(message);
-  }
-}
-
-DataCollector &Devices::getDataCollector(int deviceId) {
-  try {
-    return *m_DataCollectors.at(deviceId);
-  } catch (const std::out_of_range &) {
-    std::string message = "Data collector with id " + std::to_string(deviceId) +
-                          " does not exist";
-    utils::Logger::getInstance().fatal(message);
-    throw DeviceNotExistsException(message);
+    throw DeviceNotFoundException(message);
   }
 }
 
@@ -77,25 +56,69 @@ const DataCollector &Devices::getDataCollector(int deviceId) const {
     std::string message = "Data collector with id " + std::to_string(deviceId) +
                           " does not exist";
     utils::Logger::getInstance().fatal(message);
-    throw DeviceNotExistsException(message);
+    throw DeviceNotFoundException(message);
   }
 }
 
-void Devices::connect() {
+bool Devices::connect() {
   for (auto &[deviceId, device] : m_Devices) {
-    device->connect();
+    // Try to connect the device asynchronously so it takes less time
+    try {
+      auto &asyncDevice = dynamic_cast<AsyncDevice &>(*device);
+      asyncDevice.connectAsync();
+    } catch (const std::bad_cast &) {
+      device->connect();
+    }
   }
+
+  // Wait for all the devices to connect (or fail to connect)
+  size_t hasConnected = 0;
+  size_t hasFailedToConnect = 0;
+  while (true) {
+    hasConnected = 0;
+    hasFailedToConnect = 0;
+
+    for (auto &[deviceId, device] : m_Devices) {
+      if (device->getIsConnected()) {
+        hasConnected++;
+      }
+      if (device->getHasFailedToConnect()) {
+        hasFailedToConnect++;
+      }
+    }
+    if (hasConnected + hasFailedToConnect == m_Devices.size()) {
+      break;
+    }
+
+    // If we get here, we have to give more time for the devices to connect
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  }
+
+  // If any of the devices failed to connect, disconnect all the devices
+  if (hasFailedToConnect > 0) {
+    disconnect();
+    utils::Logger::getInstance().fatal(
+        "One or more devices failed to connect, disconnecting all devices");
+    return false;
+  }
+
+  return true;
 }
 
-void Devices::disconnect() {
+bool Devices::disconnect() {
+  bool allDisconnected = true;
   for (auto &[deviceId, device] : m_Devices) {
-    device->disconnect();
+    allDisconnected = allDisconnected && device->disconnect();
   }
+  return allDisconnected;
 }
 
-void Devices::startRecording() {
+bool Devices::startRecording() {
 
   for (auto &[deviceId, dataCollector] : m_DataCollectors) {
+    // Prevent the device to start recording when it is started
+    dataCollector->pauseRecording();
+
     try {
       // Try to start the recording asynchronously so it takes less time
       auto &asyncDataCollector =
@@ -106,7 +129,7 @@ void Devices::startRecording() {
     }
   }
 
-  // For all the devices to have responded (either is connected or failed to)
+  // Wait for all the devices to start recording (or fail to start recording)
   size_t hasConnected = 0;
   size_t hasFailedToConnect = 0;
   while (true) {
@@ -126,38 +149,42 @@ void Devices::startRecording() {
     }
 
     // If we get here, we have to give more time for the devices to connect
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
 
-  // If any of the devices failed to start recording, stop all the devices and
-  // throw an exception
+  // If any of the devices failed to start recording, stop all the devices
   if (hasFailedToConnect > 0) {
     stopRecording();
-    std::string errorMessage(
+    utils::Logger::getInstance().fatal(
         "One or more devices failed to start recording, stopping all devices");
-    utils::Logger::getInstance().fatal(errorMessage);
-    throw DeviceFailedToStartRecordingException(errorMessage);
+    return false;
   }
 
   // If all the devices are ready, reset the time series for now and set the
   // starting time to now
   for (auto &[deviceId, dataCollector] : m_DataCollectors) {
-    dataCollector->m_TimeSeries->clear();
+    dataCollector->m_TimeSeries->reset();
   }
-}
 
-void Devices::stopRecording() {
+  // Now that we are ready, we can resume the recording
   for (auto &[deviceId, dataCollector] : m_DataCollectors) {
-    dataCollector->stopRecording();
+    dataCollector->resumeRecording();
   }
+  return true;
 }
 
-std::map<int, data::TimeSeries> Devices::getTrialData() const {
-  std::map<int, data::TimeSeries> data;
-  for (const auto &[deviceId, dataCollector] : m_DataCollectors) {
-    data[deviceId] = dataCollector->getTrialData();
+bool Devices::stopRecording() {
+  // Put all the devices in pause mode as it is faster than stopping them
+  for (auto &[deviceId, dataCollector] : m_DataCollectors) {
+    dataCollector->pauseRecording();
   }
-  return data;
+
+  bool allStopped = true;
+  for (auto &[deviceId, dataCollector] : m_DataCollectors) {
+    allStopped = allStopped && dataCollector->stopRecording();
+  }
+
+  return allStopped;
 }
 
 nlohmann::json Devices::serialize() const {

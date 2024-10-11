@@ -24,23 +24,29 @@ std::vector<char> TcpDevice::read(size_t bufferSize) {
   return buffer;
 }
 
-void TcpDevice::read(std::vector<char> &buffer) {
+bool TcpDevice::read(std::vector<char> &buffer) {
   try {
     m_TcpSocket.receive(asio::buffer(buffer.data(), buffer.size()));
+    return true;
   } catch (std::exception &e) {
+    utils::Logger::getInstance().fatal(
+        "Error while reading the data to the device " + deviceName() +
+        ", disconnecting. (" + std::string(e.what()) + ")");
     disconnect();
-    throw std::runtime_error("Error while reading the data, disconnecting. " +
-                             std::string(e.what()));
+    return false;
   }
 }
 
-void TcpDevice::write(const std::string &data) {
+bool TcpDevice::write(const std::string &data) {
   try {
     m_TcpSocket.send(asio::buffer(data));
+    return true;
   } catch (std::exception &e) {
+    utils::Logger::getInstance().fatal(
+        "Error while writing the data to the device " + deviceName() +
+        ", disconnecting. (" + std::string(e.what()) + ")");
     disconnect();
-    throw std::runtime_error("Error while writing the data, disconnecting. " +
-                             std::string(e.what()));
+    return false;
   }
 }
 

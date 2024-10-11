@@ -101,11 +101,13 @@ public:
   /// @return The name of the device
   virtual std::string deviceName() const = 0;
 
-  /// @brief Connect to the actual device
-  virtual void connect();
+  /// @brief Connect to the actual device.
+  /// @return True if the device is connected, false otherwise
+  virtual bool connect();
 
   /// @brief Disconnect from the actual device
-  virtual void disconnect();
+  /// @return True if the device is disconnected, false otherwise
+  virtual bool disconnect();
 
 protected:
   /// @brief Handle the actual connexion to the device

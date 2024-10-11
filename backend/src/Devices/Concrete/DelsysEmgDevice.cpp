@@ -39,7 +39,7 @@ std::string DelsysEmgDevice::DataTcpDevice::deviceName() const {
 
 DeviceResponses DelsysEmgDevice::DataTcpDevice::parseAsyncSendCommand(
     const DeviceCommands &command, const std::any &data) {
-  throw DeviceShouldNotUseSendException(
+  throw InvalidMethodException(
       "This method should not be called for DataTcpDevice");
 }
 
@@ -83,16 +83,23 @@ std::string DelsysEmgDevice::dataCollectorName() const {
 }
 
 bool DelsysEmgDevice::handleConnect() {
-  try {
-    m_CommandDevice->connect();
-    m_CommandDevice->read(128); // Consume the welcome message
-    m_DataDevice->connect();
-    return true;
-  } catch (DeviceConnexionFailedException &) {
+  m_CommandDevice->connect();
+  if (!m_CommandDevice->getIsConnected()) {
     utils::Logger::getInstance().fatal(
         "The command device is not connected, did you start Trigno?");
     return false;
   }
+  m_CommandDevice->read(128); // Consume the welcome message
+
+  m_DataDevice->connect();
+  if (!m_DataDevice->getIsConnected()) {
+    utils::Logger::getInstance().fatal(
+        "The data device is not connected, did you start Trigno?");
+    m_CommandDevice->disconnect();
+    return false;
+  }
+
+  return true;
 }
 
 bool DelsysEmgDevice::handleDisconnect() {
@@ -112,8 +119,7 @@ bool DelsysEmgDevice::handleStartRecording() {
   }
 
   // Wait until the data starts streaming
-  m_DataDevice->read(m_DataBuffer);
-  return true;
+  return m_DataDevice->read(m_DataBuffer);
 }
 
 bool DelsysEmgDevice::handleStopRecording() {
@@ -126,7 +132,7 @@ bool DelsysEmgDevice::handleStopRecording() {
 DeviceResponses
 DelsysEmgDevice::parseAsyncSendCommand(const DeviceCommands &command,
                                        const std::any &data) {
-  throw DeviceShouldNotUseSendException(
+  throw InvalidMethodException(
       "This method should not be called for DelsysEmgDevice");
 }
 
@@ -164,12 +170,13 @@ DelsysEmgDeviceMock::CommandTcpDeviceMock::CommandTcpDeviceMock(
     const std::string &host, size_t port)
     : m_LastCommand(DelsysCommandsMock::NONE), CommandTcpDevice(host, port) {}
 
-void DelsysEmgDeviceMock::CommandTcpDeviceMock::write(const std::string &data) {
+bool DelsysEmgDeviceMock::CommandTcpDeviceMock::write(const std::string &data) {
   // Store the last command
   m_LastCommand = DelsysCommandsMock::fromString(data);
+  return true;
 }
 
-void DelsysEmgDeviceMock::CommandTcpDeviceMock::read(
+bool DelsysEmgDeviceMock::CommandTcpDeviceMock::read(
     std::vector<char> &buffer) {
   // Prepare a response with bunch of \0 characters of length buffer.size()
   std::fill(buffer.begin(), buffer.end(), 0);
@@ -191,9 +198,11 @@ void DelsysEmgDeviceMock::CommandTcpDeviceMock::read(
   }
 
   default: {
-    throw std::runtime_error("This command is not MOCK yet");
+    throw InvalidMethodException("This command is not MOCK yet");
   }
   }
+
+  return true;
 }
 
 bool DelsysEmgDeviceMock::CommandTcpDeviceMock::handleConnect() { return true; }
@@ -202,7 +211,7 @@ DelsysEmgDeviceMock::DataTcpDeviceMock::DataTcpDeviceMock(
     const std::string &host, size_t port)
     : DataTcpDevice(host, port) {}
 
-void DelsysEmgDeviceMock::DataTcpDeviceMock::read(std::vector<char> &buffer) {
+bool DelsysEmgDeviceMock::DataTcpDeviceMock::read(std::vector<char> &buffer) {
   // Write the value float(1) to the buffer assuming 16 channels and 27 samples
   // with 4 bytes per channel
 
@@ -228,6 +237,7 @@ void DelsysEmgDeviceMock::DataTcpDeviceMock::read(std::vector<char> &buffer) {
   }
 
   counter++;
+  return true;
 }
 
 bool DelsysEmgDeviceMock::DataTcpDeviceMock::handleConnect() {
