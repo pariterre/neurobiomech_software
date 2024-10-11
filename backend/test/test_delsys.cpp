@@ -27,6 +27,22 @@ TEST(Delsys, ConnectAsync) {
   ASSERT_TRUE(delsys.getIsConnected());
 }
 
+TEST(Delsys, ConnectFailedAsync) {
+  auto logger = TestLogger();
+  auto delsys = devices::DelsysEmgDeviceMock();
+
+  delsys.shouldFailToConnect = true;
+  delsys.connectAsync();
+  ASSERT_FALSE(delsys.getIsConnected());
+
+  // Wait for the connection to be established
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  ASSERT_FALSE(delsys.getIsConnected());
+  ASSERT_TRUE(delsys.getHasFailedToConnect());
+  ASSERT_TRUE(
+      logger.contains("Could not connect to the device DelsysEmgDevice"));
+}
+
 TEST(Delsys, Connect) {
   auto logger = TestLogger();
   auto delsys = devices::DelsysEmgDeviceMock();
@@ -73,6 +89,18 @@ TEST(Delsys, AutoDisconnect) {
   logger.clear();
 }
 
+TEST(Delsys, ConnectFailed) {
+  auto logger = TestLogger();
+  auto delsys = devices::DelsysEmgDeviceMock();
+
+  delsys.shouldFailToConnect = true;
+  delsys.connect();
+  ASSERT_FALSE(delsys.getIsConnected());
+  ASSERT_TRUE(delsys.getHasFailedToConnect());
+  ASSERT_TRUE(
+      logger.contains("Could not connect to the device DelsysEmgDevice"));
+}
+
 TEST(Delsys, StartRecordingAsync) {
   auto logger = TestLogger();
   auto delsys = devices::DelsysEmgDeviceMock();
@@ -84,6 +112,23 @@ TEST(Delsys, StartRecordingAsync) {
   // Wait for the recording to start
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
   ASSERT_TRUE(delsys.getIsRecording());
+}
+
+TEST(Delsys, StartRecordingFailedAsync) {
+  auto logger = TestLogger();
+  auto delsys = devices::DelsysEmgDeviceMock();
+
+  delsys.connect();
+  delsys.shouldFailToStartRecording = true;
+  delsys.startRecordingAsync();
+  ASSERT_FALSE(delsys.getIsRecording());
+
+  // Wait for the recording to start
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+  ASSERT_FALSE(delsys.getIsRecording());
+  ASSERT_TRUE(delsys.getHasFailedToStartRecording());
+  ASSERT_TRUE(logger.contains(
+      "The data collector DelsysEmgDataCollector failed to start recording"));
 }
 
 TEST(Delsys, StartRecording) {
@@ -156,6 +201,18 @@ TEST(Delsys, AutoStopRecording) {
     ASSERT_TRUE(logger.contains(
         "The data collector DelsysEmgDataCollector has stopped recording"));
   }
+}
+
+TEST(Delsys, StartRecordingFailed) {
+  auto logger = TestLogger();
+  auto delsys = devices::DelsysEmgDeviceMock();
+
+  delsys.shouldFailToStartRecording = true;
+  delsys.connect();
+  delsys.startRecording();
+  ASSERT_FALSE(delsys.getIsRecording());
+  ASSERT_TRUE(logger.contains(
+      "The data collector DelsysEmgDataCollector failed to start recording"));
 }
 
 TEST(Delsys, Data) {

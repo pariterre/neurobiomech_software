@@ -28,11 +28,20 @@ public:                                                                        \
 protected:                                                                     \
   type m_##name;
 
-// Define a "DECLARE_PRIVATE_MEMBER" macro that will declare a private member
-// variable without accessors. The macro does not capitalize the first letter of
-// the member variable name, so it should be used with PascalCase names.
+// Define a "DECLARE_PROTECTED_MEMBER" macro that will declare a protected
+// member variable without accessors. The macro does not capitalize the first
+// letter of the member variable name, so it should be used with PascalCase
+// names.
 #define DECLARE_PROTECTED_MEMBER_NOGET(type, name)                             \
 protected:                                                                     \
+  type m_##name;
+
+// Define a "DECLARE_PRIVATE_MEMBER" macro that will declare a private
+// member variable without accessors. The macro does not capitalize the first
+// letter of the member variable name, so it should be used with PascalCase
+// names.
+#define DECLARE_PRIVATE_MEMBER_NOGET(type, name)                             \
+private:                                                                     \
   type m_##name;
 
 /// ---------------------- ///

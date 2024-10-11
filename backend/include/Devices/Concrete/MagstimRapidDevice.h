@@ -100,6 +100,8 @@ public:
 
   std::string computeCrcInterface(const std::string &data);
 
+  bool shouldFailToConnect = false;
+
 protected:
   bool handleConnect() override;
   bool handleDisconnect() override;

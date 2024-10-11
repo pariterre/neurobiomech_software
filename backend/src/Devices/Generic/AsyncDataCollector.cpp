@@ -46,7 +46,7 @@ void AsyncDataCollector::startRecording() {
   }
 
   if (m_HasFailedToStartRecording) {
-    m_AsyncDataWorker.join();
+    stopDataCollectorWorkers();
   }
 }
 
@@ -74,11 +74,24 @@ void AsyncDataCollector::stopRecording() {
     return;
   }
 
-  // Stop the worker thread
-  m_AsyncDataContext.stop();
-  m_AsyncDataWorker.join();
+  stopDataCollectorWorkers();
   logger.info("The data collector " + dataCollectorName() +
               " has stopped recording");
+}
+
+void AsyncDataCollector::stopDataCollectorWorkers() {
+  if (m_IsRecording) {
+    stopRecording();
+  }
+
+  // Stop the worker thread
+  if (!m_AsyncDataContext.stopped()) {
+    m_AsyncDataContext.stop();
+  }
+
+  if (m_AsyncDataWorker.joinable()) {
+    m_AsyncDataWorker.join();
+  }
 }
 
 void AsyncDataCollector::startKeepDataWorkerAlive() {

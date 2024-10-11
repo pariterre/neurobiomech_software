@@ -10,13 +10,6 @@ using namespace STIMWALKER_NAMESPACE::devices;
 AsyncDevice::AsyncDevice(const std::chrono::microseconds &keepAliveInterval)
     : m_KeepDeviceWorkerAliveInterval(keepAliveInterval), Device() {}
 
-AsyncDevice::~AsyncDevice() {
-  if (m_AsyncDeviceWorker.joinable()) {
-    m_AsyncDeviceContext.stop();
-    m_AsyncDeviceWorker.join();
-  }
-}
-
 void AsyncDevice::connectAsync() {
   auto &logger = utils::Logger::getInstance();
 
@@ -50,7 +43,7 @@ void AsyncDevice::connect() {
   }
 
   if (m_HasFailedToConnect) {
-    m_AsyncDeviceWorker.join();
+    stopDeviceWorkers();
   }
 }
 
@@ -73,10 +66,23 @@ void AsyncDevice::disconnect() {
     return;
   }
 
-  // Stop the worker thread
-  m_AsyncDeviceContext.stop();
-  m_AsyncDeviceWorker.join();
+  stopDeviceWorkers();
   logger.info("The device " + deviceName() + " is now disconnected");
+}
+
+void AsyncDevice::stopDeviceWorkers() {
+  if (m_IsConnected) {
+    disconnect();
+  }
+
+  // Stop the worker thread
+  if (!m_AsyncDeviceContext.stopped()) {
+    m_AsyncDeviceContext.stop();
+  }
+
+  if (m_AsyncDeviceWorker.joinable()) {
+    m_AsyncDeviceWorker.join();
+  }
 }
 
 DeviceResponses AsyncDevice::sendFast(const DeviceCommands &command) {

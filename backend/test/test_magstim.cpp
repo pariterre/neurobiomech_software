@@ -28,6 +28,22 @@ TEST(Magstim, ConnectAsync) {
   ASSERT_TRUE(magstim->getIsConnected());
 }
 
+TEST(Magstim, ConnectFailedAsync) {
+  auto logger = TestLogger();
+  auto magstim = devices::MagstimRapidDeviceMock::findMagstimDevice();
+
+  magstim->shouldFailToConnect = true;
+  magstim->connectAsync();
+  ASSERT_FALSE(magstim->getIsConnected());
+
+  // Wait for the connection to be established
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  ASSERT_FALSE(magstim->getIsConnected());
+  ASSERT_TRUE(magstim->getHasFailedToConnect());
+  ASSERT_TRUE(
+      logger.contains("Could not connect to the device MagstimRapidDevice"));
+}
+
 TEST(Magstim, Connect) {
   auto logger = TestLogger();
   auto magstim = devices::MagstimRapidDeviceMock::findMagstimDevice();
@@ -73,6 +89,18 @@ TEST(Magstim, AutoDisconnect) {
   ASSERT_TRUE(
       logger.contains("The device MagstimRapidDevice is now disconnected"));
   logger.clear();
+}
+
+TEST(Magstim, ConnectFailed) {
+  auto logger = TestLogger();
+  auto magstim = devices::MagstimRapidDeviceMock::findMagstimDevice();
+
+  magstim->shouldFailToConnect = true;
+  magstim->connect();
+  ASSERT_FALSE(magstim->getIsConnected());
+  ASSERT_TRUE(magstim->getHasFailedToConnect());
+  ASSERT_TRUE(
+      logger.contains("Could not connect to the device MagstimRapidDevice"));
 }
 
 TEST(UsbDevice, Print) {

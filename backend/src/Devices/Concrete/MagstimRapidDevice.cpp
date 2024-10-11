@@ -28,11 +28,7 @@ MagstimRapidDevice::MagstimRapidDevice(const std::string &port)
   m_KeepDeviceWorkerAliveInterval = m_DisarmedPokeInterval;
 }
 
-MagstimRapidDevice::~MagstimRapidDevice() {
-  if (m_IsConnected) {
-    disconnect();
-  }
-}
+MagstimRapidDevice::~MagstimRapidDevice() { stopDeviceWorkers(); }
 
 std::string MagstimRapidDevice::deviceName() const {
   return "MagstimRapidDevice";
@@ -182,7 +178,7 @@ void MagstimRapidDeviceMock::setFastCommunication(bool isFast) {
 bool MagstimRapidDeviceMock::handleConnect() {
   // Simulate a successful connection after some time
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
-  return true;
+  return !shouldFailToConnect;
 }
 
 bool MagstimRapidDeviceMock::handleDisconnect() {

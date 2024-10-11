@@ -14,7 +14,6 @@ public:
   /// @param keepAliveInterval The interval to keep the device alive
   AsyncDevice(const std::chrono::microseconds &keepAliveInterval);
   AsyncDevice(const AsyncDevice &other) = delete;
-  ~AsyncDevice() override;
 
   /// @brief Send a command to the device without waiting for a response
   /// @param command The command to send to the device
@@ -28,14 +27,14 @@ protected:
 
   /// @brief Get the async context of the command loop
   /// @return The async context of the command loop
-  DECLARE_PROTECTED_MEMBER_NOGET(asio::io_context, AsyncDeviceContext)
+  DECLARE_PRIVATE_MEMBER_NOGET(asio::io_context, AsyncDeviceContext)
 
   /// @brief Get the mutex
   /// @return The mutex
   DECLARE_PROTECTED_MEMBER_NOGET(std::mutex, AsyncDeviceMutex)
 
   /// @brief Worker thread to keep the device alive
-  DECLARE_PROTECTED_MEMBER_NOGET(std::thread, AsyncDeviceWorker)
+  DECLARE_PRIVATE_MEMBER_NOGET(std::thread, AsyncDeviceWorker)
 
   /// @brief Get how long to wait before waking up the worker
   /// @return How long to wait before waking up the worker
@@ -58,6 +57,12 @@ public:
 
   /// @brief Start the disconnection in a synchronous way (blocking).
   void disconnect() override;
+
+protected:
+  /// @brief Stop the worker threads. This can be called by the destructor of
+  /// the inherited class so it stops the worker threads before the object is
+  /// fully destroyed
+  virtual void stopDeviceWorkers();
 
 protected:
   /// @brief Send a command to the device without waiting for a response

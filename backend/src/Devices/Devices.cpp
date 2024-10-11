@@ -2,6 +2,7 @@
 
 #include "Data/TimeSeries.h"
 #include "Devices/Exceptions.h"
+#include "Devices/Generic/AsyncDataCollector.h"
 #include "Devices/Generic/DataCollector.h"
 #include "Utils/Logger.h"
 #include <thread>
@@ -95,7 +96,14 @@ void Devices::disconnect() {
 void Devices::startRecording() {
 
   for (auto &[deviceId, dataCollector] : m_DataCollectors) {
-    dataCollector->startRecording();
+    try {
+      // Try to start the recording asynchronously so it takes less time
+      auto &asyncDataCollector =
+          dynamic_cast<AsyncDataCollector &>(*dataCollector);
+      asyncDataCollector.startRecordingAsync();
+    } catch (const std::bad_cast &) {
+      dataCollector->startRecording();
+    }
   }
 
   // For all the devices to have responded (either is connected or failed to)

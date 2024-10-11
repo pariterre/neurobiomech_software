@@ -72,13 +72,8 @@ DelsysEmgDevice::DelsysEmgDevice(
 }
 
 DelsysEmgDevice::~DelsysEmgDevice() {
-  if (m_IsRecording) {
-    stopRecording();
-  }
-
-  if (m_IsConnected) {
-    disconnect();
-  }
+  stopDataCollectorWorkers();
+  stopDeviceWorkers();
 }
 
 std::string DelsysEmgDevice::deviceName() const { return "DelsysEmgDevice"; }
@@ -253,3 +248,21 @@ DelsysEmgDeviceMock::DelsysEmgDeviceMock(const std::string &host,
           std::make_unique<DelsysEmgDeviceMock::DataTcpDeviceMock>(host,
                                                                    dataPort),
           host, commandPort, dataPort) {}
+
+bool DelsysEmgDeviceMock::handleConnect() {
+  if (shouldFailToConnect) {
+    // Simulate a failure to connect after few time
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    return false;
+  }
+  return DelsysEmgDevice::handleConnect();
+}
+
+bool DelsysEmgDeviceMock::handleStartRecording() {
+  if (shouldFailToStartRecording) {
+    // Simulate a failure to connect after few time
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    return false;
+  }
+  return DelsysEmgDevice::handleStartRecording();
+}

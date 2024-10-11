@@ -22,14 +22,14 @@ protected:
 
   /// @brief Get the async context of the command loop
   /// @return The async context of the command loop
-  DECLARE_PROTECTED_MEMBER_NOGET(asio::io_context, AsyncDataContext)
+  DECLARE_PRIVATE_MEMBER_NOGET(asio::io_context, AsyncDataContext)
 
   /// @brief Get the mutex
   /// @return The mutex
   DECLARE_PROTECTED_MEMBER_NOGET(std::mutex, AsyncDataMutex)
 
   /// @brief Worker thread to keep the device alive
-  DECLARE_PROTECTED_MEMBER_NOGET(std::thread, AsyncDataWorker)
+  DECLARE_PRIVATE_MEMBER_NOGET(std::thread, AsyncDataWorker)
 
   /// @brief Get how long to wait before waking up the worker
   /// @return How long to wait before waking up the worker
@@ -52,6 +52,12 @@ public:
 
   /// @brief Stop collecting data in a synchronous way (blocking).
   void stopRecording() override;
+
+protected:
+  /// @brief Stop the worker threads. This can be called by the destructor of
+  /// the inherited class so it stops the worker threads before the object is
+  /// fully destroyed
+  void stopDataCollectorWorkers();
 
 protected:
   /// @brief Start the keep-alive mechanism

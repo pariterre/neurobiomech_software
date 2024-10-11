@@ -187,6 +187,13 @@ protected:
 public:
   DelsysEmgDeviceMock(const std::string &host = "localhost",
                       size_t commandPort = 50040, size_t dataPort = 50043);
+
+  bool shouldFailToConnect = false;
+  bool shouldFailToStartRecording = false;
+
+protected:
+  bool handleConnect() override;
+  bool handleStartRecording() override;
 };
 
 } // namespace STIMWALKER_NAMESPACE::devices
