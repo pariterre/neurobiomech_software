@@ -15,6 +15,18 @@ TEST(Delsys, Info) {
   ASSERT_STREQ(delsys.deviceName().c_str(), "DelsysEmgDevice");
 }
 
+TEST(Delsys, ConnectAsync) {
+  auto logger = TestLogger();
+  auto delsys = devices::DelsysEmgDeviceMock();
+
+  delsys.connectAsync();
+  ASSERT_FALSE(delsys.getIsConnected());
+
+  // Wait for the connection to be established
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  ASSERT_TRUE(delsys.getIsConnected());
+}
+
 TEST(Delsys, Connect) {
   auto logger = TestLogger();
   auto delsys = devices::DelsysEmgDeviceMock();
@@ -59,6 +71,19 @@ TEST(Delsys, AutoDisconnect) {
   ASSERT_TRUE(
       logger.contains("The device DelsysEmgDevice is now disconnected"));
   logger.clear();
+}
+
+TEST(Delsys, StartRecordingAsync) {
+  auto logger = TestLogger();
+  auto delsys = devices::DelsysEmgDeviceMock();
+
+  delsys.connect();
+  delsys.startRecordingAsync();
+  ASSERT_FALSE(delsys.getIsRecording());
+
+  // Wait for the recording to start
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  ASSERT_TRUE(delsys.getIsRecording());
 }
 
 TEST(Delsys, StartRecording) {
@@ -159,8 +184,8 @@ TEST(Delsys, Data) {
         std::sin(static_cast<float>(offset) / 2000.0f * 2 * M_PI));
     float nextValue = static_cast<float>(
         std::sin(static_cast<float>(offset + 1) / 2000.0f * 2 * M_PI));
-    if ((std::abs(data[0][0] - value) < requiredPrecision) &&
-        (std::abs(data[1][0] - nextValue) < requiredPrecision)) {
+    if ((std::abs(data[0].second[0] - value) < requiredPrecision) &&
+        (std::abs(data[1].second[0] - nextValue) < requiredPrecision)) {
       break;
     }
     if (offset > 2000) {
@@ -171,10 +196,10 @@ TEST(Delsys, Data) {
     offset++;
   }
   for (size_t i = 0; i < data.size(); i++) {
-    for (size_t j = 0; j < data[i].size(); j++) {
+    for (size_t j = 0; j < data[i].second.size(); j++) {
       float value =
           static_cast<float>(std::sin((i + offset) / 2000.0 * 2 * M_PI));
-      ASSERT_NEAR(data[i][j], value, requiredPrecision);
+      ASSERT_NEAR(data[i].second[j], value, requiredPrecision);
     }
   }
 }

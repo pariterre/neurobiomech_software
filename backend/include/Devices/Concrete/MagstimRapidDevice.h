@@ -101,8 +101,8 @@ public:
   std::string computeCrcInterface(const std::string &data);
 
 protected:
-  void handleAsyncConnect() override;
-  void handleAsyncDisconnect() override;
+  bool handleConnect() override;
+  bool handleDisconnect() override;
 
   void setFastCommunication(bool isFast) override;
 };

@@ -109,14 +109,20 @@ public:
 
 protected:
   /// @brief Handle the actual connexion to the device
-  virtual void handleConnect() = 0;
+  /// @return True if the connection was successful, false otherwise
+  virtual bool handleConnect() = 0;
 
   /// @brief Handle the actual disconnection from the device
-  virtual void handleDisconnect() = 0;
+  /// @return True if the disconnection was successful, false otherwise
+  virtual bool handleDisconnect() = 0;
 
   /// @brief Get if the device is connected
   /// @return True if the device is connected, false otherwise
   DECLARE_PROTECTED_MEMBER(bool, IsConnected)
+
+  /// @brief Has failed to connect. This is always false unless the
+  /// it actually failed to connect
+  DECLARE_PROTECTED_MEMBER(bool, HasFailedToConnect)
 
   /// Send methods
 public:

@@ -6,22 +6,27 @@ size_t TimeSeries::size() const { return static_cast<int>(m_Data.size()); }
 
 void TimeSeries::clear() { m_Data.clear(); }
 
-void TimeSeries::add(DataPoint &data) {
-  if (data.m_Timestamp.count() == -1) {
-    data.m_Timestamp = std::chrono::duration_cast<std::chrono::microseconds>(
-        std::chrono::system_clock::now() - m_StartingTime);
-  }
-  m_Data.push_back(data);
+void TimeSeries::add(const DataPoint &data) {
+  m_Data.push_back(
+      std::make_pair(std::chrono::duration_cast<std::chrono::microseconds>(
+                         std::chrono::system_clock::now() - m_StartingTime),
+                     data));
 }
 
-const DataPoint &TimeSeries::operator[](size_t index) const {
-  return m_Data[index];
+void TimeSeries::add(const std::chrono::microseconds &timeStamp,
+                     const DataPoint &data) {
+  m_Data.push_back(std::make_pair(timeStamp, data));
+}
+
+const std::pair<std::chrono::microseconds, DataPoint> &
+TimeSeries::operator[](size_t index) const {
+  return m_Data.at(index);
 }
 
 nlohmann::json TimeSeries::serialize() const {
   nlohmann::json json = nlohmann::json::array();
-  for (const auto &data : m_Data) {
-    json.push_back(data.serialize());
+  for (const auto &point : m_Data) {
+    json.push_back({point.first.count(), point.second.serialize()});
   }
   return json;
 }
@@ -29,7 +34,8 @@ nlohmann::json TimeSeries::serialize() const {
 TimeSeries TimeSeries::deserialize(const nlohmann::json &json) {
   TimeSeries data;
   for (const auto &point : json) {
-    data.add(DataPoint::deserialize(point));
+    data.add(std::chrono::microseconds(point[0].get<int>()),
+             DataPoint::deserialize(point[1]));
   }
   return data;
 }
@@ -37,4 +43,9 @@ TimeSeries TimeSeries::deserialize(const nlohmann::json &json) {
 void TimeSeries::reset() {
   m_Data.clear();
   m_StartingTime = std::chrono::system_clock::now();
+}
+
+const std::vector<std::pair<std::chrono::microseconds, DataPoint>> &
+TimeSeries::getData() const {
+  return m_Data;
 }

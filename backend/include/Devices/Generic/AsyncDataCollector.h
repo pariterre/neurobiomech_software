@@ -45,11 +45,12 @@ public:
   /// @brief Start collecting data in a asynchronous way (non-blocking). It is
   /// the responsability of the caller to wait for the recording to start before
   /// continuing
+  void startRecordingAsync();
+
+  /// @brief Start recording in a synchronous way (blocking)
   void startRecording() override;
 
-  /// @brief Stop collecting data in a asynchronous way (non-blocking). It is
-  /// the responsability of the caller to wait for the recording to stop before
-  /// continuing
+  /// @brief Stop collecting data in a synchronous way (blocking).
   void stopRecording() override;
 
 protected:

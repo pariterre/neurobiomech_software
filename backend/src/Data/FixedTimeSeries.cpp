@@ -10,7 +10,6 @@ FixedTimeSeries::FixedTimeSeries(
     const std::chrono::microseconds &deltaTime)
     : m_DeltaTime(deltaTime), TimeSeries(startingTime) {}
 
-void FixedTimeSeries::add(DataPoint &data) {
-  data.m_Timestamp = m_DeltaTime * m_Data.size();
-  m_Data.push_back(data);
+void FixedTimeSeries::add(const DataPoint &data) {
+  m_Data.push_back(std::make_pair(m_DeltaTime * m_Data.size(), data));
 }

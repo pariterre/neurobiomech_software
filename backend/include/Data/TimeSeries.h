@@ -30,14 +30,23 @@ public:
 
   /// @brief Add new data to the collection with the timestamp set to
   /// StartingTime + elapsed time since the first data point was added
-  /// @param data The data to add. WARNING : If the timestamp was not set, it
-  /// will be modified by this method and set to "now"
-  virtual void add(DataPoint &data);
+  /// @param data The data to add. This also add a time stamp to the data equals
+  /// to the elapsed since [m_StartingTime]
+  virtual void add(const DataPoint &data);
+
+  /// @brief Add new data to the collection with the timestamp set to
+  /// StartingTime + elapsed time since the first data point was added
+  /// @param timeStamp The time stamp to apply to the data
+  /// @param data The data to add. This also add a time stamp to the data equals
+  /// to the elapsed since [m_StartingTime]
+  virtual void add(const std::chrono::microseconds &timeStamp,
+                   const DataPoint &data);
 
   /// @brief Get the data at a specific index
   /// @param index The index of the data
   /// @return The data at the given index
-  const DataPoint &operator[](size_t index) const;
+  const std::pair<std::chrono::microseconds, DataPoint> &
+  operator[](size_t index) const;
 
   /// @brief Get the data in serialized form
   /// @return The data in serialized form
@@ -57,9 +66,13 @@ public:
   /// current time
   void reset();
 
-protected:
+public:
   /// @brief The data of the collection
-  DECLARE_PROTECTED_MEMBER(std::vector<DataPoint>, Data);
+  const std::vector<std::pair<std::chrono::microseconds, DataPoint>> &
+  getData() const;
+
+protected:
+  std::vector<std::pair<std::chrono::microseconds, DataPoint>> m_Data;
 };
 
 } // namespace STIMWALKER_NAMESPACE::data

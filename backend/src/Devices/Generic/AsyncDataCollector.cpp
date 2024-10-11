@@ -12,7 +12,7 @@ AsyncDataCollector::AsyncDataCollector(
     : m_KeepDataWorkerAliveInterval(dataCheckIntervals),
       DataCollector(channelCount, std::move(timeSeries)) {}
 
-void AsyncDataCollector::startRecording() {
+void AsyncDataCollector::startRecordingAsync() {
   if (m_IsRecording) {
     utils::Logger::getInstance().warning(
         "The data collector " + dataCollectorName() + " is already recording");
@@ -39,6 +39,17 @@ void AsyncDataCollector::startRecording() {
   });
 }
 
+void AsyncDataCollector::startRecording() {
+  startRecordingAsync();
+  while (!m_IsRecording && !m_HasFailedToStartRecording) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+
+  if (m_HasFailedToStartRecording) {
+    m_AsyncDataWorker.join();
+  }
+}
+
 void AsyncDataCollector::stopRecording() {
   auto &logger = utils::Logger::getInstance();
 
@@ -55,12 +66,17 @@ void AsyncDataCollector::stopRecording() {
   }
   std::this_thread::sleep_for(m_KeepDataWorkerAliveInterval);
 
+  // Give the hand to inherited classes to clean up some stuff
+  m_IsRecording = !handleStopRecording();
+  if (m_IsRecording) {
+    logger.fatal("The data collector " + dataCollectorName() +
+                 " failed to stop recording");
+    return;
+  }
+
   // Stop the worker thread
   m_AsyncDataContext.stop();
   m_AsyncDataWorker.join();
-
-  // Give the hand to inherited classes to clean up some stuff
-  handleStopRecording();
   logger.info("The data collector " + dataCollectorName() +
               " has stopped recording");
 }

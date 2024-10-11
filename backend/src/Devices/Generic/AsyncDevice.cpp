@@ -16,42 +16,67 @@ AsyncDevice::~AsyncDevice() {
     m_AsyncDeviceWorker.join();
   }
 }
-void AsyncDevice::handleConnect() {
-  bool isConnectionHandled = false;
-  bool hasFailed = false;
-  m_AsyncDeviceWorker = std::thread([this, &isConnectionHandled, &hasFailed]() {
-    try {
-      handleAsyncConnect();
-    } catch (std::exception &) {
-      hasFailed = true;
+
+void AsyncDevice::connectAsync() {
+  auto &logger = utils::Logger::getInstance();
+
+  if (m_IsConnected) {
+    logger.warning("Cannot connect to the device " + deviceName() +
+                   " because it is already connected");
+    return;
+  }
+
+  m_HasFailedToConnect = false;
+  m_AsyncDeviceWorker = std::thread([this]() {
+    auto &logger = utils::Logger::getInstance();
+    m_IsConnected = handleConnect();
+    m_HasFailedToConnect = !m_IsConnected;
+
+    if (m_HasFailedToConnect) {
+      logger.fatal("Could not connect to the device " + deviceName());
       return;
     }
+
     startKeepDeviceWorkerAlive();
-    isConnectionHandled = true;
+    logger.info("The device " + deviceName() + " is now connected");
     m_AsyncDeviceContext.run();
   });
+}
 
-  // Wait until the connection is established
-  while (!isConnectionHandled) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    if (hasFailed) {
-      m_AsyncDeviceWorker.join();
-      throw DeviceConnexionFailedException(
-          "Error while connecting to the device");
-    }
+void AsyncDevice::connect() {
+  connectAsync();
+  while (!m_IsConnected && !m_HasFailedToConnect) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+
+  if (m_HasFailedToConnect) {
+    m_AsyncDeviceWorker.join();
   }
 }
 
-void AsyncDevice::handleDisconnect() {
+void AsyncDevice::disconnect() {
+  auto &logger = utils::Logger::getInstance();
+
+  if (!m_IsConnected) {
+    logger.warning("Cannot disconnect from the device " + deviceName() +
+                   " because it is not connected");
+    return;
+  }
+
   // Just leave a bit of time if there are any pending commands to process
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
   // Give the hand to inherited classes to clean up some stuff
-  handleAsyncDisconnect();
+  m_IsConnected = !handleDisconnect();
+  if (m_IsConnected) {
+    logger.fatal("Could not disconnect from the device " + deviceName());
+    return;
+  }
 
   // Stop the worker thread
   m_AsyncDeviceContext.stop();
   m_AsyncDeviceWorker.join();
+  logger.info("The device " + deviceName() + " is now disconnected");
 }
 
 DeviceResponses AsyncDevice::sendFast(const DeviceCommands &command) {

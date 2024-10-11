@@ -9,6 +9,7 @@
 #include <fstream>
 #endif // _WIN32
 #include <regex>
+#include <thread>
 
 #include "Utils/Logger.h"
 
@@ -178,6 +179,14 @@ void MagstimRapidDeviceMock::setFastCommunication(bool isFast) {
   }
 }
 
-void MagstimRapidDeviceMock::handleAsyncConnect() {}
+bool MagstimRapidDeviceMock::handleConnect() {
+  // Simulate a successful connection after some time
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  return true;
+}
 
-void MagstimRapidDeviceMock::handleAsyncDisconnect() {}
+bool MagstimRapidDeviceMock::handleDisconnect() {
+  // Simulate a successful disconnection after some time
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  return true;
+}

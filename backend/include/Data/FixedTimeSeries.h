@@ -24,9 +24,9 @@ public:
 
   /// @brief Add new data to the collection with the timestamp set to
   /// StartingTime + delta time * number of data points
-  /// @param data The data to add. WARNING : The timestamp will always be
-  /// modified by this method to be the current delta time * number of data
-  void add(DataPoint &data);
+  /// @param data The data to add. This also add a time stamp to the data equals
+  /// to the number of data points times the delta time
+  void add(const DataPoint &data) override;
 
 protected:
   /// @brief The time frequency of the data

@@ -18,10 +18,14 @@ void Device::connect() {
     return;
   }
 
-  handleConnect();
+  m_IsConnected = handleConnect();
+  m_HasFailedToConnect = !m_IsConnected;
 
-  m_IsConnected = true;
-  logger.info("The device " + deviceName() + " is now connected");
+  if (m_IsConnected) {
+    logger.info("The device " + deviceName() + " is now connected");
+  } else {
+    logger.fatal("Could not connect to the device " + deviceName());
+  }
 }
 
 void Device::disconnect() {
@@ -33,10 +37,14 @@ void Device::disconnect() {
     return;
   }
 
-  handleDisconnect();
+  m_IsConnected = !handleDisconnect();
 
-  m_IsConnected = false;
-  logger.info("The device " + deviceName() + " is now disconnected");
+  if (m_IsConnected) {
+    logger.fatal("Could not disconnect from the device " + deviceName());
+
+  } else {
+    logger.info("The device " + deviceName() + " is now disconnected");
+  }
 }
 
 DeviceResponses Device::send(const DeviceCommands &command) {

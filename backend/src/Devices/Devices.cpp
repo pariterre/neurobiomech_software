@@ -4,6 +4,7 @@
 #include "Devices/Exceptions.h"
 #include "Devices/Generic/DataCollector.h"
 #include "Utils/Logger.h"
+#include <thread>
 
 using namespace STIMWALKER_NAMESPACE;
 using namespace STIMWALKER_NAMESPACE::devices;

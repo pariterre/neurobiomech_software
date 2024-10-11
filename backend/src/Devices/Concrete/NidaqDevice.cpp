@@ -26,12 +26,14 @@ std::string NidaqDevice::dataCollectorName() const {
   return "NidaqDataCollector";
 }
 
-void NidaqDevice::handleAsyncConnect() {
+bool NidaqDevice::handleConnect() {
   // TODO Implement the connection to the device
+  return false;
 }
 
-void NidaqDevice::handleAsyncDisconnect() {
+bool NidaqDevice::handleDisconnect() {
   // TODO Implement the disconnection from the device
+  return false;
 }
 
 bool NidaqDevice::handleStartRecording() {
@@ -39,8 +41,9 @@ bool NidaqDevice::handleStartRecording() {
   return false;
 }
 
-void NidaqDevice::handleStopRecording() {
+bool NidaqDevice::handleStopRecording() {
   // TODO Implement the stop recording
+  return false;
 }
 
 void NidaqDevice::handleNewData(const data::DataPoint &data) {

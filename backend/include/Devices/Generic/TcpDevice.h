@@ -53,8 +53,8 @@ protected:
   DECLARE_PROTECTED_MEMBER_NOGET(asio::ip::tcp::socket, TcpSocket)
 
 protected:
-  void handleAsyncConnect() override;
-  void handleAsyncDisconnect() override;
+  bool handleConnect() override;
+  bool handleDisconnect() override;
 };
 
 } // namespace STIMWALKER_NAMESPACE::devices

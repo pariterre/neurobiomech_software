@@ -87,25 +87,28 @@ std::string DelsysEmgDevice::dataCollectorName() const {
   return "DelsysEmgDataCollector";
 }
 
-void DelsysEmgDevice::handleAsyncConnect() {
+bool DelsysEmgDevice::handleConnect() {
   try {
     m_CommandDevice->connect();
     m_CommandDevice->read(128); // Consume the welcome message
     m_DataDevice->connect();
-  } catch (DeviceConnexionFailedException &e) {
+    return true;
+  } catch (DeviceConnexionFailedException &) {
     utils::Logger::getInstance().fatal(
         "The command device is not connected, did you start Trigno?");
-    throw e;
+    return false;
   }
 }
 
-void DelsysEmgDevice::handleAsyncDisconnect() {
+bool DelsysEmgDevice::handleDisconnect() {
   if (m_IsRecording) {
     stopRecording();
   }
 
   m_CommandDevice->disconnect();
   m_DataDevice->disconnect();
+
+  return true;
 }
 
 bool DelsysEmgDevice::handleStartRecording() {
@@ -118,10 +121,11 @@ bool DelsysEmgDevice::handleStartRecording() {
   return true;
 }
 
-void DelsysEmgDevice::handleStopRecording() {
+bool DelsysEmgDevice::handleStopRecording() {
   if (m_CommandDevice->send(DelsysCommands::STOP) != DeviceResponses::OK) {
-    throw DeviceFailedToStopRecordingException("Command failed: STOP");
+    return false;
   }
+  return true;
 }
 
 DeviceResponses
@@ -197,7 +201,7 @@ void DelsysEmgDeviceMock::CommandTcpDeviceMock::read(
   }
 }
 
-void DelsysEmgDeviceMock::CommandTcpDeviceMock::handleAsyncConnect() {}
+bool DelsysEmgDeviceMock::CommandTcpDeviceMock::handleConnect() { return true; }
 
 DelsysEmgDeviceMock::DataTcpDeviceMock::DataTcpDeviceMock(
     const std::string &host, size_t port)
@@ -231,8 +235,9 @@ void DelsysEmgDeviceMock::DataTcpDeviceMock::read(std::vector<char> &buffer) {
   counter++;
 }
 
-void DelsysEmgDeviceMock::DataTcpDeviceMock::handleAsyncConnect() {
+bool DelsysEmgDeviceMock::DataTcpDeviceMock::handleConnect() {
   m_StartTime = std::chrono::system_clock::now();
+  return true;
 }
 
 DeviceResponses DelsysEmgDeviceMock::DataTcpDeviceMock::parseAsyncSendCommand(

@@ -42,11 +42,15 @@ void DataCollector::stopRecording() {
     return;
   }
 
-  handleStopRecording();
+  m_IsRecording = !handleStopRecording();
 
-  m_IsRecording = false;
-  logger.info("The data collector " + dataCollectorName() +
-              " has stopped recording");
+  if (m_IsRecording) {
+    logger.fatal("The data collector " + dataCollectorName() +
+                 " failed to stop recording");
+  } else {
+    logger.info("The data collector " + dataCollectorName() +
+                " has stopped recording");
+  }
 }
 
 const TimeSeries &DataCollector::getTrialData() const { return *m_TimeSeries; }

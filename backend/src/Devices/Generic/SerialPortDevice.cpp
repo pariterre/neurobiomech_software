@@ -12,9 +12,10 @@
 
 using namespace STIMWALKER_NAMESPACE::devices;
 
-SerialPortDevice::SerialPortDevice(const std::string &port, const std::chrono::microseconds &keepAliveInterval)
-      : m_Port(port), m_SerialPortContext(std::make_unique<asio::io_context>()),
-        AsyncDevice(keepAliveInterval) {}
+SerialPortDevice::SerialPortDevice(
+    const std::string &port, const std::chrono::microseconds &keepAliveInterval)
+    : m_Port(port), m_SerialPortContext(std::make_unique<asio::io_context>()),
+      AsyncDevice(keepAliveInterval) {}
 
 void SerialPortDevice::disconnect() {
   if (m_SerialPort != nullptr && m_SerialPort->is_open()) {
@@ -24,7 +25,7 @@ void SerialPortDevice::disconnect() {
   AsyncDevice::disconnect();
 }
 
-void SerialPortDevice::handleAsyncConnect() {
+bool SerialPortDevice::handleConnect() {
   m_SerialPort =
       std::make_unique<asio::serial_port>(*m_SerialPortContext, m_Port);
   m_SerialPort->set_option(asio::serial_port_base::baud_rate(9600));
@@ -35,12 +36,16 @@ void SerialPortDevice::handleAsyncConnect() {
       asio::serial_port_base::parity(asio::serial_port_base::parity::none));
   m_SerialPort->set_option(asio::serial_port_base::flow_control(
       asio::serial_port_base::flow_control::none));
+
+  return true;
 }
 
-void SerialPortDevice::handleAsyncDisconnect() {
+bool SerialPortDevice::handleDisconnect() {
   if (m_SerialPort != nullptr && m_SerialPort->is_open()) {
     m_SerialPort->close();
   }
+
+  return true;
 }
 
 void SerialPortDevice::setFastCommunication(bool isFast) {

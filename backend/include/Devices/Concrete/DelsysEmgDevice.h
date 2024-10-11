@@ -90,10 +90,10 @@ public:
   std::string dataCollectorName() const override;
 
 protected:
-  void handleAsyncConnect() override;
-  void handleAsyncDisconnect() override;
+  bool handleConnect() override;
+  bool handleDisconnect() override;
   bool handleStartRecording() override;
-  void handleStopRecording() override;
+  bool handleStopRecording() override;
 
   /// @brief The command device
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<CommandTcpDevice>,
@@ -165,7 +165,7 @@ protected:
   protected:
     DECLARE_PROTECTED_MEMBER_NOGET(DelsysCommandsMock, LastCommand)
 
-    void handleAsyncConnect() override;
+    bool handleConnect() override;
   };
 
   class DataTcpDeviceMock : public DataTcpDevice {
@@ -177,7 +177,7 @@ protected:
     DeviceResponses parseAsyncSendCommand(const DeviceCommands &command,
                                           const std::any &data) override;
 
-    void handleAsyncConnect() override;
+    bool handleConnect() override;
 
     /// @brief The time at which the data started collecting
     DECLARE_PROTECTED_MEMBER_NOGET(

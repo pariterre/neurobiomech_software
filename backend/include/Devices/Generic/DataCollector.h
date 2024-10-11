@@ -45,7 +45,7 @@ protected:
   /// @brief Method to handle the stop recording command. This is called on the
   /// thread recording the data before stopping the recording. If something goes
   /// wrong, an exception should be thrown
-  virtual void handleStopRecording() = 0;
+  virtual bool handleStopRecording() = 0;
 
   /// @brief Get the number of channels
   /// @return The number of channels

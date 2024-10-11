@@ -44,15 +44,19 @@ void TcpDevice::write(const std::string &data) {
   }
 }
 
-void TcpDevice::handleAsyncConnect() {
+bool TcpDevice::handleConnect() {
   m_TcpSocket.connect(
       asio::ip::tcp::endpoint(asio::ip::address::from_string(
                                   m_Host == "localhost" ? "127.0.0.1" : m_Host),
                               static_cast<unsigned short>(m_Port)));
+
+  return true;
 }
 
-void TcpDevice::handleAsyncDisconnect() {
+bool TcpDevice::handleDisconnect() {
   if (m_TcpSocket.is_open()) {
     m_TcpSocket.close();
   }
+
+  return true;
 }

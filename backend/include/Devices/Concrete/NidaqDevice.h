@@ -35,10 +35,10 @@ public:
   ~NidaqDevice();
 
 protected:
-  void handleAsyncConnect() override;
-  void handleAsyncDisconnect() override;
+  bool handleConnect() override;
+  bool handleDisconnect() override;
   bool handleStartRecording() override;
-  void handleStopRecording() override;
+  bool handleStopRecording() override;
   void handleNewData(const data::DataPoint &data) override;
 
   DeviceResponses parseAsyncSendCommand(const DeviceCommands &command,

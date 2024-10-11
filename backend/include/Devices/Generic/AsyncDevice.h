@@ -47,16 +47,19 @@ protected:
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::steady_timer>,
                                  KeepDeviceWorkerAliveTimer)
 
+public:
+  /// @brief Start the connection in a asynchronous way (non-blocking). It is
+  /// the responsability of the caller to wait for the connection to start
+  /// before continuing
+  void connectAsync();
+
+  /// @brief  Start the connection in a synchronous way (blocking)
+  void connect() override;
+
+  /// @brief Start the disconnection in a synchronous way (blocking).
+  void disconnect() override;
+
 protected:
-  void handleConnect() override;
-  void handleDisconnect() override;
-
-  /// @brief Handle the actual connection to the device
-  virtual void handleAsyncConnect() = 0;
-
-  /// @brief Handle the actual disconnection from the device
-  virtual void handleAsyncDisconnect() = 0;
-
   /// @brief Send a command to the device without waiting for a response
   /// @param command The command to send to the device
   /// @param data The optional data to send to the device
