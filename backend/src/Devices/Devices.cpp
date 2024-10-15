@@ -134,22 +134,29 @@ bool Devices::connect() {
 
 bool Devices::disconnect() {
   bool allDisconnected = true;
+
+  if (m_IsRecording) {
+    stopRecording();
+  }
   for (auto &[deviceId, device] : m_Devices) {
     allDisconnected = allDisconnected && device->disconnect();
   }
 
-  utils::Logger::getInstance().info("All devices are now disconnected");
   m_IsConnected = !allDisconnected;
+  if (m_IsConnected) {
+    utils::Logger::getInstance().fatal(
+        "One or more devices failed to disconnect");
+  } else {
+    utils::Logger::getInstance().info("All devices are now disconnected");
+  }
   return allDisconnected;
 }
 
 bool Devices::startRecording() {
-  m_IsRecording = false;
+  m_IsRecording = true;
+  pauseRecording();
 
   for (auto &[deviceId, dataCollector] : m_DataCollectors) {
-    // Prevent the device to start recording when it is started
-    dataCollector->pauseRecording();
-
     try {
       // Try to start the recording asynchronously so it takes less time
       auto &asyncDataCollector =
@@ -161,21 +168,22 @@ bool Devices::startRecording() {
   }
 
   // Wait for all the devices to start recording (or fail to start recording)
-  size_t hasConnected = 0;
-  size_t hasFailedToConnect = 0;
+  size_t hasStartedRecording = 0;
+  size_t hasFailedToStartRecording = 0;
   while (true) {
-    hasConnected = 0;
-    hasFailedToConnect = 0;
+    hasStartedRecording = 0;
+    hasFailedToStartRecording = 0;
 
     for (auto &[deviceId, dataCollector] : m_DataCollectors) {
       if (dataCollector->getIsRecording()) {
-        hasConnected++;
+        hasStartedRecording++;
       }
       if (dataCollector->getHasFailedToStartRecording()) {
-        hasFailedToConnect++;
+        hasFailedToStartRecording++;
       }
     }
-    if (hasConnected + hasFailedToConnect == m_DataCollectors.size()) {
+    if (hasStartedRecording + hasFailedToStartRecording ==
+        m_DataCollectors.size()) {
       break;
     }
 
@@ -184,8 +192,9 @@ bool Devices::startRecording() {
   }
 
   // If any of the devices failed to start recording, stop all the devices
-  if (hasFailedToConnect > 0) {
+  if (hasFailedToStartRecording > 0) {
     stopRecording();
+    m_IsRecording = false;
     utils::Logger::getInstance().fatal(
         "One or more devices failed to start recording, stopping all devices");
     return false;
@@ -204,11 +213,11 @@ bool Devices::startRecording() {
 
   utils::Logger::getInstance().info("All devices are now recording");
   m_IsRecording = true;
+  resumeRecording();
   return true;
 }
 
 bool Devices::stopRecording() {
-
   // Put all the devices in pause mode as it is faster than stopping them
   for (auto &[deviceId, dataCollector] : m_DataCollectors) {
     dataCollector->pauseRecording();
@@ -222,6 +231,24 @@ bool Devices::stopRecording() {
   utils::Logger::getInstance().info("All devices have stopped recording");
   m_IsRecording = !allStopped;
   return allStopped;
+}
+
+void Devices::pauseRecording() {
+  for (auto &[deviceId, dataCollector] : m_DataCollectors) {
+    dataCollector->pauseRecording();
+  }
+
+  m_IsPaused = true;
+  utils::Logger::getInstance().info("All devices have paused recording");
+}
+
+void Devices::resumeRecording() {
+  for (auto &[deviceId, dataCollector] : m_DataCollectors) {
+    dataCollector->resumeRecording();
+  }
+
+  m_IsPaused = false;
+  utils::Logger::getInstance().info("All devices have resumed recording");
 }
 
 nlohmann::json Devices::serialize() const {

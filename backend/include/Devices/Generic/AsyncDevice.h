@@ -14,6 +14,7 @@ public:
   /// @param keepAliveInterval The interval to keep the device alive
   AsyncDevice(const std::chrono::microseconds &keepAliveInterval);
   AsyncDevice(const AsyncDevice &other) = delete;
+  ~AsyncDevice() override;
 
   /// @brief Send a command to the device without waiting for a response
   /// @param command The command to send to the device

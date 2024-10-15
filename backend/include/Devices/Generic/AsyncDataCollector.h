@@ -16,6 +16,7 @@ public:
   AsyncDataCollector(size_t channelCount,
                      const std::chrono::microseconds &dataCheckIntervals,
                      std::unique_ptr<data::TimeSeries> timeSeries);
+  ~AsyncDataCollector() override;
 
 protected:
   /// Protected members without Get accessors

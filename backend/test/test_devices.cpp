@@ -208,144 +208,211 @@ TEST(Devices, ConnectFailed) {
       "One or more devices failed to connect, disconnecting all devices"));
 }
 
-// TEST(Delsys, StartRecording) {
-//   auto logger = TestLogger();
-//   auto delsys = devices::DelsysEmgDeviceMock();
+TEST(Devices, StartRecording) {
+  auto logger = TestLogger();
+  auto devices = devices::Devices();
 
-//   // The system cannot start recording if it is not connected
-//   bool isRecording = delsys.startRecording();
-//   ASSERT_FALSE(isRecording);
-//   ASSERT_FALSE(delsys.getIsRecording());
-//   ASSERT_TRUE(
-//       logger.contains("Cannot send a command to the device "
-//                       "DelsysCommandTcpDevice because it is not connected"));
-//   ASSERT_TRUE(logger.contains(
-//       "The data collector DelsysEmgDataCollector failed to start
-//       recording"));
-//   logger.clear();
+  // Add a bunch of devices
+  std::vector<int> deviceIds;
+  deviceIds.push_back(
+      devices.add(std::make_unique<devices::DelsysEmgDeviceMock>()));
+  deviceIds.push_back(
+      devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice()));
+  deviceIds.push_back(
+      devices.add(std::make_unique<devices::DelsysEmgDeviceMock>()));
+  deviceIds.push_back(
+      devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice()));
 
-//   // Connect the system and start recording
-//   delsys.connect();
-//   isRecording = delsys.startRecording();
-//   ASSERT_TRUE(isRecording);
-//   ASSERT_TRUE(delsys.getIsRecording());
-//   ASSERT_TRUE(logger.contains(
-//       "The data collector DelsysEmgDataCollector is now recording"));
-//   logger.clear();
+  // The system cannot start recording if it is not connected
+  bool isRecording = devices.startRecording();
+  ASSERT_FALSE(isRecording);
+  ASSERT_FALSE(devices.getIsRecording());
+  ASSERT_EQ(logger.count("Cannot send a command to the device "
+                         "DelsysCommandTcpDevice because it is not connected"),
+            4); // Twice for starting and twice for stopping due to failed start
+  ASSERT_EQ(logger.count("The data collector DelsysEmgDataCollector failed to "
+                         "start recording"),
+            2);
+  ASSERT_EQ(
+      logger.count(
+          "The data collector DelsysEmgDataCollector has stopped recording"),
+      2);
+  ASSERT_TRUE(logger.contains("All devices have stopped recording"));
+  ASSERT_TRUE(logger.contains(
+      "One or more devices failed to start recording, stopping all devices"));
+  logger.clear();
 
-//   // The system cannot start recording if it is already recording
-//   isRecording = delsys.startRecording();
-//   ASSERT_TRUE(isRecording);
-//   ASSERT_TRUE(delsys.getIsRecording());
-//   ASSERT_TRUE(logger.contains(
-//       "The data collector DelsysEmgDataCollector is already recording"));
-//   logger.clear();
+  // Connect the system and start recording
+  devices.connect();
+  isRecording = devices.startRecording();
+  ASSERT_TRUE(isRecording);
+  ASSERT_TRUE(devices.getIsRecording());
+  ASSERT_EQ(logger.count(
+                "The data collector DelsysEmgDataCollector is now recording"),
+            2);
+  ASSERT_TRUE(logger.contains("All devices are now recording"));
+  logger.clear();
 
-//   // Stop recording
-//   bool isNotRecording = delsys.stopRecording();
-//   ASSERT_TRUE(isNotRecording);
-//   ASSERT_FALSE(delsys.getIsRecording());
-//   ASSERT_TRUE(logger.contains(
-//       "The data collector DelsysEmgDataCollector has stopped recording"));
-//   logger.clear();
+  // The system cannot start recording if it is already recording
+  isRecording = devices.startRecording();
+  ASSERT_TRUE(isRecording);
+  ASSERT_TRUE(devices.getIsRecording());
+  ASSERT_EQ(
+      logger.count(
+          "The data collector DelsysEmgDataCollector is already recording"),
+      2);
+  ASSERT_TRUE(logger.contains("All devices are now recording"));
+  logger.clear();
 
-//   // The system cannot stop recording if it is not recording
-//   isNotRecording = delsys.stopRecording();
-//   ASSERT_TRUE(isNotRecording);
-//   ASSERT_FALSE(delsys.getIsRecording());
-//   ASSERT_TRUE(logger.contains(
-//       "The data collector DelsysEmgDataCollector is not recording"));
-//   logger.clear();
+  // Stop recording
+  bool isNotRecording = devices.stopRecording();
+  ASSERT_TRUE(isNotRecording);
+  ASSERT_FALSE(devices.getIsRecording());
+  ASSERT_EQ(
+      logger.count(
+          "The data collector DelsysEmgDataCollector has stopped recording"),
+      2);
+  ASSERT_TRUE(logger.contains("All devices have stopped recording"));
+  logger.clear();
 
-//   // Disconnect the system
-//   delsys.disconnect();
-// }
+  // The system cannot stop recording if it is not recording
+  isNotRecording = devices.stopRecording();
+  ASSERT_TRUE(isNotRecording);
+  ASSERT_FALSE(devices.getIsRecording());
+  ASSERT_EQ(logger.count(
+                "The data collector DelsysEmgDataCollector is not recording"),
+            2);
+  ASSERT_TRUE(logger.contains("All devices have stopped recording"));
+  logger.clear();
 
-// TEST(Delsys, AutoStopRecording) {
-//   // The system auto stop recording when the object is destroyed
-//   auto logger = TestLogger();
-//   {
-//     auto delsys = devices::DelsysEmgDeviceMock();
-//     delsys.connect();
-//     delsys.startRecording();
-//   }
-//   ASSERT_TRUE(logger.contains(
-//       "The data collector DelsysEmgDataCollector has stopped recording"));
-//   logger.clear();
+  // Disconnect the system
+  devices.disconnect();
+}
 
-//   // The system auto stop if disconnect is called
-//   {
-//     auto delsys = devices::DelsysEmgDeviceMock();
-//     delsys.connect();
-//     delsys.startRecording();
-//     delsys.disconnect();
+TEST(Devices, AutoStopRecording) {
+  // The system auto stop recording when the object is destroyed
+  auto logger = TestLogger();
+  {
+    auto devices = devices::Devices();
 
-//     ASSERT_FALSE(delsys.getIsRecording());
-//     ASSERT_TRUE(logger.contains(
-//         "The data collector DelsysEmgDataCollector has stopped recording"));
-//   }
-// }
+    // Add a bunch of devices
+    devices.add(std::make_unique<devices::DelsysEmgDeviceMock>());
+    devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice());
+    devices.add(std::make_unique<devices::DelsysEmgDeviceMock>());
+    devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice());
 
-// TEST(Delsys, StartRecordingFailed) {
-//   auto logger = TestLogger();
-//   auto delsys = devices::DelsysEmgDeviceMock();
-//   delsys.shouldFailToStartRecording = true;
+    // Connect the system and start recording
+    devices.connect();
+    devices.startRecording();
+  }
+  ASSERT_EQ(logger.count("All devices have stopped recording"), 1);
+  logger.clear();
 
-//   delsys.connect();
-//   bool isRecording = delsys.startRecording();
-//   ASSERT_FALSE(isRecording);
-//   ASSERT_FALSE(delsys.getIsRecording());
-//   ASSERT_TRUE(logger.contains(
-//       "The data collector DelsysEmgDataCollector failed to start
-//       recording"));
-// }
+  // The system auto stop if disconnect is called
+  {
+    auto devices = devices::Devices();
 
-// TEST(Delsys, Data) {
-//   auto delsys = devices::DelsysEmgDeviceMock();
-//   delsys.connect();
+    // Add a bunch of devices
+    devices.add(std::make_unique<devices::DelsysEmgDeviceMock>());
+    devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice());
+    devices.add(std::make_unique<devices::DelsysEmgDeviceMock>());
+    devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice());
 
-//   // Wait for the data to be collected
-//   bool isRecording = delsys.startRecording();
-//   ASSERT_TRUE(isRecording);
-//   std::this_thread::sleep_for(std::chrono::milliseconds(100));
-//   delsys.stopRecording();
+    // Connect the system and start recording
+    devices.connect();
+    devices.startRecording();
+    devices.disconnect();
 
-//   // Get the data
-//   const auto &data = delsys.getTrialData();
-//   // Technically it should have recorded be exactly 200 (2000Hz). But the
-//   // material is not that precise. So we just check that it is at least 150
-//   ASSERT_GE(data.size(), 150);
+    ASSERT_FALSE(devices.getIsRecording());
+    ASSERT_EQ(logger.count("All devices are now disconnected"), 1);
+  }
+}
 
-//   // Check the data. The fake data are based on a sine wave but offset by the
-//   // number of data previously taken in any of the test. We therefore search
-//   for
-//   // this offset first, then it should be a sine wave. The offset is found
-//   when
-//   // a value is exact and the next one is also exact (determining the
-//   direction
-//   // of the sine wave).
-//   size_t offset = 0;
-//   while (true) {
-//     float value = static_cast<float>(
-//         std::sin(static_cast<float>(offset) / 2000.0f * 2 * M_PI));
-//     float nextValue = static_cast<float>(
-//         std::sin(static_cast<float>(offset + 1) / 2000.0f * 2 * M_PI));
-//     if ((std::abs(data[0].second[0] - value) < requiredPrecision) &&
-//         (std::abs(data[1].second[0] - nextValue) < requiredPrecision)) {
-//       break;
-//     }
-//     if (offset > 2000) {
-//       // But we know for sure it will never be that far in (as the wave has
-//       // looped)
-//       FAIL() << "Could not find the offset in the data";
-//     }
-//     offset++;
-//   }
-//   for (size_t i = 0; i < data.size(); i++) {
-//     for (size_t j = 0; j < data[i].second.size(); j++) {
-//       float value =
-//           static_cast<float>(std::sin((i + offset) / 2000.0 * 2 * M_PI));
-//       ASSERT_NEAR(data[i].second[j], value, requiredPrecision);
-//     }
-//   }
-// }
+TEST(Devices, StartRecordingFailed) {
+  auto logger = TestLogger();
+  auto devices = devices::Devices();
+
+  // Add a bunch of devices
+  std::vector<int> deviceIds;
+  deviceIds.push_back(
+      devices.add(std::make_unique<devices::DelsysEmgDeviceMock>()));
+  deviceIds.push_back(
+      devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice()));
+  deviceIds.push_back(
+      devices.add(std::make_unique<devices::DelsysEmgDeviceMock>()));
+  deviceIds.push_back(
+      devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice()));
+
+  // Make the second Delsys fail to connect
+  auto &delsys = const_cast<devices::Device &>(devices[deviceIds[2]]);
+  dynamic_cast<devices::DelsysEmgDeviceMock &>(delsys)
+      .shouldFailToStartRecording = true;
+
+  devices.connect();
+  bool isRecording = devices.startRecording();
+  ASSERT_FALSE(devices.getIsRecording());
+  // Even though it is sync, the messages to the logger are sometimes late
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  ASSERT_EQ(logger.count(
+                "The data collector DelsysEmgDataCollector is now recording"),
+            1);
+  ASSERT_EQ(logger.count("The data collector DelsysEmgDataCollector failed to "
+                         "start recording"),
+            1);
+  ASSERT_EQ(
+      logger.count(
+          "The data collector DelsysEmgDataCollector has stopped recording"),
+      2);
+  ASSERT_TRUE(logger.contains(
+      "One or more devices failed to start recording, stopping all devices"));
+  ASSERT_TRUE(logger.contains("All devices have stopped recording"));
+}
+
+TEST(Devices, Data) {
+  auto logger = TestLogger();
+  auto devices = devices::Devices();
+
+  // Add a bunch of devices
+  std::vector<int> deviceIds;
+  deviceIds.push_back(
+      devices.add(std::make_unique<devices::DelsysEmgDeviceMock>()));
+  deviceIds.push_back(
+      devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice()));
+  deviceIds.push_back(
+      devices.add(std::make_unique<devices::DelsysEmgDeviceMock>()));
+  deviceIds.push_back(
+      devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice()));
+
+  // Connect the system and start recording
+  devices.connect();
+  devices.startRecording();
+  auto now = std::chrono::high_resolution_clock::now();
+
+  // All the time series should have the same starting time
+  for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
+    auto timeSeries = dataCollector->getTrialData();
+    ASSERT_LE(timeSeries.getStartingTime(), now);
+  }
+  logger.clear();
+
+  // Pause the recording should pause the time series
+  devices.pauseRecording();
+  ASSERT_TRUE(devices.getIsPaused());
+  ASSERT_TRUE(logger.contains("All devices have paused recording"));
+
+  std::map<int, size_t> sizes;
+  for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
+    sizes[deviceId] = dataCollector->getTrialData().size();
+  }
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
+    ASSERT_EQ(dataCollector->getTrialData().size(), sizes[deviceId]);
+  }
+
+  // Resume the recording should resume the time series
+  devices.resumeRecording();
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
+    ASSERT_GT(dataCollector->getTrialData().size(), sizes[deviceId]);
+  }
+}

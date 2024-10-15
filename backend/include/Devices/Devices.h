@@ -20,6 +20,8 @@ class Devices {
 
   /// DEVICE MANAGEMENT METHODS ///
 public:
+  /// @brief Constructor
+  Devices() = default;
   ~Devices();
 
   /// @brief Create a new device in the collection
@@ -75,6 +77,14 @@ public:
   /// the devices to stop recording before returning)
   bool stopRecording();
 
+  /// @brief Pause recording on all the devices in a blocking way (wait for all
+  /// the devices to pause recording before returning)
+  void pauseRecording();
+
+  /// @brief Resume recording on all the devices in a blocking way (wait for all
+  /// the devices to resume recording before returning)
+  void resumeRecording();
+
   /// DATA SPECIFIC METHODS ///
 public:
   /// @brief Get the data in serialized form
@@ -88,6 +98,9 @@ protected:
 
   /// @brief If the devices are recording
   DECLARE_PROTECTED_MEMBER(bool, IsRecording)
+
+  /// @brief If the devices are recording
+  DECLARE_PROTECTED_MEMBER(bool, IsPaused)
 
 protected:
   /// @brief The collection of devices

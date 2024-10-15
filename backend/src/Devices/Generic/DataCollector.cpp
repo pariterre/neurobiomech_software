@@ -8,7 +8,7 @@ using namespace STIMWALKER_NAMESPACE::devices;
 
 DataCollector::DataCollector(size_t channelCount,
                              std::unique_ptr<data::TimeSeries> timeSeries)
-    : m_DataChannelCount(channelCount), m_IsRecording(false),
+    : m_DataChannelCount(channelCount), m_IsRecording(false), m_IsPaused(false),
       m_TimeSeries(std::move(timeSeries)) {}
 
 bool DataCollector::startRecording() {

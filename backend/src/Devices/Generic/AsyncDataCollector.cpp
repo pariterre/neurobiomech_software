@@ -12,6 +12,8 @@ AsyncDataCollector::AsyncDataCollector(
     : m_KeepDataWorkerAliveInterval(dataCheckIntervals),
       DataCollector(channelCount, std::move(timeSeries)) {}
 
+AsyncDataCollector::~AsyncDataCollector() { stopDataCollectorWorkers(); }
+
 void AsyncDataCollector::startRecordingAsync() {
   if (m_IsRecording) {
     utils::Logger::getInstance().warning(
@@ -55,7 +57,7 @@ bool AsyncDataCollector::startRecording() {
 bool AsyncDataCollector::stopRecording() {
   auto &logger = utils::Logger::getInstance();
 
-  if (!m_IsRecording) {
+  if (!m_IsRecording && !m_HasFailedToStartRecording) {
     logger.warning("The data collector " + dataCollectorName() +
                    " is not recording");
     return true;
@@ -65,15 +67,15 @@ bool AsyncDataCollector::stopRecording() {
   {
     std::lock_guard<std::mutex> lock(m_AsyncDataMutex);
     m_IsRecording = false;
+    m_HasFailedToStartRecording = false;
   }
   std::this_thread::sleep_for(m_KeepDataWorkerAliveInterval);
 
   // Give the hand to inherited classes to clean up some stuff
-  m_IsRecording = !handleStopRecording();
-  if (m_IsRecording) {
+  bool success = handleStopRecording();
+  if (!success) {
     logger.fatal("The data collector " + dataCollectorName() +
                  " failed to stop recording");
-    return false;
   }
 
   stopDataCollectorWorkers();
