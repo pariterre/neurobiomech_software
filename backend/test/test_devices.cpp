@@ -368,6 +368,34 @@ TEST(Devices, StartRecordingFailed) {
   ASSERT_TRUE(logger.contains("All devices have stopped recording"));
 }
 
+TEST(Devices, Clear) {
+  auto logger = TestLogger();
+  auto devices = devices::Devices();
+
+  // Add a bunch of devices
+  std::vector<int> deviceIds;
+  deviceIds.push_back(
+      devices.add(std::make_unique<devices::DelsysEmgDeviceMock>()));
+  deviceIds.push_back(
+      devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice()));
+  deviceIds.push_back(
+      devices.add(std::make_unique<devices::DelsysEmgDeviceMock>()));
+  deviceIds.push_back(
+      devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice()));
+
+  // Connect the system and start recording
+  devices.connect();
+  devices.startRecording();
+
+  // Clear the devices
+  devices.clear();
+  ASSERT_EQ(devices.size(), 0);
+  ASSERT_FALSE(devices.getIsConnected());
+  ASSERT_FALSE(devices.getIsRecording());
+  ASSERT_TRUE(logger.contains("All devices have stopped recording"));
+  ASSERT_TRUE(logger.contains("All devices are now disconnected"));
+}
+
 TEST(Devices, Data) {
   auto logger = TestLogger();
   auto devices = devices::Devices();

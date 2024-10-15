@@ -48,6 +48,14 @@ public:
   const std::pair<std::chrono::microseconds, DataPoint> &
   operator[](size_t index) const;
 
+  /// @brief Get the last n data
+  /// @param n The number of data to get from the end
+  TimeSeries tail(size_t n) const;
+
+  /// @brief Get the data since a specific time
+  /// @param time The time to get the data since
+  TimeSeries since(const std::chrono::system_clock::time_point &time) const;
+
   /// @brief Get the data in serialized form
   /// @return The data in serialized form
   nlohmann::json serialize() const;

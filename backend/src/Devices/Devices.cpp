@@ -46,6 +46,14 @@ void Devices::remove(int deviceId) {
 size_t Devices::size() const { return m_Devices.size(); }
 
 void Devices::clear() {
+  if (m_IsRecording) {
+    stopRecording();
+  }
+
+  if (m_IsConnected) {
+    disconnect();
+  }
+
   m_Devices.clear();
   m_DataCollectors.clear();
 }

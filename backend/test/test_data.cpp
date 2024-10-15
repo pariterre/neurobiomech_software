@@ -144,6 +144,30 @@ TEST(TimeSeries, AccessData) {
   // Same for getData
   { const_cast<double &>(data[0].second.getData()[1]) = 200.0; }
   ASSERT_NEAR(data[0].second[1], 200.0, requiredPrecision);
+
+  // Getting the last n data should return the last n data
+  auto tail = data.tail(3);
+  ASSERT_EQ(tail.getStartingTime(), data.getStartingTime());
+  ASSERT_EQ(tail.size(), 3);
+  ASSERT_EQ(tail[0].first, std::chrono::milliseconds(300));
+  ASSERT_EQ(tail[0].second.size(), 3);
+  ASSERT_NEAR(tail[0].second[0], 7.0, requiredPrecision);
+  ASSERT_NEAR(tail[0].second[1], 8.0, requiredPrecision);
+  ASSERT_NEAR(tail[0].second[2], 9.0, requiredPrecision);
+  ASSERT_EQ(tail[1].first, std::chrono::milliseconds(400));
+
+  // Getting the data since a specific time should return the data since that
+  // time
+  auto since =
+      data.since(data.getStartingTime() + std::chrono::milliseconds(300));
+  ASSERT_EQ(since.getStartingTime(), data.getStartingTime());
+  ASSERT_EQ(since.size(), 2); // data[4] is actually before 300
+  ASSERT_EQ(since[0].first, std::chrono::milliseconds(300));
+  ASSERT_EQ(since[0].second.size(), 3);
+  ASSERT_NEAR(since[0].second[0], 7.0, requiredPrecision);
+  ASSERT_NEAR(since[0].second[1], 8.0, requiredPrecision);
+  ASSERT_NEAR(since[0].second[2], 9.0, requiredPrecision);
+  ASSERT_EQ(since[1].first, std::chrono::milliseconds(400));
 }
 
 TEST(TimeSeries, ClearingData) {

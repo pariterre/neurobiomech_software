@@ -23,6 +23,25 @@ TimeSeries::operator[](size_t index) const {
   return m_Data.at(index);
 }
 
+TimeSeries TimeSeries::tail(size_t n) const {
+  TimeSeries data(m_StartingTime);
+  for (size_t i = m_Data.size() - n; i < m_Data.size(); i++) {
+    data.add(m_Data[i].first, m_Data[i].second);
+  }
+  return data;
+}
+
+TimeSeries
+TimeSeries::since(const std::chrono::system_clock::time_point &time) const {
+  TimeSeries data(m_StartingTime);
+  for (const auto &point : m_Data) {
+    if (m_StartingTime + point.first >= time) {
+      data.add(point.first, point.second);
+    }
+  }
+  return data;
+}
+
 nlohmann::json TimeSeries::serialize() const {
   nlohmann::json json = nlohmann::json::array();
   for (const auto &point : m_Data) {
