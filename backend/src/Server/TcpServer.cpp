@@ -3,12 +3,20 @@
 #include "Utils/Logger.h"
 #include <thread>
 
+#include "Devices/Concrete/DelsysEmgDevice.h"
+#include "Devices/Concrete/MagstimRapidDevice.h"
+#include "Devices/Generic/Device.h"
+
 using asio::ip::tcp;
 using namespace STIMWALKER_NAMESPACE::server;
 
+// Here are the names of the devices that can be connected (for internal use)
+const std::string DEVICE_NAME_DELSYS = "DelsysEmgDevice";
+const std::string DEVICE_NAME_MAGSTIM = "MagstimRapidDevice";
+
 TcpServer::TcpServer(int port)
-    : m_Port(port), m_IsStarted(false), m_IsClientConnected(false),
-      m_CurrentVersion(1) {};
+    : m_IsStarted(false), m_IsClientConnected(false), m_Port(port),
+      m_ProtocolVersion(1) {};
 
 TcpServer::~TcpServer() {
   if (m_IsStarted) {
@@ -58,13 +66,16 @@ void TcpServer::startServer() {
       }
 
       // Parse the packet
-      TcpServerCommand command = parsePacket(buffer);
+      TcpServerCommand command = parseCommandPacket(buffer);
 
       // Handle the command based on the current status
       bool isSuccessful = false;
       switch (m_Status) {
       case (TcpServerStatus::INITIALIZING):
         isSuccessful = handleHandshake(command);
+        break;
+      case (TcpServerStatus::CONNECTED):
+        isSuccessful = handleCommand(command);
         break;
       }
 
@@ -81,6 +92,24 @@ void TcpServer::startServer() {
 
   // If we get here, the server has been stopped
   logger.info("Server has shut down");
+}
+
+void TcpServer::stopServer() {
+  auto &logger = utils::Logger::getInstance();
+
+  // Make sure all the devices are properly disconnected
+  if (m_IsClientConnected) {
+    disconnectClient();
+  }
+  std::lock_guard<std::mutex> lock(m_Mutex);
+
+  // Close the acceptor
+  if (m_Acceptor->is_open()) {
+    m_Acceptor->close();
+  }
+
+  // Shutdown the server down
+  m_IsStarted = false;
 }
 
 void TcpServer::disconnectClient() {
@@ -105,24 +134,6 @@ void TcpServer::disconnectClient() {
   m_Status = TcpServerStatus::INITIALIZING;
   m_IsClientConnected = false;
   logger.info("Client disconnected");
-}
-
-void TcpServer::stopServer() {
-  auto &logger = utils::Logger::getInstance();
-
-  // Make sure all the devices are properly disconnected
-  if (m_IsClientConnected) {
-    disconnectClient();
-  }
-  std::lock_guard<std::mutex> lock(m_Mutex);
-
-  // Close the acceptor
-  if (m_Acceptor->is_open()) {
-    m_Acceptor->close();
-  }
-
-  // Shutdown the server down
-  m_IsStarted = false;
 }
 
 bool TcpServer::handleHandshake(TcpServerCommand command) {
@@ -156,7 +167,127 @@ bool TcpServer::handleHandshake(TcpServerCommand command) {
   return true;
 }
 
-TcpServerCommand TcpServer::parsePacket(const std::array<char, 8> &buffer) {
+bool TcpServer::handleCommand(TcpServerCommand command) {
+  auto &logger = utils::Logger::getInstance();
+  asio::error_code error;
+
+  // Handle the command
+  TcpServerResponse response;
+  switch (command) {
+  case TcpServerCommand::CONNECT_DELSYS:
+  case TcpServerCommand::CONNECT_MAGSTIM:
+    response =
+        addDevice(command) ? TcpServerResponse::OK : TcpServerResponse::NOK;
+    break;
+
+  case TcpServerCommand::DISCONNECT_DELSYS:
+    if (m_ConnectedDevices.find(DEVICE_NAME_DELSYS) ==
+        m_ConnectedDevices.end()) {
+      logger.warning("Delsys EMG device not connected");
+      response = TcpServerResponse::NOK;
+      break;
+    }
+
+    m_Devices.remove(m_ConnectedDevices[DEVICE_NAME_DELSYS]);
+    response = TcpServerResponse::OK;
+    break;
+
+  case TcpServerCommand::DISCONNECT_MAGSTIM:
+    if (m_ConnectedDevices.find(DEVICE_NAME_MAGSTIM) ==
+        m_ConnectedDevices.end()) {
+      logger.warning("Magstim Rapid device not connected");
+      response = TcpServerResponse::NOK;
+      break;
+    }
+
+    m_Devices.remove(m_ConnectedDevices[DEVICE_NAME_MAGSTIM]);
+    response = TcpServerResponse::OK;
+    break;
+
+  case TcpServerCommand::START_RECORDING:
+    m_Devices.startRecording();
+    break;
+
+  case TcpServerCommand::STOP_RECORDING:
+    logger.info("Stopping recording");
+    m_Devices.stopRecording();
+    break;
+
+  case TcpServerCommand::PAUSE_RECORDING:
+    logger.info("Pausing recording");
+    m_Devices.pauseRecording();
+    break;
+
+  case TcpServerCommand::RESUME_RECORDING:
+    logger.info("Resuming recording");
+    m_Devices.resumeRecording();
+    break;
+
+  default:
+    logger.fatal("Invalid command: " +
+                 std::to_string(static_cast<std::uint32_t>(command)));
+    response = TcpServerResponse::NOK;
+    break;
+  }
+
+  // Respond OK to the command
+  size_t byteWritten = asio::write(
+      *m_Socket, asio::buffer(constructResponsePacket(response)), error);
+  if (byteWritten != 8 || error) {
+    logger.fatal("TCP write error: " + error.message());
+    return false;
+  }
+
+  return true;
+}
+
+bool TcpServer::addDevice(TcpServerCommand command) {
+  auto &logger = utils::Logger::getInstance();
+
+  std::string deviceName;
+  switch (command) {
+  case TcpServerCommand::CONNECT_DELSYS:
+    deviceName = DEVICE_NAME_DELSYS;
+    break;
+  case TcpServerCommand::CONNECT_MAGSTIM:
+    deviceName = DEVICE_NAME_MAGSTIM;
+    break;
+  default:
+    logger.fatal("Invalid command: " +
+                 std::to_string(static_cast<std::uint32_t>(command)));
+    return false;
+  }
+
+  // Check if m_ConnectedDevices contains the device
+  if (m_ConnectedDevices.find(deviceName) != m_ConnectedDevices.end()) {
+    logger.warning(deviceName + " already connected");
+    return false;
+  }
+
+  return addDeviceToDevices(command);
+}
+
+bool TcpServer::addDeviceToDevices(TcpServerCommand command) {
+  auto &logger = utils::Logger::getInstance();
+
+  switch (command) {
+  case TcpServerCommand::CONNECT_DELSYS:
+    m_ConnectedDevices[DEVICE_NAME_DELSYS] =
+        m_Devices.add(std::make_unique<devices::DelsysEmgDevice>());
+    return true;
+  case TcpServerCommand::CONNECT_MAGSTIM:
+    m_ConnectedDevices[DEVICE_NAME_MAGSTIM] =
+        m_Devices.add(devices::MagstimRapidDevice::findMagstimDevice());
+    return true;
+  default:
+    logger.fatal("Invalid command: " +
+                 std::to_string(static_cast<std::uint32_t>(command)));
+    return false;
+  }
+}
+
+TcpServerCommand
+TcpServer::parseCommandPacket(const std::array<char, 8> &buffer) {
   // Packets are exactly 8 bytes long, big-endian
   // - First 4 bytes are the version number
   // - Next 4 bytes are the command
@@ -164,12 +295,12 @@ TcpServerCommand TcpServer::parsePacket(const std::array<char, 8> &buffer) {
   // Check the version
   std::uint32_t version =
       *reinterpret_cast<const std::uint32_t *>(buffer.data());
-  if (version != m_CurrentVersion) {
+  if (version != m_ProtocolVersion) {
     auto &logger = utils::Logger::getInstance();
     logger.fatal("Invalid version: " + std::to_string(version) +
                  ". Please "
                  "update the client to version " +
-                 std::to_string(m_CurrentVersion));
+                 std::to_string(m_ProtocolVersion));
     return TcpServerCommand::ERROR;
   }
 
@@ -188,11 +319,30 @@ TcpServer::constructResponsePacket(TcpServerResponse response) {
   packet.fill('\0');
 
   // Add the version number
-  std::memcpy(packet.data(), &m_CurrentVersion, sizeof(std::uint32_t));
+  std::memcpy(packet.data(), &m_ProtocolVersion, sizeof(std::uint32_t));
 
   // Add the response
   std::memcpy(packet.data() + sizeof(std::uint32_t), &response,
               sizeof(TcpServerResponse));
 
   return packet;
+}
+
+bool TcpServerMock::addDeviceToDevices(TcpServerCommand command) {
+  auto &logger = utils::Logger::getInstance();
+
+  switch (command) {
+  case TcpServerCommand::CONNECT_DELSYS:
+    m_ConnectedDevices[DEVICE_NAME_DELSYS] =
+        m_Devices.add(std::make_unique<devices::DelsysEmgDeviceMock>());
+    return true;
+  case TcpServerCommand::CONNECT_MAGSTIM:
+    m_ConnectedDevices[DEVICE_NAME_MAGSTIM] =
+        m_Devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice());
+    return true;
+  default:
+    logger.fatal("Invalid command: " +
+                 std::to_string(static_cast<std::uint32_t>(command)));
+    return false;
+  }
 }

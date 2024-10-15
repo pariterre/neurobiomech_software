@@ -12,7 +12,7 @@ int main() {
   try {
     // Create a TCP server asynchroniously
     asio::io_context context;
-    server::TcpServer server;
+    server::TcpServerMock server(5000);
     auto worker = std::thread([&context, &server]() {
       server.startServer();
       context.run();
@@ -24,7 +24,9 @@ int main() {
     // Connect to this server using a TCP client
     server::TcpClient client;
     client.connect();
+    client.addDelsysDevice();
 
+    client.startRecording();
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
     // Clean up things

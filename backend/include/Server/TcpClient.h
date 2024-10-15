@@ -18,7 +18,14 @@ public:
   bool connect();
   bool disconnect();
 
-  TcpServerResponse waitForResponse();
+  bool addDelsysDevice();
+  bool addMagstimDevice();
+
+  bool removeDelsysDevice();
+  bool removeMagstimDevice();
+
+  bool startRecording();
+  bool stopRecording();
 
 protected:
   DECLARE_PROTECTED_MEMBER(std::string, Host);
@@ -26,9 +33,10 @@ protected:
 
   DECLARE_PROTECTED_MEMBER(bool, IsConnected);
 
-  bool sendHandshake();
+  bool sendCommandWithConfirmation(TcpServerCommand command);
+  TcpServerResponse waitForResponse();
 
-  std::array<char, 8> constructPacket(TcpServerCommand command);
+  std::array<char, 8> constructCommandPacket(TcpServerCommand command);
   TcpServerResponse parseResponsePacket(const std::array<char, 8> &buffer);
 
 private:
