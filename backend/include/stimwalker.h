@@ -5,6 +5,7 @@
 
 #include "Data/all.h"
 #include "Devices/all.h"
+#include "Server/all.h"
 #include "Utils/all.h"
 
 #endif // __STIMWALKER_H__

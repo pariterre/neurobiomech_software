@@ -42,6 +42,7 @@ set(${STIMWALKER_NAME}_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 add_subdirectory("src/Utils")
 add_subdirectory("src/Data")
 add_subdirectory("src/Devices")
+add_subdirectory("src/Server")
 
 # Doc
 if (BUILD_DOC)

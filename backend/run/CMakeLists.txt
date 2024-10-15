@@ -9,6 +9,7 @@ set(SOURCE_FILES
     example_delsys.cpp
     example_devices.cpp
     example_magstim.cpp
+    example_server.cpp
     main_rehastim.cpp
     main_lokomat.cpp
 )
@@ -27,11 +28,13 @@ foreach(SOURCE_FILE ${SOURCE_FILES})
         ${MODULE_UTILS}
         ${MODULE_DATA}
         ${MODULE_DEVICES}
+        ${MODULE_SERVER}
     )
     target_link_libraries(${EXECUTABLE_NAME} PRIVATE
         ${MODULE_UTILS}
         ${MODULE_DATA}
         ${MODULE_DEVICES}
+        ${MODULE_SERVER}
         nlohmann_json::nlohmann_json
     )
     if (WIN32)
