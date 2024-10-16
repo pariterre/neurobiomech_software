@@ -12,7 +12,7 @@ int main() {
   try {
     // Create a TCP server asynchroniously
     asio::io_context context;
-    server::TcpServerMock server(5000);
+    server::TcpServerMock server;
     auto worker = std::thread([&context, &server]() {
       server.startServer();
       context.run();
@@ -24,12 +24,26 @@ int main() {
     // Connect to this server using a TCP client
     server::TcpClient client;
     client.connect();
-    client.addDelsysDevice();
 
-    client.startDataStreaming();
+    // Add the devices
+    client.addDelsysDevice();
+    client.addMagstimDevice();
+
+    // Start recording data
+    client.startRecording();
     std::this_thread::sleep_for(std::chrono::seconds(2));
+    client.stopRecording();
+    auto data = client.getData();
+
+    // Remove the only data collector we have
+    client.removeDelsysDevice();
+    client.startRecording();
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    client.stopRecording();
+    // auto data = client.getData();
 
     // Clean up things
+    client.disconnect();
     server.stopServer();
     context.stop();
     worker.join();

@@ -3,10 +3,12 @@
 #include "Utils/Logger.h"
 
 using asio::ip::tcp;
+using namespace STIMWALKER_NAMESPACE;
 using namespace STIMWALKER_NAMESPACE::server;
 
-TcpClient::TcpClient(std::string host, int port)
-    : m_Host(host), m_Port(port), m_IsConnected(false), m_CurrentVersion(1) {};
+TcpClient::TcpClient(std::string host, int commandPort, int dataPort)
+    : m_Host(host), m_CommandPort(commandPort), m_DataPort(dataPort),
+      m_IsConnected(false), m_ProtocolVersion(1) {};
 
 TcpClient::~TcpClient() {
   if (m_IsConnected) {
@@ -19,9 +21,13 @@ bool TcpClient::connect() {
 
   // Connect
   m_IsConnected = false;
-  m_Socket = std::make_unique<tcp::socket>(m_Context);
   tcp::resolver resolver(m_Context);
-  asio::connect(*m_Socket, resolver.resolve(m_Host, std::to_string(m_Port)));
+  m_CommandSocket = std::make_unique<tcp::socket>(m_Context);
+  asio::connect(*m_CommandSocket,
+                resolver.resolve(m_Host, std::to_string(m_CommandPort)));
+  m_DataSocket = std::make_unique<tcp::socket>(m_Context);
+  asio::connect(*m_DataSocket,
+                resolver.resolve(m_Host, std::to_string(m_DataPort)));
   m_IsConnected = true;
 
   // Send the handshake
@@ -42,7 +48,8 @@ bool TcpClient::disconnect() {
     return true;
   }
 
-  m_Socket->close();
+  m_CommandSocket->close();
+  m_DataSocket->close();
   m_IsConnected = false;
   return true;
 }
@@ -95,28 +102,38 @@ bool TcpClient::removeMagstimDevice() {
   return true;
 }
 
-bool TcpClient::startDataStreaming() {
+bool TcpClient::startRecording() {
   auto &logger = utils::Logger::getInstance();
 
-  if (!sendCommandWithConfirmation(TcpServerCommand::START_DATA_STREAMING)) {
-    logger.fatal("Failed to start data streaming");
+  if (!sendCommandWithConfirmation(TcpServerCommand::START_RECORDING)) {
+    logger.fatal("Failed to start recording");
     return false;
   }
 
-  logger.info("Data streaming started");
+  logger.info("Recording started");
   return true;
 }
 
-bool TcpClient::stopDataStreaming() {
+bool TcpClient::stopRecording() {
   auto &logger = utils::Logger::getInstance();
 
-  if (!sendCommandWithConfirmation(TcpServerCommand::STOP_DATA_STREAMING)) {
-    logger.fatal("Failed to stop data streaming");
+  if (!sendCommandWithConfirmation(TcpServerCommand::STOP_RECORDING)) {
+    logger.fatal("Failed to stop recording");
     return false;
   }
 
-  logger.info("Data streaming stopped");
+  logger.info("Recording stopped");
   return true;
+}
+
+bool TcpClient::updateData() {
+  auto &logger = utils::Logger::getInstance();
+  if (!sendCommandWithConfirmation(TcpServerCommand::GET_DATA)) {
+    logger.fatal("Failed to update the data");
+    return false;
+  }
+
+  // TODO RENDU ICI!!
 }
 
 bool TcpClient::sendCommandWithConfirmation(TcpServerCommand command) {
@@ -129,11 +146,12 @@ bool TcpClient::sendCommandWithConfirmation(TcpServerCommand command) {
 
   asio::error_code error;
   size_t byteWritten = asio::write(
-      *m_Socket, asio::buffer(constructCommandPacket(command)), error);
+      *m_CommandSocket, asio::buffer(constructCommandPacket(command)), error);
 
   if (byteWritten != 8 || error) {
     logger.fatal("TCP write error: " + error.message());
-    m_Socket->close();
+    m_CommandSocket->close();
+    m_DataSocket->close();
     m_IsConnected = false;
     return false;
   }
@@ -142,7 +160,8 @@ bool TcpClient::sendCommandWithConfirmation(TcpServerCommand command) {
   if (response != TcpServerResponse::OK) {
     logger.fatal("Failed to get confirmation for command: " +
                  std::to_string(static_cast<std::uint32_t>(command)));
-    m_Socket->close();
+    m_CommandSocket->close();
+    m_DataSocket->close();
     m_IsConnected = false;
     return false;
   }
@@ -153,7 +172,7 @@ bool TcpClient::sendCommandWithConfirmation(TcpServerCommand command) {
 TcpServerResponse TcpClient::waitForResponse() {
   auto buffer = std::array<char, 8>();
   asio::error_code error;
-  size_t byteRead = asio::read(*m_Socket, asio::buffer(buffer), error);
+  size_t byteRead = asio::read(*m_CommandSocket, asio::buffer(buffer), error);
   if (byteRead != 8 || error) {
     auto &logger = utils::Logger::getInstance();
     logger.fatal("TCP read error: " + error.message());
@@ -173,7 +192,7 @@ TcpClient::constructCommandPacket(TcpServerCommand command) {
   packet.fill('\0');
 
   // Add the version number
-  std::memcpy(packet.data(), &m_CurrentVersion, sizeof(std::uint32_t));
+  std::memcpy(packet.data(), &m_ProtocolVersion, sizeof(std::uint32_t));
 
   // Add the command
   std::memcpy(packet.data() + sizeof(std::uint32_t), &command,
@@ -191,12 +210,12 @@ TcpClient::parseResponsePacket(const std::array<char, 8> &buffer) {
   // Check the version
   std::uint32_t version =
       *reinterpret_cast<const std::uint32_t *>(buffer.data());
-  if (version != m_CurrentVersion) {
+  if (version != m_ProtocolVersion) {
     auto &logger = utils::Logger::getInstance();
     logger.fatal("Invalid version: " + std::to_string(version) +
                  ". Please "
                  "update the server to version " +
-                 std::to_string(m_CurrentVersion));
+                 std::to_string(m_ProtocolVersion));
     return TcpServerResponse::NOK;
   }
 

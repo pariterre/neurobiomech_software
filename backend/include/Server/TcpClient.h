@@ -3,6 +3,7 @@
 
 #include "stimwalkerConfig.h"
 
+#include "Data/TimeSeries.h"
 #include "Server/TcpServer.h"
 #include "Utils/CppMacros.h"
 #include <asio.hpp>
@@ -11,7 +12,8 @@ namespace STIMWALKER_NAMESPACE::server {
 
 class TcpClient {
 public:
-  TcpClient(std::string host = "localhost", int port = 5000);
+  TcpClient(std::string host = "localhost", int commandPort = 5000,
+            int dataPort = 5001);
   ~TcpClient();
   TcpClient(const TcpClient &) = delete;
 
@@ -24,12 +26,18 @@ public:
   bool removeDelsysDevice();
   bool removeMagstimDevice();
 
-  bool startDataStreaming();
-  bool stopDataStreaming();
+  bool startRecording();
+  bool stopRecording();
+
+  bool updateData();
+
+protected:
+  DECLARE_PROTECTED_MEMBER(data::TimeSeries, Data);
 
 protected:
   DECLARE_PROTECTED_MEMBER(std::string, Host);
-  DECLARE_PROTECTED_MEMBER(int, Port);
+  DECLARE_PROTECTED_MEMBER(int, CommandPort);
+  DECLARE_PROTECTED_MEMBER(int, DataPort);
 
   DECLARE_PROTECTED_MEMBER(bool, IsConnected);
 
@@ -41,9 +49,12 @@ protected:
 
 private:
   DECLARE_PRIVATE_MEMBER_NOGET(asio::io_context, Context);
-  DECLARE_PRIVATE_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>, Socket);
+  DECLARE_PRIVATE_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
+                               CommandSocket);
+  DECLARE_PRIVATE_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
+                               DataSocket);
 
-  DECLARE_PRIVATE_MEMBER_NOGET(std::uint32_t, CurrentVersion)
+  DECLARE_PRIVATE_MEMBER_NOGET(std::uint32_t, ProtocolVersion)
 };
 
 } // namespace STIMWALKER_NAMESPACE::server

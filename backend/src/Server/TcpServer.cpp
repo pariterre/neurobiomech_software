@@ -14,9 +14,9 @@ using namespace STIMWALKER_NAMESPACE::server;
 const std::string DEVICE_NAME_DELSYS = "DelsysEmgDevice";
 const std::string DEVICE_NAME_MAGSTIM = "MagstimRapidDevice";
 
-TcpServer::TcpServer(int port)
-    : m_IsStarted(false), m_IsClientConnected(false), m_Port(port),
-      m_ProtocolVersion(1) {};
+TcpServer::TcpServer(int commandPort, int dataPort)
+    : m_IsStarted(false), m_IsClientConnected(false),
+      m_CommandPort(commandPort), m_DataPort(dataPort), m_ProtocolVersion(1) {};
 
 TcpServer::~TcpServer() {
   if (m_IsStarted) {
@@ -27,67 +27,36 @@ TcpServer::~TcpServer() {
 void TcpServer::startServer() {
   auto &logger = utils::Logger::getInstance();
 
-  // Create the context and acceptor
-  m_Acceptor = std::make_unique<tcp::acceptor>(
-      m_Context, tcp::endpoint(tcp::v4(), m_Port));
-  logger.info("Server started on port " + std::to_string(m_Port));
+  // Create the contexts and acceptors
+  m_CommandAcceptor = std::make_unique<tcp::acceptor>(
+      m_Context, tcp::endpoint(tcp::v4(), m_CommandPort));
+  logger.info("Command server started on port " +
+              std::to_string(m_CommandPort));
+  m_DataAcceptor = std::make_unique<tcp::acceptor>(
+      m_Context, tcp::endpoint(tcp::v4(), m_DataPort));
+  logger.info("Data server started on port " + std::to_string(m_DataPort));
 
-  // Accept a connection
   m_IsStarted = true;
   while (m_IsStarted) {
-    m_Status = TcpServerStatus::INITIALIZING;
-    m_Socket = std::make_unique<tcp::socket>(m_Context);
+    // Accept a new connection
+    waitForNewConnexion();
 
-    m_Acceptor->accept(*m_Socket);
-    logger.info("Server connected to client");
-    m_IsClientConnected = true;
-    m_Socket->non_blocking(true);
-
-    auto buffer = std::array<char, 8>();
-    asio::error_code error;
-    while (true) {
-      // Lock the mutex during the time the command is answered
-      std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      if (!m_IsStarted || !m_IsClientConnected) {
-        break;
+    // Start the command worker to handle the commands
+    auto commandWorker = std::thread([this]() {
+      while (m_IsStarted && m_IsClientConnected) {
+        waitAndHandleNewCommand();
       }
-      std::lock_guard<std::mutex> lock(m_Mutex);
+    });
 
-      size_t byteRead = asio::read(*m_Socket, asio::buffer(buffer), error);
-      if (error == asio::error::would_block) {
-        // No data available at the moment
-        continue;
+    auto dataWorker = std::thread([this]() {
+      while (m_IsStarted && m_IsClientConnected) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
       }
+    });
 
-      // If there is any error, log it and break out of the loop
-      if (byteRead == 0 || byteRead > 1024 || error) {
-        logger.fatal("TCP read error: " + error.message());
-        break;
-      }
-
-      // Parse the packet
-      TcpServerCommand command = parseCommandPacket(buffer);
-
-      // Handle the command based on the current status
-      bool isSuccessful = false;
-      switch (m_Status) {
-      case (TcpServerStatus::INITIALIZING):
-        isSuccessful = handleHandshake(command);
-        break;
-      case (TcpServerStatus::CONNECTED):
-        isSuccessful = handleCommand(command);
-        break;
-      }
-
-      if (!isSuccessful) {
-        break;
-      }
-    }
-
-    // If we get here, the server should continue running but the client has
-    // disconnected, so shut the devices, close the socket to make sure and wait
-    // for a new connection
-    disconnectClient();
+    // Wait for the workers to finish
+    commandWorker.join();
+    dataWorker.join();
   }
 
   // If we get here, the server has been stopped
@@ -104,8 +73,11 @@ void TcpServer::stopServer() {
   std::lock_guard<std::mutex> lock(m_Mutex);
 
   // Close the acceptor
-  if (m_Acceptor->is_open()) {
-    m_Acceptor->close();
+  if (m_CommandAcceptor->is_open()) {
+    m_CommandAcceptor->close();
+  }
+  if (m_DataAcceptor->is_open()) {
+    m_DataAcceptor->close();
   }
 
   // Shutdown the server down
@@ -123,17 +95,101 @@ void TcpServer::disconnectClient() {
 
   // Make sure all the devices are properly disconnected
   m_Devices.clear();
-
-  // Wait a bit so if the connexion was already closed, we don't close it again
-
-  if (m_Socket->is_open()) {
-    m_Socket->close();
+  if (m_CommandSocket->is_open()) {
+    m_CommandSocket->close();
+  }
+  if (m_DataSocket->is_open()) {
+    m_DataSocket->close();
   }
 
-  // Set the status to initializing
+  // Reset the status to initializing
   m_Status = TcpServerStatus::INITIALIZING;
   m_IsClientConnected = false;
   logger.info("Client disconnected");
+}
+
+void TcpServer::waitForNewConnexion() {
+  auto &logger = utils::Logger::getInstance();
+
+  m_Status = TcpServerStatus::INITIALIZING;
+  m_CommandSocket = std::make_unique<tcp::socket>(m_Context);
+  m_DataSocket = std::make_unique<tcp::socket>(m_Context);
+
+  m_CommandAcceptor->accept(*m_CommandSocket);
+  logger.info("Command socket connected to client, waiting for data socket");
+  // TODO Check for a non-blocking accept
+  m_DataAcceptor->accept(*m_DataSocket);
+  logger.info("Data socket connected to client, waiting for handshake");
+  m_IsClientConnected = true;
+  m_CommandSocket->non_blocking(true);
+
+  auto now = std::chrono::high_resolution_clock::now();
+  while (m_Status == TcpServerStatus::INITIALIZING) {
+    // Wait for the handshake
+    waitAndHandleNewCommand();
+
+    if (std::chrono::high_resolution_clock::now() - now >
+        std::chrono::seconds(5)) {
+      logger.fatal("Handshake timeout");
+      disconnectClient();
+      return;
+    }
+  }
+}
+
+void TcpServer::waitAndHandleNewCommand() {
+  auto &logger = utils::Logger::getInstance();
+
+  // Lock the mutex during the time the command is answered
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  if (!m_IsStarted || !m_IsClientConnected) {
+    // Just a sanity check after the sleep and getting the lock
+    return;
+  }
+
+  auto buffer = std::array<char, 8>();
+  asio::error_code error;
+  size_t byteRead = asio::read(*m_CommandSocket, asio::buffer(buffer), error);
+
+  // Since command is non-blocking, we can just continue if there is no data
+  if (error == asio::error::would_block) {
+    return;
+  }
+
+  // If something went wrong, disconnect the client and stop everything
+  if (byteRead == 0 || byteRead > 1024 || error) {
+    logger.fatal("TCP read error: " + error.message());
+    disconnectClient();
+    return;
+  }
+
+  // Parse the packet
+  TcpServerCommand command = parseCommandPacket(buffer);
+
+  // Handle the command based on the current status
+  bool isSuccessful = false;
+  switch (m_Status) {
+  case (TcpServerStatus::INITIALIZING):
+    isSuccessful = handleHandshake(command);
+    break;
+  case (TcpServerStatus::CONNECTED):
+    isSuccessful = handleCommand(command);
+    break;
+  default:
+    logger.fatal("Invalid server status: " +
+                 std::to_string(static_cast<std::uint32_t>(m_Status)));
+    isSuccessful = false;
+    break;
+  }
+
+  // If anything went wrong, disconnect the client
+  if (!isSuccessful) {
+    disconnectClient();
+  }
+
+  // If we get here, the command was successful and we can continue
+  return;
 }
 
 bool TcpServer::handleHandshake(TcpServerCommand command) {
@@ -145,7 +201,7 @@ bool TcpServer::handleHandshake(TcpServerCommand command) {
     logger.fatal("Invalid command during initialization: " +
                  std::to_string(static_cast<std::uint32_t>(command)));
 
-    asio::write(*m_Socket,
+    asio::write(*m_CommandSocket,
                 asio::buffer(constructResponsePacket(TcpServerResponse::NOK)),
                 error);
     return false;
@@ -153,8 +209,8 @@ bool TcpServer::handleHandshake(TcpServerCommand command) {
 
   // Respond OK to the handshake
   size_t byteWritten = asio::write(
-      *m_Socket, asio::buffer(constructResponsePacket(TcpServerResponse::OK)),
-      error);
+      *m_CommandSocket,
+      asio::buffer(constructResponsePacket(TcpServerResponse::OK)), error);
   if (byteWritten != 8 || error) {
     logger.fatal("TCP write error: " + error.message());
     return false;
@@ -192,22 +248,14 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
                                                  : TcpServerResponse::NOK;
     break;
 
-  case TcpServerCommand::START_DATA_STREAMING:
-    m_Devices.startDataStreaming();
-    break;
-
-  case TcpServerCommand::STOP_DATA_STREAMING:
-    m_Devices.stopDataStreaming();
-    break;
-
   case TcpServerCommand::START_RECORDING:
-    logger.info("Start recording");
-    m_Devices.startRecording();
+    response = m_Devices.startRecording() ? TcpServerResponse::OK
+                                          : TcpServerResponse::NOK;
     break;
 
   case TcpServerCommand::STOP_RECORDING:
-    logger.info("Stop recording");
-    m_Devices.stopRecording();
+    response = m_Devices.stopRecording() ? TcpServerResponse::OK
+                                         : TcpServerResponse::NOK;
     break;
 
   default:
@@ -219,7 +267,7 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
 
   // Respond OK to the command
   size_t byteWritten = asio::write(
-      *m_Socket, asio::buffer(constructResponsePacket(response)), error);
+      *m_CommandSocket, asio::buffer(constructResponsePacket(response)), error);
   if (byteWritten != 8 || error) {
     logger.fatal("TCP write error: " + error.message());
     return false;
@@ -237,7 +285,12 @@ bool TcpServer::addDevice(const std::string &deviceName) {
     return false;
   }
 
+  // Stop the data streaming when changing the devices
+  m_Devices.stopDataStreaming();
   makeAndAddDevice(deviceName);
+  m_Devices.connect();
+  m_Devices.startDataStreaming();
+
   return true;
 }
 
@@ -265,8 +318,12 @@ bool TcpServer::removeDevice(const std::string &deviceName) {
     return false;
   }
 
+  // Stop the data streaming when changing the devices
+  m_Devices.stopDataStreaming();
   m_Devices.remove(m_ConnectedDeviceIds[deviceName]);
   m_ConnectedDeviceIds.erase(deviceName);
+  m_Devices.startDataStreaming();
+
   return true;
 }
 

@@ -679,10 +679,10 @@ TEST(Devices, SerializeTrialData) {
   // Serialize the data
   auto data = devices.serialize();
   ASSERT_EQ(data.size(), 2);
-  ASSERT_EQ(data[0]["name"], "DelsysEmgDevice");
+  ASSERT_EQ(data[0]["name"], "DelsysEmgDataCollector");
   ASSERT_EQ(data[0]["data"].size(),
             devices.getDataCollector(deviceIds[0]).getTrialData().size());
-  ASSERT_EQ(data[1]["name"], "DelsysEmgDevice");
+  ASSERT_EQ(data[1]["name"], "DelsysEmgDataCollector");
   ASSERT_EQ(data[1]["data"].size(),
             devices.getDataCollector(deviceIds[2]).getTrialData().size());
 }

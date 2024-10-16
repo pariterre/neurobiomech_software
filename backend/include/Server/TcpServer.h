@@ -18,10 +18,9 @@ enum class TcpServerCommand : std::uint32_t {
   CONNECT_MAGSTIM,
   DISCONNECT_DELSYS,
   DISCONNECT_MAGSTIM,
-  START_DATA_STREAMING,
-  STOP_DATA_STREAMING,
   START_RECORDING,
   STOP_RECORDING,
+  GET_DATA,
   FAILED,
 };
 
@@ -30,8 +29,9 @@ enum class TcpServerResponse : std::uint32_t { OK, NOK };
 class TcpServer {
 public:
   /// @brief Constructor
-  /// @param port The port to listen to (default is 5000)
-  TcpServer(int port = 5000);
+  /// @param commandPort The port to communicate the commands (default is 5000)
+  /// @param dataPort The port to communicate the data (default is 5001)
+  TcpServer(int commandPort = 5000, int dataPort = 5001);
 
   /// @brief Destructor
   ~TcpServer();
@@ -53,6 +53,13 @@ public:
   void disconnectClient();
 
 protected:
+  /// @brief Wait for a new connexion
+  void waitForNewConnexion();
+
+  /// @brief Wait for a new command
+  /// @return True if everything is okay, False if the 
+  void waitAndHandleNewCommand();
+
   /// @brief If the server is started
   DECLARE_PROTECTED_MEMBER(bool, IsStarted);
 
@@ -94,16 +101,27 @@ protected:
   // --- TCP SERVER METHODS --- //
   // -------------------------- //
 protected:
-  /// @brief The port to listen to
-  DECLARE_PROTECTED_MEMBER(int, Port);
+  /// @brief The port to listen to communicate the commands
+  DECLARE_PROTECTED_MEMBER(int, CommandPort);
 
-  /// @brief The socket that is connected to the client
+  /// @brief The port to listen to communicate the data
+  DECLARE_PROTECTED_MEMBER(int, DataPort);
+
+  /// @brief The socket that is connected to the client for commands
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
-                                 Socket);
+                                 CommandSocket);
 
-  /// @brief The acceptor that listens to the port
+  /// @brief The socket that is connected to the client for data
+  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
+                                 DataSocket);
+
+  /// @brief The acceptor that listens to the command port
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::acceptor>,
-                                 Acceptor);
+                                 CommandAcceptor);
+
+  /// @brief The acceptor that listens to the data port
+  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::acceptor>,
+                                 DataAcceptor);
 
   /// @brief The current status of the server
   DECLARE_PROTECTED_MEMBER(TcpServerStatus, Status);
@@ -141,8 +159,10 @@ class TcpServerMock : public TcpServer {
 
 public:
   /// @brief Constructor
-  /// @param port The port to listen to (default is 5000)
-  TcpServerMock(int port = 5000) : TcpServer(port) {};
+  /// @param commandPort The port to communicate the commands (default is 5000)
+  /// @param dataPort The port to communicate the data (default is 5001)
+  TcpServerMock(int commandPort = 5000, int dataPort = 5001)
+      : TcpServer(commandPort, dataPort) {};
 
   /// @brief Destructor
   ~TcpServerMock() = default;
