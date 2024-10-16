@@ -7,10 +7,10 @@ size_t TimeSeries::size() const { return static_cast<int>(m_Data.size()); }
 void TimeSeries::clear() { m_Data.clear(); }
 
 void TimeSeries::add(const DataPoint &data) {
-  m_Data.push_back(
-      std::make_pair(std::chrono::duration_cast<std::chrono::microseconds>(
-                         std::chrono::system_clock::now() - m_StartingTime),
-                     data));
+  m_Data.push_back(std::make_pair(
+      std::chrono::duration_cast<std::chrono::microseconds>(
+          std::chrono::high_resolution_clock::now() - m_StopWatch),
+      data));
 }
 
 void TimeSeries::add(const std::chrono::microseconds &timeStamp,
@@ -62,6 +62,7 @@ TimeSeries TimeSeries::deserialize(const nlohmann::json &json) {
 void TimeSeries::reset() {
   m_Data.clear();
   m_StartingTime = std::chrono::system_clock::now();
+  m_StopWatch = std::chrono::high_resolution_clock::now();
 }
 
 const std::vector<std::pair<std::chrono::microseconds, DataPoint>> &

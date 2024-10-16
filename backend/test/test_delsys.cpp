@@ -54,6 +54,8 @@ TEST(Delsys, Connect) {
   bool isConnected = delsys.connect();
   ASSERT_TRUE(isConnected);
   ASSERT_TRUE(delsys.getIsConnected());
+  // The logger is sometimes late
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
   ASSERT_TRUE(logger.contains("The device DelsysEmgDevice is now connected"));
   logger.clear();
 

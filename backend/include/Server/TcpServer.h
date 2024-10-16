@@ -22,7 +22,7 @@ enum class TcpServerCommand : std::uint32_t {
   STOP_RECORDING,
   PAUSE_RECORDING,
   RESUME_RECORDING,
-  ERROR,
+  FAILED,
 };
 
 enum class TcpServerResponse : std::uint32_t { OK, NOK };

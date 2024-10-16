@@ -12,7 +12,7 @@ TEST(Devices, Add) {
   auto devices = devices::Devices();
 
   // Add a bunch of devices
-  std::vector<int> deviceIds;
+  std::vector<size_t> deviceIds;
   deviceIds.push_back(
       devices.add(std::make_unique<devices::DelsysEmgDeviceMock>()));
   deviceIds.push_back(
@@ -46,7 +46,7 @@ TEST(Devices, Get) {
   auto devices = devices::Devices();
 
   // Add a bunch of devices
-  std::vector<int> deviceIds;
+  std::vector<size_t> deviceIds;
   deviceIds.push_back(
       devices.add(std::make_unique<devices::DelsysEmgDeviceMock>()));
   deviceIds.push_back(
@@ -79,10 +79,10 @@ TEST(Devices, Get) {
       dynamic_cast<const devices::DataCollector *>(&devices[deviceIds[2]]));
 
   // Requesting an inexistent device should throw an exception
-  ASSERT_THROW(devices[deviceIds[4]], devices::DeviceNotFoundException);
-  ASSERT_THROW(devices.getDevice(deviceIds[4]),
+  ASSERT_THROW(devices[deviceIds.back() + 1], devices::DeviceNotFoundException);
+  ASSERT_THROW(devices.getDevice(deviceIds.back() + 1),
                devices::DeviceNotFoundException);
-  ASSERT_THROW(devices.getDataCollector(deviceIds[4]),
+  ASSERT_THROW(devices.getDataCollector(deviceIds.back() + 1),
                devices::DeviceNotFoundException);
 
   // Requesting an existent device which is not a data collector should throw
@@ -175,7 +175,7 @@ TEST(Devices, ConnectFailed) {
   auto devices = devices::Devices();
 
   // Add a bunch of devices
-  std::vector<int> deviceIds;
+  std::vector<size_t> deviceIds;
   deviceIds.push_back(
       devices.add(std::make_unique<devices::DelsysEmgDeviceMock>()));
   deviceIds.push_back(
@@ -213,7 +213,7 @@ TEST(Devices, StartRecording) {
   auto devices = devices::Devices();
 
   // Add a bunch of devices
-  std::vector<int> deviceIds;
+  std::vector<size_t> deviceIds;
   deviceIds.push_back(
       devices.add(std::make_unique<devices::DelsysEmgDeviceMock>()));
   deviceIds.push_back(
@@ -333,7 +333,7 @@ TEST(Devices, StartRecordingFailed) {
   auto devices = devices::Devices();
 
   // Add a bunch of devices
-  std::vector<int> deviceIds;
+  std::vector<size_t> deviceIds;
   deviceIds.push_back(
       devices.add(std::make_unique<devices::DelsysEmgDeviceMock>()));
   deviceIds.push_back(
@@ -373,7 +373,7 @@ TEST(Devices, Clear) {
   auto devices = devices::Devices();
 
   // Add a bunch of devices
-  std::vector<int> deviceIds;
+  std::vector<size_t> deviceIds;
   deviceIds.push_back(
       devices.add(std::make_unique<devices::DelsysEmgDeviceMock>()));
   deviceIds.push_back(
@@ -401,7 +401,7 @@ TEST(Devices, Data) {
   auto devices = devices::Devices();
 
   // Add a bunch of devices
-  std::vector<int> deviceIds;
+  std::vector<size_t> deviceIds;
   deviceIds.push_back(
       devices.add(std::make_unique<devices::DelsysEmgDeviceMock>()));
   deviceIds.push_back(
@@ -414,12 +414,13 @@ TEST(Devices, Data) {
   // Connect the system and start recording
   devices.connect();
   devices.startRecording();
-  auto now = std::chrono::high_resolution_clock::now();
+  auto now = std::chrono::system_clock::now();
 
   // All the time series should have the same starting time
   for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
     auto timeSeries = dataCollector->getTrialData();
-    ASSERT_LE(timeSeries.getStartingTime(), now);
+    ASSERT_LE(timeSeries.getStartingTime().time_since_epoch(),
+              now.time_since_epoch());
   }
   logger.clear();
 
@@ -428,7 +429,7 @@ TEST(Devices, Data) {
   ASSERT_TRUE(devices.getIsPaused());
   ASSERT_TRUE(logger.contains("All devices have paused recording"));
 
-  std::map<int, size_t> sizes;
+  std::map<size_t, size_t> sizes;
   for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
     sizes[deviceId] = dataCollector->getTrialData().size();
   }

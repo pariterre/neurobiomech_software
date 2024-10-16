@@ -15,9 +15,12 @@ namespace STIMWALKER_NAMESPACE::data {
 /// @brief Class to store data
 class TimeSeries {
 public:
-  TimeSeries() : m_StartingTime(std::chrono::system_clock::now()) {}
+  TimeSeries()
+      : m_StartingTime(std::chrono::system_clock::now()),
+        m_StopWatch(std::chrono::high_resolution_clock::now()) {}
   TimeSeries(const std::chrono::system_clock::time_point &startingTime)
-      : m_StartingTime(startingTime) {}
+      : m_StartingTime(startingTime),
+        m_StopWatch(std::chrono::high_resolution_clock::now()) {}
   virtual ~TimeSeries() = default;
 
   /// @brief Get the number of data in the collection
@@ -68,6 +71,13 @@ protected:
   /// @brief The timestamp of the starting point. See [setStartingTime](@ref
   /// setStartingTime) for more information on how to change the starting time
   DECLARE_PROTECTED_MEMBER(std::chrono::system_clock::time_point, StartingTime);
+
+  /// @brief This is set when [TimeSeries] is create or [reset] method is
+  /// called. Contrary to [m_StartingTime] it cannot be used as the initial
+  /// point for the data. However, this allows to compute the elapsed time since
+  /// reset. This is therefore used to create the timestamp of the data
+  DECLARE_PROTECTED_MEMBER(std::chrono::high_resolution_clock::time_point,
+                           StopWatch);
 
 public:
   /// @brief Clear the data in the collection and reset the starting time to the

@@ -21,9 +21,9 @@ Devices::~Devices() {
   }
 }
 
-int Devices::add(std::unique_ptr<Device> device) {
+size_t Devices::add(std::unique_ptr<Device> device) {
   std::string deviceName = device->deviceName();
-  static int deviceId = 0;
+  static size_t deviceId = 0;
 
   // Add the device to the device collection if it does not exist yet
   m_Devices[deviceId] = std::move(device);
@@ -38,7 +38,7 @@ int Devices::add(std::unique_ptr<Device> device) {
   return deviceId++;
 }
 
-void Devices::remove(int deviceId) {
+void Devices::remove(size_t deviceId) {
   m_Devices.erase(deviceId);
   m_DataCollectors.erase(deviceId);
 }
@@ -58,7 +58,7 @@ void Devices::clear() {
   m_DataCollectors.clear();
 }
 
-const Device &Devices::operator[](int deviceId) const {
+const Device &Devices::operator[](size_t deviceId) const {
   try {
     return *m_Devices.at(deviceId);
   } catch (const std::out_of_range &) {
@@ -69,7 +69,7 @@ const Device &Devices::operator[](int deviceId) const {
   }
 }
 
-const Device &Devices::getDevice(int deviceId) const {
+const Device &Devices::getDevice(size_t deviceId) const {
   try {
     return *m_Devices.at(deviceId);
   } catch (const std::out_of_range &) {
@@ -80,7 +80,7 @@ const Device &Devices::getDevice(int deviceId) const {
   }
 }
 
-const DataCollector &Devices::getDataCollector(int deviceId) const {
+const DataCollector &Devices::getDataCollector(size_t deviceId) const {
   try {
     return *m_DataCollectors.at(deviceId);
   } catch (const std::out_of_range &) {

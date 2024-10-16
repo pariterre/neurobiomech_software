@@ -118,7 +118,7 @@ void AsyncDataCollector::keepDataWorkerAlive(
 
   m_KeepDataWorkerAliveTimer->async_wait([this](const auto &errorCode) {
     // Get the current time
-    auto now = std::chrono::steady_clock::now();
+    auto now = std::chrono::high_resolution_clock::now();
 
     // If errorCode is not false, it means the timer was stopped by the user, or
     // the device was disconnected. In both cases, do nothing and return
@@ -134,7 +134,7 @@ void AsyncDataCollector::keepDataWorkerAlive(
 
     // Once it's done, repeat the process, but take into account the time it
     // took to execute the [dataCheck] method
-    auto timeToExecute = std::chrono::steady_clock::now() - now;
+    auto timeToExecute = std::chrono::high_resolution_clock::now() - now;
     auto next = m_KeepDataWorkerAliveInterval - timeToExecute;
     if (next < std::chrono::microseconds(1)) {
       next = std::chrono::microseconds(1);

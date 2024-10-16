@@ -301,7 +301,7 @@ TcpServer::parseCommandPacket(const std::array<char, 8> &buffer) {
                  ". Please "
                  "update the client to version " +
                  std::to_string(m_ProtocolVersion));
-    return TcpServerCommand::ERROR;
+    return TcpServerCommand::FAILED;
   }
 
   // Get the command

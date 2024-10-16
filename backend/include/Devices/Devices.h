@@ -28,11 +28,11 @@ public:
   /// @param device The device to add
   /// @return The id of the device in the collection so it can be accessed or
   /// removed later
-  int add(std::unique_ptr<Device> device);
+  size_t add(std::unique_ptr<Device> device);
 
   /// @brief Remove the device from the collection
   /// @param deviceId The id of the device (the one returned by the add method)
-  void remove(int deviceId);
+  void remove(size_t deviceId);
 
   /// @brief Get the number of devices in the collection
   /// @return The number of devices in the collection
@@ -44,17 +44,17 @@ public:
   /// @brief Get the requested device
   /// @param deviceId The id of the device (the one returned by the add method)
   /// @return The requested device
-  const Device &operator[](int deviceId) const;
+  const Device &operator[](size_t deviceId) const;
 
   /// @brief Get the requested device
   /// @param deviceId The id of the device (the one returned by the add method)
   /// @return The requested device
-  const Device &getDevice(int deviceId) const;
+  const Device &getDevice(size_t deviceId) const;
 
   /// @brief Get the requested data collector
   /// @param deviceId The id of the data collector
   /// @return The requested data collector
-  const DataCollector &getDataCollector(int deviceId) const;
+  const DataCollector &getDataCollector(size_t deviceId) const;
 
   /// DRIVING THE DEVICES METHODS ///
 public:
@@ -104,15 +104,15 @@ protected:
 
 protected:
   /// @brief The collection of devices
-  std::map<int, std::shared_ptr<Device>> m_Devices;
+  std::map<size_t, std::shared_ptr<Device>> m_Devices;
 
 public:
   /// @brief The collection of data collectors
-  const std::map<int, std::shared_ptr<DataCollector>> &
+  const std::map<size_t, std::shared_ptr<DataCollector>> &
   getDataCollectors() const {
     return m_DataCollectors;
   }
-  std::map<int, std::shared_ptr<DataCollector>> m_DataCollectors;
+  std::map<size_t, std::shared_ptr<DataCollector>> m_DataCollectors;
 };
 
 } // namespace devices
