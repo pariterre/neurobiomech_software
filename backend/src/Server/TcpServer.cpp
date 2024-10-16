@@ -200,14 +200,14 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
     m_Devices.stopDataStreaming();
     break;
 
-  case TcpServerCommand::PAUSE_RECORDING:
-    logger.info("Pausing recording");
-    m_Devices.pauseRecording();
+  case TcpServerCommand::START_RECORDING:
+    logger.info("Start recording");
+    m_Devices.startRecording();
     break;
 
-  case TcpServerCommand::RESUME_RECORDING:
-    logger.info("Resuming recording");
-    m_Devices.resumeRecording();
+  case TcpServerCommand::STOP_RECORDING:
+    logger.info("Stop recording");
+    m_Devices.stopRecording();
     break;
 
   default:

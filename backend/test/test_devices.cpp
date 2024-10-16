@@ -367,6 +367,161 @@ TEST(Devices, StartDataStreamingFailed) {
   ASSERT_TRUE(logger.contains("All devices have stopped streaming data"));
 }
 
+TEST(Devices, StartRecording) {
+  auto logger = TestLogger();
+  auto devices = devices::Devices();
+
+  // Add a bunch of devices
+  std::vector<size_t> deviceIds;
+  deviceIds.push_back(
+      devices.add(std::make_unique<devices::DelsysEmgDeviceMock>()));
+  deviceIds.push_back(
+      devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice()));
+  deviceIds.push_back(
+      devices.add(std::make_unique<devices::DelsysEmgDeviceMock>()));
+  deviceIds.push_back(
+      devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice()));
+
+  // The system cannot start recording data if it is not connected
+  bool isRecording = devices.startRecording();
+  ASSERT_FALSE(isRecording);
+  ASSERT_FALSE(devices.getIsRecording());
+  ASSERT_EQ(logger.count("The data collector DelsysEmgDataCollector is not "
+                         "streaming data, so it cannot start recording"),
+            2);
+  ASSERT_EQ(logger.count(
+                "The data collector DelsysEmgDataCollector is not recording"),
+            2);
+  ASSERT_TRUE(logger.contains("All devices have stopped recording"));
+  ASSERT_TRUE(logger.contains("One or more devices failed to start "
+                              "recording, stopping to record on all devices"));
+  logger.clear();
+
+  // Connect the system is still not enough to start recording
+  devices.connect();
+  isRecording = devices.startRecording();
+  ASSERT_FALSE(isRecording);
+  ASSERT_FALSE(devices.getIsRecording());
+  ASSERT_EQ(logger.count("The data collector DelsysEmgDataCollector is not "
+                         "streaming data, so it cannot start recording"),
+            2);
+  ASSERT_EQ(logger.count(
+                "The data collector DelsysEmgDataCollector is not recording"),
+            2);
+  ASSERT_TRUE(logger.contains("All devices have stopped recording"));
+  ASSERT_TRUE(logger.contains("One or more devices failed to start "
+                              "recording, stopping to record on all devices"));
+
+  logger.clear();
+
+  // Start streaming data should allow to start recording
+  devices.startDataStreaming();
+  isRecording = devices.startRecording();
+  ASSERT_TRUE(isRecording);
+  ASSERT_TRUE(devices.getIsRecording());
+  ASSERT_EQ(logger.count(
+                "The data collector DelsysEmgDataCollector is now recording"),
+            2);
+  ASSERT_TRUE(logger.contains("All devices are now recording"));
+  logger.clear();
+
+  // The system cannot start recording data if it is already recording
+  isRecording = devices.startRecording();
+  ASSERT_TRUE(isRecording);
+  ASSERT_TRUE(devices.getIsRecording());
+  ASSERT_EQ(logger.count("The data collector DelsysEmgDataCollector is already "
+                         "recording"),
+            2);
+  ASSERT_TRUE(logger.contains("All devices are now recording"));
+  logger.clear();
+
+  // Stop recording data
+  bool isNotRecording = devices.stopRecording();
+  ASSERT_TRUE(isNotRecording);
+  ASSERT_FALSE(devices.getIsRecording());
+  ASSERT_EQ(logger.count("The data collector DelsysEmgDataCollector has "
+                         "stopped recording"),
+            2);
+  ASSERT_TRUE(logger.contains("All devices have stopped recording"));
+  logger.clear();
+
+  // The system cannot stop recording data if it is not recording
+  isNotRecording = devices.stopRecording();
+  ASSERT_TRUE(isNotRecording);
+  ASSERT_FALSE(devices.getIsRecording());
+  ASSERT_EQ(logger.count(
+                "The data collector DelsysEmgDataCollector is not recording"),
+            2);
+  ASSERT_TRUE(logger.contains("All devices have stopped recording"));
+  logger.clear();
+
+  // Disconnect the system
+  devices.disconnect();
+}
+
+TEST(Devices, AutoStopRecording) {
+  // The system auto stop recording when the object is destroyed
+  auto logger = TestLogger();
+  {
+    auto devices = devices::Devices();
+
+    // Add a bunch of devices
+    devices.add(std::make_unique<devices::DelsysEmgDeviceMock>());
+    devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice());
+    devices.add(std::make_unique<devices::DelsysEmgDeviceMock>());
+    devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice());
+
+    // Connect the system and start streaming data
+    devices.connect();
+    devices.startDataStreaming();
+    devices.startRecording();
+  }
+  ASSERT_EQ(logger.count("All devices have stopped recording"), 1);
+  logger.clear();
+
+  // The system auto stop if stop data streaming is called
+  {
+    auto devices = devices::Devices();
+
+    // Add a bunch of devices
+    devices.add(std::make_unique<devices::DelsysEmgDeviceMock>());
+    devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice());
+    devices.add(std::make_unique<devices::DelsysEmgDeviceMock>());
+    devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice());
+
+    // Connect the system and start streaming data
+    devices.connect();
+    devices.startDataStreaming();
+    devices.startRecording();
+    devices.stopDataStreaming();
+
+    ASSERT_FALSE(devices.getIsRecording());
+    ASSERT_EQ(logger.count("All devices have stopped recording"), 1);
+    logger.clear();
+  }
+
+  // The system auto stop if disconnect is called
+  {
+    auto devices = devices::Devices();
+
+    // Add a bunch of devices
+    devices.add(std::make_unique<devices::DelsysEmgDeviceMock>());
+    devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice());
+    devices.add(std::make_unique<devices::DelsysEmgDeviceMock>());
+    devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice());
+
+    // Connect the system and start streaming data
+    devices.connect();
+    devices.startDataStreaming();
+    devices.startRecording();
+    devices.disconnect();
+
+    ASSERT_FALSE(devices.getIsRecording());
+    ASSERT_EQ(logger.count("All devices have stopped recording"), 1);
+    logger.clear();
+  }
+}
+
 TEST(Devices, Clear) {
   auto logger = TestLogger();
   auto devices = devices::Devices();
@@ -385,17 +540,20 @@ TEST(Devices, Clear) {
   // Connect the system and start streaming data
   devices.connect();
   devices.startDataStreaming();
+  devices.startRecording();
 
   // Clear the devices
   devices.clear();
   ASSERT_EQ(devices.size(), 0);
   ASSERT_FALSE(devices.getIsConnected());
   ASSERT_FALSE(devices.getIsStreamingData());
+  ASSERT_FALSE(devices.getIsRecording());
+  ASSERT_TRUE(logger.contains("All devices have stopped recording"));
   ASSERT_TRUE(logger.contains("All devices have stopped streaming data"));
   ASSERT_TRUE(logger.contains("All devices are now disconnected"));
 }
 
-TEST(Devices, Data) {
+TEST(Devices, LiveData) {
   auto logger = TestLogger();
   auto devices = devices::Devices();
 
@@ -410,37 +568,121 @@ TEST(Devices, Data) {
   deviceIds.push_back(
       devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice()));
 
-  // Connect the system and start streaming data
+  // Connect the system and start streaming data should start the live data
   devices.connect();
   devices.startDataStreaming();
   auto now = std::chrono::system_clock::now();
 
   // All the time series should have the same starting time
   for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
-    auto timeSeries = dataCollector->getTimeSeries();
-    ASSERT_LE(timeSeries.getStartingTime().time_since_epoch(),
+    const auto &data = dataCollector->getLiveData();
+    ASSERT_LE(data.getStartingTime().time_since_epoch(),
               now.time_since_epoch());
   }
-  logger.clear();
 
-  // Pause the recording should pause the time series
-  devices.pauseRecording();
-  ASSERT_TRUE(devices.getIsPaused());
-  ASSERT_TRUE(logger.contains("All devices have paused recording"));
+  // Data are supposed to be collected in the live data
+  std::map<size_t, size_t> sizes;
+  for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
+    sizes[deviceId] = dataCollector->getLiveData().size();
+  }
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
+    ASSERT_GT(dataCollector->getLiveData().size(), sizes[deviceId]);
+  }
+
+  // Stop streaming data should stop the live data
+  devices.stopDataStreaming();
+  sizes.clear();
+  for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
+    sizes[deviceId] = dataCollector->getLiveData().size();
+  }
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
+    ASSERT_EQ(dataCollector->getLiveData().size(), sizes[deviceId]);
+  }
+}
+
+TEST(Devices, TrialData) {
+  auto logger = TestLogger();
+  auto devices = devices::Devices();
+
+  // Add a bunch of devices
+  std::vector<size_t> deviceIds;
+  deviceIds.push_back(
+      devices.add(std::make_unique<devices::DelsysEmgDeviceMock>()));
+  deviceIds.push_back(
+      devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice()));
+  deviceIds.push_back(
+      devices.add(std::make_unique<devices::DelsysEmgDeviceMock>()));
+  deviceIds.push_back(
+      devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice()));
+
+  // Connect the system and start streaming data does not start the trial data
+  devices.connect();
+  devices.startDataStreaming();
 
   std::map<size_t, size_t> sizes;
   for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
-    sizes[deviceId] = dataCollector->getTimeSeries().size();
+    sizes[deviceId] = dataCollector->getTrialData().size();
   }
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
   for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
-    ASSERT_EQ(dataCollector->getTimeSeries().size(), sizes[deviceId]);
+    ASSERT_EQ(dataCollector->getTrialData().size(), sizes[deviceId]);
   }
 
-  // Resume the recording should resume the time series
-  devices.resumeRecording();
+  devices.startRecording();
+  auto now = std::chrono::system_clock::now();
+  // All the time series should have the same starting time
+  for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
+    const auto &data = dataCollector->getTrialData();
+    ASSERT_LE(data.getStartingTime().time_since_epoch(),
+              now.time_since_epoch());
+  }
+  devices.stopRecording();
+  for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
+    ASSERT_GT(dataCollector->getTrialData().size(), sizes[deviceId]);
+  }
+
+  // Stopping the recording should stop the trial data
+  sizes.clear();
+  for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
+    sizes[deviceId] = dataCollector->getTrialData().size();
+  }
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
   for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
-    ASSERT_GT(dataCollector->getTimeSeries().size(), sizes[deviceId]);
+    ASSERT_EQ(dataCollector->getTrialData().size(), sizes[deviceId]);
   }
+}
+
+TEST(Devices, SerializeTrialData) {
+  auto logger = TestLogger();
+  auto devices = devices::Devices();
+
+  // Add a bunch of devices
+  std::vector<size_t> deviceIds;
+  deviceIds.push_back(
+      devices.add(std::make_unique<devices::DelsysEmgDeviceMock>()));
+  deviceIds.push_back(
+      devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice()));
+  deviceIds.push_back(
+      devices.add(std::make_unique<devices::DelsysEmgDeviceMock>()));
+  deviceIds.push_back(
+      devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice()));
+
+  // Record some data
+  devices.connect();
+  devices.startDataStreaming();
+  devices.startRecording();
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  devices.disconnect();
+
+  // Serialize the data
+  auto data = devices.serialize();
+  ASSERT_EQ(data.size(), 2);
+  ASSERT_EQ(data[0]["name"], "DelsysEmgDevice");
+  ASSERT_EQ(data[0]["data"].size(),
+            devices.getDataCollector(deviceIds[0]).getTrialData().size());
+  ASSERT_EQ(data[1]["name"], "DelsysEmgDevice");
+  ASSERT_EQ(data[1]["data"].size(),
+            devices.getDataCollector(deviceIds[2]).getTrialData().size());
 }

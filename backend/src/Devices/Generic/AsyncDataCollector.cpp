@@ -8,9 +8,10 @@ using namespace STIMWALKER_NAMESPACE::devices;
 
 AsyncDataCollector::AsyncDataCollector(
     size_t channelCount, const std::chrono::microseconds &dataCheckIntervals,
-    std::unique_ptr<data::TimeSeries> timeSeries)
+    const std::function<std::unique_ptr<data::TimeSeries>()>
+        &timeSeriesGenerator)
     : m_KeepDataWorkerAliveInterval(dataCheckIntervals),
-      DataCollector(channelCount, std::move(timeSeries)) {}
+      DataCollector(channelCount, timeSeriesGenerator) {}
 
 AsyncDataCollector::~AsyncDataCollector() { stopDataCollectorWorkers(); }
 
@@ -34,7 +35,7 @@ void AsyncDataCollector::startDataStreamingAsync() {
       return;
     }
 
-    m_TimeSeries->clear();
+    m_LiveTimeSeries->reset();
     startKeepDataWorkerAlive();
     logger.info("The data collector " + dataCollectorName() +
                 " is now streaming data");
@@ -73,6 +74,7 @@ bool AsyncDataCollector::stopDataStreaming() {
   std::this_thread::sleep_for(m_KeepDataWorkerAliveInterval);
 
   // Give the hand to inherited classes to clean up some stuff
+  stopRecording();
   bool success = handleStopDataStreaming();
   if (!success) {
     logger.fatal("The data collector " + dataCollectorName() +
@@ -85,7 +87,21 @@ bool AsyncDataCollector::stopDataStreaming() {
   return true;
 }
 
+bool AsyncDataCollector::startRecording() {
+  std::lock_guard<std::mutex> lock(m_AsyncDataMutex);
+  return DataCollector::startRecording();
+}
+
+bool AsyncDataCollector::stopRecording() {
+  std::lock_guard<std::mutex> lock(m_AsyncDataMutex);
+  return DataCollector::stopRecording();
+}
+
 void AsyncDataCollector::stopDataCollectorWorkers() {
+  if (m_IsRecording) {
+    stopRecording();
+  }
+
   if (m_IsStreamingData) {
     stopDataStreaming();
   }

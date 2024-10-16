@@ -12,6 +12,12 @@
 
 using namespace STIMWALKER_NAMESPACE::devices;
 
+std::function<std::unique_ptr<STIMWALKER_NAMESPACE::data::TimeSeries>()>
+    timeSeriesGenerator = []() {
+      return std::make_unique<STIMWALKER_NAMESPACE::data::FixedTimeSeries>(
+          std::chrono::microseconds(500));
+    };
+
 DelsysEmgDevice::CommandTcpDevice::CommandTcpDevice(const std::string &host,
                                                     size_t port)
     : TcpDevice(host, port, std::chrono::milliseconds(1000)) {}
@@ -51,8 +57,7 @@ DelsysEmgDevice::DelsysEmgDevice(const std::string &host, size_t commandPort,
       m_DataBuffer(std::vector<char>(16 * m_SampleCount * m_BytesPerChannel)),
       AsyncDevice(std::chrono::milliseconds(1000)),
       AsyncDataCollector(16, std::chrono::microseconds(1),
-                         std::make_unique<data::FixedTimeSeries>(
-                             std::chrono::microseconds(500))) {
+                         timeSeriesGenerator) {
   m_IgnoreTooSlowWarning = true;
 }
 
@@ -66,8 +71,7 @@ DelsysEmgDevice::DelsysEmgDevice(
       m_DataBuffer(std::vector<char>(16 * m_SampleCount * m_BytesPerChannel)),
       AsyncDevice(std::chrono::milliseconds(1000)),
       AsyncDataCollector(16, std::chrono::microseconds(1),
-                         std::make_unique<data::FixedTimeSeries>(
-                             std::chrono::microseconds(500))) {
+                         timeSeriesGenerator) {
   m_IgnoreTooSlowWarning = true;
 }
 

@@ -77,13 +77,15 @@ public:
   /// were recording data, this will also stop the recording
   bool stopDataStreaming();
 
-  /// @brief Pause recording on all the devices in a blocking way (wait for all
-  /// the devices to pause recording before returning)
-  void pauseRecording();
+  /// @brief Start recording on all the devices in a blocking way (wait for all
+  /// the devices to start recording before returning)
+  /// @return True if all the devices started recording data, false otherwise
+  bool startRecording();
 
-  /// @brief Resume recording on all the devices in a blocking way (wait for all
-  /// the devices to resume recording before returning)
-  void resumeRecording();
+  /// @brief Stop recording on all the devices in a blocking way (wait for all
+  /// the devices to stop recording before returning)
+  /// @return True if all the devices stopped recording data, false otherwise
+  bool stopRecording();
 
   /// DATA SPECIFIC METHODS ///
 public:
@@ -100,7 +102,7 @@ protected:
   DECLARE_PROTECTED_MEMBER(bool, IsStreamingData)
 
   /// @brief If the devices are recording
-  DECLARE_PROTECTED_MEMBER(bool, IsPaused)
+  DECLARE_PROTECTED_MEMBER(bool, IsRecording)
 
 protected:
   /// @brief The collection of devices

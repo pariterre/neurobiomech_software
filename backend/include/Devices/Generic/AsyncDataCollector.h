@@ -12,10 +12,11 @@ public:
   /// @brief Constructor
   /// @param frameRate The frame rate of the device
   /// @param dataCheckIntervals The interval to check for new data
-  /// @param timeSeries The time series to store the data
+  /// @param timeSeriesGenerator The time series generator function
   AsyncDataCollector(size_t channelCount,
                      const std::chrono::microseconds &dataCheckIntervals,
-                     std::unique_ptr<data::TimeSeries> timeSeries);
+                     const std::function<std::unique_ptr<data::TimeSeries>()>
+                         &timeSeriesGenerator);
   ~AsyncDataCollector() override;
 
 protected:
@@ -53,6 +54,9 @@ public:
 
   /// @brief Stop data streaming in a synchronous way (blocking).
   bool stopDataStreaming() override;
+
+  bool startRecording() override;
+  bool stopRecording() override;
 
 protected:
   /// @brief Stop the worker threads. This can be called by the destructor of

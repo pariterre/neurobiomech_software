@@ -6,10 +6,13 @@
 using namespace STIMWALKER_NAMESPACE::data;
 using namespace STIMWALKER_NAMESPACE::devices;
 
-DataCollector::DataCollector(size_t channelCount,
-                             std::unique_ptr<data::TimeSeries> timeSeries)
+DataCollector::DataCollector(
+    size_t channelCount,
+    const std::function<std::unique_ptr<data::TimeSeries>()>
+        &timeSeriesGenerator)
     : m_DataChannelCount(channelCount), m_IsStreamingData(false),
-      m_IsPaused(false), m_TimeSeries(std::move(timeSeries)) {}
+      m_IsRecording(false), m_LiveTimeSeries(timeSeriesGenerator()),
+      m_TrialTimeSeries(timeSeriesGenerator()) {}
 
 bool DataCollector::startDataStreaming() {
   auto &logger = utils::Logger::getInstance();
@@ -22,7 +25,7 @@ bool DataCollector::startDataStreaming() {
 
   m_IsStreamingData = handleStartDataStreaming();
   m_HasFailedToStartDataStreaming = !m_IsStreamingData;
-  m_TimeSeries->clear();
+  m_LiveTimeSeries->reset();
 
   if (m_IsStreamingData) {
     logger.info("The data collector " + dataCollectorName() +
@@ -44,6 +47,7 @@ bool DataCollector::stopDataStreaming() {
     return true;
   }
 
+  stopRecording();
   m_IsStreamingData = !handleStopDataStreaming();
 
   if (m_IsStreamingData) {
@@ -57,28 +61,74 @@ bool DataCollector::stopDataStreaming() {
   }
 }
 
-void DataCollector::pauseRecording() { m_IsPaused = true; }
+bool DataCollector::startRecording() {
+  auto &logger = utils::Logger::getInstance();
 
-void DataCollector::resumeRecording() { m_IsPaused = false; }
+  if (!m_IsStreamingData) {
+    logger.fatal("The data collector " + dataCollectorName() +
+                 " is not streaming data, so it cannot start recording");
+    return false;
+  }
+  if (m_IsRecording) {
+    logger.warning("The data collector " + dataCollectorName() +
+                   " is already recording");
+    return true;
+  }
 
-const TimeSeries &DataCollector::getTimeSeries() const { return *m_TimeSeries; }
+  m_TrialTimeSeries->reset();
+  m_IsRecording = true;
+
+  logger.info("The data collector " + dataCollectorName() +
+              " is now recording");
+  return true;
+}
+
+bool DataCollector::stopRecording() {
+  auto &logger = utils::Logger::getInstance();
+
+  if (!m_IsRecording) {
+    logger.warning("The data collector " + dataCollectorName() +
+                   " is not recording");
+    return true;
+  }
+
+  m_IsRecording = false;
+
+  logger.info("The data collector " + dataCollectorName() +
+              " has stopped recording");
+  return true;
+}
+
+const TimeSeries &DataCollector::getLiveData() const {
+  return *m_LiveTimeSeries;
+}
+
+const TimeSeries &DataCollector::getTrialData() const {
+  return *m_TrialTimeSeries;
+}
 
 void DataCollector::addDataPoint(DataPoint &dataPoint) {
-  if (!m_IsStreamingData || m_IsPaused) {
+  if (!m_IsStreamingData) {
     return;
   }
 
-  m_TimeSeries->add(dataPoint);
+  m_LiveTimeSeries->add(dataPoint);
+  if (m_IsRecording) {
+    m_TrialTimeSeries->add(dataPoint);
+  }
   onNewData.notifyListeners(dataPoint);
 }
 
 void DataCollector::addDataPoints(std::vector<DataPoint> &data) {
-  if (!m_IsStreamingData || m_IsPaused) {
+  if (!m_IsStreamingData) {
     return;
   }
 
   for (auto d : data) {
-    m_TimeSeries->add(d);
+    m_LiveTimeSeries->add(d);
+    if (m_IsRecording) {
+      m_TrialTimeSeries->add(d);
+    }
   }
   onNewData.notifyListeners(data.back());
 }

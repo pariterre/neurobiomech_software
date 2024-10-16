@@ -19,9 +19,10 @@ class DataCollector {
 public:
   /// @brief Constructor
   /// @param channelCount The number of channels
-  /// @param timeSeries The time series to store the data
+  /// @param timeSeriesGenerator The time series generator function
   DataCollector(size_t channelCount,
-                std::unique_ptr<data::TimeSeries> timeSeries);
+                const std::function<std::unique_ptr<data::TimeSeries>()>
+                    &timeSeriesGenerator);
 
   /// @brief Destructor
   virtual ~DataCollector() = default;
@@ -40,13 +41,15 @@ public:
   /// @return True if the data stopped streaming, false otherwise
   virtual bool stopDataStreaming();
 
-  /// @brief Pause collecting data. If this is called before the recording, it
-  /// will pause the recording when it starts
-  virtual void pauseRecording();
+  /// @brief Start the recording. This resets the LiveTimeSeries and starts
+  /// sending the data to the TrialTimeSeries
+  /// @return True if the data are recording, false otherwise
+  virtual bool startRecording();
 
-  /// @brief Resume collecting data. If this is called before the recording, it
-  /// will resume the recording when it starts
-  virtual void resumeRecording();
+  /// @brief Stop the recording. This stops the data from being sent to the
+  /// TrialTimeSeries
+  /// @return True if the data are not recording, false otherwise
+  virtual bool stopRecording();
 
 protected:
   /// @brief Method to handle the start streaming data command.
@@ -65,20 +68,27 @@ protected:
   /// @return True if the device is streaming data, false otherwise
   DECLARE_PROTECTED_MEMBER(bool, IsStreamingData)
 
-  /// @brief Get if the device is currently paused
-  /// @return True if the device is paused, false otherwise
-  DECLARE_PROTECTED_MEMBER(bool, IsPaused)
+  /// @brief Get if the device is currently recording
+  /// @return True if the device is recording, false otherwise
+  DECLARE_PROTECTED_MEMBER(bool, IsRecording)
 
   /// @brief Has failed to start the data streaming. This is always false unless
   /// the it actually failed to start to stream
   DECLARE_PROTECTED_MEMBER(bool, HasFailedToStartDataStreaming)
 
-  /// @brief The live time series data. This is reset every time the recording
+  /// @brief The live time series data. This is reset when the data streaming
   /// starts
-  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<data::TimeSeries>, TimeSeries)
+  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<data::TimeSeries>,
+                                 LiveTimeSeries)
+
+  /// @brief The trial time series data. This is reset every time the recording
+  /// starts
+  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<data::TimeSeries>,
+                                 TrialTimeSeries)
 
 public:
-  const data::TimeSeries &getTimeSeries() const;
+  const data::TimeSeries &getLiveData() const;
+  const data::TimeSeries &getTrialData() const;
 
   /// @brief Set the callback function to call when data is collected
   /// @param callback The callback function

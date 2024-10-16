@@ -6,8 +6,34 @@
 #include "utils.h"
 
 static double requiredPrecision(1e-6);
-
 using namespace STIMWALKER_NAMESPACE;
+
+int findDataOffset(const data::TimeSeries &data) {
+  // The fake data are based on a sine wave but
+  // offset by the number of data previously taken in any of the
+  // test. We therefore search for this offset first, then it
+  // should be a sine wave. The offset is found when a value is
+  // exact and the next one is also exact (determining the
+  // direction of the sine wave).
+  int offset = 0;
+  while (true) {
+    float value = static_cast<float>(
+        std::sin(static_cast<float>(offset) / 2000.0f * 2 * M_PI));
+    float nextValue = static_cast<float>(
+        std::sin(static_cast<float>(offset + 1) / 2000.0f * 2 * M_PI));
+    if ((std::abs(data[0].second[0] - value) < requiredPrecision) &&
+        (std::abs(data[1].second[0] - nextValue) < requiredPrecision)) {
+      break;
+    }
+    if (offset > 2000) {
+      // But we know for sure it will never be that far in (as the wave has
+      // looped)
+      return -1;
+    }
+    offset++;
+  }
+  return offset;
+}
 
 TEST(Delsys, Info) {
   auto delsys = devices::DelsysEmgDeviceMock();
@@ -228,81 +254,167 @@ TEST(Delsys, StartDataStreamingFailed) {
                               "failed to start streaming data"));
 }
 
-TEST(Delsys, PauseRecording) {
+TEST(Delsys, StartRecording) {
   auto logger = TestLogger();
   auto delsys = devices::DelsysEmgDeviceMock();
 
-  // Pause the system prior to recording
-  delsys.pauseRecording();
-  ASSERT_TRUE(delsys.getIsPaused());
+  // Start the recording of data before connecting or streaming should fail
+  bool isRecording = delsys.startRecording();
+  ASSERT_FALSE(isRecording);
+  ASSERT_FALSE(delsys.getIsRecording());
+  // The logger is sometimes late
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  ASSERT_TRUE(
+      logger.contains("The data collector DelsysEmgDataCollector is not "
+                      "streaming data, so it cannot start recording"));
+  logger.clear();
 
-  // Start the recording
+  // Connect the system
   delsys.connect();
+  isRecording = delsys.startRecording();
+  ASSERT_FALSE(isRecording);
+  ASSERT_FALSE(delsys.getIsRecording());
+  // The logger is sometimes late
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  ASSERT_TRUE(
+      logger.contains("The data collector DelsysEmgDataCollector is "
+                      "not streaming data, so it cannot start recording"));
+  logger.clear();
+
+  // Start streaming data
   delsys.startDataStreaming();
+  isRecording = delsys.startRecording();
+  ASSERT_TRUE(isRecording);
+  ASSERT_TRUE(delsys.getIsRecording());
+  // The logger is sometimes late
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  ASSERT_TRUE(logger.contains("The data collector DelsysEmgDataCollector is "
+                              "now recording"));
+  logger.clear();
 
-  // Wait for a bit. There should not be any data
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  ASSERT_EQ(delsys.getTimeSeries().size(), 0);
+  // Stop recording
+  bool isNotRecording = delsys.stopRecording();
+  ASSERT_TRUE(isNotRecording);
+  ASSERT_FALSE(delsys.getIsRecording());
+  // The logger is sometimes late
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  ASSERT_TRUE(logger.contains("The data collector DelsysEmgDataCollector has "
+                              "stopped recording"));
+  logger.clear();
 
-  // Resume the recording
-  delsys.resumeRecording();
-  ASSERT_FALSE(delsys.getIsPaused());
-
-  // Wait for a bit. There should be data
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  size_t dataCount = delsys.getTimeSeries().size();
-  ASSERT_GT(dataCount, 0);
-
-  // Pause the recording again
-  delsys.pauseRecording();
-  ASSERT_TRUE(delsys.getIsPaused());
-
-  // Wait for a bit. There should not be any new data
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  ASSERT_EQ(delsys.getTimeSeries().size(), dataCount);
+  // The system cannot stop recording if it is not recording
+  isNotRecording = delsys.stopRecording();
+  ASSERT_TRUE(isNotRecording);
+  ASSERT_FALSE(delsys.getIsRecording());
+  // The logger is sometimes late
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  ASSERT_TRUE(logger.contains("The data collector DelsysEmgDataCollector is "
+                              "not recording"));
 }
 
-TEST(Delsys, Data) {
+TEST(Delsys, AutoStopRecording) {
+  // The system auto stop recording when the object is destroyed
+  auto logger = TestLogger();
+  {
+    auto delsys = devices::DelsysEmgDeviceMock();
+    delsys.connect();
+    delsys.startDataStreaming();
+    delsys.startRecording();
+  }
+  ASSERT_TRUE(logger.contains(
+      "The data collector DelsysEmgDataCollector has stopped recording"));
+  logger.clear();
+
+  // The system auto stop if stop data streaming is called
+  {
+    auto delsys = devices::DelsysEmgDeviceMock();
+    delsys.connect();
+    delsys.startDataStreaming();
+    delsys.startRecording();
+    delsys.stopDataStreaming();
+
+    ASSERT_FALSE(delsys.getIsRecording());
+    ASSERT_TRUE(logger.contains("The data collector DelsysEmgDataCollector has "
+                                "stopped recording"));
+    logger.clear();
+  }
+
+  // The system auto stop if disconnect is called
+  {
+    auto delsys = devices::DelsysEmgDeviceMock();
+    delsys.connect();
+    delsys.startDataStreaming();
+    delsys.startRecording();
+    delsys.disconnect();
+
+    ASSERT_FALSE(delsys.getIsRecording());
+    ASSERT_TRUE(logger.contains("The data collector DelsysEmgDataCollector has "
+                                "stopped recording"));
+    logger.clear();
+  }
+}
+
+TEST(Delsys, LiveData) {
   auto delsys = devices::DelsysEmgDeviceMock();
   delsys.connect();
 
-  // Wait for the data to be collected
+  // Live data should collect even if the system is not recording
   delsys.startDataStreaming();
+  ASSERT_FALSE(delsys.getIsRecording());
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
   delsys.stopDataStreaming();
 
   // Get the data
-  const auto &data = delsys.getTimeSeries();
+  const auto &data = delsys.getLiveData();
   // Technically it should have recorded be exactly 200 (2000Hz). But the
   // material is not that precise. So we just check that it is at least 150
   ASSERT_GE(data.size(), 150);
 
-  // Check the data. The fake data are based on a sine wave but offset by the
-  // number of data previously taken in any of the test. We therefore search for
-  // this offset first, then it should be a sine wave. The offset is found when
-  // a value is exact and the next one is also exact (determining the direction
-  // of the sine wave).
-  size_t offset = 0;
-  while (true) {
-    float value = static_cast<float>(
-        std::sin(static_cast<float>(offset) / 2000.0f * 2 * M_PI));
-    float nextValue = static_cast<float>(
-        std::sin(static_cast<float>(offset + 1) / 2000.0f * 2 * M_PI));
-    if ((std::abs(data[0].second[0] - value) < requiredPrecision) &&
-        (std::abs(data[1].second[0] - nextValue) < requiredPrecision)) {
-      break;
-    }
-    if (offset > 2000) {
-      // But we know for sure it will never be that far in (as the wave has
-      // looped)
-      FAIL() << "Could not find the offset in the data";
-    }
-    offset++;
+  int offset = findDataOffset(data);
+  if (offset == -1) {
+    FAIL() << "Could not find the offset in the data";
   }
+
   for (size_t i = 0; i < data.size(); i++) {
     for (size_t j = 0; j < data[i].second.size(); j++) {
-      float value =
-          static_cast<float>(std::sin((i + offset) / 2000.0 * 2 * M_PI));
+      float value = static_cast<float>(
+          std::sin((i + static_cast<size_t>(offset)) / 2000.0 * 2 * M_PI));
+      ASSERT_NEAR(data[i].second[j], value, requiredPrecision);
+    }
+  }
+}
+
+TEST(Delsys, TrialData) {
+  auto delsys = devices::DelsysEmgDeviceMock();
+  delsys.connect();
+
+  // Trial data should only collect when the system is recording
+  delsys.startDataStreaming();
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+  // Get the data
+  const auto &data = delsys.getTrialData();
+  ASSERT_EQ(data.size(), 0);
+
+  auto now = std::chrono::system_clock::now();
+  delsys.startRecording();
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  delsys.stopRecording();
+
+  ASSERT_ALMOST_NOW(data.getStartingTime(), now);
+  // Technically it should have recorded be exactly 200 (2000Hz). But the
+  // material is not that precise. So we just check that it is at least 150
+  ASSERT_GE(data.size(), 150);
+
+  int offset = findDataOffset(data);
+  if (offset == -1) {
+    FAIL() << "Could not find the offset in the data";
+  }
+
+  for (size_t i = 0; i < data.size(); i++) {
+    for (size_t j = 0; j < data[i].second.size(); j++) {
+      float value = static_cast<float>(
+          std::sin((i + static_cast<size_t>(offset)) / 2000.0 * 2 * M_PI));
       ASSERT_NEAR(data[i].second[j], value, requiredPrecision);
     }
   }

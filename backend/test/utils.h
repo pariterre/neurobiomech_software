@@ -5,6 +5,22 @@
 
 #include "Utils/Logger.h"
 
+static void
+ASSERT_ALMOST_NOW(const std::chrono::system_clock::time_point &time,
+                  const std::chrono::system_clock::time_point &now) {
+  auto timeCount = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                       time.time_since_epoch())
+                       .count();
+  auto nowCount = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                      now.time_since_epoch())
+                      .count();
+  auto nowDelayCount = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                           std::chrono::milliseconds(50))
+                           .count();
+  ASSERT_GE(timeCount, nowCount);
+  ASSERT_LE(timeCount, nowCount + nowDelayCount);
+}
+
 class TestLogger {
 public:
   TestLogger() : m_logger(STIMWALKER_NAMESPACE::utils::Logger::getInstance()) {
