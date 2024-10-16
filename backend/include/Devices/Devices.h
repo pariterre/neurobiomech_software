@@ -66,16 +66,16 @@ public:
   /// devices to be disconnected before returning)
   bool disconnect();
 
-  /// @brief Start recording on all the devices in a blocking way (wait for all
-  /// the devices to start recording before returning). Additionally, it sets
-  /// all the starting reconding time of all device to "now" as of the time of
-  /// the when all the devices are started.
-  /// @return True if all the devices started recording, false otherwise
-  bool startRecording();
+  /// @brief Start data streaming on all the devices in a blocking way (wait for
+  /// all the devices to start streaming data before returning). This must be
+  /// called before starting to record data
+  /// @return True if all the devices started streaming data, false otherwise
+  bool startDataStreaming();
 
-  /// @brief Stop recording on all the devices in a blocking way (wait for all
-  /// the devices to stop recording before returning)
-  bool stopRecording();
+  /// @brief Stop data streaming on all the devices in a blocking way (wait for
+  /// all the devices to stop streaming data before returning). If the devices
+  /// were recording data, this will also stop the recording
+  bool stopDataStreaming();
 
   /// @brief Pause recording on all the devices in a blocking way (wait for all
   /// the devices to pause recording before returning)
@@ -96,8 +96,8 @@ protected:
   /// @brief If the devices are connected
   DECLARE_PROTECTED_MEMBER(bool, IsConnected)
 
-  /// @brief If the devices are recording
-  DECLARE_PROTECTED_MEMBER(bool, IsRecording)
+  /// @brief If the devices are streaming data
+  DECLARE_PROTECTED_MEMBER(bool, IsStreamingData)
 
   /// @brief If the devices are recording
   DECLARE_PROTECTED_MEMBER(bool, IsPaused)

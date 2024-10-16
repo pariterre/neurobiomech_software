@@ -37,8 +37,8 @@ public:
 protected:
   bool handleConnect() override;
   bool handleDisconnect() override;
-  bool handleStartRecording() override;
-  bool handleStopRecording() override;
+  bool handleStartDataStreaming() override;
+  bool handleStopDataStreaming() override;
   void handleNewData(const data::DataPoint &data) override;
 
   DeviceResponses parseAsyncSendCommand(const DeviceCommands &command,

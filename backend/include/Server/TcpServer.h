@@ -18,8 +18,8 @@ enum class TcpServerCommand : std::uint32_t {
   CONNECT_MAGSTIM,
   DISCONNECT_DELSYS,
   DISCONNECT_MAGSTIM,
-  START_RECORDING,
-  STOP_RECORDING,
+  START_DATA_STREAMING,
+  STOP_DATA_STREAMING,
   PAUSE_RECORDING,
   RESUME_RECORDING,
   FAILED,
@@ -63,8 +63,8 @@ protected:
   DECLARE_PROTECTED_MEMBER(devices::Devices, Devices);
 
 protected:
-  /// @brief The connected devices sorted by their names
-  std::map<std::string, size_t> m_ConnectedDevices;
+  /// @brief The id of the connected devices
+  std::map<std::string, size_t> m_ConnectedDeviceIds;
 
   // ----------------------------- //
   // --- COMMUNICATION METHODS --- //
@@ -108,11 +108,23 @@ protected:
   /// @brief The current status of the server
   DECLARE_PROTECTED_MEMBER(TcpServerStatus, Status);
 
-  /// @brief Connect the device based on the command
-  /// @param command The command to connect the device
-  /// @return True if the device is connected, false otherwise
-  bool addDevice(TcpServerCommand command);
-  virtual bool addDeviceToDevices(TcpServerCommand command);
+  /// @brief Add the requested device
+  /// @param deviceName The name of the device to add
+  /// @return True if the device is added, false otherwise
+  bool addDevice(const std::string &deviceName);
+
+  /// @brief Make the device and add it to the devices. This method is called by
+  /// [addDevice] when it is confirmed that it is possible to actually add the
+  /// device (no check is expected to be done in this method). This is a virtual
+  /// method that can be overridden by the mocker to simulate the addition of a
+  /// device
+  /// @param deviceName The name of the device to add
+  virtual void makeAndAddDevice(const std::string &deviceName);
+
+  /// @brief Remove the requested device
+  /// @param deviceName The name of the device to remove
+  /// @return True if the device is removed, false otherwise
+  bool removeDevice(const std::string &deviceName);
 
 private:
   /// @brief The asio context used for async methods of the server
@@ -137,7 +149,7 @@ public:
   TcpServerMock(const TcpServerMock &) = delete;
 
 protected:
-  bool addDeviceToDevices(TcpServerCommand command) override;
+  void makeAndAddDevice(const std::string &deviceName) override;
 };
 
 } // namespace STIMWALKER_NAMESPACE::server

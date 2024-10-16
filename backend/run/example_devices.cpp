@@ -13,21 +13,22 @@ int main() {
     devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice());
 
     devices.connect();
-    devices.startRecording();
-    logger.info("The system is now connected and is recording");
+    devices.startDataStreaming();
+    logger.info("The system is now connected and is streaming data");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    logger.info("The system has been recording for 1 seconds");
+    logger.info("The system has been streaming data for 1 seconds");
 
-    devices.stopRecording();
+    devices.stopDataStreaming();
     devices.disconnect();
-    logger.info("The system has stopped recording and is now disconnected");
+    logger.info(
+        "The system has stopped streaming data and is now disconnected");
 
     const auto &dataCollectors = devices.getDataCollectors();
     for (auto &[deviceId, dataCollector] : dataCollectors) {
       logger.info("The device " + devices[deviceId].deviceName() +
                   " has collected " +
-                  std::to_string(dataCollector->getTrialData().size()) +
+                  std::to_string(dataCollector->getTimeSeries().size()) +
                   " data points");
     }
 

@@ -15,17 +15,18 @@ int main() {
     auto delsys = devices::DelsysEmgDeviceMock();
 
     delsys.connect();
-    delsys.startRecording();
-    logger.info("The system is now connected and is recording");
+    delsys.startDataStreaming();
+    logger.info("The system is now connected and is streaming data");
 
     std::this_thread::sleep_for(std::chrono::seconds(1));
-    logger.info("The system has been recording for 1 seconds");
+    logger.info("The system has been streaming data for 1 seconds");
 
-    delsys.stopRecording();
+    delsys.stopDataStreaming();
     delsys.disconnect();
-    logger.info("The system has stopped recording and is now disconnected");
+    logger.info(
+        "The system has stopped streaming data and is now disconnected");
 
-    const auto &data = delsys.getTrialData();
+    const auto &data = delsys.getTimeSeries();
     logger.info("The data has been collected: " + std::to_string(data.size()) +
                 " data points");
 

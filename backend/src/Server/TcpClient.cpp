@@ -95,27 +95,27 @@ bool TcpClient::removeMagstimDevice() {
   return true;
 }
 
-bool TcpClient::startRecording() {
+bool TcpClient::startDataStreaming() {
   auto &logger = utils::Logger::getInstance();
 
-  if (!sendCommandWithConfirmation(TcpServerCommand::START_RECORDING)) {
-    logger.fatal("Failed to start recording");
+  if (!sendCommandWithConfirmation(TcpServerCommand::START_DATA_STREAMING)) {
+    logger.fatal("Failed to start data streaming");
     return false;
   }
 
-  logger.info("Recording started");
+  logger.info("Data streaming started");
   return true;
 }
 
-bool TcpClient::stopRecording() {
+bool TcpClient::stopDataStreaming() {
   auto &logger = utils::Logger::getInstance();
 
-  if (!sendCommandWithConfirmation(TcpServerCommand::STOP_RECORDING)) {
-    logger.fatal("Failed to stop recording");
+  if (!sendCommandWithConfirmation(TcpServerCommand::STOP_DATA_STREAMING)) {
+    logger.fatal("Failed to stop data streaming");
     return false;
   }
 
-  logger.info("Recording stopped");
+  logger.info("Data streaming stopped");
   return true;
 }
 

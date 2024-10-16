@@ -175,42 +175,29 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
   TcpServerResponse response;
   switch (command) {
   case TcpServerCommand::CONNECT_DELSYS:
+    response = addDevice(DEVICE_NAME_DELSYS) ? TcpServerResponse::OK
+                                             : TcpServerResponse::NOK;
+    break;
   case TcpServerCommand::CONNECT_MAGSTIM:
-    response =
-        addDevice(command) ? TcpServerResponse::OK : TcpServerResponse::NOK;
+    response = addDevice(DEVICE_NAME_MAGSTIM) ? TcpServerResponse::OK
+                                              : TcpServerResponse::NOK;
     break;
 
   case TcpServerCommand::DISCONNECT_DELSYS:
-    if (m_ConnectedDevices.find(DEVICE_NAME_DELSYS) ==
-        m_ConnectedDevices.end()) {
-      logger.warning("Delsys EMG device not connected");
-      response = TcpServerResponse::NOK;
-      break;
-    }
-
-    m_Devices.remove(m_ConnectedDevices[DEVICE_NAME_DELSYS]);
-    response = TcpServerResponse::OK;
+    response = removeDevice(DEVICE_NAME_DELSYS) ? TcpServerResponse::OK
+                                                : TcpServerResponse::NOK;
     break;
-
   case TcpServerCommand::DISCONNECT_MAGSTIM:
-    if (m_ConnectedDevices.find(DEVICE_NAME_MAGSTIM) ==
-        m_ConnectedDevices.end()) {
-      logger.warning("Magstim Rapid device not connected");
-      response = TcpServerResponse::NOK;
-      break;
-    }
-
-    m_Devices.remove(m_ConnectedDevices[DEVICE_NAME_MAGSTIM]);
-    response = TcpServerResponse::OK;
+    response = removeDevice(DEVICE_NAME_MAGSTIM) ? TcpServerResponse::OK
+                                                 : TcpServerResponse::NOK;
     break;
 
-  case TcpServerCommand::START_RECORDING:
-    m_Devices.startRecording();
+  case TcpServerCommand::START_DATA_STREAMING:
+    m_Devices.startDataStreaming();
     break;
 
-  case TcpServerCommand::STOP_RECORDING:
-    logger.info("Stopping recording");
-    m_Devices.stopRecording();
+  case TcpServerCommand::STOP_DATA_STREAMING:
+    m_Devices.stopDataStreaming();
     break;
 
   case TcpServerCommand::PAUSE_RECORDING:
@@ -241,49 +228,46 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
   return true;
 }
 
-bool TcpServer::addDevice(TcpServerCommand command) {
+bool TcpServer::addDevice(const std::string &deviceName) {
   auto &logger = utils::Logger::getInstance();
 
-  std::string deviceName;
-  switch (command) {
-  case TcpServerCommand::CONNECT_DELSYS:
-    deviceName = DEVICE_NAME_DELSYS;
-    break;
-  case TcpServerCommand::CONNECT_MAGSTIM:
-    deviceName = DEVICE_NAME_MAGSTIM;
-    break;
-  default:
-    logger.fatal("Invalid command: " +
-                 std::to_string(static_cast<std::uint32_t>(command)));
-    return false;
-  }
-
-  // Check if m_ConnectedDevices contains the device
-  if (m_ConnectedDevices.find(deviceName) != m_ConnectedDevices.end()) {
+  // Check if [m_ConnectedDeviceIds] contains the device
+  if (m_ConnectedDeviceIds.find(deviceName) != m_ConnectedDeviceIds.end()) {
     logger.warning(deviceName + " already connected");
     return false;
   }
 
-  return addDeviceToDevices(command);
+  makeAndAddDevice(deviceName);
+  return true;
 }
 
-bool TcpServer::addDeviceToDevices(TcpServerCommand command) {
+void TcpServer::makeAndAddDevice(const std::string &deviceName) {
   auto &logger = utils::Logger::getInstance();
 
-  switch (command) {
-  case TcpServerCommand::CONNECT_DELSYS:
-    m_ConnectedDevices[DEVICE_NAME_DELSYS] =
+  if (deviceName == DEVICE_NAME_DELSYS) {
+    m_ConnectedDeviceIds[DEVICE_NAME_DELSYS] =
         m_Devices.add(std::make_unique<devices::DelsysEmgDevice>());
-    return true;
-  case TcpServerCommand::CONNECT_MAGSTIM:
-    m_ConnectedDevices[DEVICE_NAME_MAGSTIM] =
+  } else if (deviceName == DEVICE_NAME_MAGSTIM) {
+    m_ConnectedDeviceIds[DEVICE_NAME_MAGSTIM] =
         m_Devices.add(devices::MagstimRapidDevice::findMagstimDevice());
-    return true;
-  default:
-    logger.fatal("Invalid command: " +
-                 std::to_string(static_cast<std::uint32_t>(command)));
+  } else {
+    logger.fatal("Invalid device name: " + deviceName);
+    throw std::runtime_error("Invalid device name: " + deviceName);
+  }
+}
+
+bool TcpServer::removeDevice(const std::string &deviceName) {
+  auto &logger = utils::Logger::getInstance();
+
+  // Check if [m_ConnectedDeviceIds] contains the device
+  if (m_ConnectedDeviceIds.find(deviceName) == m_ConnectedDeviceIds.end()) {
+    logger.warning(deviceName + " not connected");
     return false;
   }
+
+  m_Devices.remove(m_ConnectedDeviceIds[deviceName]);
+  m_ConnectedDeviceIds.erase(deviceName);
+  return true;
 }
 
 TcpServerCommand
@@ -328,21 +312,17 @@ TcpServer::constructResponsePacket(TcpServerResponse response) {
   return packet;
 }
 
-bool TcpServerMock::addDeviceToDevices(TcpServerCommand command) {
+void TcpServerMock::makeAndAddDevice(const std::string &deviceName) {
   auto &logger = utils::Logger::getInstance();
 
-  switch (command) {
-  case TcpServerCommand::CONNECT_DELSYS:
-    m_ConnectedDevices[DEVICE_NAME_DELSYS] =
+  if (deviceName == DEVICE_NAME_DELSYS) {
+    m_ConnectedDeviceIds[DEVICE_NAME_DELSYS] =
         m_Devices.add(std::make_unique<devices::DelsysEmgDeviceMock>());
-    return true;
-  case TcpServerCommand::CONNECT_MAGSTIM:
-    m_ConnectedDevices[DEVICE_NAME_MAGSTIM] =
+  } else if (deviceName == DEVICE_NAME_MAGSTIM) {
+    m_ConnectedDeviceIds[DEVICE_NAME_MAGSTIM] =
         m_Devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice());
-    return true;
-  default:
-    logger.fatal("Invalid command: " +
-                 std::to_string(static_cast<std::uint32_t>(command)));
-    return false;
+  } else {
+    logger.fatal("Invalid device name: " + deviceName);
+    throw std::runtime_error("Invalid device name: " + deviceName);
   }
 }

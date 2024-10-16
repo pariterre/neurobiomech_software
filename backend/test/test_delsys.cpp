@@ -108,124 +108,124 @@ TEST(Delsys, ConnectFailed) {
       logger.contains("Could not connect to the device DelsysEmgDevice"));
 }
 
-TEST(Delsys, StartRecordingAsync) {
+TEST(Delsys, StartDataStreamingAsync) {
   auto logger = TestLogger();
   auto delsys = devices::DelsysEmgDeviceMock();
 
   delsys.connect();
-  delsys.startRecordingAsync();
-  ASSERT_FALSE(delsys.getIsRecording());
+  delsys.startDataStreamingAsync();
+  ASSERT_FALSE(delsys.getIsStreamingData());
 
-  // Wait for the recording to start
+  // Wait for the data stream to start
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  ASSERT_TRUE(delsys.getIsRecording());
+  ASSERT_TRUE(delsys.getIsStreamingData());
 }
 
-TEST(Delsys, StartRecordingFailedAsync) {
+TEST(Delsys, StartDataStreamingFailedAsync) {
   auto logger = TestLogger();
   auto delsys = devices::DelsysEmgDeviceMock();
-  delsys.shouldFailToStartRecording = true;
+  delsys.shouldFailToStartDataStreaming = true;
 
   delsys.connect();
-  delsys.startRecordingAsync();
-  ASSERT_FALSE(delsys.getIsRecording());
+  delsys.startDataStreamingAsync();
+  ASSERT_FALSE(delsys.getIsStreamingData());
 
-  // Wait for the recording to start
+  // Wait for the data stream to start
   std::this_thread::sleep_for(std::chrono::milliseconds(200));
-  ASSERT_FALSE(delsys.getIsRecording());
-  ASSERT_TRUE(delsys.getHasFailedToStartRecording());
-  ASSERT_TRUE(logger.contains(
-      "The data collector DelsysEmgDataCollector failed to start recording"));
+  ASSERT_FALSE(delsys.getIsStreamingData());
+  ASSERT_TRUE(delsys.getHasFailedToStartDataStreaming());
+  ASSERT_TRUE(logger.contains("The data collector DelsysEmgDataCollector "
+                              "failed to start streaming data"));
 }
 
-TEST(Delsys, StartRecording) {
+TEST(Delsys, StartDataStreaming) {
   auto logger = TestLogger();
   auto delsys = devices::DelsysEmgDeviceMock();
 
-  // The system cannot start recording if it is not connected
-  bool isRecording = delsys.startRecording();
-  ASSERT_FALSE(isRecording);
-  ASSERT_FALSE(delsys.getIsRecording());
+  // The system cannot start streaming data if it is not connected
+  bool isStreamingData = delsys.startDataStreaming();
+  ASSERT_FALSE(isStreamingData);
+  ASSERT_FALSE(delsys.getIsStreamingData());
   ASSERT_TRUE(
       logger.contains("Cannot send a command to the device "
                       "DelsysCommandTcpDevice because it is not connected"));
-  ASSERT_TRUE(logger.contains(
-      "The data collector DelsysEmgDataCollector failed to start recording"));
+  ASSERT_TRUE(logger.contains("The data collector DelsysEmgDataCollector "
+                              "failed to start streaming data"));
   logger.clear();
 
-  // Connect the system and start recording
+  // Connect the system and start streaming data
   delsys.connect();
-  isRecording = delsys.startRecording();
-  ASSERT_TRUE(isRecording);
-  ASSERT_TRUE(delsys.getIsRecording());
+  isStreamingData = delsys.startDataStreaming();
+  ASSERT_TRUE(isStreamingData);
+  ASSERT_TRUE(delsys.getIsStreamingData());
   ASSERT_TRUE(logger.contains(
-      "The data collector DelsysEmgDataCollector is now recording"));
+      "The data collector DelsysEmgDataCollector is now streaming data"));
   logger.clear();
 
-  // The system cannot start recording if it is already recording
-  isRecording = delsys.startRecording();
-  ASSERT_TRUE(isRecording);
-  ASSERT_TRUE(delsys.getIsRecording());
+  // The system cannot start streaming data if it is already streaming
+  isStreamingData = delsys.startDataStreaming();
+  ASSERT_TRUE(isStreamingData);
+  ASSERT_TRUE(delsys.getIsStreamingData());
   ASSERT_TRUE(logger.contains(
-      "The data collector DelsysEmgDataCollector is already recording"));
+      "The data collector DelsysEmgDataCollector is already streaming data"));
   logger.clear();
 
-  // Stop recording
-  bool isNotRecording = delsys.stopRecording();
-  ASSERT_TRUE(isNotRecording);
-  ASSERT_FALSE(delsys.getIsRecording());
+  // Stop streaming data
+  bool isNotStreamingData = delsys.stopDataStreaming();
+  ASSERT_TRUE(isNotStreamingData);
+  ASSERT_FALSE(delsys.getIsStreamingData());
   ASSERT_TRUE(logger.contains(
-      "The data collector DelsysEmgDataCollector has stopped recording"));
+      "The data collector DelsysEmgDataCollector has stopped streaming data"));
   logger.clear();
 
-  // The system cannot stop recording if it is not recording
-  isNotRecording = delsys.stopRecording();
-  ASSERT_TRUE(isNotRecording);
-  ASSERT_FALSE(delsys.getIsRecording());
+  // The system cannot stop streaming data if it is not streaming
+  isNotStreamingData = delsys.stopDataStreaming();
+  ASSERT_TRUE(isNotStreamingData);
+  ASSERT_FALSE(delsys.getIsStreamingData());
   ASSERT_TRUE(logger.contains(
-      "The data collector DelsysEmgDataCollector is not recording"));
+      "The data collector DelsysEmgDataCollector is not streaming data"));
   logger.clear();
 
   // Disconnect the system
   delsys.disconnect();
 }
 
-TEST(Delsys, AutoStopRecording) {
-  // The system auto stop recording when the object is destroyed
+TEST(Delsys, AutoStopDataStreaming) {
+  // The system auto stop streaming data when the object is destroyed
   auto logger = TestLogger();
   {
     auto delsys = devices::DelsysEmgDeviceMock();
     delsys.connect();
-    delsys.startRecording();
+    delsys.startDataStreaming();
   }
   ASSERT_TRUE(logger.contains(
-      "The data collector DelsysEmgDataCollector has stopped recording"));
+      "The data collector DelsysEmgDataCollector has stopped streaming data"));
   logger.clear();
 
   // The system auto stop if disconnect is called
   {
     auto delsys = devices::DelsysEmgDeviceMock();
     delsys.connect();
-    delsys.startRecording();
+    delsys.startDataStreaming();
     delsys.disconnect();
 
-    ASSERT_FALSE(delsys.getIsRecording());
-    ASSERT_TRUE(logger.contains(
-        "The data collector DelsysEmgDataCollector has stopped recording"));
+    ASSERT_FALSE(delsys.getIsStreamingData());
+    ASSERT_TRUE(logger.contains("The data collector DelsysEmgDataCollector has "
+                                "stopped streaming data"));
   }
 }
 
-TEST(Delsys, StartRecordingFailed) {
+TEST(Delsys, StartDataStreamingFailed) {
   auto logger = TestLogger();
   auto delsys = devices::DelsysEmgDeviceMock();
-  delsys.shouldFailToStartRecording = true;
+  delsys.shouldFailToStartDataStreaming = true;
 
   delsys.connect();
-  bool isRecording = delsys.startRecording();
-  ASSERT_FALSE(isRecording);
-  ASSERT_FALSE(delsys.getIsRecording());
-  ASSERT_TRUE(logger.contains(
-      "The data collector DelsysEmgDataCollector failed to start recording"));
+  bool isStreamingData = delsys.startDataStreaming();
+  ASSERT_FALSE(isStreamingData);
+  ASSERT_FALSE(delsys.getIsStreamingData());
+  ASSERT_TRUE(logger.contains("The data collector DelsysEmgDataCollector "
+                              "failed to start streaming data"));
 }
 
 TEST(Delsys, PauseRecording) {
@@ -238,11 +238,11 @@ TEST(Delsys, PauseRecording) {
 
   // Start the recording
   delsys.connect();
-  delsys.startRecording();
+  delsys.startDataStreaming();
 
   // Wait for a bit. There should not be any data
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  ASSERT_EQ(delsys.getTrialData().size(), 0);
+  ASSERT_EQ(delsys.getTimeSeries().size(), 0);
 
   // Resume the recording
   delsys.resumeRecording();
@@ -250,7 +250,7 @@ TEST(Delsys, PauseRecording) {
 
   // Wait for a bit. There should be data
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  size_t dataCount = delsys.getTrialData().size();
+  size_t dataCount = delsys.getTimeSeries().size();
   ASSERT_GT(dataCount, 0);
 
   // Pause the recording again
@@ -259,7 +259,7 @@ TEST(Delsys, PauseRecording) {
 
   // Wait for a bit. There should not be any new data
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  ASSERT_EQ(delsys.getTrialData().size(), dataCount);
+  ASSERT_EQ(delsys.getTimeSeries().size(), dataCount);
 }
 
 TEST(Delsys, Data) {
@@ -267,13 +267,12 @@ TEST(Delsys, Data) {
   delsys.connect();
 
   // Wait for the data to be collected
-  bool isRecording = delsys.startRecording();
-  ASSERT_TRUE(isRecording);
+  delsys.startDataStreaming();
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  delsys.stopRecording();
+  delsys.stopDataStreaming();
 
   // Get the data
-  const auto &data = delsys.getTrialData();
+  const auto &data = delsys.getTimeSeries();
   // Technically it should have recorded be exactly 200 (2000Hz). But the
   // material is not that precise. So we just check that it is at least 150
   ASSERT_GE(data.size(), 150);

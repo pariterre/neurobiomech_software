@@ -30,13 +30,15 @@ public:
   /// @return The name of the DataCollector
   virtual std::string dataCollectorName() const = 0;
 
-  /// @brief Start collecting data.
-  /// @return True if is recording, false otherwise
-  virtual bool startRecording();
+  /// @brief Start the data streaming. This sends the data to the LiveTimeSeries
+  /// but not to the TrialTimeSeries
+  /// @return True if the data streaming started, false otherwise
+  virtual bool startDataStreaming();
 
-  /// @brief Stop collecting data
-  /// @return True if the recording is stopped, false otherwise
-  virtual bool stopRecording();
+  /// @brief Stop the data streaming. This stops the data from being sent to the
+  /// LiveTimeSeries and the TrialTimeSeries
+  /// @return True if the data stopped streaming, false otherwise
+  virtual bool stopDataStreaming();
 
   /// @brief Pause collecting data. If this is called before the recording, it
   /// will pause the recording when it starts
@@ -47,37 +49,36 @@ public:
   virtual void resumeRecording();
 
 protected:
-  /// @brief Method to handle the start recording command. This is called on the
-  /// thread recording the data before starting the recording.
-  /// @return True if the recording started successfully, false otherwise
-  virtual bool handleStartRecording() = 0;
+  /// @brief Method to handle the start streaming data command.
+  /// @return True if the data started streaming successfully, false otherwise
+  virtual bool handleStartDataStreaming() = 0;
 
-  /// @brief Method to handle the stop recording command. This is called on the
-  /// thread recording the data before stopping the recording.
-  /// @return True if the recording stopped successfully, false otherwise
-  virtual bool handleStopRecording() = 0;
+  /// @brief Method to handle the stop streaming data command.
+  /// @return True if the data stopped streaming successfully, false otherwise
+  virtual bool handleStopDataStreaming() = 0;
 
   /// @brief Get the number of channels
   /// @return The number of channels
   DECLARE_PROTECTED_MEMBER(size_t, DataChannelCount)
 
-  /// @brief Get if the device is currently recording
-  /// @return True if the device is recording, false otherwise
-  DECLARE_PROTECTED_MEMBER(bool, IsRecording)
+  /// @brief Get if the device is currently streaming data
+  /// @return True if the device is streaming data, false otherwise
+  DECLARE_PROTECTED_MEMBER(bool, IsStreamingData)
 
   /// @brief Get if the device is currently paused
   /// @return True if the device is paused, false otherwise
   DECLARE_PROTECTED_MEMBER(bool, IsPaused)
 
-  /// @brief Has failed to start recording. This is always false unless the
-  /// it actually failed to start recording
-  DECLARE_PROTECTED_MEMBER(bool, HasFailedToStartRecording)
+  /// @brief Has failed to start the data streaming. This is always false unless
+  /// the it actually failed to start to stream
+  DECLARE_PROTECTED_MEMBER(bool, HasFailedToStartDataStreaming)
 
-  /// @brief The timeseries data of the previous/current recording
+  /// @brief The live time series data. This is reset every time the recording
+  /// starts
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<data::TimeSeries>, TimeSeries)
 
 public:
-  const data::TimeSeries &getTrialData() const;
+  const data::TimeSeries &getTimeSeries() const;
 
   /// @brief Set the callback function to call when data is collected
   /// @param callback The callback function
@@ -85,9 +86,9 @@ public:
 
 protected:
   /// @brief This method adds a new data point to the data collector. This
-  /// method should not be overridden but must be called by the inherited class
-  /// when new data are ready. Once the new data are added, the [onNewData]
-  /// callback is called
+  /// method should not be overridden (apart from AsyncDataCollector) but must
+  /// be called by the inherited class when new data are ready. Once the new
+  /// data are added, the [onNewData] callback is called
   /// @param data The new data to add
   virtual void addDataPoint(data::DataPoint &data);
 

@@ -24,8 +24,8 @@ public:
   bool removeDelsysDevice();
   bool removeMagstimDevice();
 
-  bool startRecording();
-  bool stopRecording();
+  bool startDataStreaming();
+  bool stopDataStreaming();
 
 protected:
   DECLARE_PROTECTED_MEMBER(std::string, Host);

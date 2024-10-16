@@ -103,8 +103,8 @@ bool DelsysEmgDevice::handleConnect() {
 }
 
 bool DelsysEmgDevice::handleDisconnect() {
-  if (m_IsRecording) {
-    stopRecording();
+  if (m_IsStreamingData) {
+    stopDataStreaming();
   }
 
   m_CommandDevice->disconnect();
@@ -113,7 +113,7 @@ bool DelsysEmgDevice::handleDisconnect() {
   return true;
 }
 
-bool DelsysEmgDevice::handleStartRecording() {
+bool DelsysEmgDevice::handleStartDataStreaming() {
   if (m_CommandDevice->send(DelsysCommands::START) != DeviceResponses::OK) {
     return false;
   }
@@ -122,7 +122,7 @@ bool DelsysEmgDevice::handleStartRecording() {
   return m_DataDevice->read(m_DataBuffer);
 }
 
-bool DelsysEmgDevice::handleStopRecording() {
+bool DelsysEmgDevice::handleStopDataStreaming() {
   if (m_CommandDevice->send(DelsysCommands::STOP) != DeviceResponses::OK) {
     return false;
   }
@@ -268,11 +268,11 @@ bool DelsysEmgDeviceMock::handleConnect() {
   return DelsysEmgDevice::handleConnect();
 }
 
-bool DelsysEmgDeviceMock::handleStartRecording() {
-  if (shouldFailToStartRecording) {
+bool DelsysEmgDeviceMock::handleStartDataStreaming() {
+  if (shouldFailToStartDataStreaming) {
     // Simulate a failure to connect after few time
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     return false;
   }
-  return DelsysEmgDevice::handleStartRecording();
+  return DelsysEmgDevice::handleStartDataStreaming();
 }

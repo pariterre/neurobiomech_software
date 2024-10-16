@@ -14,79 +14,80 @@ AsyncDataCollector::AsyncDataCollector(
 
 AsyncDataCollector::~AsyncDataCollector() { stopDataCollectorWorkers(); }
 
-void AsyncDataCollector::startRecordingAsync() {
-  if (m_IsRecording) {
-    utils::Logger::getInstance().warning(
-        "The data collector " + dataCollectorName() + " is already recording");
+void AsyncDataCollector::startDataStreamingAsync() {
+  if (m_IsStreamingData) {
+    utils::Logger::getInstance().warning("The data collector " +
+                                         dataCollectorName() +
+                                         " is already streaming data");
     return;
   }
 
-  m_HasFailedToStartRecording = false;
+  m_HasFailedToStartDataStreaming = false;
   m_AsyncDataWorker = std::thread([this]() {
     auto &logger = utils::Logger::getInstance();
-    m_IsRecording = handleStartRecording();
-    m_HasFailedToStartRecording = !m_IsRecording;
+    m_IsStreamingData = handleStartDataStreaming();
+    m_HasFailedToStartDataStreaming = !m_IsStreamingData;
 
-    if (m_HasFailedToStartRecording) {
+    if (m_HasFailedToStartDataStreaming) {
       logger.fatal("The data collector " + dataCollectorName() +
-                   " failed to start recording");
+                   " failed to start streaming datas");
       return;
     }
 
     m_TimeSeries->clear();
     startKeepDataWorkerAlive();
     logger.info("The data collector " + dataCollectorName() +
-                " is now recording");
+                " is now streaming data");
     m_AsyncDataContext.run();
   });
 }
 
-bool AsyncDataCollector::startRecording() {
-  startRecordingAsync();
-  while (!m_IsRecording && !m_HasFailedToStartRecording) {
+bool AsyncDataCollector::startDataStreaming() {
+  startDataStreamingAsync();
+  while (!m_IsStreamingData && !m_HasFailedToStartDataStreaming) {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 
-  if (m_HasFailedToStartRecording) {
+  if (m_HasFailedToStartDataStreaming) {
     stopDataCollectorWorkers();
     return false;
   }
   return true;
 }
 
-bool AsyncDataCollector::stopRecording() {
+bool AsyncDataCollector::stopDataStreaming() {
   auto &logger = utils::Logger::getInstance();
 
-  if (!m_IsRecording && !m_HasFailedToStartRecording) {
+  if (!m_IsStreamingData && !m_HasFailedToStartDataStreaming) {
     logger.warning("The data collector " + dataCollectorName() +
-                   " is not recording");
+                   " is not streaming data");
     return true;
   }
 
   // Cancel the timer first to ensure that it does not keep the io_context alive
   {
     std::lock_guard<std::mutex> lock(m_AsyncDataMutex);
-    m_IsRecording = false;
-    m_HasFailedToStartRecording = false;
+    m_IsStreamingData = false;
+    m_HasFailedToStartDataStreaming = false;
   }
   std::this_thread::sleep_for(m_KeepDataWorkerAliveInterval);
 
   // Give the hand to inherited classes to clean up some stuff
-  bool success = handleStopRecording();
+  bool success = handleStopDataStreaming();
   if (!success) {
     logger.fatal("The data collector " + dataCollectorName() +
-                 " failed to stop recording");
+                 " failed to stop streaming data");
   }
 
   stopDataCollectorWorkers();
   logger.info("The data collector " + dataCollectorName() +
-              " has stopped recording");
+              " has stopped streaming data");
   return true;
 }
 
 void AsyncDataCollector::stopDataCollectorWorkers() {
-  if (m_IsRecording) {
-    stopRecording();
+  if (m_IsStreamingData) {
+    stopDataStreaming();
   }
 
   // Stop the worker thread
@@ -122,7 +123,7 @@ void AsyncDataCollector::keepDataWorkerAlive(
 
     // If errorCode is not false, it means the timer was stopped by the user, or
     // the device was disconnected. In both cases, do nothing and return
-    if (!m_IsRecording || errorCode) {
+    if (!m_IsStreamingData || errorCode) {
       m_KeepDataWorkerAliveTimer->cancel();
       return;
     }

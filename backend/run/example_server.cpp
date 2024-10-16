@@ -26,7 +26,7 @@ int main() {
     client.connect();
     client.addDelsysDevice();
 
-    client.startRecording();
+    client.startDataStreaming();
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
     // Clean up things

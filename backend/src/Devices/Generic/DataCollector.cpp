@@ -8,51 +8,51 @@ using namespace STIMWALKER_NAMESPACE::devices;
 
 DataCollector::DataCollector(size_t channelCount,
                              std::unique_ptr<data::TimeSeries> timeSeries)
-    : m_DataChannelCount(channelCount), m_IsRecording(false), m_IsPaused(false),
-      m_TimeSeries(std::move(timeSeries)) {}
+    : m_DataChannelCount(channelCount), m_IsStreamingData(false),
+      m_IsPaused(false), m_TimeSeries(std::move(timeSeries)) {}
 
-bool DataCollector::startRecording() {
+bool DataCollector::startDataStreaming() {
   auto &logger = utils::Logger::getInstance();
 
-  if (m_IsRecording) {
+  if (m_IsStreamingData) {
     logger.warning("The data collector " + dataCollectorName() +
-                   " is already recording");
+                   " is already streaming data");
     return true;
   }
 
-  m_IsRecording = handleStartRecording();
-  m_HasFailedToStartRecording = !m_IsRecording;
+  m_IsStreamingData = handleStartDataStreaming();
+  m_HasFailedToStartDataStreaming = !m_IsStreamingData;
   m_TimeSeries->clear();
 
-  if (m_IsRecording) {
+  if (m_IsStreamingData) {
     logger.info("The data collector " + dataCollectorName() +
-                " is now recording");
+                " is now streaming data");
     return true;
   } else {
     logger.fatal("The data collector " + dataCollectorName() +
-                 " failed to start recording");
+                 " failed to start streaming data");
     return false;
   }
 }
 
-bool DataCollector::stopRecording() {
+bool DataCollector::stopDataStreaming() {
   auto &logger = utils::Logger::getInstance();
 
-  if (!m_IsRecording) {
+  if (!m_IsStreamingData) {
     logger.warning("The data collector " + dataCollectorName() +
-                   " is not recording");
+                   " is not streaming data");
     return true;
   }
 
-  m_IsRecording = !handleStopRecording();
+  m_IsStreamingData = !handleStopDataStreaming();
 
-  if (m_IsRecording) {
+  if (m_IsStreamingData) {
     logger.fatal("The data collector " + dataCollectorName() +
-                 " failed to stop recording");
+                 " failed to stop streaming data");
     return false;
   } else {
     logger.info("The data collector " + dataCollectorName() +
-                " has stopped recording");
+                " has stopped streaming data");
     return true;
   }
 }
@@ -61,10 +61,10 @@ void DataCollector::pauseRecording() { m_IsPaused = true; }
 
 void DataCollector::resumeRecording() { m_IsPaused = false; }
 
-const TimeSeries &DataCollector::getTrialData() const { return *m_TimeSeries; }
+const TimeSeries &DataCollector::getTimeSeries() const { return *m_TimeSeries; }
 
 void DataCollector::addDataPoint(DataPoint &dataPoint) {
-  if (!m_IsRecording || m_IsPaused) {
+  if (!m_IsStreamingData || m_IsPaused) {
     return;
   }
 
@@ -73,7 +73,7 @@ void DataCollector::addDataPoint(DataPoint &dataPoint) {
 }
 
 void DataCollector::addDataPoints(std::vector<DataPoint> &data) {
-  if (!m_IsRecording || m_IsPaused) {
+  if (!m_IsStreamingData || m_IsPaused) {
     return;
   }
 

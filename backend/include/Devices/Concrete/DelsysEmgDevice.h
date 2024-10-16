@@ -92,8 +92,8 @@ public:
 protected:
   bool handleConnect() override;
   bool handleDisconnect() override;
-  bool handleStartRecording() override;
-  bool handleStopRecording() override;
+  bool handleStartDataStreaming() override;
+  bool handleStopDataStreaming() override;
 
   /// @brief The command device
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<CommandTcpDevice>,
@@ -189,11 +189,11 @@ public:
                       size_t commandPort = 50040, size_t dataPort = 50043);
 
   bool shouldFailToConnect = false;
-  bool shouldFailToStartRecording = false;
+  bool shouldFailToStartDataStreaming = false;
 
 protected:
   bool handleConnect() override;
-  bool handleStartRecording() override;
+  bool handleStartDataStreaming() override;
 };
 
 } // namespace STIMWALKER_NAMESPACE::devices

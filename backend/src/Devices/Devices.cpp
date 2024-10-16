@@ -12,10 +12,6 @@ using namespace STIMWALKER_NAMESPACE;
 using namespace STIMWALKER_NAMESPACE::devices;
 
 Devices::~Devices() {
-  if (m_IsRecording) {
-    stopRecording();
-  }
-
   if (m_IsConnected) {
     disconnect();
   }
@@ -46,10 +42,6 @@ void Devices::remove(size_t deviceId) {
 size_t Devices::size() const { return m_Devices.size(); }
 
 void Devices::clear() {
-  if (m_IsRecording) {
-    stopRecording();
-  }
-
   if (m_IsConnected) {
     disconnect();
   }
@@ -141,11 +133,11 @@ bool Devices::connect() {
 }
 
 bool Devices::disconnect() {
-  bool allDisconnected = true;
-
-  if (m_IsRecording) {
-    stopRecording();
+  if (m_IsStreamingData) {
+    stopDataStreaming();
   }
+
+  bool allDisconnected = true;
   for (auto &[deviceId, device] : m_Devices) {
     allDisconnected = allDisconnected && device->disconnect();
   }
@@ -160,37 +152,37 @@ bool Devices::disconnect() {
   return allDisconnected;
 }
 
-bool Devices::startRecording() {
-  m_IsRecording = true;
+bool Devices::startDataStreaming() {
+  m_IsStreamingData = true;
   pauseRecording();
 
   for (auto &[deviceId, dataCollector] : m_DataCollectors) {
     try {
-      // Try to start the recording asynchronously so it takes less time
+      // Try to start the data streaming asynchronously so it takes less time
       auto &asyncDataCollector =
           dynamic_cast<AsyncDataCollector &>(*dataCollector);
-      asyncDataCollector.startRecordingAsync();
+      asyncDataCollector.startDataStreamingAsync();
     } catch (const std::bad_cast &) {
-      dataCollector->startRecording();
+      dataCollector->startDataStreaming();
     }
   }
 
-  // Wait for all the devices to start recording (or fail to start recording)
-  size_t hasStartedRecording = 0;
-  size_t hasFailedToStartRecording = 0;
+  // Wait for all the devices to start streaming data (or fail to)
+  size_t hasStartedStreaming = 0;
+  size_t hasFailedToStartStreaming = 0;
   while (true) {
-    hasStartedRecording = 0;
-    hasFailedToStartRecording = 0;
+    hasStartedStreaming = 0;
+    hasFailedToStartStreaming = 0;
 
     for (auto &[deviceId, dataCollector] : m_DataCollectors) {
-      if (dataCollector->getIsRecording()) {
-        hasStartedRecording++;
+      if (dataCollector->getIsStreamingData()) {
+        hasStartedStreaming++;
       }
-      if (dataCollector->getHasFailedToStartRecording()) {
-        hasFailedToStartRecording++;
+      if (dataCollector->getHasFailedToStartDataStreaming()) {
+        hasFailedToStartStreaming++;
       }
     }
-    if (hasStartedRecording + hasFailedToStartRecording ==
+    if (hasStartedStreaming + hasFailedToStartStreaming ==
         m_DataCollectors.size()) {
       break;
     }
@@ -199,12 +191,12 @@ bool Devices::startRecording() {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
   }
 
-  // If any of the devices failed to start recording, stop all the devices
-  if (hasFailedToStartRecording > 0) {
-    stopRecording();
-    m_IsRecording = false;
-    utils::Logger::getInstance().fatal(
-        "One or more devices failed to start recording, stopping all devices");
+  // If any of the devices failed to start streaming data, stop all the devices
+  if (hasFailedToStartStreaming > 0) {
+    stopDataStreaming();
+    m_IsStreamingData = false;
+    utils::Logger::getInstance().fatal("One or more devices failed to start "
+                                       "streaming data, stopping all devices");
     return false;
   }
 
@@ -214,18 +206,12 @@ bool Devices::startRecording() {
     dataCollector->m_TimeSeries->reset();
   }
 
-  // Now that we are ready, we can resume the recording
-  for (auto &[deviceId, dataCollector] : m_DataCollectors) {
-    dataCollector->resumeRecording();
-  }
-
-  utils::Logger::getInstance().info("All devices are now recording");
-  m_IsRecording = true;
-  resumeRecording();
+  utils::Logger::getInstance().info("All devices are now streaming data");
+  m_IsStreamingData = true;
   return true;
 }
 
-bool Devices::stopRecording() {
+bool Devices::stopDataStreaming() {
   // Put all the devices in pause mode as it is faster than stopping them
   for (auto &[deviceId, dataCollector] : m_DataCollectors) {
     dataCollector->pauseRecording();
@@ -233,11 +219,11 @@ bool Devices::stopRecording() {
 
   bool allStopped = true;
   for (auto &[deviceId, dataCollector] : m_DataCollectors) {
-    allStopped = allStopped && dataCollector->stopRecording();
+    allStopped = allStopped && dataCollector->stopDataStreaming();
   }
 
-  utils::Logger::getInstance().info("All devices have stopped recording");
-  m_IsRecording = !allStopped;
+  utils::Logger::getInstance().info("All devices have stopped streaming data");
+  m_IsStreamingData = !allStopped;
   return allStopped;
 }
 
@@ -262,7 +248,7 @@ void Devices::resumeRecording() {
 nlohmann::json Devices::serialize() const {
   nlohmann::json json;
   for (const auto &[deviceName, dataCollector] : m_DataCollectors) {
-    json[deviceName] = dataCollector->getTrialData().serialize();
+    json[deviceName] = dataCollector->getTimeSeries().serialize();
   }
   return json;
 }

@@ -43,16 +43,16 @@ protected:
                                  KeepDataWorkerAliveTimer)
 
 public:
-  /// @brief Start collecting data in a asynchronous way (non-blocking). It is
-  /// the responsability of the caller to wait for the recording to start before
-  /// continuing
-  void startRecordingAsync();
+  /// @brief Start the data streaming in a asynchronous way (non-blocking). It
+  /// is the responsability of the caller to wait for the streaming to actually
+  /// start before continuing with other operations
+  void startDataStreamingAsync();
 
-  /// @brief Start recording in a synchronous way (blocking)
-  bool startRecording() override;
+  /// @brief Start data streaming in a synchronous way (blocking)
+  bool startDataStreaming() override;
 
-  /// @brief Stop collecting data in a synchronous way (blocking).
-  bool stopRecording() override;
+  /// @brief Stop data streaming in a synchronous way (blocking).
+  bool stopDataStreaming() override;
 
 protected:
   /// @brief Stop the worker threads. This can be called by the destructor of
