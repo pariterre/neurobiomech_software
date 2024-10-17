@@ -57,11 +57,13 @@ protected:
   void waitForNewConnexion();
 
   /// @brief Wait for a new command
-  /// @return True if everything is okay, False if the 
+  /// @return True if everything is okay, False if the server is shutting down
   void waitAndHandleNewCommand();
 
   /// @brief If the server is started
   DECLARE_PROTECTED_MEMBER(bool, IsStarted);
+
+  DECLARE_PROTECTED_MEMBER(bool, IsShuttingDown);
 
   /// @brief If a client is connected
   DECLARE_PROTECTED_MEMBER(bool, IsClientConnected);

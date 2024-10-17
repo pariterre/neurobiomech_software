@@ -1,6 +1,7 @@
 #include "Server/TcpServer.h"
 
 #include "Utils/Logger.h"
+#include <asio/steady_timer.hpp>
 #include <thread>
 
 #include "Devices/Concrete/DelsysEmgDevice.h"
@@ -37,9 +38,14 @@ void TcpServer::startServer() {
   logger.info("Data server started on port " + std::to_string(m_DataPort));
 
   m_IsStarted = true;
+  m_IsShuttingDown = false;
   while (m_IsStarted) {
     // Accept a new connection
     waitForNewConnexion();
+    if (!m_IsClientConnected) {
+      // If it failed to connect, restart the process
+      continue;
+    }
 
     // Start the command worker to handle the commands
     auto commandWorker = std::thread([this]() {
@@ -60,6 +66,7 @@ void TcpServer::startServer() {
   }
 
   // If we get here, the server has been stopped
+  m_IsShuttingDown = false;
   logger.info("Server has shut down");
 }
 
@@ -72,16 +79,12 @@ void TcpServer::stopServer() {
   }
   std::lock_guard<std::mutex> lock(m_Mutex);
 
-  // Close the acceptor
-  if (m_CommandAcceptor->is_open()) {
-    m_CommandAcceptor->close();
-  }
-  if (m_DataAcceptor->is_open()) {
-    m_DataAcceptor->close();
-  }
-
   // Shutdown the server down
   m_IsStarted = false;
+  m_IsShuttingDown = true;
+  while (m_IsShuttingDown) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
 }
 
 void TcpServer::disconnectClient() {
@@ -110,24 +113,58 @@ void TcpServer::disconnectClient() {
 
 void TcpServer::waitForNewConnexion() {
   auto &logger = utils::Logger::getInstance();
-
   m_Status = TcpServerStatus::INITIALIZING;
-  m_CommandSocket = std::make_unique<tcp::socket>(m_Context);
-  m_DataSocket = std::make_unique<tcp::socket>(m_Context);
 
-  m_CommandAcceptor->accept(*m_CommandSocket);
-  logger.info("Command socket connected to client, waiting for data socket");
-  // TODO Check for a non-blocking accept
-  m_DataAcceptor->accept(*m_DataSocket);
-  logger.info("Data socket connected to client, waiting for handshake");
+  m_CommandSocket = std::make_unique<tcp::socket>(m_Context);
+  m_CommandAcceptor->async_accept(*m_CommandSocket, [](asio::error_code) {});
+  while (!m_CommandSocket->is_open()) {
+    // TODO Find why this coucou2 is only called once (why m_Context.run is
+    // blocking)
+    std::cout << "coucou2" << std::endl;
+    m_Context.run();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // If the server is not running anymore, cancel the acceptor and return
+    if (!m_IsStarted) {
+      logger.fatal("Server has been stopped");
+      m_CommandAcceptor->cancel();
+      return;
+    }
+  }
+
+  logger.info("Command socket connected to client, waiting (5 seconds) for a "
+              "connexion to the data socket");
+  // Wait for the data socket to connect for the next 5 seconds
+  m_DataSocket = std::make_unique<tcp::socket>(m_Context);
+  m_DataAcceptor->async_accept(*m_DataSocket, [](asio::error_code) {});
+  auto now = std::chrono::high_resolution_clock::now();
+  while (!m_DataSocket->is_open()) {
+    std::cout << "coucou" << std::endl;
+    m_Context.run();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // If it fails to connect during the aloted time, disconnect the client
+    if (!m_IsStarted || std::chrono::high_resolution_clock::now() - now <
+                            std::chrono::seconds(5)) {
+      logger.fatal("Data socket connection timeout, disconnecting client");
+      m_CommandSocket->close();
+      m_DataAcceptor->cancel();
+      return;
+    }
+  }
+
+  logger.info(
+      "Data socket connected to client, waiting for official handshake");
   m_IsClientConnected = true;
   m_CommandSocket->non_blocking(true);
 
-  auto now = std::chrono::high_resolution_clock::now();
+  now = std::chrono::high_resolution_clock::now();
   while (m_Status == TcpServerStatus::INITIALIZING) {
     // Wait for the handshake
     waitAndHandleNewCommand();
 
+    // Since the command is non-blocking, we can just continue if there is no
+    // data
     if (std::chrono::high_resolution_clock::now() - now >
         std::chrono::seconds(5)) {
       logger.fatal("Handshake timeout");

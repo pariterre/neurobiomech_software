@@ -11,12 +11,8 @@ int main() {
 
   try {
     // Create a TCP server asynchroniously
-    asio::io_context context;
     server::TcpServerMock server;
-    auto worker = std::thread([&context, &server]() {
-      server.startServer();
-      context.run();
-    });
+    auto worker = std::thread([&server]() { server.startServer(); });
 
     // Give a bit of time for the server to start
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -45,7 +41,6 @@ int main() {
     // Clean up things
     client.disconnect();
     server.stopServer();
-    context.stop();
     worker.join();
 
   } catch (std::exception &e) {
