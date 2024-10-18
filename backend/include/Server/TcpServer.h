@@ -20,7 +20,6 @@ enum class TcpServerCommand : std::uint32_t {
   DISCONNECT_MAGSTIM,
   START_RECORDING,
   STOP_RECORDING,
-  GET_DATA,
   FAILED,
 };
 
@@ -55,7 +54,7 @@ public:
 
   /// @brief Disconnect the current client
   void disconnectClient();
-  
+
   /// @brief If a client is connected
   bool isClientConnected();
 
@@ -69,7 +68,6 @@ protected:
 
   /// @brief If the server is started
   DECLARE_PROTECTED_MEMBER(bool, IsServerRunning);
-
 
   /// @brief Get the devices that are currently connected
   DECLARE_PROTECTED_MEMBER(devices::Devices, Devices);

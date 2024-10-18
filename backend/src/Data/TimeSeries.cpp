@@ -1,5 +1,6 @@
 #include "Data/TimeSeries.h"
 
+using namespace STIMWALKER_NAMESPACE;
 using namespace STIMWALKER_NAMESPACE::data;
 
 size_t TimeSeries::size() const { return static_cast<int>(m_Data.size()); }
@@ -65,7 +66,7 @@ void TimeSeries::reset() {
   m_StopWatch = std::chrono::high_resolution_clock::now();
 }
 
-const std::vector<std::pair<std::chrono::microseconds, DataPoint>> &
+const utils::RollingVector<std::pair<std::chrono::microseconds, DataPoint>> &
 TimeSeries::getData() const {
   return m_Data;
 }

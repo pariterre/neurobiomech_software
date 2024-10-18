@@ -128,10 +128,10 @@ bool TcpClient::stopRecording() {
 
 bool TcpClient::updateData() {
   auto &logger = utils::Logger::getInstance();
-  if (!sendCommand(TcpServerCommand::GET_DATA)) {
-    logger.fatal("CLIENT: Failed to update the data");
-    return false;
-  }
+  // if (!sendCommand(TcpServerCommand::GET_DATA)) {
+  //   logger.fatal("CLIENT: Failed to update the data");
+  //   return false;
+  // }
 
   // TODO RENDU ICI!!
 }

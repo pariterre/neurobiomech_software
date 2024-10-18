@@ -92,7 +92,7 @@ public:
 
   /// @brief Set the callback function to call when data is collected
   /// @param callback The callback function
-  StimwalkerEvent<data::DataPoint> onNewData;
+  utils::StimwalkerEvent<data::DataPoint> onNewData;
 
 protected:
   /// @brief This method adds a new data point to the data collector. This

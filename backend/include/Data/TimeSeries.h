@@ -9,6 +9,7 @@
 
 #include "Data/DataPoint.h"
 #include "Utils/CppMacros.h"
+#include "Utils/RollingVector.h"
 
 namespace STIMWALKER_NAMESPACE::data {
 
@@ -86,11 +87,11 @@ public:
 
 public:
   /// @brief The data of the collection
-  const std::vector<std::pair<std::chrono::microseconds, DataPoint>> &
+  const utils::RollingVector<std::pair<std::chrono::microseconds, DataPoint>> &
   getData() const;
 
 protected:
-  std::vector<std::pair<std::chrono::microseconds, DataPoint>> m_Data;
+  utils::RollingVector<std::pair<std::chrono::microseconds, DataPoint>> m_Data;
 };
 
 } // namespace STIMWALKER_NAMESPACE::data

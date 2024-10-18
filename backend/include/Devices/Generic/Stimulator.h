@@ -25,7 +25,7 @@ public:
 public:
   /// @brief Set the callback function to call when a stimulation is performed
   /// @param onStimulate The callback function
-  StimwalkerEvent<const DataPoint &> OnStimulation;
+  utils::StimwalkerEvent<const DataPoint &> OnStimulation;
 
 protected:
   /// @brief Method that is internally called when a stimulation is performed.

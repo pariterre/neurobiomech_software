@@ -7,6 +7,8 @@
 
 #include "Utils/CppMacros.h"
 
+namespace STIMWALKER_NAMESPACE::utils {
+
 template <typename T> class StimwalkerEvent {
 public:
   ///
@@ -48,5 +50,7 @@ protected:
 
   DECLARE_PROTECTED_MEMBER_NOGET(std::mutex, Mutex)
 };
+
+} // namespace STIMWALKER_NAMESPACE::utils
 
 #endif // __STIMWALKER_UTILS_STIMWALKER_EVENT_H__
