@@ -77,6 +77,7 @@ protected:
   DECLARE_PROTECTED_MEMBER(bool, IsConnected);
 
   /// @brief The Send a command to the server and wait for the confirmation
+  /// @param command The command to send
   bool sendCommand(TcpServerCommand command);
 
   /// @brief Wait for a response from the server (invoked by [sendCommand])

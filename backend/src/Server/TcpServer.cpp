@@ -373,7 +373,8 @@ bool TcpServer::addDevice(const std::string &deviceName) {
 
   // Check if [m_ConnectedDeviceIds] contains the device
   if (m_ConnectedDeviceIds.find(deviceName) != m_ConnectedDeviceIds.end()) {
-    logger.warning(deviceName + " already connected");
+    logger.warning("Cannot add the " + deviceName +
+                   " devise as it is already connected");
     return false;
   }
 

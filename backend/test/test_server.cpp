@@ -47,6 +47,7 @@ TEST(Server, StartServer) {
   ASSERT_TRUE(logger.contains("Server has shut down"));
 }
 
+#ifndef SKIP_LONG_TESTS
 TEST(Server, ClientConnexion) {
   auto logger = TestLogger();
 
@@ -335,3 +336,182 @@ TEST(Server, ClientConnexion) {
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 }
+#endif // SKIP_LONG_TESTS
+
+TEST(Server, AddDevices) {
+  auto logger = TestLogger();
+
+  // Happy path
+  {
+    server::TcpServerMock server(5000, 5001, std::chrono::milliseconds(500));
+    server.startServer();
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+    server::TcpClient client;
+    client.connect();
+
+    // Add the devices
+    bool isDelsysAdded = client.addDelsysDevice();
+    bool isMagstimAdded = client.addMagstimDevice();
+    ASSERT_TRUE(isDelsysAdded);
+    ASSERT_TRUE(isMagstimAdded);
+
+    // Give some time to the message to arrive
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    ASSERT_TRUE(logger.contains("The device DelsysEmgDevice is now connected"));
+    ASSERT_TRUE(
+        logger.contains("The device MagstimRapidDevice is now connected"));
+    ASSERT_TRUE(logger.contains(
+        "The data collector DelsysEmgDataCollector is now streaming data"));
+    logger.clear();
+  }
+  ASSERT_TRUE(logger.contains(
+      "The data collector DelsysEmgDataCollector has stopped streaming data"));
+  ASSERT_TRUE(
+      logger.contains("The device DelsysEmgDevice is now disconnected"));
+  ASSERT_TRUE(
+      logger.contains("The device MagstimRapidDevice is now disconnected"));
+  ASSERT_TRUE(logger.contains("Server has shut down"));
+  logger.clear();
+
+  // Add the same devices twice
+  {
+    server::TcpServerMock server(5000, 5001, std::chrono::milliseconds(500));
+    server.startServer();
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+    server::TcpClient client;
+    client.connect();
+
+    // Add the devices
+    bool isDelsysAdded = client.addDelsysDevice();
+    bool isMagstimAdded = client.addMagstimDevice();
+    ASSERT_TRUE(isDelsysAdded);
+    ASSERT_TRUE(isMagstimAdded);
+
+    // Add the devices again
+    isDelsysAdded = client.addDelsysDevice();
+    isMagstimAdded = client.addMagstimDevice();
+    ASSERT_FALSE(isDelsysAdded);
+    ASSERT_FALSE(isMagstimAdded);
+
+    // Give some time to the message to arrive
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    ASSERT_TRUE(logger.contains(
+        "Cannot add the DelsysEmgDevice devise as it is already connected"));
+    ASSERT_TRUE(logger.contains(
+        "Cannot add the MagstimRapidDevice devise as it is already connected"));
+  }
+  ASSERT_TRUE(logger.contains("Server has shut down"));
+  logger.clear();
+
+  // Remove devices by hand
+  {
+    server::TcpServerMock server(5000, 5001, std::chrono::milliseconds(500));
+    server.startServer();
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+    server::TcpClient client;
+    client.connect();
+
+    // Add the devices
+    bool isDelsysAdded = client.addDelsysDevice();
+    bool isMagstimAdded = client.addMagstimDevice();
+    ASSERT_TRUE(isDelsysAdded);
+    ASSERT_TRUE(isMagstimAdded);
+    logger.clear();
+
+    // Remove the devices
+    bool isDelsysRemoved = client.removeDelsysDevice();
+    bool isMagstimRemoved = client.removeMagstimDevice();
+    ASSERT_TRUE(isDelsysRemoved);
+    ASSERT_TRUE(isMagstimRemoved);
+
+    // Give some time to the message to arrive
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    ASSERT_TRUE(
+        logger.contains("The device DelsysEmgDevice is now disconnected"));
+    ASSERT_TRUE(
+        logger.contains("The device MagstimRapidDevice is now disconnected"));
+  }
+  ASSERT_TRUE(logger.contains("Server has shut down"));
+  logger.clear();
+}
+
+TEST(Server, Recording) {
+  auto logger = TestLogger();
+
+  // Happy path
+  {
+    server::TcpServerMock server(5000, 5001, std::chrono::milliseconds(500));
+    server.startServer();
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+    server::TcpClient client;
+    client.connect();
+
+    // Add the devices
+    client.addDelsysDevice();
+    client.addMagstimDevice();
+
+    // Start recording
+    bool isRecordingStarted = client.startRecording();
+    ASSERT_TRUE(isRecordingStarted);
+
+    // Give some time to the message to arrive
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    ASSERT_TRUE(logger.contains(
+        "The data collector DelsysEmgDataCollector is now recording"));
+    logger.clear();
+  }
+  ASSERT_TRUE(logger.contains(
+      "The data collector DelsysEmgDataCollector has stopped recording"));
+  ASSERT_TRUE(logger.contains("Server has shut down"));
+  logger.clear();
+
+  // Start/Stop recording twice
+  {
+    server::TcpServerMock server(5000, 5001, std::chrono::milliseconds(500));
+    server.startServer();
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+    server::TcpClient client;
+    client.connect();
+
+    // Add the devices
+    bool isDelsysAdded = client.addDelsysDevice();
+    bool isMagstimAdded = client.addMagstimDevice();
+    ASSERT_TRUE(isDelsysAdded);
+    ASSERT_TRUE(isMagstimAdded);
+
+    // Start recording
+    bool isRecordingStarted = client.startRecording();
+    ASSERT_TRUE(isRecordingStarted);
+
+    // Start recording again
+    isRecordingStarted = client.startRecording();
+    ASSERT_TRUE(isRecordingStarted);
+
+    // Give some time to the message to arrive
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    ASSERT_TRUE(logger.contains(
+        "The data collector DelsysEmgDataCollector is already recording"));
+    logger.clear();
+
+    // Stop recording
+    bool isRecordingStopped = client.stopRecording();
+    ASSERT_TRUE(isRecordingStopped);
+
+    // Stop recording again
+    isRecordingStopped = client.stopRecording();
+    ASSERT_TRUE(isRecordingStopped);
+
+    // Give some time to the message to arrive
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    ASSERT_TRUE(logger.contains(
+        "The data collector DelsysEmgDataCollector is not recording"));
+  }
+  logger.clear();
+}
+
+TEST(Server, TrialData) {}

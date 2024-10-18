@@ -32,11 +32,11 @@ bool TcpClient::connect() {
 
   // Send the handshake
   if (!sendCommand(TcpServerCommand::HANDSHAKE)) {
-    logger.fatal("Handshake failed");
+    logger.fatal("CLIENT: Handshake failed");
     return false;
   }
 
-  logger.info("Connected to server");
+  logger.info("CLIENT: Connected to server");
   return true;
 }
 
@@ -44,7 +44,7 @@ bool TcpClient::disconnect() {
   auto &logger = utils::Logger::getInstance();
 
   if (!m_IsConnected) {
-    logger.warning("Client is not connected");
+    logger.warning("CLIENT: Client is not connected");
     return true;
   }
 
@@ -58,11 +58,11 @@ bool TcpClient::addDelsysDevice() {
   auto &logger = utils::Logger::getInstance();
 
   if (!sendCommand(TcpServerCommand::CONNECT_DELSYS)) {
-    logger.fatal("Failed to add Delsys device");
+    logger.fatal("CLIENT: Failed to add Delsys device");
     return false;
   }
 
-  logger.info("Delsys device added");
+  logger.info("CLIENT: Delsys device added");
   return true;
 }
 
@@ -70,11 +70,11 @@ bool TcpClient::addMagstimDevice() {
   auto &logger = utils::Logger::getInstance();
 
   if (!sendCommand(TcpServerCommand::CONNECT_MAGSTIM)) {
-    logger.fatal("Failed to add Magstim device");
+    logger.fatal("CLIENT: Failed to add Magstim device");
     return false;
   }
 
-  logger.info("Magstim device added");
+  logger.info("CLIENT: Magstim device added");
   return true;
 }
 
@@ -82,11 +82,11 @@ bool TcpClient::removeDelsysDevice() {
   auto &logger = utils::Logger::getInstance();
 
   if (!sendCommand(TcpServerCommand::DISCONNECT_DELSYS)) {
-    logger.fatal("Failed to remove Delsys device");
+    logger.fatal("CLIENT: Failed to remove Delsys device");
     return false;
   }
 
-  logger.info("Delsys device removed");
+  logger.info("CLIENT: Delsys device removed");
   return true;
 }
 
@@ -94,11 +94,11 @@ bool TcpClient::removeMagstimDevice() {
   auto &logger = utils::Logger::getInstance();
 
   if (!sendCommand(TcpServerCommand::DISCONNECT_MAGSTIM)) {
-    logger.fatal("Failed to remove Magstim device");
+    logger.fatal("CLIENT: Failed to remove Magstim device");
     return false;
   }
 
-  logger.info("Magstim device removed");
+  logger.info("CLIENT: Magstim device removed");
   return true;
 }
 
@@ -106,11 +106,11 @@ bool TcpClient::startRecording() {
   auto &logger = utils::Logger::getInstance();
 
   if (!sendCommand(TcpServerCommand::START_RECORDING)) {
-    logger.fatal("Failed to start recording");
+    logger.fatal("CLIENT: Failed to start recording");
     return false;
   }
 
-  logger.info("Recording started");
+  logger.info("CLIENT: Recording started");
   return true;
 }
 
@@ -118,18 +118,18 @@ bool TcpClient::stopRecording() {
   auto &logger = utils::Logger::getInstance();
 
   if (!sendCommand(TcpServerCommand::STOP_RECORDING)) {
-    logger.fatal("Failed to stop recording");
+    logger.fatal("CLIENT: Failed to stop recording");
     return false;
   }
 
-  logger.info("Recording stopped");
+  logger.info("CLIENT: Recording stopped");
   return true;
 }
 
 bool TcpClient::updateData() {
   auto &logger = utils::Logger::getInstance();
   if (!sendCommand(TcpServerCommand::GET_DATA)) {
-    logger.fatal("Failed to update the data");
+    logger.fatal("CLIENT: Failed to update the data");
     return false;
   }
 
@@ -140,7 +140,7 @@ bool TcpClient::sendCommand(TcpServerCommand command) {
   auto &logger = utils::Logger::getInstance();
 
   if (!m_IsConnected) {
-    logger.fatal("Client is not connected");
+    logger.fatal("CLIENT: Client is not connected");
     return false;
   }
 
@@ -149,7 +149,7 @@ bool TcpClient::sendCommand(TcpServerCommand command) {
       *m_CommandSocket, asio::buffer(constructCommandPacket(command)), error);
 
   if (byteWritten != 8 || error) {
-    logger.fatal("TCP write error: " + error.message());
+    logger.fatal("CLIENT: TCP write error: " + error.message());
     m_CommandSocket->close();
     m_DataSocket->close();
     m_IsConnected = false;
@@ -158,11 +158,8 @@ bool TcpClient::sendCommand(TcpServerCommand command) {
 
   auto response = waitForResponse();
   if (response != TcpServerResponse::OK) {
-    logger.fatal("Failed to get confirmation for command: " +
-                 std::to_string(static_cast<std::uint32_t>(command)));
-    m_CommandSocket->close();
-    m_DataSocket->close();
-    m_IsConnected = false;
+    logger.warning("CLIENT: Failed to get confirmation for command: " +
+                   std::to_string(static_cast<std::uint32_t>(command)));
     return false;
   }
 
@@ -175,7 +172,7 @@ TcpServerResponse TcpClient::waitForResponse() {
   size_t byteRead = asio::read(*m_CommandSocket, asio::buffer(buffer), error);
   if (byteRead != 8 || error) {
     auto &logger = utils::Logger::getInstance();
-    logger.fatal("TCP read error: " + error.message());
+    logger.fatal("CLIENT: TCP read error: " + error.message());
     return TcpServerResponse::NOK;
   }
 
@@ -212,7 +209,7 @@ TcpClient::parseResponsePacket(const std::array<char, 8> &buffer) {
       *reinterpret_cast<const std::uint32_t *>(buffer.data());
   if (version != m_ProtocolVersion) {
     auto &logger = utils::Logger::getInstance();
-    logger.fatal("Invalid version: " + std::to_string(version) +
+    logger.fatal("CLIENT: Invalid version: " + std::to_string(version) +
                  ". Please "
                  "update the server to version " +
                  std::to_string(m_ProtocolVersion));
