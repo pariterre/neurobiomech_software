@@ -41,9 +41,13 @@ public:
   // --- DEVICES METHODS --- //
   // ----------------------- //
 public:
-  /// @brief Start the server. This method is blocking. In order to run it
-  /// asynchronously, run it in a separate thread
+  /// @brief Start the server. This method is non-blocking. The server will run
+  /// in a separate thread
   void startServer();
+
+  /// @brief Start the server. This method is blocking. The server will run in
+  /// the current thread
+  void startServerSync();
 
   /// @brief Stop the server. This sends a message to the server that it should
   /// stop. After this command, [startServer] will return
@@ -51,6 +55,9 @@ public:
 
   /// @brief Disconnect the current client
   void disconnectClient();
+  
+  /// @brief If a client is connected
+  bool isClientConnected();
 
 protected:
   /// @brief Wait for a new connexion
@@ -61,12 +68,8 @@ protected:
   void waitAndHandleNewCommand();
 
   /// @brief If the server is started
-  DECLARE_PROTECTED_MEMBER(bool, IsStarted);
+  DECLARE_PROTECTED_MEMBER(bool, IsServerRunning);
 
-  DECLARE_PROTECTED_MEMBER(bool, IsShuttingDown);
-
-  /// @brief If a client is connected
-  DECLARE_PROTECTED_MEMBER(bool, IsClientConnected);
 
   /// @brief Get the devices that are currently connected
   DECLARE_PROTECTED_MEMBER(devices::Devices, Devices);
@@ -109,6 +112,9 @@ protected:
   /// @brief The port to listen to communicate the data
   DECLARE_PROTECTED_MEMBER(int, DataPort);
 
+  /// @brief The timeout period for the server
+  DECLARE_PROTECTED_MEMBER(std::chrono::milliseconds, TimeoutPeriod);
+
   /// @brief The socket that is connected to the client for commands
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
                                  CommandSocket);
@@ -147,8 +153,12 @@ protected:
   bool removeDevice(const std::string &deviceName);
 
 private:
-  /// @brief The asio context used for async methods of the server
-  DECLARE_PRIVATE_MEMBER_NOGET(asio::io_context, Context);
+  /// @brief The asio contexts used for async methods of the server
+  DECLARE_PRIVATE_MEMBER_NOGET(asio::io_context, CommandContext);
+  DECLARE_PRIVATE_MEMBER_NOGET(asio::io_context, DataContext);
+
+  /// @brief The worker thread for the [startServerAsync] method
+  DECLARE_PRIVATE_MEMBER_NOGET(std::thread, ServerWorker);
 
   /// @brief The mutex to lock certain operations
   DECLARE_PRIVATE_MEMBER_NOGET(std::mutex, Mutex);
@@ -163,8 +173,12 @@ public:
   /// @brief Constructor
   /// @param commandPort The port to communicate the commands (default is 5000)
   /// @param dataPort The port to communicate the data (default is 5001)
-  TcpServerMock(int commandPort = 5000, int dataPort = 5001)
-      : TcpServer(commandPort, dataPort) {};
+  TcpServerMock(
+      int commandPort = 5000, int dataPort = 5001,
+      std::chrono::milliseconds timeoutPeriod = std::chrono::milliseconds(5000))
+      : TcpServer(commandPort, dataPort) {
+    m_TimeoutPeriod = timeoutPeriod;
+  };
 
   /// @brief Destructor
   ~TcpServerMock() = default;

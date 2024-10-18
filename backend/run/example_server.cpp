@@ -12,10 +12,7 @@ int main() {
   try {
     // Create a TCP server asynchroniously
     server::TcpServerMock server;
-    auto worker = std::thread([&server]() { server.startServer(); });
-
-    // Give a bit of time for the server to start
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    server.startServer();
 
     // Connect to this server using a TCP client
     server::TcpClient client;
@@ -41,7 +38,6 @@ int main() {
     // Clean up things
     client.disconnect();
     server.stopServer();
-    worker.join();
 
   } catch (std::exception &e) {
     logger.fatal(e.what());

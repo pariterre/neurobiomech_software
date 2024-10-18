@@ -8,7 +8,6 @@
 #include "Devices/Concrete/MagstimRapidDevice.h"
 #include "Devices/Generic/Device.h"
 
-using asio::ip::tcp;
 using namespace STIMWALKER_NAMESPACE::server;
 
 // Here are the names of the devices that can be connected (for internal use)
@@ -16,47 +15,48 @@ const std::string DEVICE_NAME_DELSYS = "DelsysEmgDevice";
 const std::string DEVICE_NAME_MAGSTIM = "MagstimRapidDevice";
 
 TcpServer::TcpServer(int commandPort, int dataPort)
-    : m_IsStarted(false), m_IsClientConnected(false),
-      m_CommandPort(commandPort), m_DataPort(dataPort), m_ProtocolVersion(1) {};
+    : m_IsServerRunning(false), m_CommandPort(commandPort),
+      m_DataPort(dataPort), m_TimeoutPeriod(std::chrono::milliseconds(5000)),
+      m_ProtocolVersion(1) {};
 
-TcpServer::~TcpServer() {
-  if (m_IsStarted) {
-    stopServer();
-  }
-}
+TcpServer::~TcpServer() { stopServer(); }
 
 void TcpServer::startServer() {
+  m_ServerWorker = std::thread([this]() { startServerSync(); });
+}
+
+void TcpServer::startServerSync() {
   auto &logger = utils::Logger::getInstance();
 
   // Create the contexts and acceptors
-  m_CommandAcceptor = std::make_unique<tcp::acceptor>(
-      m_Context, tcp::endpoint(tcp::v4(), m_CommandPort));
+  m_CommandAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
+      m_CommandContext,
+      asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_CommandPort));
   logger.info("Command server started on port " +
               std::to_string(m_CommandPort));
-  m_DataAcceptor = std::make_unique<tcp::acceptor>(
-      m_Context, tcp::endpoint(tcp::v4(), m_DataPort));
+  m_DataAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
+      m_DataContext, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_DataPort));
   logger.info("Data server started on port " + std::to_string(m_DataPort));
 
-  m_IsStarted = true;
-  m_IsShuttingDown = false;
-  while (m_IsStarted) {
+  m_IsServerRunning = true;
+  while (m_IsServerRunning) {
     // Accept a new connection
     waitForNewConnexion();
-    if (!m_IsClientConnected) {
+    if (!isClientConnected()) {
       // If it failed to connect, restart the process
       continue;
     }
 
     // Start the command worker to handle the commands
     auto commandWorker = std::thread([this]() {
-      while (m_IsStarted && m_IsClientConnected) {
+      while (m_IsServerRunning && isClientConnected()) {
         waitAndHandleNewCommand();
       }
     });
 
     auto dataWorker = std::thread([this]() {
-      while (m_IsStarted && m_IsClientConnected) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      while (m_IsServerRunning && isClientConnected()) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
       }
     });
 
@@ -64,99 +64,150 @@ void TcpServer::startServer() {
     commandWorker.join();
     dataWorker.join();
   }
-
-  // If we get here, the server has been stopped
-  m_IsShuttingDown = false;
-  logger.info("Server has shut down");
 }
 
 void TcpServer::stopServer() {
   auto &logger = utils::Logger::getInstance();
 
-  // Make sure all the devices are properly disconnected
-  if (m_IsClientConnected) {
-    disconnectClient();
-  }
-  std::lock_guard<std::mutex> lock(m_Mutex);
+  // Give a bit of time so it things went too fast the startServerSync is
+  // actully ready
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
   // Shutdown the server down
-  m_IsStarted = false;
-  m_IsShuttingDown = true;
-  while (m_IsShuttingDown) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    m_IsServerRunning = false;
   }
+
+  // Make sure all the devices are properly disconnected
+  if (isClientConnected()) {
+    disconnectClient();
+  }
+
+  // When closing the server too soon, they can be open even if client was not
+  // connected
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    if (m_CommandSocket && m_CommandSocket->is_open()) {
+      m_CommandSocket->close();
+    }
+    if (m_DataSocket && m_DataSocket->is_open()) {
+      m_DataSocket->close();
+    }
+
+    if (m_CommandAcceptor) {
+      m_CommandAcceptor->close();
+    }
+    if (m_DataAcceptor) {
+      m_DataAcceptor->close();
+    }
+  }
+  // Stop any running context
+  m_CommandContext.stop();
+
+  // Wait for the server to stop
+  if (m_ServerWorker.joinable()) {
+    m_ServerWorker.join();
+  }
+  logger.info("Server has shut down");
 }
 
 void TcpServer::disconnectClient() {
   auto &logger = utils::Logger::getInstance();
 
-  if (!m_IsClientConnected) {
-    logger.warning("Client already disconnected");
-    return;
+  if (isClientConnected()) {
+    logger.info("Disconnecting client");
   }
-  std::lock_guard<std::mutex> lock(m_Mutex);
 
   // Make sure all the devices are properly disconnected
+  std::lock_guard<std::mutex> lock(m_Mutex);
   m_Devices.clear();
-  if (m_CommandSocket->is_open()) {
+  if (m_CommandSocket && m_CommandSocket->is_open()) {
     m_CommandSocket->close();
   }
-  if (m_DataSocket->is_open()) {
+  if (m_DataSocket && m_DataSocket->is_open()) {
     m_DataSocket->close();
   }
 
   // Reset the status to initializing
   m_Status = TcpServerStatus::INITIALIZING;
-  m_IsClientConnected = false;
-  logger.info("Client disconnected");
+}
+
+bool TcpServer::isClientConnected() {
+  return m_CommandSocket && m_CommandSocket->is_open() && m_DataSocket &&
+         m_DataSocket->is_open();
 }
 
 void TcpServer::waitForNewConnexion() {
   auto &logger = utils::Logger::getInstance();
+  logger.info("Waiting for a new connexion");
+
   m_Status = TcpServerStatus::INITIALIZING;
 
-  m_CommandSocket = std::make_unique<tcp::socket>(m_Context);
-  m_CommandAcceptor->async_accept(*m_CommandSocket, [](asio::error_code) {});
+  // Wait for the command socket to connect
+  auto commandTimer =
+      asio::steady_timer(m_CommandContext, std::chrono::milliseconds(10));
+  m_CommandSocket = std::make_unique<asio::ip::tcp::socket>(m_CommandContext);
+  m_CommandAcceptor->async_accept(*m_CommandSocket,
+                                  [](const asio::error_code &) {});
+  // Wait for a connexion while periodically checking if the server is still
+  // running
   while (!m_CommandSocket->is_open()) {
-    // TODO Find why this coucou2 is only called once (why m_Context.run is
-    // blocking)
-    std::cout << "coucou2" << std::endl;
-    m_Context.run();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    commandTimer.async_wait(
+        [this](const asio::error_code &) { m_CommandContext.stop(); });
+    m_CommandContext.run();
+    m_CommandContext.restart();
 
-    // If the server is not running anymore, cancel the acceptor and return
-    if (!m_IsStarted) {
-      logger.fatal("Server has been stopped");
-      m_CommandAcceptor->cancel();
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    if (!m_IsServerRunning) {
+      if (m_CommandAcceptor && m_CommandAcceptor->is_open()) {
+        m_CommandAcceptor->cancel();
+      }
+      logger.info("Stopping listening to ports as server is shutting down");
       return;
     }
   }
+  logger.info("Command socket connected to client, waiting for a connexion to "
+              "the data socket");
 
-  logger.info("Command socket connected to client, waiting (5 seconds) for a "
-              "connexion to the data socket");
-  // Wait for the data socket to connect for the next 5 seconds
-  m_DataSocket = std::make_unique<tcp::socket>(m_Context);
+  // Wait for the data socket to connect
+  auto dataTimer =
+      asio::steady_timer(m_DataContext, std::chrono::milliseconds(10));
+  m_DataSocket = std::make_unique<asio::ip::tcp::socket>(m_DataContext);
   m_DataAcceptor->async_accept(*m_DataSocket, [](asio::error_code) {});
   auto now = std::chrono::high_resolution_clock::now();
   while (!m_DataSocket->is_open()) {
-    std::cout << "coucou" << std::endl;
-    m_Context.run();
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    dataTimer.async_wait(
+        [this](const asio::error_code &) { m_DataContext.stop(); });
+    m_DataContext.run();
+    m_DataContext.restart();
 
-    // If it fails to connect during the aloted time, disconnect the client
-    if (!m_IsStarted || std::chrono::high_resolution_clock::now() - now <
-                            std::chrono::seconds(5)) {
-      logger.fatal("Data socket connection timeout, disconnecting client");
-      m_CommandSocket->close();
-      m_DataAcceptor->cancel();
+    if (!m_IsServerRunning ||
+        std::chrono::high_resolution_clock::now() - now > m_TimeoutPeriod) {
+      std::lock_guard<std::mutex> lock(m_Mutex);
+      if (m_CommandSocket && m_CommandSocket->is_open()) {
+        m_CommandSocket->close();
+      }
+      if (m_DataAcceptor && m_DataAcceptor->is_open()) {
+        m_DataAcceptor->cancel();
+      }
+      if (!m_IsServerRunning) {
+        logger.info("Stopping listening to ports as server is shutting down");
+      } else if (std::chrono::high_resolution_clock::now() - now >
+                 m_TimeoutPeriod) {
+        logger.fatal("Data socket connection timeout (" +
+                     std::to_string(m_TimeoutPeriod.count()) +
+                     " ms), disconnecting client");
+      }
       return;
     }
   }
 
-  logger.info(
-      "Data socket connected to client, waiting for official handshake");
-  m_IsClientConnected = true;
-  m_CommandSocket->non_blocking(true);
+  {
+    logger.info(
+        "Data socket connected to client, waiting for official handshake");
+    m_CommandSocket->non_blocking(true);
+  }
 
   now = std::chrono::high_resolution_clock::now();
   while (m_Status == TcpServerStatus::INITIALIZING) {
@@ -165,9 +216,11 @@ void TcpServer::waitForNewConnexion() {
 
     // Since the command is non-blocking, we can just continue if there is no
     // data
-    if (std::chrono::high_resolution_clock::now() - now >
-        std::chrono::seconds(5)) {
-      logger.fatal("Handshake timeout");
+    if (!m_IsServerRunning || !isClientConnected() ||
+        std::chrono::high_resolution_clock::now() - now > m_TimeoutPeriod) {
+      logger.fatal("Handshake timeout (" +
+                   std::to_string(m_TimeoutPeriod.count()) +
+                   " ms), disconnecting client");
       disconnectClient();
       return;
     }
@@ -179,10 +232,12 @@ void TcpServer::waitAndHandleNewCommand() {
 
   // Lock the mutex during the time the command is answered
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
-  std::lock_guard<std::mutex> lock(m_Mutex);
-  if (!m_IsStarted || !m_IsClientConnected) {
-    // Just a sanity check after the sleep and getting the lock
-    return;
+  {
+    std::lock_guard<std::mutex> lock(m_Mutex);
+    if (!m_IsServerRunning || !isClientConnected()) {
+      // Just a sanity check after the sleep and getting the lock
+      return;
+    }
   }
 
   auto buffer = std::array<char, 8>();

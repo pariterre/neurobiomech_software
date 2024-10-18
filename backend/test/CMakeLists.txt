@@ -55,6 +55,7 @@ set(TEST_SRC_FILES
     ${CMAKE_SOURCE_DIR}/test/test_lokomat.cpp
     ${CMAKE_SOURCE_DIR}/test/test_magstim.cpp
     ${CMAKE_SOURCE_DIR}/test/test_nidaq.cpp
+    ${CMAKE_SOURCE_DIR}/test/test_server.cpp
     ${CMAKE_SOURCE_DIR}/test/test_utils.cpp
 )
 add_executable(${PROJECT_NAME} ${TEST_SRC_FILES})
@@ -71,11 +72,13 @@ add_dependencies(${PROJECT_NAME}
     ${MODULE_UTILS}
     ${MODULE_DATA}
     ${MODULE_DEVICES}
+    ${MODULE_SERVER}
 )
 target_link_libraries(${PROJECT_NAME} PRIVATE
     ${MODULE_UTILS}
     ${MODULE_DATA}
     ${MODULE_DEVICES}
+    ${MODULE_SERVER}
     nlohmann_json::nlohmann_json
     "gtest_main"
 )
