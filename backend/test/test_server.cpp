@@ -287,7 +287,8 @@ TEST(Server, ClientConnexion) {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     server::TcpClient client;
-    client.connect();
+    bool isConnected = client.connect();
+    ASSERT_TRUE(isConnected);
 
     // Give some time to the message to arrive
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -304,7 +305,8 @@ TEST(Server, ClientConnexion) {
 
     server::TcpClient client;
     client.connect();
-    client.disconnect();
+    bool isDisconnected = client.disconnect();
+    ASSERT_TRUE(isDisconnected);
 
     // Give some time to the message to arrive
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -325,7 +327,8 @@ TEST(Server, ClientConnexion) {
 
     // Give some time
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    client.connect();
+    bool isConnected = client.connect();
+    ASSERT_TRUE(isConnected);
 
     ASSERT_EQ(logger.count("Handshake from client is valid"), 2);
   }

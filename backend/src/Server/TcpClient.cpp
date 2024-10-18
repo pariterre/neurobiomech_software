@@ -21,17 +21,17 @@ bool TcpClient::connect() {
 
   // Connect
   m_IsConnected = false;
-  tcp::resolver resolver(m_Context);
-  m_CommandSocket = std::make_unique<tcp::socket>(m_Context);
+  tcp::resolver resolver(m_CommandContext);
+  m_CommandSocket = std::make_unique<tcp::socket>(m_CommandContext);
   asio::connect(*m_CommandSocket,
                 resolver.resolve(m_Host, std::to_string(m_CommandPort)));
-  m_DataSocket = std::make_unique<tcp::socket>(m_Context);
+  m_DataSocket = std::make_unique<tcp::socket>(m_CommandContext);
   asio::connect(*m_DataSocket,
                 resolver.resolve(m_Host, std::to_string(m_DataPort)));
   m_IsConnected = true;
 
   // Send the handshake
-  if (!sendCommandWithConfirmation(TcpServerCommand::HANDSHAKE)) {
+  if (!sendCommand(TcpServerCommand::HANDSHAKE)) {
     logger.fatal("Handshake failed");
     return false;
   }
@@ -57,7 +57,7 @@ bool TcpClient::disconnect() {
 bool TcpClient::addDelsysDevice() {
   auto &logger = utils::Logger::getInstance();
 
-  if (!sendCommandWithConfirmation(TcpServerCommand::CONNECT_DELSYS)) {
+  if (!sendCommand(TcpServerCommand::CONNECT_DELSYS)) {
     logger.fatal("Failed to add Delsys device");
     return false;
   }
@@ -69,7 +69,7 @@ bool TcpClient::addDelsysDevice() {
 bool TcpClient::addMagstimDevice() {
   auto &logger = utils::Logger::getInstance();
 
-  if (!sendCommandWithConfirmation(TcpServerCommand::CONNECT_MAGSTIM)) {
+  if (!sendCommand(TcpServerCommand::CONNECT_MAGSTIM)) {
     logger.fatal("Failed to add Magstim device");
     return false;
   }
@@ -81,7 +81,7 @@ bool TcpClient::addMagstimDevice() {
 bool TcpClient::removeDelsysDevice() {
   auto &logger = utils::Logger::getInstance();
 
-  if (!sendCommandWithConfirmation(TcpServerCommand::DISCONNECT_DELSYS)) {
+  if (!sendCommand(TcpServerCommand::DISCONNECT_DELSYS)) {
     logger.fatal("Failed to remove Delsys device");
     return false;
   }
@@ -93,7 +93,7 @@ bool TcpClient::removeDelsysDevice() {
 bool TcpClient::removeMagstimDevice() {
   auto &logger = utils::Logger::getInstance();
 
-  if (!sendCommandWithConfirmation(TcpServerCommand::DISCONNECT_MAGSTIM)) {
+  if (!sendCommand(TcpServerCommand::DISCONNECT_MAGSTIM)) {
     logger.fatal("Failed to remove Magstim device");
     return false;
   }
@@ -105,7 +105,7 @@ bool TcpClient::removeMagstimDevice() {
 bool TcpClient::startRecording() {
   auto &logger = utils::Logger::getInstance();
 
-  if (!sendCommandWithConfirmation(TcpServerCommand::START_RECORDING)) {
+  if (!sendCommand(TcpServerCommand::START_RECORDING)) {
     logger.fatal("Failed to start recording");
     return false;
   }
@@ -117,7 +117,7 @@ bool TcpClient::startRecording() {
 bool TcpClient::stopRecording() {
   auto &logger = utils::Logger::getInstance();
 
-  if (!sendCommandWithConfirmation(TcpServerCommand::STOP_RECORDING)) {
+  if (!sendCommand(TcpServerCommand::STOP_RECORDING)) {
     logger.fatal("Failed to stop recording");
     return false;
   }
@@ -128,7 +128,7 @@ bool TcpClient::stopRecording() {
 
 bool TcpClient::updateData() {
   auto &logger = utils::Logger::getInstance();
-  if (!sendCommandWithConfirmation(TcpServerCommand::GET_DATA)) {
+  if (!sendCommand(TcpServerCommand::GET_DATA)) {
     logger.fatal("Failed to update the data");
     return false;
   }
@@ -136,7 +136,7 @@ bool TcpClient::updateData() {
   // TODO RENDU ICI!!
 }
 
-bool TcpClient::sendCommandWithConfirmation(TcpServerCommand command) {
+bool TcpClient::sendCommand(TcpServerCommand command) {
   auto &logger = utils::Logger::getInstance();
 
   if (!m_IsConnected) {
