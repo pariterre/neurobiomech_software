@@ -26,14 +26,16 @@ int main() {
     client.startRecording();
     std::this_thread::sleep_for(std::chrono::seconds(2));
     client.stopRecording();
-    auto data = client.getData();
+    auto data = client.getLastTrialData();
+
+    std::cout << data["DelsysEmgDataCollector"].size() << std::endl;
 
     // Remove the only data collector we have
     client.removeDelsysDevice();
     client.startRecording();
     std::this_thread::sleep_for(std::chrono::seconds(2));
     client.stopRecording();
-    // auto data = client.getData();
+    // auto data = client.getLastTrialData();
 
     // Clean up things
     client.disconnect();

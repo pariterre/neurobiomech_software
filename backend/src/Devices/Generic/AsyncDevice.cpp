@@ -21,19 +21,21 @@ void AsyncDevice::connectAsync() {
     return;
   }
 
+  m_AsyncDeviceContext.restart();
   m_HasFailedToConnect = false;
   m_AsyncDeviceWorker = std::thread([this]() {
     auto &logger = utils::Logger::getInstance();
-    m_IsConnected = handleConnect();
-    m_HasFailedToConnect = !m_IsConnected;
+    m_HasFailedToConnect = !handleConnect();
 
     if (m_HasFailedToConnect) {
+      m_IsConnected = false;
       logger.fatal("Could not connect to the device " + deviceName());
       return;
     }
 
     logger.info("The device " + deviceName() + " is now connected");
     startKeepDeviceWorkerAlive();
+    m_IsConnected = true;
     m_AsyncDeviceContext.run();
   });
 }

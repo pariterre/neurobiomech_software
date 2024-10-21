@@ -220,7 +220,8 @@ bool Devices::stopDataStreaming() {
     stopRecording();
   }
 
-  // Stop all the recording
+  // Stop all the recording (this is just to make sure in case some device is
+  // started while m_ISRecording is false)
   for (auto &[deviceId, dataCollector] : m_DataCollectors) {
     dataCollector->stopRecording();
   }
@@ -274,7 +275,7 @@ bool Devices::stopRecording() {
   return true;
 }
 
-nlohmann::json Devices::serialize() const {
+nlohmann::json Devices::getLastTrialDataSerialized() const {
   nlohmann::json json;
   size_t deviceIndex = 0;
   for (const auto &[deviceId, dataCollector] : m_DataCollectors) {
@@ -283,4 +284,15 @@ nlohmann::json Devices::serialize() const {
     deviceIndex++;
   }
   return json;
+}
+
+std::map<std::string, data::TimeSeries>
+Devices::deserializeData(const nlohmann::json &json) {
+  std::map<std::string, data::TimeSeries> data;
+  for (const auto &[deviceIndex, deviceData] : json.items()) {
+    auto name = deviceData["name"].get<std::string>();
+    auto timeSeries = data::TimeSeries::deserialize(deviceData["data"]);
+    data[name] = timeSeries;
+  }
+  return data;
 }

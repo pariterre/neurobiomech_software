@@ -55,9 +55,9 @@ public:
   /// @return True if the recording is stopped, false otherwise
   bool stopRecording();
 
-  /// @brief Get the data from the server
+  /// @brief Get the data from the previously recorded trial on the server
   /// @return True if the data is received, false otherwise
-  bool updateData();
+  std::map<std::string, data::TimeSeries> getLastTrialData();
 
 protected:
   /// @brief The data received from the server
@@ -78,7 +78,7 @@ protected:
 
   /// @brief The Send a command to the server and wait for the confirmation
   /// @param command The command to send
-  bool sendCommand(TcpServerCommand command);
+  TcpServerResponse sendCommand(TcpServerCommand command);
 
   /// @brief Wait for a response from the server (invoked by [sendCommand])
   TcpServerResponse waitForResponse();

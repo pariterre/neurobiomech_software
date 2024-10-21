@@ -350,6 +350,12 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
                                          : TcpServerResponse::NOK;
     break;
 
+  case TcpServerCommand::GET_LAST_TRIAL_DATA: {
+    auto data = m_Devices.getLastTrialDataSerialized().dump();
+    response = static_cast<TcpServerResponse>(data.size());
+    asio::write(*m_DataSocket, asio::buffer(data), error);
+  } break;
+
   default:
     logger.fatal("Invalid command: " +
                  std::to_string(static_cast<std::uint32_t>(command)));

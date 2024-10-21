@@ -23,13 +23,14 @@ void AsyncDataCollector::startDataStreamingAsync() {
     return;
   }
 
+  m_AsyncDataContext.restart();
   m_HasFailedToStartDataStreaming = false;
   m_AsyncDataWorker = std::thread([this]() {
     auto &logger = utils::Logger::getInstance();
-    m_IsStreamingData = handleStartDataStreaming();
-    m_HasFailedToStartDataStreaming = !m_IsStreamingData;
+    m_HasFailedToStartDataStreaming = !handleStartDataStreaming();
 
     if (m_HasFailedToStartDataStreaming) {
+      m_IsStreamingData = false;
       logger.fatal("The data collector " + dataCollectorName() +
                    " failed to start streaming datas");
       return;
@@ -37,6 +38,7 @@ void AsyncDataCollector::startDataStreamingAsync() {
 
     m_LiveTimeSeries->reset();
     startKeepDataWorkerAlive();
+    m_IsStreamingData = true;
     logger.info("The data collector " + dataCollectorName() +
                 " is now streaming data");
     m_AsyncDataContext.run();

@@ -677,7 +677,7 @@ TEST(Devices, SerializeTrialData) {
   devices.disconnect();
 
   // Serialize the data
-  auto data = devices.serialize();
+  auto data = devices.getLastTrialDataSerialized();
   ASSERT_EQ(data.size(), 2);
   ASSERT_EQ(data[0]["name"], "DelsysEmgDataCollector");
   ASSERT_EQ(data[0]["data"].size(),

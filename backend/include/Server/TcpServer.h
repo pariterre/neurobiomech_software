@@ -20,10 +20,14 @@ enum class TcpServerCommand : std::uint32_t {
   DISCONNECT_MAGSTIM,
   START_RECORDING,
   STOP_RECORDING,
+  GET_LAST_TRIAL_DATA,
   FAILED,
 };
 
-enum class TcpServerResponse : std::uint32_t { OK, NOK };
+enum class TcpServerResponse : std::uint32_t {
+  NOK = 0,
+  OK = 1,
+};
 
 class TcpServer {
 public:

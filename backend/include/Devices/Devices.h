@@ -89,9 +89,17 @@ public:
 
   /// DATA SPECIFIC METHODS ///
 public:
-  /// @brief Get the data in serialized form
-  /// @return The data in serialized form
-  nlohmann::json serialize() const;
+  /// @brief Get the data of the last recorded trial in serialized form
+  /// @return The data of the last recorded trial in serialized form
+  nlohmann::json getLastTrialDataSerialized() const;
+
+  /// @brief Deserialize timeseries data. This is almost the opposite of
+  /// serialized with the difference that the map is not a map of devices, but
+  /// a map device names
+  /// @param json The serialized data
+  /// @return The deserialized data
+  static std::map<std::string, data::TimeSeries>
+  deserializeData(const nlohmann::json &json);
 
   /// INTERNAL ///
 protected:
