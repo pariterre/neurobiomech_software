@@ -132,6 +132,7 @@ bool TcpClient::stopRecording() {
 
 std::map<std::string, data::TimeSeries> TcpClient::getLastTrialData() {
   auto &logger = utils::Logger::getInstance();
+  logger.info("CLIENT: Fetching the last trial data");
 
   auto response = sendCommand(TcpServerCommand::GET_LAST_TRIAL_DATA);
   if (response == TcpServerResponse::NOK) {
@@ -140,24 +141,39 @@ std::map<std::string, data::TimeSeries> TcpClient::getLastTrialData() {
   }
 
   // Read the data
-  std::uint32_t byteCounts = static_cast<std::uint32_t>(response);
-  auto buffer = std::vector<char>(byteCounts);
+  auto now = std::chrono::high_resolution_clock::now();
+  std::uint32_t totalByteCount = static_cast<std::uint32_t>(response);
+  std::vector<char> dataBuffer(totalByteCount);
   asio::error_code error;
-  size_t byteRead = asio::read(*m_DataSocket, asio::buffer(buffer), error);
-  if (byteRead != byteCounts || error) {
+  auto byteRead = asio::read(*m_DataSocket, asio::buffer(dataBuffer), error);
+  if (byteRead != totalByteCount || error) {
     logger.fatal("CLIENT: Failed to fetch the last trial data");
     return std::map<std::string, data::TimeSeries>();
   }
+  logger.info(
+      "CLIENT: It took " +
+      std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
+                         std::chrono::high_resolution_clock::now() - now)
+                         .count()) +
+      "ms to get the data");
+  now = std::chrono::high_resolution_clock::now();
 
   // Parse the data
   std::map<std::string, data::TimeSeries> data;
   try {
-    data = devices::Devices::deserializeData(nlohmann::json::parse(buffer));
+    data = devices::Devices::deserializeData(nlohmann::json::parse(dataBuffer));
   } catch (...) {
     logger.fatal("CLIENT: Failed to parse the last trial data");
     return std::map<std::string, data::TimeSeries>();
   }
+  logger.info(
+      "CLIENT: It took " +
+      std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
+                         std::chrono::high_resolution_clock::now() - now)
+                         .count()) +
+      "ms to parse the data");
 
+  waitForResponse();
   logger.info("CLIENT: Last trial data acquired");
   return data;
 }

@@ -32,14 +32,15 @@ int main() {
     //             " data series (expected about ~4000)");
 
     // Remove the only data collector we have
-    // client.removeDelsysDevice();
+    client.removeMagstimDevice();
     client.startRecording();
-    std::this_thread::sleep_for(std::chrono::seconds(4));
+    std::this_thread::sleep_for(std::chrono::seconds(6));
     client.stopRecording();
     auto data = client.getLastTrialData();
     logger.info("A second trial received containing: " +
                 std::to_string(data["DelsysEmgDataCollector"].size()) +
-                " data series (expected about ~8000)");
+                " data series (expected about ~" + std::to_string(6 * 2000) +
+                ")");
 
     // Clean up things
     client.disconnect();

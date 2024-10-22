@@ -17,6 +17,11 @@ public:
   /// @param data The data to store
   DataPoint(const std::vector<double> &data) : m_Data(data) {}
 
+  /// @brief Deserialize a json object
+  /// @param json The json object to deserialize
+  DataPoint(const nlohmann::json &json)
+      : m_Data(json.get<std::vector<double>>()) {}
+
   /// @brief Get the number of channels
   /// @return The number of channels
   size_t size() const;
@@ -29,10 +34,6 @@ public:
   /// @brief Convert the object to JSON
   /// @return The JSON object
   nlohmann::json serialize() const;
-
-  /// @brief Deserialize the object
-  /// @param json The JSON object
-  static DataPoint deserialize(const nlohmann::json &json);
 
 protected:
   /// @brief The data

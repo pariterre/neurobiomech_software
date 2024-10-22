@@ -288,11 +288,10 @@ nlohmann::json Devices::getLastTrialDataSerialized() const {
 
 std::map<std::string, data::TimeSeries>
 Devices::deserializeData(const nlohmann::json &json) {
-  std::map<std::string, data::TimeSeries> data;
+  auto data = std::map<std::string, data::TimeSeries>();
   for (const auto &[deviceIndex, deviceData] : json.items()) {
     auto name = deviceData["name"].get<std::string>();
-    auto timeSeries = data::TimeSeries::deserialize(deviceData["data"]);
-    data[name] = timeSeries;
+    data[name] = data::TimeSeries(deviceData["data"]);
   }
   return data;
 }

@@ -3,12 +3,24 @@
 using namespace STIMWALKER_NAMESPACE;
 using namespace STIMWALKER_NAMESPACE::data;
 
+TimeSeries::TimeSeries(const nlohmann::json &json)
+    : m_StartingTime(std::chrono::system_clock::duration(
+          json["startingTime"].get<int64_t>())),
+      m_StopWatch(std::chrono::high_resolution_clock::now()),
+      m_Data(utils::RollingVector<data::TimeSeriesData>(
+          static_cast<size_t>(json["data"].size()))) {
+  for (const auto &point : json["data"]) {
+    m_Data.push_back(data::TimeSeriesData(
+        std::chrono::microseconds(point[0].get<int>()), DataPoint(point[1])));
+  }
+}
+
 size_t TimeSeries::size() const { return static_cast<int>(m_Data.size()); }
 
 void TimeSeries::clear() { m_Data.clear(); }
 
 void TimeSeries::add(const DataPoint &data) {
-  m_Data.push_back(std::make_pair(
+  m_Data.push_back(data::TimeSeriesData(
       std::chrono::duration_cast<std::chrono::microseconds>(
           std::chrono::high_resolution_clock::now() - m_StopWatch),
       data));
@@ -16,7 +28,7 @@ void TimeSeries::add(const DataPoint &data) {
 
 void TimeSeries::add(const std::chrono::microseconds &timeStamp,
                      const DataPoint &data) {
-  m_Data.push_back(std::make_pair(timeStamp, data));
+  m_Data.push_back(data::TimeSeriesData(timeStamp, data));
 }
 
 const std::pair<std::chrono::microseconds, DataPoint> &
@@ -44,20 +56,14 @@ TimeSeries::since(const std::chrono::system_clock::time_point &time) const {
 }
 
 nlohmann::json TimeSeries::serialize() const {
-  nlohmann::json json = nlohmann::json::array();
+  nlohmann::json json = nlohmann::json::object();
+  json["startingTime"] = m_StartingTime.time_since_epoch().count();
+  json["data"] = nlohmann::json::array();
+  auto &jsonData = json["data"];
   for (const auto &point : m_Data) {
-    json.push_back({point.first.count(), point.second.serialize()});
+    jsonData.push_back({point.first.count(), point.second.serialize()});
   }
   return json;
-}
-
-TimeSeries TimeSeries::deserialize(const nlohmann::json &json) {
-  TimeSeries data;
-  for (const auto &point : json) {
-    data.add(std::chrono::microseconds(point[0].get<int>()),
-             DataPoint::deserialize(point[1]));
-  }
-  return data;
 }
 
 void TimeSeries::reset() {

@@ -13,8 +13,21 @@
 
 namespace STIMWALKER_NAMESPACE::data {
 
+struct TimeSeriesData {
+  std::chrono::microseconds timeStamp;
+  std::vector<double> data;
+
+  const std::chrono::microseconds &first() const { return timeStamp; }
+  const std::vector<double> &second() const { return data; }
+
+  TimeSeriesData(const std::chrono::microseconds &timeStamp,
+                 const std::vector<double> &data)
+      : timeStamp(timeStamp), data(data) {}
+};
+
 /// @brief Class to store data
 class TimeSeries {
+
 public:
   TimeSeries()
       : m_StartingTime(std::chrono::system_clock::now()),
@@ -22,6 +35,11 @@ public:
   TimeSeries(const std::chrono::system_clock::time_point &startingTime)
       : m_StartingTime(startingTime),
         m_StopWatch(std::chrono::high_resolution_clock::now()) {}
+
+  /// @brief Deserialize the data
+  /// @param json The data in serialized form
+  TimeSeries(const nlohmann::json &json);
+
   virtual ~TimeSeries() = default;
 
   /// @brief Get the number of data in the collection
@@ -49,8 +67,7 @@ public:
   /// @brief Get the data at a specific index
   /// @param index The index of the data
   /// @return The data at the given index
-  const std::pair<std::chrono::microseconds, DataPoint> &
-  operator[](size_t index) const;
+  const TimeSeriesData &operator[](size_t index) const;
 
   /// @brief Get the last n data
   /// @param n The number of data to get from the end
@@ -63,10 +80,6 @@ public:
   /// @brief Get the data in serialized form
   /// @return The data in serialized form
   nlohmann::json serialize() const;
-
-  /// @brief Deserialize the data
-  /// @param json The data in serialized form
-  static TimeSeries deserialize(const nlohmann::json &json);
 
 protected:
   /// @brief The timestamp of the starting point. See [setStartingTime](@ref
@@ -87,11 +100,10 @@ public:
 
 public:
   /// @brief The data of the collection
-  const utils::RollingVector<std::pair<std::chrono::microseconds, DataPoint>> &
-  getData() const;
+  const utils::RollingVector<TimeSeriesData> &getData() const;
 
 protected:
-  utils::RollingVector<std::pair<std::chrono::microseconds, DataPoint>> m_Data;
+  utils::RollingVector<TimeSeriesData> m_Data;
 };
 
 } // namespace STIMWALKER_NAMESPACE::data

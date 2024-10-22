@@ -245,12 +245,13 @@ void TcpServer::waitAndHandleNewCommand() {
   size_t byteRead = asio::read(*m_CommandSocket, asio::buffer(buffer), error);
 
   // Since command is non-blocking, we can just continue if there is no data
-  if (error == asio::error::would_block) {
+  if (!m_IsServerRunning || byteRead == 0 ||
+      error == asio::error::would_block) {
     return;
   }
 
   // If something went wrong, disconnect the client and stop everything
-  if (byteRead == 0 || byteRead > 1024 || error) {
+  if (byteRead > 1024 || error) {
     logger.fatal("TCP read error: " + error.message());
     disconnectClient();
     return;
@@ -351,9 +352,14 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
     break;
 
   case TcpServerCommand::GET_LAST_TRIAL_DATA: {
-    auto data = m_Devices.getLastTrialDataSerialized().dump();
-    response = static_cast<TcpServerResponse>(data.size());
-    asio::write(*m_DataSocket, asio::buffer(data), error);
+    auto data = m_Devices.getLastTrialDataSerialized();
+    auto dataDump = data.dump();
+    response = static_cast<TcpServerResponse>(dataDump.size());
+    asio::write(*m_CommandSocket,
+                asio::buffer(constructResponsePacket(response)), error);
+    auto written = asio::write(*m_DataSocket, asio::buffer(dataDump), error);
+    logger.info("Data size: " + std::to_string(written));
+    response = TcpServerResponse::OK;
   } break;
 
   default:

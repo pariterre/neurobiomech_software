@@ -9,7 +9,3 @@ const double &DataPoint::operator[](size_t index) const {
 }
 
 nlohmann::json DataPoint::serialize() const { return nlohmann::json(m_Data); }
-
-DataPoint DataPoint::deserialize(const nlohmann::json &json) {
-  return DataPoint(json.get<std::vector<double>>());
-}
