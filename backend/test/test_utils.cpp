@@ -241,3 +241,5 @@ TEST(RollingVector, NoLimit) {
   ASSERT_EQ(vector.getMaxSize(), size_t(-1));
   ASSERT_EQ(vector.size(), 0);
 }
+
+// TODO ADD ROLLING FRONT, BACK, AND MAKE SURE THE ITERATORS WORK
