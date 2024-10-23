@@ -680,9 +680,21 @@ TEST(Devices, SerializeTrialData) {
   auto data = devices.getLastTrialDataSerialized();
   ASSERT_EQ(data.size(), 2);
   ASSERT_EQ(data[0]["name"], "DelsysEmgDataCollector");
-  ASSERT_EQ(data[0]["data"].size(),
+  ASSERT_EQ(data[0]["data"]["startingTime"],
+            devices.getDataCollector(deviceIds[0])
+                .getTrialData()
+                .getStartingTime()
+                .time_since_epoch()
+                .count());
+  ASSERT_EQ(data[0]["data"]["data"].size(),
             devices.getDataCollector(deviceIds[0]).getTrialData().size());
   ASSERT_EQ(data[1]["name"], "DelsysEmgDataCollector");
-  ASSERT_EQ(data[1]["data"].size(),
+  ASSERT_EQ(data[1]["data"]["startingTime"],
+            devices.getDataCollector(deviceIds[2])
+                .getTrialData()
+                .getStartingTime()
+                .time_since_epoch()
+                .count());
+  ASSERT_EQ(data[1]["data"]["data"].size(),
             devices.getDataCollector(deviceIds[2]).getTrialData().size());
 }
