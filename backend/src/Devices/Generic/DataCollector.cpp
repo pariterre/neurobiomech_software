@@ -107,19 +107,8 @@ const TimeSeries &DataCollector::getTrialData() const {
   return *m_TrialTimeSeries;
 }
 
-void DataCollector::addDataPoint(DataPoint &dataPoint) {
-  if (!m_IsStreamingData) {
-    return;
-  }
-
-  m_LiveTimeSeries->add(dataPoint);
-  if (m_IsRecording) {
-    m_TrialTimeSeries->add(dataPoint);
-  }
-  onNewData.notifyListeners(dataPoint);
-}
-
-void DataCollector::addDataPoints(std::vector<DataPoint> &data) {
+void DataCollector::addDataPoints(
+    const std::vector<std::vector<double>> &data) {
   if (!m_IsStreamingData) {
     return;
   }
@@ -130,5 +119,5 @@ void DataCollector::addDataPoints(std::vector<DataPoint> &data) {
       m_TrialTimeSeries->add(d);
     }
   }
-  onNewData.notifyListeners(data.back());
+  onNewData.notifyListeners(m_LiveTimeSeries->back());
 }

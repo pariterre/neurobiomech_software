@@ -8,6 +8,8 @@
                        // library, we can do it easily
 #ifdef _WIN32
 #define _ENABLE_EXTENDED_ALIGNED_STORAGE
+// Windows 10 and more
+#define _WIN32_WINNT 0x0A00
 #endif
 
 #define STIMWALKER_NAMESPACE stimwalker

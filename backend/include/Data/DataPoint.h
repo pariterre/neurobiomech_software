@@ -1,11 +1,11 @@
 #ifndef __STIMWALKER_DATA_DATA_POINT_H__
 #define __STIMWALKER_DATA_DATA_POINT_H__
 
-#include <map>
-#include <nlohmann/json.hpp>
+#include "stimwalkerConfig.h"
 
 #include "Utils/CppMacros.h"
-#include "stimwalkerConfig.h"
+#include <map>
+#include <nlohmann/json.hpp>
 
 namespace STIMWALKER_NAMESPACE::data {
 
@@ -13,14 +13,21 @@ namespace STIMWALKER_NAMESPACE::data {
 class DataPoint {
 
 public:
-  /// @brief Constructor. Since timestamp is not provided, it is set to -1
+  /// @brief Empty constructor
+  DataPoint() : m_TimeStamp(std::chrono::microseconds(0)), m_Data({}) {};
+
+  /// @brief Contructor
+  /// @param timeStamp The time stamp (i.e. elapsed time since starting time)
   /// @param data The data to store
-  DataPoint(const std::vector<double> &data) : m_Data(data) {}
+  DataPoint(const std::chrono::microseconds &timeStamp,
+            const std::vector<double> &data)
+      : m_TimeStamp(timeStamp), m_Data(data) {}
 
   /// @brief Deserialize a json object
   /// @param json The json object to deserialize
   DataPoint(const nlohmann::json &json)
-      : m_Data(json.get<std::vector<double>>()) {}
+      : m_TimeStamp(json[0].get<int64_t>()),
+        m_Data(json[1].get<std::vector<double>>()) {}
 
   /// @brief Get the number of channels
   /// @return The number of channels
@@ -36,6 +43,9 @@ public:
   nlohmann::json serialize() const;
 
 protected:
+  /// @brief The time stamp of the data
+  DECLARE_PROTECTED_MEMBER(std::chrono::microseconds, TimeStamp);
+
   /// @brief The data
   DECLARE_PROTECTED_MEMBER(std::vector<double>, Data);
 };

@@ -22,11 +22,18 @@ public:
 
   ~FixedTimeSeries() = default;
 
+  /// @brief Add new data to the collection with the timestamp
+  /// @param timeStamp The time stamp of the data. This can break the "fixed"
+  /// time series if the time stamp is not a multiple of the delta time or is
+  /// not in the right order
+  /// @param data The data to add
+  virtual void add(const std::chrono::microseconds &timeStamp,
+                   const std::vector<double> &data);
+
   /// @brief Add new data to the collection with the timestamp set to
-  /// StartingTime + delta time * number of data points
-  /// @param data The data to add. This also add a time stamp to the data equals
-  /// to the number of data points times the delta time
-  void add(const DataPoint &data) override;
+  /// StartingTime + delta time * number of data points.
+  /// @param data The data to add.
+  void add(const std::vector<double> &data) override;
 
 protected:
   /// @brief The time frequency of the data

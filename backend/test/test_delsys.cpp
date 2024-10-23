@@ -21,8 +21,8 @@ int findDataOffset(const data::TimeSeries &data) {
         std::sin(static_cast<float>(offset) / 2000.0f * 2 * M_PI));
     float nextValue = static_cast<float>(
         std::sin(static_cast<float>(offset + 1) / 2000.0f * 2 * M_PI));
-    if ((std::abs(data[0].second[0] - value) < requiredPrecision) &&
-        (std::abs(data[1].second[0] - nextValue) < requiredPrecision)) {
+    if ((std::abs(data[0].getData()[0] - value) < requiredPrecision) &&
+        (std::abs(data[1].getData()[0] - nextValue) < requiredPrecision)) {
       break;
     }
     if (offset > 2000) {
@@ -376,10 +376,10 @@ TEST(Delsys, LiveData) {
   }
 
   for (size_t i = 0; i < data.size(); i++) {
-    for (size_t j = 0; j < data[i].second.size(); j++) {
+    for (size_t j = 0; j < data[i].getData().size(); j++) {
       float value = static_cast<float>(
           std::sin((i + static_cast<size_t>(offset)) / 2000.0 * 2 * M_PI));
-      ASSERT_NEAR(data[i].second[j], value, requiredPrecision);
+      ASSERT_NEAR(data[i].getData()[j], value, requiredPrecision);
     }
   }
 }
@@ -412,10 +412,10 @@ TEST(Delsys, TrialData) {
   }
 
   for (size_t i = 0; i < data.size(); i++) {
-    for (size_t j = 0; j < data[i].second.size(); j++) {
+    for (size_t j = 0; j < data[i].getData().size(); j++) {
       float value = static_cast<float>(
           std::sin((i + static_cast<size_t>(offset)) / 2000.0 * 2 * M_PI));
-      ASSERT_NEAR(data[i].second[j], value, requiredPrecision);
+      ASSERT_NEAR(data[i].getData()[j], value, requiredPrecision);
     }
   }
 }

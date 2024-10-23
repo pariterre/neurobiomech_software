@@ -1,6 +1,8 @@
 #ifndef __STIMWALKER_DEVICES_DELSYS_EMG_DEVICE_H__
 #define __STIMWALKER_DEVICES_DELSYS_EMG_DEVICE_H__
 
+#include "stimwalkerConfig.h"
+
 #include <array>
 #include <asio.hpp>
 #include <fstream>

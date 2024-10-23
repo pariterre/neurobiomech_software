@@ -2,28 +2,16 @@
 #define __STIMWALKER_DATA_TIME_SERIES_H__
 
 #include "stimwalkerConfig.h"
+
+#include "Data/DataPoint.h"
+#include "Utils/CppMacros.h"
+#include "Utils/RollingVector.h"
 #include <map>
 #include <memory>
 #include <nlohmann/json.hpp>
 #include <vector>
 
-#include "Data/DataPoint.h"
-#include "Utils/CppMacros.h"
-#include "Utils/RollingVector.h"
-
 namespace STIMWALKER_NAMESPACE::data {
-
-struct TimeSeriesData {
-  std::chrono::microseconds timeStamp;
-  std::vector<double> data;
-
-  const std::chrono::microseconds &first() const { return timeStamp; }
-  const std::vector<double> &second() const { return data; }
-
-  TimeSeriesData(const std::chrono::microseconds &timeStamp,
-                 const std::vector<double> &data)
-      : timeStamp(timeStamp), data(data) {}
-};
 
 /// @brief Class to store data
 class TimeSeries {
@@ -52,26 +40,33 @@ public:
 
   /// @brief Add new data to the collection with the timestamp set to
   /// StartingTime + elapsed time since the first data point was added
-  /// @param data The data to add. This also add a time stamp to the data equals
-  /// to the elapsed since [m_StartingTime]
-  virtual void add(const DataPoint &data);
+  /// @param timeStamp The time stamp of the data
+  /// @param data The data to add
+  virtual void add(const std::chrono::microseconds &timeStamp,
+                   const std::vector<double> &data);
 
   /// @brief Add new data to the collection with the timestamp set to
   /// StartingTime + elapsed time since the first data point was added
-  /// @param timeStamp The time stamp to apply to the data
   /// @param data The data to add. This also add a time stamp to the data equals
   /// to the elapsed since [m_StartingTime]
-  virtual void add(const std::chrono::microseconds &timeStamp,
-                   const DataPoint &data);
+  virtual void add(const std::vector<double> &data);
 
   /// @brief Get the data at a specific index
   /// @param index The index of the data
   /// @return The data at the given index
-  const TimeSeriesData &operator[](size_t index) const;
+  const DataPoint &operator[](size_t index) const;
 
   /// @brief Get the last n data
   /// @param n The number of data to get from the end
   TimeSeries tail(size_t n) const;
+
+  /// @brief Get the first data
+  /// @return The first data
+  const DataPoint &front() const;
+
+  /// @brief Get the last data
+  /// @return The last data
+  const DataPoint &back() const;
 
   /// @brief Get the data since a specific time
   /// @param time The time to get the data since
@@ -98,12 +93,9 @@ public:
   /// current time
   void reset();
 
-public:
-  /// @brief The data of the collection
-  const utils::RollingVector<TimeSeriesData> &getData() const;
-
 protected:
-  utils::RollingVector<TimeSeriesData> m_Data;
+  /// @brief The data of the collection
+  DECLARE_PROTECTED_MEMBER(utils::RollingVector<DataPoint>, Data);
 };
 
 } // namespace STIMWALKER_NAMESPACE::data

@@ -17,9 +17,8 @@ public:
   /// @brief Constructor with a buffer limit
   /// @param size The maximum size of the buffer until it rolls
   RollingVector(size_t size)
-      : m_MaxSize(size), m_CurrentIndex(0), m_UnwrapIndex(0), m_IsFull(false) {
-    m_Data.resize(size);
-  }
+      : m_Data(size), m_MaxSize(size), m_CurrentIndex(0), m_UnwrapIndex(0),
+        m_IsFull(false) {}
 
   /// @brief Add a new value to the vector, if the vector is full, the oldest
   /// value is replaced
@@ -45,8 +44,14 @@ public:
     return m_IsFull ? m_Data.begin() + m_CurrentIndex : m_Data.begin();
   }
 
-  auto end() const {
-    return m_IsFull ? m_Data.end() : m_Data.begin() + m_CurrentIndex;
+  const T &front() const {
+    return *(m_IsFull ? m_Data.begin() + m_CurrentIndex : m_Data.begin());
+  }
+
+  auto end() const { return m_Data.begin() + m_CurrentIndex % m_MaxSize; }
+
+  const T &back() const {
+    return *(m_Data.begin() + (m_CurrentIndex - 1) % m_MaxSize);
   }
 
   /// @brief Clear the vector

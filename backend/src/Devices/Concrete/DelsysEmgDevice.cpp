@@ -148,7 +148,7 @@ void DelsysEmgDevice::dataCheck() {
               m_DataChannelCount * m_SampleCount * m_BytesPerChannel);
 
   // // Convert the data to double
-  std::vector<data::DataPoint> dataPoints;
+  std::vector<std::vector<double>> dataPoints;
   for (int i = 0; i < m_SampleCount; i++) {
     std::vector<double> dataAsDouble(m_DataChannelCount);
     std::transform(dataAsFloat.begin() + i * m_DataChannelCount,
@@ -156,7 +156,7 @@ void DelsysEmgDevice::dataCheck() {
                    dataAsDouble.begin(),
                    [](float x) { return static_cast<double>(x); });
 
-    dataPoints.push_back(data::DataPoint(dataAsDouble));
+    dataPoints.push_back(dataAsDouble);
   }
 
   addDataPoints(dataPoints);
