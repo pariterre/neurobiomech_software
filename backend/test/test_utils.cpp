@@ -164,6 +164,12 @@ TEST(RollingVector, Adding) {
   ASSERT_EQ(vector.at(4), 5);
   EXPECT_THROW(vector.at(5), std::out_of_range);
   ASSERT_EQ(vector.size(), 5);
+  size_t index = 0;
+  for (auto &v : vector) {
+    ASSERT_EQ(v, index % 5 + 1);
+    index++;
+  }
+  ASSERT_EQ(index, 5);
 
   vector.push_back(6);
   ASSERT_EQ(vector[0], 2);
@@ -175,17 +181,20 @@ TEST(RollingVector, Adding) {
   EXPECT_THROW(vector.at(6), std::out_of_range);
   ASSERT_EQ(vector.size(), 6);
 
-  size_t index = 0;
+  index = 0;
   for (auto &v : vector) {
     ASSERT_EQ(v, index % 5 + 2);
     index++;
   }
+  ASSERT_EQ(index, 5);
 
+  // Try it twice in a row
   index = 0;
   for (const auto &v : vector) {
     ASSERT_EQ(v, index % 5 + 2);
     index++;
   }
+  ASSERT_EQ(index, 5);
 
   vector.clear();
   ASSERT_EQ(vector.getMaxSize(), 5);
@@ -242,4 +251,221 @@ TEST(RollingVector, NoLimit) {
   ASSERT_EQ(vector.size(), 0);
 }
 
-// TODO ADD ROLLING FRONT, BACK, AND MAKE SURE THE ITERATORS WORK
+TEST(RollingVector, AllGetsWithMaxSize) {
+  auto vector = utils::RollingVector<int>(5);
+  ASSERT_EQ(vector.getMaxSize(), 5);
+  ASSERT_EQ(vector.size(), 0);
+
+  // When there are no elements
+  ASSERT_NO_THROW(vector[0]);
+  ASSERT_THROW(vector.at(0), std::out_of_range);
+  ASSERT_THROW(vector.front(), std::out_of_range);
+  ASSERT_THROW(vector.back(), std::out_of_range);
+  size_t forLoopCount = 0;
+  for (auto &v : vector) {
+    forLoopCount++;
+  }
+  ASSERT_TRUE(forLoopCount == 0);
+
+  // When there is only one element
+  vector.push_back(1);
+  ASSERT_TRUE(vector[0] == 1);
+  ASSERT_TRUE(vector.at(0) == 1);
+  ASSERT_TRUE(vector.front() == 1);
+  ASSERT_TRUE(vector.back() == 1);
+  forLoopCount = 0;
+  for (auto &v : vector) {
+    ASSERT_TRUE(v == forLoopCount + 1);
+    forLoopCount++;
+  }
+  ASSERT_TRUE(forLoopCount == 1);
+
+  // When there are two elements
+  vector.push_back(2);
+  ASSERT_TRUE(vector[0] == 1);
+  ASSERT_TRUE(vector[1] == 2);
+  ASSERT_TRUE(vector.at(0) == 1);
+  ASSERT_TRUE(vector.at(1) == 2);
+  ASSERT_TRUE(vector.front() == 1);
+  ASSERT_TRUE(vector.back() == 2);
+  forLoopCount = 0;
+  for (auto &v : vector) {
+    ASSERT_TRUE(v == forLoopCount + 1);
+    forLoopCount++;
+  }
+
+  // When there are exactly max size elements
+  vector.push_back(3);
+  vector.push_back(4);
+  vector.push_back(5);
+  ASSERT_TRUE(vector[0] == 1);
+  ASSERT_TRUE(vector[1] == 2);
+  ASSERT_TRUE(vector[2] == 3);
+  ASSERT_TRUE(vector[3] == 4);
+  ASSERT_TRUE(vector[4] == 5);
+  ASSERT_TRUE(vector.at(0) == 1);
+  ASSERT_TRUE(vector.at(1) == 2);
+  ASSERT_TRUE(vector.at(2) == 3);
+  ASSERT_TRUE(vector.at(3) == 4);
+  ASSERT_TRUE(vector.at(4) == 5);
+  ASSERT_TRUE(vector.front() == 1);
+  ASSERT_TRUE(vector.back() == 5);
+  forLoopCount = 0;
+  for (auto &v : vector) {
+    ASSERT_TRUE(v == forLoopCount + 1);
+    forLoopCount++;
+  }
+  ASSERT_TRUE(forLoopCount == 5);
+
+  // When there is one element more than max size elements
+  vector.push_back(6);
+  ASSERT_TRUE(vector[0] == 2);
+  ASSERT_TRUE(vector[1] == 3);
+  ASSERT_TRUE(vector[2] == 4);
+  ASSERT_TRUE(vector[3] == 5);
+  ASSERT_TRUE(vector[4] == 6);
+  ASSERT_TRUE(vector.at(0) == 2);
+  ASSERT_TRUE(vector.at(1) == 3);
+  ASSERT_TRUE(vector.at(2) == 4);
+  ASSERT_TRUE(vector.at(3) == 5);
+  ASSERT_TRUE(vector.at(4) == 6);
+  ASSERT_TRUE(vector.front() == 2);
+  ASSERT_TRUE(vector.back() == 6);
+  forLoopCount = 0;
+  for (auto &v : vector) {
+    ASSERT_TRUE(v == forLoopCount + 2);
+    forLoopCount++;
+  }
+  ASSERT_TRUE(forLoopCount == 5);
+
+  // Where there is two elements more than max size elements
+  vector.push_back(7);
+  ASSERT_TRUE(vector[0] == 3);
+  ASSERT_TRUE(vector[1] == 4);
+  ASSERT_TRUE(vector[2] == 5);
+  ASSERT_TRUE(vector[3] == 6);
+  ASSERT_TRUE(vector[4] == 7);
+  ASSERT_TRUE(vector.at(0) == 3);
+  ASSERT_TRUE(vector.at(1) == 4);
+  ASSERT_TRUE(vector.at(2) == 5);
+  ASSERT_TRUE(vector.at(3) == 6);
+  ASSERT_TRUE(vector.at(4) == 7);
+  ASSERT_TRUE(vector.front() == 3);
+  ASSERT_TRUE(vector.back() == 7);
+  forLoopCount = 0;
+  for (auto &v : vector) {
+    ASSERT_TRUE(v == forLoopCount + 3);
+    forLoopCount++;
+  }
+
+  // When there is exactly twice the max size elements
+  vector.push_back(8);
+  vector.push_back(9);
+  vector.push_back(10);
+  ASSERT_TRUE(vector[0] == 6);
+  ASSERT_TRUE(vector[1] == 7);
+  ASSERT_TRUE(vector[2] == 8);
+  ASSERT_TRUE(vector[3] == 9);
+  ASSERT_TRUE(vector[4] == 10);
+  ASSERT_TRUE(vector.at(0) == 6);
+  ASSERT_TRUE(vector.at(1) == 7);
+  ASSERT_TRUE(vector.at(2) == 8);
+  ASSERT_TRUE(vector.at(3) == 9);
+  ASSERT_TRUE(vector.at(4) == 10);
+  ASSERT_TRUE(vector.front() == 6);
+  ASSERT_TRUE(vector.back() == 10);
+  forLoopCount = 0;
+  for (auto &v : vector) {
+    ASSERT_TRUE(v == forLoopCount + 6);
+    forLoopCount++;
+  }
+  ASSERT_TRUE(forLoopCount == 5);
+
+  // When there is one element more than twice the max size elements
+  vector.push_back(11);
+  ASSERT_TRUE(vector[0] == 7);
+  ASSERT_TRUE(vector[1] == 8);
+  ASSERT_TRUE(vector[2] == 9);
+  ASSERT_TRUE(vector[3] == 10);
+  ASSERT_TRUE(vector[4] == 11);
+  ASSERT_TRUE(vector.at(0) == 7);
+  ASSERT_TRUE(vector.at(1) == 8);
+  ASSERT_TRUE(vector.at(2) == 9);
+  ASSERT_TRUE(vector.at(3) == 10);
+  ASSERT_TRUE(vector.at(4) == 11);
+  ASSERT_TRUE(vector.front() == 7);
+  ASSERT_TRUE(vector.back() == 11);
+  forLoopCount = 0;
+  for (auto &v : vector) {
+    ASSERT_TRUE(v == forLoopCount + 7);
+    forLoopCount++;
+  }
+  ASSERT_TRUE(forLoopCount == 5);
+}
+
+TEST(RollingVector, AllGetsWithNoLimit) {
+  auto vector = utils::RollingVector<int>();
+  ASSERT_EQ(vector.getMaxSize(), size_t(-1));
+  ASSERT_EQ(vector.size(), 0);
+
+  // When there are no elements
+  // ASSERT_THROW(vector[0], std::out_of_range); This is a segfault
+  ASSERT_THROW(vector.at(0), std::out_of_range);
+  ASSERT_THROW(vector.front(), std::out_of_range);
+  ASSERT_THROW(vector.back(), std::out_of_range);
+  int forLoopCount = 0;
+  for (auto &v : vector) {
+    forLoopCount++;
+  }
+  ASSERT_TRUE(forLoopCount == 0);
+
+  // When there is only one element
+  vector.push_back(1);
+  ASSERT_TRUE(vector[0] == 1);
+  ASSERT_TRUE(vector.at(0) == 1);
+  ASSERT_TRUE(vector.front() == 1);
+  ASSERT_TRUE(vector.back() == 1);
+  forLoopCount = 0;
+  for (auto &v : vector) {
+    ASSERT_TRUE(v == forLoopCount + 1);
+    forLoopCount++;
+  }
+  ASSERT_TRUE(forLoopCount == 1);
+
+  // When there are two elements
+  vector.push_back(2);
+  ASSERT_TRUE(vector[0] == 1);
+  ASSERT_TRUE(vector[1] == 2);
+  ASSERT_TRUE(vector.at(0) == 1);
+  ASSERT_TRUE(vector.at(1) == 2);
+  ASSERT_TRUE(vector.front() == 1);
+  ASSERT_TRUE(vector.back() == 2);
+  forLoopCount = 0;
+  for (auto &v : vector) {
+    ASSERT_TRUE(v == forLoopCount + 1);
+    forLoopCount++;
+  }
+
+  // When there are multiple elements
+  vector.push_back(3);
+  vector.push_back(4);
+  vector.push_back(5);
+  ASSERT_TRUE(vector[0] == 1);
+  ASSERT_TRUE(vector[1] == 2);
+  ASSERT_TRUE(vector[2] == 3);
+  ASSERT_TRUE(vector[3] == 4);
+  ASSERT_TRUE(vector[4] == 5);
+  ASSERT_TRUE(vector.at(0) == 1);
+  ASSERT_TRUE(vector.at(1) == 2);
+  ASSERT_TRUE(vector.at(2) == 3);
+  ASSERT_TRUE(vector.at(3) == 4);
+  ASSERT_TRUE(vector.at(4) == 5);
+  ASSERT_TRUE(vector.front() == 1);
+  ASSERT_TRUE(vector.back() == 5);
+  forLoopCount = 0;
+  for (auto &v : vector) {
+    ASSERT_TRUE(v == forLoopCount + 1);
+    forLoopCount++;
+  }
+  ASSERT_TRUE(forLoopCount == 5);
+}

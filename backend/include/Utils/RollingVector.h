@@ -9,6 +9,59 @@
 namespace STIMWALKER_NAMESPACE::utils {
 
 template <typename T> class RollingVector {
+
+  /// --- Iterator class --- ///
+public:
+  class Iterator {
+  public:
+    Iterator(const RollingVector *vec, size_t pos) : m_Vec(vec), m_Pos(pos) {}
+
+    // Dereference the iterator (calls the vector's operator[])
+    const T &operator*() const { return (*m_Vec)[m_Pos]; }
+
+    // Pointer access
+    const T *operator->() const { return &(*m_Vec)[m_Pos]; }
+
+    // Pre-increment
+    Iterator &operator++() {
+      m_Pos++;
+      return *this;
+    }
+
+    // Post-increment
+    Iterator operator++(int) {
+      Iterator tmp = *this;
+      ++(*this);
+      return tmp;
+    }
+
+    friend Iterator operator+(const Iterator &a, size_t b) {
+      return Iterator(a.m_Vec, a.m_Pos + b);
+    }
+
+    friend Iterator operator+(size_t a, const Iterator &b) { return b + a; }
+
+    friend Iterator operator-(const Iterator &a, size_t b) {
+      return Iterator(a.m_Vec, a.m_Pos - b);
+    }
+
+    friend Iterator operator-(size_t a, const Iterator &b) { return b - a; }
+
+    // Equality operator
+    friend bool operator==(const Iterator &a, const Iterator &b) {
+      return a.m_Pos == b.m_Pos;
+    }
+
+    // Inequality operator
+    friend bool operator!=(const Iterator &a, const Iterator &b) {
+      return !(a == b);
+    }
+
+  private:
+    const RollingVector *m_Vec;
+    size_t m_Pos;
+  };
+
 public:
   /// @brief Constructor without a limit (equivalent to std::vector)
   RollingVector()
@@ -40,18 +93,26 @@ public:
   }
 
   // Iterators for range-based for loops.
-  auto begin() const {
-    return m_IsFull ? m_Data.begin() + m_CurrentIndex : m_Data.begin();
+  RollingVector::Iterator begin() const {
+    return RollingVector::Iterator(this, 0);
+  }
+
+  RollingVector::Iterator end() const {
+    return RollingVector::Iterator(this, m_IsFull ? m_MaxSize : m_CurrentIndex);
   }
 
   const T &front() const {
-    return *(m_IsFull ? m_Data.begin() + m_CurrentIndex : m_Data.begin());
+    if (m_UnwrapIndex == 0) {
+      throw std::out_of_range("Index out of range");
+    }
+    return *begin();
   }
 
-  auto end() const { return m_Data.begin() + m_CurrentIndex % m_MaxSize; }
-
   const T &back() const {
-    return *(m_Data.begin() + (m_CurrentIndex - 1) % m_MaxSize);
+    if (m_UnwrapIndex == 0) {
+      throw std::out_of_range("Index out of range");
+    }
+    return *(end() - 1);
   }
 
   /// @brief Clear the vector
@@ -70,7 +131,11 @@ public:
   /// @brief Get the requested value. It does not perform any check on the index
   /// @param index The index of the value to get
   /// @return The value at the given index
-  const T &operator[](size_t index) const { return m_Data[index % m_MaxSize]; }
+  const T &operator[](size_t index) const {
+    // return m_Data[m_IsFull ? (index + m_CurrentIndex) % m_MaxSize : index];
+    //  call the non-const operator[] to avoid code duplication
+    return const_cast<RollingVector<T> *>(this)->operator[](index);
+  }
 
   /// @brief Get the requested value. It does not perform any check on the index
   /// @param index The index of the value to get
@@ -86,7 +151,7 @@ public:
     if (index >= m_UnwrapIndex) {
       throw std::out_of_range("Index out of range");
     }
-    return m_Data[m_IsFull ? (index + m_CurrentIndex) % m_MaxSize : index];
+    return (*this)[index];
   }
 
   /// @brief Get the requested value. It does perform a check on the index
@@ -96,7 +161,7 @@ public:
     if (index >= m_UnwrapIndex) {
       throw std::out_of_range("Index out of range");
     }
-    return m_Data[m_IsFull ? (index + m_CurrentIndex) % m_MaxSize : index];
+    return (*this)[index];
   }
 
 protected:
