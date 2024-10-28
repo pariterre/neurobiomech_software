@@ -14,9 +14,9 @@ using namespace STIMWALKER_NAMESPACE::server;
 const std::string DEVICE_NAME_DELSYS = "DelsysEmgDevice";
 const std::string DEVICE_NAME_MAGSTIM = "MagstimRapidDevice";
 
-TcpServer::TcpServer(int commandPort, int responsePort)
+TcpServer::TcpServer(int commandPort, int responsePort, int liveDataPort)
     : m_IsServerRunning(false), m_CommandPort(commandPort),
-      m_ResponsePort(responsePort),
+      m_ResponsePort(responsePort), m_LiveDataPort(liveDataPort),
       m_TimeoutPeriod(std::chrono::milliseconds(5000)), m_ProtocolVersion(1) {};
 
 TcpServer::~TcpServer() { stopServer(); }
@@ -32,12 +32,13 @@ void TcpServer::startServerSync() {
   m_CommandAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
       m_CommandContext,
       asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_CommandPort));
-  logger.info("Command server started on port " +
+  logger.info("TCP Command server started on port " +
               std::to_string(m_CommandPort));
+
   m_ResponseAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
       m_ResponseContext,
       asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_ResponsePort));
-  logger.info("Response server started on port " +
+  logger.info("TCP Response server started on port " +
               std::to_string(m_ResponsePort));
 
   m_IsServerRunning = true;
@@ -130,6 +131,9 @@ void TcpServer::disconnectClient() {
   if (m_ResponseSocket && m_ResponseSocket->is_open()) {
     m_ResponseSocket->close();
   }
+  if (m_LiveData) {
+    m_LiveData = nullptr;
+  }
 
   // Reset the status to initializing
   m_Status = TcpServerStatus::INITIALIZING;
@@ -206,8 +210,19 @@ void TcpServer::waitForNewConnexion() {
   }
 
   {
-    logger.info(
-        "Response socket connected to client, waiting for official handshake");
+    logger.info("Response socket connected to client, preparing UDP connexion "
+                "for live data streaming");
+  }
+
+  {
+    auto clientIp = m_CommandSocket->remote_endpoint().address().to_string();
+    m_LiveData = std::make_unique<LiveDataStreaming>(m_LiveDataPort, clientIp);
+    logger.info("UDP Live data server started on port " +
+                std::to_string(m_LiveDataPort));
+  }
+
+  {
+    logger.info("All ports are connected, waiting for the handshake");
     m_CommandSocket->non_blocking(true);
   }
 

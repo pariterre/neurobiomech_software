@@ -86,7 +86,7 @@ TEST(Server, ClientConnexion) {
   auto logger = TestLogger();
 
   {
-    server::TcpServerMock server(5000, 5001, failingTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, failingTimeoutPeriod);
     server.startServer();
 
     logger.giveTimeToUpdate();
@@ -101,7 +101,7 @@ TEST(Server, ClientConnexion) {
   logger.clear();
 
   {
-    server::TcpServerMock server(5000, 5001, failingTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, failingTimeoutPeriod);
     server.startServer();
     logger.giveTimeToUpdate();
 
@@ -121,7 +121,7 @@ TEST(Server, ClientConnexion) {
 
   // Server can be shut if one connexion was made but dropped
   {
-    server::TcpServerMock server(5000, 5001, failingTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, failingTimeoutPeriod);
     server.startServer();
 
     asio::io_context context;
@@ -143,7 +143,7 @@ TEST(Server, ClientConnexion) {
   // Server can be shut if connexions to command and response ports were made,
   // but waiting for the handshake
   {
-    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
     server.startServer();
 
     asio::io_context context;
@@ -167,7 +167,7 @@ TEST(Server, ClientConnexion) {
   // Server can be shut if connexions to command and response ports were made,
   // but waiting for the handshake timed out
   {
-    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
     server.startServer();
 
     asio::io_context context;
@@ -197,7 +197,7 @@ TEST(Server, ClientConnexion) {
   // Server can be shut if connexions to command and response ports were made,
   // but waiting for the handshake timed out, and a connexion was retried
   {
-    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
     server.startServer();
 
     asio::io_context context;
@@ -229,7 +229,7 @@ TEST(Server, ClientConnexion) {
   // but waiting for the handshake timed out, and a connexion was retried but
   // response socket connexion timed out
   {
-    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
     server.startServer();
 
     asio::io_context context;
@@ -261,7 +261,7 @@ TEST(Server, ClientConnexion) {
   // but waiting for the handshake timed out, and a connexion was retried and
   // response socket connexion was made
   {
-    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
     server.startServer();
 
     asio::io_context context;
@@ -297,7 +297,7 @@ TEST(Server, ClientConnexion) {
   // but waiting for the handshake timed out, and a connexion was retried and
   // response socket connexion was made, but handshaked timed out
   {
-    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
     server.startServer();
 
     asio::io_context context;
@@ -333,7 +333,7 @@ TEST(Server, ClientConnexion) {
 
   // Server can be shut if connexions was successful
   {
-    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
     server.startServer();
 
     server::TcpClient client;
@@ -349,7 +349,7 @@ TEST(Server, ClientConnexion) {
 
   // Server can be shut if connexions was successful then dropped
   {
-    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
     server.startServer();
 
     server::TcpClient client;
@@ -368,7 +368,7 @@ TEST(Server, ClientConnexion) {
 
   // We can reconnect after disconnecting
   {
-    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
     server.startServer();
 
     server::TcpClient client;
@@ -396,7 +396,7 @@ TEST(Server, AddDevices) {
 
   // Happy path
   {
-    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
     server.startServer();
 
     server::TcpClient client;
@@ -427,7 +427,7 @@ TEST(Server, AddDevices) {
 
   // Add the same devices twice
   {
-    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
     server.startServer();
 
     server::TcpClient client;
@@ -457,7 +457,7 @@ TEST(Server, AddDevices) {
 
   // Remove devices by hand
   {
-    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
     server.startServer();
 
     server::TcpClient client;
@@ -492,7 +492,7 @@ TEST(Server, Recording) {
 
   // Happy path
   {
-    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
     server.startServer();
 
     server::TcpClient client;
@@ -519,7 +519,7 @@ TEST(Server, Recording) {
 
   // Start/Stop recording twice
   {
-    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
     server.startServer();
 
     server::TcpClient client;
@@ -564,7 +564,7 @@ TEST(Server, Recording) {
 TEST(Server, LastTrialData) {
   auto logger = TestLogger();
 
-  server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
+  server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
   server.startServer();
 
   server::TcpClient client;

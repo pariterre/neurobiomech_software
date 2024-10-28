@@ -3,6 +3,7 @@
 
 #include "stimwalkerConfig.h"
 
+#include "Devices/Concrete/LiveDataStreaming.h"
 #include "Devices/Devices.h"
 #include "Utils/CppMacros.h"
 #include <asio.hpp>
@@ -34,7 +35,10 @@ public:
   /// @brief Constructor
   /// @param commandPort The port to communicate the commands (default is 5000)
   /// @param responsePort The port to communicate the response (default is 5001)
-  TcpServer(int commandPort = 5000, int responsePort = 5001);
+  /// @param liveDataPort The port to communicate the live data (default is
+  /// 5002)
+  TcpServer(int commandPort = 5000, int responsePort = 5001,
+            int liveDataPort = 4999);
 
   /// @brief Destructor
   ~TcpServer();
@@ -114,6 +118,9 @@ protected:
   /// @brief The port to listen to communicate the responses
   DECLARE_PROTECTED_MEMBER(int, ResponsePort);
 
+  /// @brief The port to listen to communicate the live data
+  DECLARE_PROTECTED_MEMBER(int, LiveDataPort);
+
   /// @brief The timeout period for the server
   DECLARE_PROTECTED_MEMBER(std::chrono::milliseconds, TimeoutPeriod);
 
@@ -132,6 +139,10 @@ protected:
   /// @brief The acceptor that listens to the response port
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::acceptor>,
                                  ResponseAcceptor);
+
+  /// @brief The live data streamer
+  friend class LiveDataStreaming;
+  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<LiveDataStreaming>, LiveData);
 
   /// @brief The current status of the server
   DECLARE_PROTECTED_MEMBER(TcpServerStatus, Status);
@@ -175,13 +186,19 @@ public:
   /// @brief Constructor
   /// @param commandPort The port to communicate the commands (default is 5000)
   /// @param responsePort The port to communicate the response (default is 5001)
+  /// @param liveDataPort The port to communicate the live data (default is
+  /// 5002)
+  /// @param timeoutPeriod The timeout period for the server (default is 5000
+  /// ms)
   TcpServerMock(
-      int commandPort = 5000, int responsePort = 5001,
+      int commandPort = 5000, int responsePort = 5001, int liveDataPort = 5002,
       std::chrono::milliseconds timeoutPeriod = std::chrono::milliseconds(5000))
       : TcpServer(commandPort, responsePort) {
     m_TimeoutPeriod = timeoutPeriod;
   };
 
+  /// @brief Set the timeout period for the server
+  /// @param timeoutPeriod The timeout period for the server
   void setTimeoutPeriod(std::chrono::milliseconds timeoutPeriod) {
     m_TimeoutPeriod = timeoutPeriod;
   }
