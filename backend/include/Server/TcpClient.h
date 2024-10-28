@@ -15,9 +15,9 @@ public:
   /// @brief Constructor
   /// @param host The host to connect to
   /// @param commandPort The port to communicate the commands (default is 5000)
-  /// @param dataPort The port to communicate the data (default is 5001)
+  /// @param responsePort The port to communicate the resonses (default is 5001)
   TcpClient(std::string host = "localhost", int commandPort = 5000,
-            int dataPort = 5001);
+            int responsePort = 5001);
 
   /// @brief Destructor
   ~TcpClient();
@@ -70,8 +70,8 @@ protected:
   /// @brief The port to communicate the commands
   DECLARE_PROTECTED_MEMBER(int, CommandPort);
 
-  /// @brief The port to communicate the data
-  DECLARE_PROTECTED_MEMBER(int, DataPort);
+  /// @brief The port to communicate the responses
+  DECLARE_PROTECTED_MEMBER(int, ResponsePort);
 
   /// @brief If the client is connected to the server
   DECLARE_PROTECTED_MEMBER(bool, IsConnected);
@@ -101,9 +101,9 @@ private:
   DECLARE_PRIVATE_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
                                CommandSocket);
 
-  /// @brief The socket that is connected to the server for data
+  /// @brief The socket that is connected to the server for responses
   DECLARE_PRIVATE_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
-                               DataSocket);
+                               ResponseSocket);
 
   /// @brief The protocol version of the communication with the server
   DECLARE_PRIVATE_MEMBER_NOGET(std::uint32_t, ProtocolVersion)

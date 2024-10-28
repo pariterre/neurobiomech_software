@@ -6,8 +6,8 @@ using asio::ip::tcp;
 using namespace STIMWALKER_NAMESPACE;
 using namespace STIMWALKER_NAMESPACE::server;
 
-TcpClient::TcpClient(std::string host, int commandPort, int dataPort)
-    : m_Host(host), m_CommandPort(commandPort), m_DataPort(dataPort),
+TcpClient::TcpClient(std::string host, int commandPort, int responsePort)
+    : m_Host(host), m_CommandPort(commandPort), m_ResponsePort(responsePort),
       m_IsConnected(false), m_ProtocolVersion(1) {};
 
 TcpClient::~TcpClient() {
@@ -25,9 +25,9 @@ bool TcpClient::connect() {
   m_CommandSocket = std::make_unique<tcp::socket>(m_Context);
   asio::connect(*m_CommandSocket,
                 resolver.resolve(m_Host, std::to_string(m_CommandPort)));
-  m_DataSocket = std::make_unique<tcp::socket>(m_Context);
-  asio::connect(*m_DataSocket,
-                resolver.resolve(m_Host, std::to_string(m_DataPort)));
+  m_ResponseSocket = std::make_unique<tcp::socket>(m_Context);
+  asio::connect(*m_ResponseSocket,
+                resolver.resolve(m_Host, std::to_string(m_ResponsePort)));
   m_IsConnected = true;
 
   // Send the handshake
@@ -49,7 +49,7 @@ bool TcpClient::disconnect() {
   }
 
   m_CommandSocket->close();
-  m_DataSocket->close();
+  m_ResponseSocket->close();
   m_IsConnected = false;
   return true;
 }
@@ -145,7 +145,8 @@ std::map<std::string, data::TimeSeries> TcpClient::getLastTrialData() {
   std::uint32_t totalByteCount = static_cast<std::uint32_t>(response);
   std::vector<char> dataBuffer(totalByteCount);
   asio::error_code error;
-  auto byteRead = asio::read(*m_DataSocket, asio::buffer(dataBuffer), error);
+  auto byteRead =
+      asio::read(*m_ResponseSocket, asio::buffer(dataBuffer), error);
   if (byteRead != totalByteCount || error) {
     logger.fatal("CLIENT: Failed to fetch the last trial data");
     return std::map<std::string, data::TimeSeries>();
@@ -193,7 +194,7 @@ TcpServerResponse TcpClient::sendCommand(TcpServerCommand command) {
   if (byteWritten != 8 || error) {
     logger.fatal("CLIENT: TCP write error: " + error.message());
     m_CommandSocket->close();
-    m_DataSocket->close();
+    m_ResponseSocket->close();
     m_IsConnected = false;
     return TcpServerResponse::NOK;
   }
