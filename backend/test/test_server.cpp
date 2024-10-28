@@ -50,13 +50,13 @@ TEST(Server, Ports) {
   {
     server::TcpServer server;
     ASSERT_EQ(server.getCommandPort(), 5000);
-    ASSERT_EQ(server.getDataPort(), 5001);
+    ASSERT_EQ(server.getResponsePort(), 5001);
   }
 
   {
     server::TcpServer server(5010, 5011);
     ASSERT_EQ(server.getCommandPort(), 5010);
-    ASSERT_EQ(server.getDataPort(), 5011);
+    ASSERT_EQ(server.getResponsePort(), 5011);
   }
 }
 
@@ -69,7 +69,7 @@ TEST(Server, StartServer) {
 
   // Test the server actually started
   ASSERT_TRUE(logger.contains("Command server started on port 5000"));
-  ASSERT_TRUE(logger.contains("Data server started on port 5001"));
+  ASSERT_TRUE(logger.contains("Response server started on port 5001"));
   logger.clear();
 
   // Stop the server
@@ -91,7 +91,7 @@ TEST(Server, ClientConnexion) {
 
     logger.giveTimeToUpdate();
     ASSERT_TRUE(logger.contains("Command server started on port 5000"));
-    ASSERT_TRUE(logger.contains("Data server started on port 5001"));
+    ASSERT_TRUE(logger.contains("Response server started on port 5001"));
     ASSERT_TRUE(logger.contains("Waiting for a new connexion"));
 
     // Server can be shut if nothing happened
@@ -112,9 +112,10 @@ TEST(Server, ClientConnexion) {
     // Give some time to the message to arrive
     logger.giveTimeToUpdate();
     ASSERT_TRUE(logger.contains("Command socket connected to client, waiting "
-                                "for a connexion to the data socket"));
+                                "for a connexion to the response socket"));
   }
-  // Server can be shut if one connexion was made and is waiting for the data
+  // Server can be shut if one connexion was made and is waiting for the reponse
+  // port
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 
@@ -130,7 +131,7 @@ TEST(Server, ClientConnexion) {
 
     // Wait longer than the timeout
     std::this_thread::sleep_for(failingTimeoutPeriod + failingBufferPeriod);
-    ASSERT_TRUE(logger.contains("Data socket connection timeout (" +
+    ASSERT_TRUE(logger.contains("Response socket connection timeout (" +
                                 std::to_string(failingTimeoutPeriod.count()) +
                                 " ms), disconnecting client"));
   }
@@ -139,8 +140,8 @@ TEST(Server, ClientConnexion) {
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 
-  // Server can be shut if connexions to command and data were made, but waiting
-  // for the handshake
+  // Server can be shut if connexions to command and response ports were made,
+  // but waiting for the handshake
   {
     server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
     server.startServer();
@@ -150,21 +151,21 @@ TEST(Server, ClientConnexion) {
     auto commandSocket = std::make_unique<asio::ip::tcp::socket>(context);
     asio::connect(*commandSocket,
                   resolver.resolve("localhost", std::to_string(5000)));
-    auto dataSocket = std::make_unique<asio::ip::tcp::socket>(context);
-    asio::connect(*dataSocket,
+    auto responseSocket = std::make_unique<asio::ip::tcp::socket>(context);
+    asio::connect(*responseSocket,
                   resolver.resolve("localhost", std::to_string(5001)));
 
     // Give some time to the message to arrive
     logger.giveTimeToUpdate();
     ASSERT_TRUE(logger.contains(
-        "Data socket connected to client, waiting for official handshake"));
+        "Response socket connected to client, waiting for official handshake"));
   }
   ASSERT_TRUE(logger.contains("Disconnecting client"));
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 
-  // Server can be shut if connexions to command and data were made, but waiting
-  // for the handshake timed out
+  // Server can be shut if connexions to command and response ports were made,
+  // but waiting for the handshake timed out
   {
     server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
     server.startServer();
@@ -172,10 +173,10 @@ TEST(Server, ClientConnexion) {
     asio::io_context context;
     asio::ip::tcp::resolver resolver(context);
     auto commandSocket = std::make_unique<asio::ip::tcp::socket>(context);
-    auto dataSocket = std::make_unique<asio::ip::tcp::socket>(context);
+    auto responseSocket = std::make_unique<asio::ip::tcp::socket>(context);
     asio::connect(*commandSocket,
                   resolver.resolve("localhost", std::to_string(5000)));
-    asio::connect(*dataSocket,
+    asio::connect(*responseSocket,
                   resolver.resolve("localhost", std::to_string(5001)));
 
     // Wait longer than the timeout
@@ -193,8 +194,8 @@ TEST(Server, ClientConnexion) {
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 
-  // Server can be shut if connexions to command and data were made, but waiting
-  // for the handshake timed out, and a connexion was retried
+  // Server can be shut if connexions to command and response ports were made,
+  // but waiting for the handshake timed out, and a connexion was retried
   {
     server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
     server.startServer();
@@ -202,10 +203,10 @@ TEST(Server, ClientConnexion) {
     asio::io_context context;
     asio::ip::tcp::resolver resolver(context);
     auto commandSocket = std::make_unique<asio::ip::tcp::socket>(context);
-    auto dataSocket = std::make_unique<asio::ip::tcp::socket>(context);
+    auto responseSocket = std::make_unique<asio::ip::tcp::socket>(context);
     asio::connect(*commandSocket,
                   resolver.resolve("localhost", std::to_string(5000)));
-    asio::connect(*dataSocket,
+    asio::connect(*responseSocket,
                   resolver.resolve("localhost", std::to_string(5001)));
 
     // Wait longer than the timeout
@@ -218,15 +219,15 @@ TEST(Server, ClientConnexion) {
     // Give some time to the message to arrive
     logger.giveTimeToUpdate();
     ASSERT_EQ(logger.count("Command socket connected to client, waiting for a "
-                           "connexion to the data socket"),
+                           "connexion to the response socket"),
               2);
   }
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 
-  // Server can be shut if connexions to command and data were made, but waiting
-  // for the handshake timed out, and a connexion was retried but data connexion
-  // timed out
+  // Server can be shut if connexions to command and response ports were made,
+  // but waiting for the handshake timed out, and a connexion was retried but
+  // response socket connexion timed out
   {
     server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
     server.startServer();
@@ -234,10 +235,10 @@ TEST(Server, ClientConnexion) {
     asio::io_context context;
     asio::ip::tcp::resolver resolver(context);
     auto commandSocket = std::make_unique<asio::ip::tcp::socket>(context);
-    auto dataSocket = std::make_unique<asio::ip::tcp::socket>(context);
+    auto responseSocket = std::make_unique<asio::ip::tcp::socket>(context);
     asio::connect(*commandSocket,
                   resolver.resolve("localhost", std::to_string(5000)));
-    asio::connect(*dataSocket,
+    asio::connect(*responseSocket,
                   resolver.resolve("localhost", std::to_string(5001)));
 
     // Wait longer than the timeout
@@ -248,7 +249,7 @@ TEST(Server, ClientConnexion) {
                   resolver.resolve("localhost", std::to_string(5000)));
     std::this_thread::sleep_for(failingTimeoutPeriod + failingBufferPeriod);
 
-    ASSERT_TRUE(logger.contains("Data socket connection timeout (" +
+    ASSERT_TRUE(logger.contains("Response socket connection timeout (" +
                                 std::to_string(failingTimeoutPeriod.count()) +
                                 " ms), "
                                 "disconnecting client"));
@@ -256,9 +257,9 @@ TEST(Server, ClientConnexion) {
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 
-  // Server can be shut if connexions to command and data were made, but waiting
-  // for the handshake timed out, and a connexion was retried and data connexion
-  // was made
+  // Server can be shut if connexions to command and response ports were made,
+  // but waiting for the handshake timed out, and a connexion was retried and
+  // response socket connexion was made
   {
     server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
     server.startServer();
@@ -266,10 +267,10 @@ TEST(Server, ClientConnexion) {
     asio::io_context context;
     asio::ip::tcp::resolver resolver(context);
     auto commandSocket = std::make_unique<asio::ip::tcp::socket>(context);
-    auto dataSocket = std::make_unique<asio::ip::tcp::socket>(context);
+    auto responseSocket = std::make_unique<asio::ip::tcp::socket>(context);
     asio::connect(*commandSocket,
                   resolver.resolve("localhost", std::to_string(5000)));
-    asio::connect(*dataSocket,
+    asio::connect(*responseSocket,
                   resolver.resolve("localhost", std::to_string(5001)));
 
     // Wait longer than the timeout
@@ -279,21 +280,22 @@ TEST(Server, ClientConnexion) {
     server.setTimeoutPeriod(sufficientTimeoutPeriod);
     asio::connect(*commandSocket,
                   resolver.resolve("localhost", std::to_string(5000)));
-    asio::connect(*dataSocket,
+    asio::connect(*responseSocket,
                   resolver.resolve("localhost", std::to_string(5001)));
+    ensureServerIsConnected(server);
 
     // Give some time to the message to arrive
     logger.giveTimeToUpdate();
-    ASSERT_EQ(logger.count("Data socket connected to client, waiting for "
+    ASSERT_EQ(logger.count("Response socket connected to client, waiting for "
                            "official handshake"),
               2);
   }
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 
-  // Server can be shut if connexions to command and data were made, but waiting
-  // for the handshake timed out, and a connexion was retried and data connexion
-  // was made, but handshaked timed out
+  // Server can be shut if connexions to command and response ports were made,
+  // but waiting for the handshake timed out, and a connexion was retried and
+  // response socket connexion was made, but handshaked timed out
   {
     server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
     server.startServer();
@@ -301,10 +303,10 @@ TEST(Server, ClientConnexion) {
     asio::io_context context;
     asio::ip::tcp::resolver resolver(context);
     auto commandSocket = std::make_unique<asio::ip::tcp::socket>(context);
-    auto dataSocket = std::make_unique<asio::ip::tcp::socket>(context);
+    auto responseSocket = std::make_unique<asio::ip::tcp::socket>(context);
     asio::connect(*commandSocket,
                   resolver.resolve("localhost", std::to_string(5000)));
-    asio::connect(*dataSocket,
+    asio::connect(*responseSocket,
                   resolver.resolve("localhost", std::to_string(5001)));
 
     // Wait longer than the timeout
@@ -314,7 +316,7 @@ TEST(Server, ClientConnexion) {
     server.setTimeoutPeriod(sufficientTimeoutPeriod);
     asio::connect(*commandSocket,
                   resolver.resolve("localhost", std::to_string(5000)));
-    asio::connect(*dataSocket,
+    asio::connect(*responseSocket,
                   resolver.resolve("localhost", std::to_string(5001)));
 
     ensureServerIsConnected(server);
@@ -559,4 +561,6 @@ TEST(Server, Recording) {
   logger.clear();
 }
 
-TEST(Server, TrialData) {}
+TEST(Server, TrialData) {
+  // TODO: Implement
+}

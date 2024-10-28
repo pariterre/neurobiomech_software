@@ -33,8 +33,8 @@ class TcpServer {
 public:
   /// @brief Constructor
   /// @param commandPort The port to communicate the commands (default is 5000)
-  /// @param dataPort The port to communicate the data (default is 5001)
-  TcpServer(int commandPort = 5000, int dataPort = 5001);
+  /// @param responsePort The port to communicate the response (default is 5001)
+  TcpServer(int commandPort = 5000, int responsePort = 5001);
 
   /// @brief Destructor
   ~TcpServer();
@@ -111,8 +111,8 @@ protected:
   /// @brief The port to listen to communicate the commands
   DECLARE_PROTECTED_MEMBER(int, CommandPort);
 
-  /// @brief The port to listen to communicate the data
-  DECLARE_PROTECTED_MEMBER(int, DataPort);
+  /// @brief The port to listen to communicate the responses
+  DECLARE_PROTECTED_MEMBER(int, ResponsePort);
 
   /// @brief The timeout period for the server
   DECLARE_PROTECTED_MEMBER(std::chrono::milliseconds, TimeoutPeriod);
@@ -121,17 +121,17 @@ protected:
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
                                  CommandSocket);
 
-  /// @brief The socket that is connected to the client for data
+  /// @brief The socket that is connected to the client for response
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
-                                 DataSocket);
+                                 ResponseSocket);
 
   /// @brief The acceptor that listens to the command port
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::acceptor>,
                                  CommandAcceptor);
 
-  /// @brief The acceptor that listens to the data port
+  /// @brief The acceptor that listens to the response port
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::acceptor>,
-                                 DataAcceptor);
+                                 ResponseAcceptor);
 
   /// @brief The current status of the server
   DECLARE_PROTECTED_MEMBER(TcpServerStatus, Status);
@@ -157,7 +157,7 @@ protected:
 private:
   /// @brief The asio contexts used for async methods of the server
   DECLARE_PRIVATE_MEMBER_NOGET(asio::io_context, CommandContext);
-  DECLARE_PRIVATE_MEMBER_NOGET(asio::io_context, DataContext);
+  DECLARE_PRIVATE_MEMBER_NOGET(asio::io_context, ResponseContext);
 
   /// @brief The worker thread for the [startServerAsync] method
   DECLARE_PRIVATE_MEMBER_NOGET(std::thread, ServerWorker);
@@ -174,11 +174,11 @@ class TcpServerMock : public TcpServer {
 public:
   /// @brief Constructor
   /// @param commandPort The port to communicate the commands (default is 5000)
-  /// @param dataPort The port to communicate the data (default is 5001)
+  /// @param responsePort The port to communicate the response (default is 5001)
   TcpServerMock(
-      int commandPort = 5000, int dataPort = 5001,
+      int commandPort = 5000, int responsePort = 5001,
       std::chrono::milliseconds timeoutPeriod = std::chrono::milliseconds(5000))
-      : TcpServer(commandPort, dataPort) {
+      : TcpServer(commandPort, responsePort) {
     m_TimeoutPeriod = timeoutPeriod;
   };
 

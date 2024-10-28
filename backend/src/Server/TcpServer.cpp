@@ -14,10 +14,10 @@ using namespace STIMWALKER_NAMESPACE::server;
 const std::string DEVICE_NAME_DELSYS = "DelsysEmgDevice";
 const std::string DEVICE_NAME_MAGSTIM = "MagstimRapidDevice";
 
-TcpServer::TcpServer(int commandPort, int dataPort)
+TcpServer::TcpServer(int commandPort, int responsePort)
     : m_IsServerRunning(false), m_CommandPort(commandPort),
-      m_DataPort(dataPort), m_TimeoutPeriod(std::chrono::milliseconds(5000)),
-      m_ProtocolVersion(1) {};
+      m_ResponsePort(responsePort),
+      m_TimeoutPeriod(std::chrono::milliseconds(5000)), m_ProtocolVersion(1) {};
 
 TcpServer::~TcpServer() { stopServer(); }
 
@@ -34,9 +34,11 @@ void TcpServer::startServerSync() {
       asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_CommandPort));
   logger.info("Command server started on port " +
               std::to_string(m_CommandPort));
-  m_DataAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
-      m_DataContext, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_DataPort));
-  logger.info("Data server started on port " + std::to_string(m_DataPort));
+  m_ResponseAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
+      m_ResponseContext,
+      asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_ResponsePort));
+  logger.info("Response server started on port " +
+              std::to_string(m_ResponsePort));
 
   m_IsServerRunning = true;
   while (m_IsServerRunning) {
@@ -54,7 +56,7 @@ void TcpServer::startServerSync() {
       }
     });
 
-    auto dataWorker = std::thread([this]() {
+    auto responseWorker = std::thread([this]() {
       while (m_IsServerRunning && isClientConnected()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
       }
@@ -62,7 +64,7 @@ void TcpServer::startServerSync() {
 
     // Wait for the workers to finish
     commandWorker.join();
-    dataWorker.join();
+    responseWorker.join();
   }
 }
 
@@ -91,15 +93,15 @@ void TcpServer::stopServer() {
     if (m_CommandSocket && m_CommandSocket->is_open()) {
       m_CommandSocket->close();
     }
-    if (m_DataSocket && m_DataSocket->is_open()) {
-      m_DataSocket->close();
+    if (m_ResponseSocket && m_ResponseSocket->is_open()) {
+      m_ResponseSocket->close();
     }
 
     if (m_CommandAcceptor) {
       m_CommandAcceptor->close();
     }
-    if (m_DataAcceptor) {
-      m_DataAcceptor->close();
+    if (m_ResponseAcceptor) {
+      m_ResponseAcceptor->close();
     }
   }
   // Stop any running context
@@ -125,8 +127,8 @@ void TcpServer::disconnectClient() {
   if (m_CommandSocket && m_CommandSocket->is_open()) {
     m_CommandSocket->close();
   }
-  if (m_DataSocket && m_DataSocket->is_open()) {
-    m_DataSocket->close();
+  if (m_ResponseSocket && m_ResponseSocket->is_open()) {
+    m_ResponseSocket->close();
   }
 
   // Reset the status to initializing
@@ -134,8 +136,8 @@ void TcpServer::disconnectClient() {
 }
 
 bool TcpServer::isClientConnected() const {
-  return m_CommandSocket && m_CommandSocket->is_open() && m_DataSocket &&
-         m_DataSocket->is_open();
+  return m_CommandSocket && m_CommandSocket->is_open() && m_ResponseSocket &&
+         m_ResponseSocket->is_open();
 }
 
 void TcpServer::waitForNewConnexion() {
@@ -168,19 +170,19 @@ void TcpServer::waitForNewConnexion() {
     }
   }
   logger.info("Command socket connected to client, waiting for a connexion to "
-              "the data socket");
+              "the response socket");
 
-  // Wait for the data socket to connect
-  auto dataTimer =
-      asio::steady_timer(m_DataContext, std::chrono::milliseconds(10));
-  m_DataSocket = std::make_unique<asio::ip::tcp::socket>(m_DataContext);
-  m_DataAcceptor->async_accept(*m_DataSocket, [](asio::error_code) {});
+  // Wait for the response socket to connect
+  auto responseSocketTimer =
+      asio::steady_timer(m_ResponseContext, std::chrono::milliseconds(10));
+  m_ResponseSocket = std::make_unique<asio::ip::tcp::socket>(m_ResponseContext);
+  m_ResponseAcceptor->async_accept(*m_ResponseSocket, [](asio::error_code) {});
   auto now = std::chrono::high_resolution_clock::now();
-  while (!m_DataSocket->is_open()) {
-    dataTimer.async_wait(
-        [this](const asio::error_code &) { m_DataContext.stop(); });
-    m_DataContext.run();
-    m_DataContext.restart();
+  while (!m_ResponseSocket->is_open()) {
+    responseSocketTimer.async_wait(
+        [this](const asio::error_code &) { m_ResponseContext.stop(); });
+    m_ResponseContext.run();
+    m_ResponseContext.restart();
 
     if (!m_IsServerRunning ||
         std::chrono::high_resolution_clock::now() - now > m_TimeoutPeriod) {
@@ -188,14 +190,14 @@ void TcpServer::waitForNewConnexion() {
       if (m_CommandSocket && m_CommandSocket->is_open()) {
         m_CommandSocket->close();
       }
-      if (m_DataAcceptor && m_DataAcceptor->is_open()) {
-        m_DataAcceptor->cancel();
+      if (m_ResponseAcceptor && m_ResponseAcceptor->is_open()) {
+        m_ResponseAcceptor->cancel();
       }
       if (!m_IsServerRunning) {
         logger.info("Stopping listening to ports as server is shutting down");
       } else if (std::chrono::high_resolution_clock::now() - now >
                  m_TimeoutPeriod) {
-        logger.fatal("Data socket connection timeout (" +
+        logger.fatal("Response socket connection timeout (" +
                      std::to_string(m_TimeoutPeriod.count()) +
                      " ms), disconnecting client");
       }
@@ -205,7 +207,7 @@ void TcpServer::waitForNewConnexion() {
 
   {
     logger.info(
-        "Data socket connected to client, waiting for official handshake");
+        "Response socket connected to client, waiting for official handshake");
     m_CommandSocket->non_blocking(true);
   }
 
@@ -363,7 +365,8 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
     response = static_cast<TcpServerResponse>(dataDump.size());
     asio::write(*m_CommandSocket,
                 asio::buffer(constructResponsePacket(response)), error);
-    auto written = asio::write(*m_DataSocket, asio::buffer(dataDump), error);
+    auto written =
+        asio::write(*m_ResponseSocket, asio::buffer(dataDump), error);
     logger.info("Data size: " + std::to_string(written));
     response = TcpServerResponse::OK;
   } break;
