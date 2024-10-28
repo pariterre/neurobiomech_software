@@ -363,7 +363,7 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
     auto data = m_Devices.getLastTrialDataSerialized();
     auto dataDump = data.dump();
     response = static_cast<TcpServerResponse>(dataDump.size());
-    asio::write(*m_CommandSocket,
+    asio::write(*m_ResponseSocket,
                 asio::buffer(constructResponsePacket(response)), error);
     auto written =
         asio::write(*m_ResponseSocket, asio::buffer(dataDump), error);

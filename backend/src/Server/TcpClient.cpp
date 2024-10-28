@@ -134,30 +134,8 @@ std::map<std::string, data::TimeSeries> TcpClient::getLastTrialData() {
   auto &logger = utils::Logger::getInstance();
   logger.info("CLIENT: Fetching the last trial data");
 
-  auto response = sendCommand(TcpServerCommand::GET_LAST_TRIAL_DATA);
-  if (response == TcpServerResponse::NOK) {
-    logger.fatal("CLIENT: Failed to get the data");
-    return std::map<std::string, data::TimeSeries>();
-  }
-
-  // Read the data
-  auto now = std::chrono::high_resolution_clock::now();
-  std::uint32_t totalByteCount = static_cast<std::uint32_t>(response);
-  std::vector<char> dataBuffer(totalByteCount);
-  asio::error_code error;
-  auto byteRead =
-      asio::read(*m_ResponseSocket, asio::buffer(dataBuffer), error);
-  if (byteRead != totalByteCount || error) {
-    logger.fatal("CLIENT: Failed to fetch the last trial data");
-    return std::map<std::string, data::TimeSeries>();
-  }
-  logger.info(
-      "CLIENT: It took " +
-      std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
-                         std::chrono::high_resolution_clock::now() - now)
-                         .count()) +
-      "ms to get the data");
-  now = std::chrono::high_resolution_clock::now();
+  std::vector<char> dataBuffer =
+      sendCommandWithResponse(TcpServerCommand::GET_LAST_TRIAL_DATA);
 
   // Parse the data
   std::map<std::string, data::TimeSeries> data;
@@ -167,14 +145,7 @@ std::map<std::string, data::TimeSeries> TcpClient::getLastTrialData() {
     logger.fatal("CLIENT: Failed to parse the last trial data");
     return std::map<std::string, data::TimeSeries>();
   }
-  logger.info(
-      "CLIENT: It took " +
-      std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
-                         std::chrono::high_resolution_clock::now() - now)
-                         .count()) +
-      "ms to parse the data");
 
-  waitForResponse();
   logger.info("CLIENT: Last trial data acquired");
   return data;
 }
@@ -199,7 +170,7 @@ TcpServerResponse TcpClient::sendCommand(TcpServerCommand command) {
     return TcpServerResponse::NOK;
   }
 
-  auto response = waitForResponse();
+  auto response = waitForCommandAcknowledgment();
   if (response == TcpServerResponse::NOK) {
     logger.warning("CLIENT: Failed to get confirmation for command: " +
                    std::to_string(static_cast<std::uint32_t>(command)));
@@ -207,7 +178,37 @@ TcpServerResponse TcpClient::sendCommand(TcpServerCommand command) {
   return response;
 }
 
-TcpServerResponse TcpClient::waitForResponse() {
+std::vector<char> TcpClient::sendCommandWithResponse(TcpServerCommand command) {
+  auto &logger = utils::Logger::getInstance();
+
+  if (!m_IsConnected) {
+    logger.fatal("CLIENT: Client is not connected");
+    return std::vector<char>();
+  }
+
+  asio::error_code error;
+  size_t byteWritten = asio::write(
+      *m_CommandSocket, asio::buffer(constructCommandPacket(command)), error);
+
+  if (byteWritten != 8 || error) {
+    logger.fatal("CLIENT: TCP write error: " + error.message());
+    m_CommandSocket->close();
+    m_ResponseSocket->close();
+    m_IsConnected = false;
+    return std::vector<char>();
+  }
+
+  auto data = waitForResponse();
+  auto response = waitForCommandAcknowledgment();
+  if (response == TcpServerResponse::NOK) {
+    logger.warning("CLIENT: Failed to get confirmation for command: " +
+                   std::to_string(static_cast<std::uint32_t>(command)));
+    return std::vector<char>();
+  }
+  return data;
+}
+
+TcpServerResponse TcpClient::waitForCommandAcknowledgment() {
   auto buffer = std::array<char, 8>();
   asio::error_code error;
   size_t byteRead = asio::read(*m_CommandSocket, asio::buffer(buffer), error);
@@ -217,7 +218,29 @@ TcpServerResponse TcpClient::waitForResponse() {
     return TcpServerResponse::NOK;
   }
 
-  return parseResponsePacket(buffer);
+  return parseAcknowledgmentPacket(buffer);
+}
+
+std::vector<char> TcpClient::waitForResponse() {
+  auto buffer = std::array<char, 8>();
+  asio::error_code error;
+  size_t byteRead = asio::read(*m_ResponseSocket, asio::buffer(buffer), error);
+  if (byteRead != 8 || error) {
+    auto &logger = utils::Logger::getInstance();
+    logger.fatal("CLIENT: TCP read error: " + error.message());
+    return std::vector<char>();
+  }
+
+  std::uint32_t totalByteCount =
+      static_cast<std::uint32_t>(parseAcknowledgmentPacket(buffer));
+  std::vector<char> dataBuffer(totalByteCount);
+  byteRead = asio::read(*m_ResponseSocket, asio::buffer(dataBuffer), error);
+  if (byteRead != totalByteCount || error) {
+    utils::Logger::getInstance().fatal(
+        "CLIENT: Failed to fetch the last trial data");
+    return std::vector<char>();
+  }
+  return dataBuffer;
 }
 
 std::array<char, 8>
@@ -240,7 +263,7 @@ TcpClient::constructCommandPacket(TcpServerCommand command) {
 }
 
 TcpServerResponse
-TcpClient::parseResponsePacket(const std::array<char, 8> &buffer) {
+TcpClient::parseAcknowledgmentPacket(const std::array<char, 8> &buffer) {
   // Packets are exactly 8 bytes long, big-endian
   // - First 4 bytes are the version number
   // - Next 4 bytes are the response

@@ -561,7 +561,7 @@ TEST(Server, Recording) {
   logger.clear();
 }
 
-TEST(Server, TrialData) {
+TEST(Server, LastTrialData) {
   auto logger = TestLogger();
 
   server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);

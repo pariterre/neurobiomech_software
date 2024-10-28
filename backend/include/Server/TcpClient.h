@@ -78,10 +78,21 @@ protected:
 
   /// @brief The Send a command to the server and wait for the confirmation
   /// @param command The command to send
+  /// @return The acknowledgment from the server
   TcpServerResponse sendCommand(TcpServerCommand command);
 
-  /// @brief Wait for a response from the server (invoked by [sendCommand])
-  TcpServerResponse waitForResponse();
+  /// @brief The Send a command to the server and wait for the confirmation
+  /// @param command The command to send
+  /// @return The response from the server
+  std::vector<char> sendCommandWithResponse(TcpServerCommand command);
+
+  /// @brief Wait for acknowledgment from the server (invoked by [sendCommand])
+  /// @return The acknowledgment from the server
+  TcpServerResponse waitForCommandAcknowledgment();
+
+  /// @brief Wait for a response from the server
+  /// @return The response from the server
+  std::vector<char> waitForResponse();
 
   /// @brief Construct a command packet to send to the server
   /// @param command The command to send
@@ -91,7 +102,8 @@ protected:
   /// @brief Parse a response packet from the server
   /// @param buffer The buffer to parse
   /// @return The response from the server
-  TcpServerResponse parseResponsePacket(const std::array<char, 8> &buffer);
+  TcpServerResponse
+  parseAcknowledgmentPacket(const std::array<char, 8> &buffer);
 
 private:
   /// @brief The asio context used for async methods of the client
