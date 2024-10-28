@@ -70,7 +70,7 @@ void TcpServer::stopServer() {
   auto &logger = utils::Logger::getInstance();
 
   // Give a bit of time so it things went too fast the startServerSync is
-  // actully ready
+  // actually ready
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
   // Shutdown the server down
@@ -133,7 +133,7 @@ void TcpServer::disconnectClient() {
   m_Status = TcpServerStatus::INITIALIZING;
 }
 
-bool TcpServer::isClientConnected() {
+bool TcpServer::isClientConnected() const {
   return m_CommandSocket && m_CommandSocket->is_open() && m_DataSocket &&
          m_DataSocket->is_open();
 }
@@ -243,6 +243,12 @@ void TcpServer::waitAndHandleNewCommand() {
   auto buffer = std::array<char, 8>();
   asio::error_code error;
   size_t byteRead = asio::read(*m_CommandSocket, asio::buffer(buffer), error);
+
+  if (error == asio::error::eof) {
+    logger.info("Client disconnected");
+    disconnectClient();
+    return;
+  }
 
   // Since command is non-blocking, we can just continue if there is no data
   if (!m_IsServerRunning || byteRead == 0 ||

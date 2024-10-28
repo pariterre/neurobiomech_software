@@ -81,7 +81,7 @@ TEST(Delsys, Connect) {
   ASSERT_TRUE(isConnected);
   ASSERT_TRUE(delsys.getIsConnected());
   // The logger is sometimes late
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  logger.giveTimeToUpdate();
   ASSERT_TRUE(logger.contains("The device DelsysEmgDevice is now connected"));
   logger.clear();
 
@@ -263,7 +263,7 @@ TEST(Delsys, StartRecording) {
   ASSERT_FALSE(isRecording);
   ASSERT_FALSE(delsys.getIsRecording());
   // The logger is sometimes late
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  logger.giveTimeToUpdate();
   ASSERT_TRUE(
       logger.contains("The data collector DelsysEmgDataCollector is not "
                       "streaming data, so it cannot start recording"));
@@ -275,7 +275,7 @@ TEST(Delsys, StartRecording) {
   ASSERT_FALSE(isRecording);
   ASSERT_FALSE(delsys.getIsRecording());
   // The logger is sometimes late
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  logger.giveTimeToUpdate();
   ASSERT_TRUE(
       logger.contains("The data collector DelsysEmgDataCollector is "
                       "not streaming data, so it cannot start recording"));
@@ -287,7 +287,7 @@ TEST(Delsys, StartRecording) {
   ASSERT_TRUE(isRecording);
   ASSERT_TRUE(delsys.getIsRecording());
   // The logger is sometimes late
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  logger.giveTimeToUpdate();
   ASSERT_TRUE(logger.contains("The data collector DelsysEmgDataCollector is "
                               "now recording"));
   logger.clear();
@@ -297,7 +297,7 @@ TEST(Delsys, StartRecording) {
   ASSERT_TRUE(isNotRecording);
   ASSERT_FALSE(delsys.getIsRecording());
   // The logger is sometimes late
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  logger.giveTimeToUpdate();
   ASSERT_TRUE(logger.contains("The data collector DelsysEmgDataCollector has "
                               "stopped recording"));
   logger.clear();
@@ -307,7 +307,7 @@ TEST(Delsys, StartRecording) {
   ASSERT_TRUE(isNotRecording);
   ASSERT_FALSE(delsys.getIsRecording());
   // The logger is sometimes late
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  logger.giveTimeToUpdate();
   ASSERT_TRUE(logger.contains("The data collector DelsysEmgDataCollector is "
                               "not recording"));
 }

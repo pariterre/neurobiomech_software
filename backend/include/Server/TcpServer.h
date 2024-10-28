@@ -60,7 +60,7 @@ public:
   void disconnectClient();
 
   /// @brief If a client is connected
-  bool isClientConnected();
+  bool isClientConnected() const;
 
 protected:
   /// @brief Wait for a new connexion
@@ -181,6 +181,10 @@ public:
       : TcpServer(commandPort, dataPort) {
     m_TimeoutPeriod = timeoutPeriod;
   };
+
+  void setTimeoutPeriod(std::chrono::milliseconds timeoutPeriod) {
+    m_TimeoutPeriod = timeoutPeriod;
+  }
 
   /// @brief Destructor
   ~TcpServerMock() = default;

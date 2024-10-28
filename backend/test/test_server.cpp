@@ -8,6 +8,40 @@
 
 static double requiredPrecision(1e-10);
 
+std::chrono::milliseconds failingTimeoutPeriod(500);
+std::chrono::milliseconds failingBufferPeriod(50);
+#ifdef WIN32
+std::chrono::milliseconds sufficientTimeoutPeriod(4000);
+#else
+std::chrono::milliseconds sufficientTimeoutPeriod(500);
+#endif
+void ensureServerIsConnected(
+    const STIMWALKER_NAMESPACE::server::TcpServerMock &server) {
+  auto startingWaitingTime = std::chrono::high_resolution_clock::now();
+  while (true) {
+    if (server.isClientConnected() ||
+        std::chrono::high_resolution_clock::now() >
+            startingWaitingTime + sufficientTimeoutPeriod) {
+      break;
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+}
+void ensureServerIsDisconnected(
+    const STIMWALKER_NAMESPACE::server::TcpServerMock &server) {
+  auto startingWaitingTime = std::chrono::high_resolution_clock::now();
+  while (true) {
+    if (!server.isClientConnected() ||
+        std::chrono::high_resolution_clock::now() >
+            startingWaitingTime + sufficientTimeoutPeriod) {
+      break;
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+}
+
 using namespace STIMWALKER_NAMESPACE;
 
 TEST(Server, Ports) {
@@ -31,7 +65,7 @@ TEST(Server, StartServer) {
 
   server::TcpServer server;
   server.startServer();
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  logger.giveTimeToUpdate();
 
   // Test the server actually started
   ASSERT_TRUE(logger.contains("Command server started on port 5000"));
@@ -52,10 +86,10 @@ TEST(Server, ClientConnexion) {
   auto logger = TestLogger();
 
   {
-    server::TcpServerMock server(5000, 5001, std::chrono::milliseconds(500));
+    server::TcpServerMock server(5000, 5001, failingTimeoutPeriod);
     server.startServer();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
+    logger.giveTimeToUpdate();
     ASSERT_TRUE(logger.contains("Command server started on port 5000"));
     ASSERT_TRUE(logger.contains("Data server started on port 5001"));
     ASSERT_TRUE(logger.contains("Waiting for a new connexion"));
@@ -67,16 +101,16 @@ TEST(Server, ClientConnexion) {
   logger.clear();
 
   {
-    server::TcpServerMock server(5000, 5001, std::chrono::milliseconds(500));
+    server::TcpServerMock server(5000, 5001, failingTimeoutPeriod);
     server.startServer();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    logger.giveTimeToUpdate();
 
     asio::io_context context;
     asio::ip::tcp::resolver resolver(context);
     auto socket = std::make_unique<asio::ip::tcp::socket>(context);
     asio::connect(*socket, resolver.resolve("localhost", std::to_string(5000)));
     // Give some time to the message to arrive
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    logger.giveTimeToUpdate();
     ASSERT_TRUE(logger.contains("Command socket connected to client, waiting "
                                 "for a connexion to the data socket"));
   }
@@ -86,9 +120,8 @@ TEST(Server, ClientConnexion) {
 
   // Server can be shut if one connexion was made but dropped
   {
-    server::TcpServerMock server(5000, 5001, std::chrono::milliseconds(500));
+    server::TcpServerMock server(5000, 5001, failingTimeoutPeriod);
     server.startServer();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     asio::io_context context;
     asio::ip::tcp::resolver resolver(context);
@@ -96,9 +129,10 @@ TEST(Server, ClientConnexion) {
     asio::connect(*socket, resolver.resolve("localhost", std::to_string(5000)));
 
     // Wait longer than the timeout
-    std::this_thread::sleep_for(std::chrono::milliseconds(600));
-    ASSERT_TRUE(logger.contains(
-        "Data socket connection timeout (500 ms), disconnecting client"));
+    std::this_thread::sleep_for(failingTimeoutPeriod + failingBufferPeriod);
+    ASSERT_TRUE(logger.contains("Data socket connection timeout (" +
+                                std::to_string(failingTimeoutPeriod.count()) +
+                                " ms), disconnecting client"));
   }
   ASSERT_TRUE("All devices are now disconnected");
   ASSERT_TRUE("Stopping listening to ports as server is shutting down");
@@ -108,22 +142,20 @@ TEST(Server, ClientConnexion) {
   // Server can be shut if connexions to command and data were made, but waiting
   // for the handshake
   {
-    server::TcpServerMock server(5000, 5001, std::chrono::milliseconds(500));
+    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
     server.startServer();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     asio::io_context context;
     asio::ip::tcp::resolver resolver(context);
     auto commandSocket = std::make_unique<asio::ip::tcp::socket>(context);
-    auto dataSocket = std::make_unique<asio::ip::tcp::socket>(context);
     asio::connect(*commandSocket,
                   resolver.resolve("localhost", std::to_string(5000)));
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    auto dataSocket = std::make_unique<asio::ip::tcp::socket>(context);
     asio::connect(*dataSocket,
                   resolver.resolve("localhost", std::to_string(5001)));
 
     // Give some time to the message to arrive
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    logger.giveTimeToUpdate();
     ASSERT_TRUE(logger.contains(
         "Data socket connected to client, waiting for official handshake"));
   }
@@ -134,9 +166,8 @@ TEST(Server, ClientConnexion) {
   // Server can be shut if connexions to command and data were made, but waiting
   // for the handshake timed out
   {
-    server::TcpServerMock server(5000, 5001, std::chrono::milliseconds(500));
+    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
     server.startServer();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     asio::io_context context;
     asio::ip::tcp::resolver resolver(context);
@@ -148,10 +179,14 @@ TEST(Server, ClientConnexion) {
                   resolver.resolve("localhost", std::to_string(5001)));
 
     // Wait longer than the timeout
-    std::this_thread::sleep_for(std::chrono::milliseconds(600));
+    ensureServerIsConnected(server);
+    server.setTimeoutPeriod(failingTimeoutPeriod);
+    std::this_thread::sleep_for(failingTimeoutPeriod + failingBufferPeriod);
 
-    ASSERT_TRUE(
-        logger.contains("Handshake timeout (500 ms), disconnecting client"));
+    logger.giveTimeToUpdate();
+    ASSERT_TRUE(logger.contains("Handshake timeout (" +
+                                std::to_string(failingTimeoutPeriod.count()) +
+                                +" ms), disconnecting client"));
     ASSERT_TRUE(logger.contains("Disconnecting client"));
     ASSERT_TRUE(logger.contains("All devices are now disconnected"));
   }
@@ -161,9 +196,8 @@ TEST(Server, ClientConnexion) {
   // Server can be shut if connexions to command and data were made, but waiting
   // for the handshake timed out, and a connexion was retried
   {
-    server::TcpServerMock server(5000, 5001, std::chrono::milliseconds(500));
+    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
     server.startServer();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     asio::io_context context;
     asio::ip::tcp::resolver resolver(context);
@@ -175,12 +209,14 @@ TEST(Server, ClientConnexion) {
                   resolver.resolve("localhost", std::to_string(5001)));
 
     // Wait longer than the timeout
-    std::this_thread::sleep_for(std::chrono::milliseconds(600));
+    ensureServerIsConnected(server);
+    server.setTimeoutPeriod(failingTimeoutPeriod);
+    std::this_thread::sleep_for(failingTimeoutPeriod + failingBufferPeriod);
     asio::connect(*commandSocket,
                   resolver.resolve("localhost", std::to_string(5000)));
 
     // Give some time to the message to arrive
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    logger.giveTimeToUpdate();
     ASSERT_EQ(logger.count("Command socket connected to client, waiting for a "
                            "connexion to the data socket"),
               2);
@@ -192,9 +228,8 @@ TEST(Server, ClientConnexion) {
   // for the handshake timed out, and a connexion was retried but data connexion
   // timed out
   {
-    server::TcpServerMock server(5000, 5001, std::chrono::milliseconds(500));
+    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
     server.startServer();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     asio::io_context context;
     asio::ip::tcp::resolver resolver(context);
@@ -206,12 +241,16 @@ TEST(Server, ClientConnexion) {
                   resolver.resolve("localhost", std::to_string(5001)));
 
     // Wait longer than the timeout
-    std::this_thread::sleep_for(std::chrono::milliseconds(600));
+    ensureServerIsConnected(server);
+    server.setTimeoutPeriod(failingTimeoutPeriod);
+    std::this_thread::sleep_for(failingTimeoutPeriod + failingBufferPeriod);
     asio::connect(*commandSocket,
                   resolver.resolve("localhost", std::to_string(5000)));
-    std::this_thread::sleep_for(std::chrono::milliseconds(600));
+    std::this_thread::sleep_for(failingTimeoutPeriod + failingBufferPeriod);
 
-    ASSERT_TRUE(logger.contains("Data socket connection timeout (500 ms), "
+    ASSERT_TRUE(logger.contains("Data socket connection timeout (" +
+                                std::to_string(failingTimeoutPeriod.count()) +
+                                " ms), "
                                 "disconnecting client"));
   }
   ASSERT_TRUE(logger.contains("Server has shut down"));
@@ -221,9 +260,8 @@ TEST(Server, ClientConnexion) {
   // for the handshake timed out, and a connexion was retried and data connexion
   // was made
   {
-    server::TcpServerMock server(5000, 5001, std::chrono::milliseconds(500));
+    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
     server.startServer();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     asio::io_context context;
     asio::ip::tcp::resolver resolver(context);
@@ -235,14 +273,17 @@ TEST(Server, ClientConnexion) {
                   resolver.resolve("localhost", std::to_string(5001)));
 
     // Wait longer than the timeout
-    std::this_thread::sleep_for(std::chrono::milliseconds(600));
+    ensureServerIsConnected(server);
+    server.setTimeoutPeriod(failingTimeoutPeriod);
+    std::this_thread::sleep_for(failingTimeoutPeriod + failingBufferPeriod);
+    server.setTimeoutPeriod(sufficientTimeoutPeriod);
     asio::connect(*commandSocket,
                   resolver.resolve("localhost", std::to_string(5000)));
     asio::connect(*dataSocket,
                   resolver.resolve("localhost", std::to_string(5001)));
 
     // Give some time to the message to arrive
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    logger.giveTimeToUpdate();
     ASSERT_EQ(logger.count("Data socket connected to client, waiting for "
                            "official handshake"),
               2);
@@ -254,9 +295,8 @@ TEST(Server, ClientConnexion) {
   // for the handshake timed out, and a connexion was retried and data connexion
   // was made, but handshaked timed out
   {
-    server::TcpServerMock server(5000, 5001, std::chrono::milliseconds(500));
+    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
     server.startServer();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     asio::io_context context;
     asio::ip::tcp::resolver resolver(context);
@@ -268,14 +308,22 @@ TEST(Server, ClientConnexion) {
                   resolver.resolve("localhost", std::to_string(5001)));
 
     // Wait longer than the timeout
-    std::this_thread::sleep_for(std::chrono::milliseconds(600));
+    ensureServerIsConnected(server);
+    server.setTimeoutPeriod(failingTimeoutPeriod);
+    std::this_thread::sleep_for(failingTimeoutPeriod + failingBufferPeriod);
+    server.setTimeoutPeriod(sufficientTimeoutPeriod);
     asio::connect(*commandSocket,
                   resolver.resolve("localhost", std::to_string(5000)));
     asio::connect(*dataSocket,
                   resolver.resolve("localhost", std::to_string(5001)));
-    std::this_thread::sleep_for(std::chrono::milliseconds(600));
 
-    ASSERT_EQ(logger.count("Handshake timeout (500 ms), disconnecting client"),
+    ensureServerIsConnected(server);
+    server.setTimeoutPeriod(failingTimeoutPeriod);
+    std::this_thread::sleep_for(failingTimeoutPeriod + failingBufferPeriod);
+
+    ASSERT_EQ(logger.count("Handshake timeout (" +
+                           std::to_string(failingTimeoutPeriod.count()) +
+                           " ms), disconnecting client"),
               2);
   }
   ASSERT_TRUE(logger.contains("Server has shut down"));
@@ -283,16 +331,15 @@ TEST(Server, ClientConnexion) {
 
   // Server can be shut if connexions was successful
   {
-    server::TcpServerMock server(5000, 5001, std::chrono::milliseconds(500));
+    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
     server.startServer();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     server::TcpClient client;
     bool isConnected = client.connect();
     ASSERT_TRUE(isConnected);
 
     // Give some time to the message to arrive
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    logger.giveTimeToUpdate();
     ASSERT_TRUE(logger.contains("Handshake from client is valid"));
   }
   ASSERT_TRUE(logger.contains("Server has shut down"));
@@ -300,17 +347,18 @@ TEST(Server, ClientConnexion) {
 
   // Server can be shut if connexions was successful then dropped
   {
-    server::TcpServerMock server(5000, 5001, std::chrono::milliseconds(500));
+    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
     server.startServer();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     server::TcpClient client;
     client.connect();
+    ensureServerIsConnected(server);
     bool isDisconnected = client.disconnect();
     ASSERT_TRUE(isDisconnected);
 
     // Give some time to the message to arrive
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    ensureServerIsDisconnected(server);
+    logger.giveTimeToUpdate();
     ASSERT_TRUE(logger.contains("Disconnecting client"));
   }
   ASSERT_TRUE(logger.contains("Server has shut down"));
@@ -318,19 +366,22 @@ TEST(Server, ClientConnexion) {
 
   // We can reconnect after disconnecting
   {
-    server::TcpServerMock server(5000, 5001, std::chrono::milliseconds(500));
+    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
     server.startServer();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     server::TcpClient client;
     client.connect();
+    ensureServerIsConnected(server);
     client.disconnect();
+    ensureServerIsDisconnected(server);
 
     // Give some time
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     bool isConnected = client.connect();
     ASSERT_TRUE(isConnected);
+    ensureServerIsConnected(server);
 
+    logger.giveTimeToUpdate();
     ASSERT_EQ(logger.count("Handshake from client is valid"), 2);
   }
   ASSERT_TRUE(logger.contains("Server has shut down"));
@@ -343,9 +394,8 @@ TEST(Server, AddDevices) {
 
   // Happy path
   {
-    server::TcpServerMock server(5000, 5001, std::chrono::milliseconds(500));
+    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
     server.startServer();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     server::TcpClient client;
     client.connect();
@@ -357,7 +407,6 @@ TEST(Server, AddDevices) {
     ASSERT_TRUE(isMagstimAdded);
 
     // Give some time to the message to arrive
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
     ASSERT_TRUE(logger.contains("The device DelsysEmgDevice is now connected"));
     ASSERT_TRUE(
         logger.contains("The device MagstimRapidDevice is now connected"));
@@ -376,9 +425,8 @@ TEST(Server, AddDevices) {
 
   // Add the same devices twice
   {
-    server::TcpServerMock server(5000, 5001, std::chrono::milliseconds(500));
+    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
     server.startServer();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     server::TcpClient client;
     client.connect();
@@ -396,7 +444,7 @@ TEST(Server, AddDevices) {
     ASSERT_FALSE(isMagstimAdded);
 
     // Give some time to the message to arrive
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    logger.giveTimeToUpdate();
     ASSERT_TRUE(logger.contains(
         "Cannot add the DelsysEmgDevice devise as it is already connected"));
     ASSERT_TRUE(logger.contains(
@@ -407,9 +455,8 @@ TEST(Server, AddDevices) {
 
   // Remove devices by hand
   {
-    server::TcpServerMock server(5000, 5001, std::chrono::milliseconds(500));
+    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
     server.startServer();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     server::TcpClient client;
     client.connect();
@@ -428,7 +475,7 @@ TEST(Server, AddDevices) {
     ASSERT_TRUE(isMagstimRemoved);
 
     // Give some time to the message to arrive
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    logger.giveTimeToUpdate();
     ASSERT_TRUE(
         logger.contains("The device DelsysEmgDevice is now disconnected"));
     ASSERT_TRUE(
@@ -443,9 +490,8 @@ TEST(Server, Recording) {
 
   // Happy path
   {
-    server::TcpServerMock server(5000, 5001, std::chrono::milliseconds(500));
+    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
     server.startServer();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     server::TcpClient client;
     client.connect();
@@ -459,7 +505,7 @@ TEST(Server, Recording) {
     ASSERT_TRUE(isRecordingStarted);
 
     // Give some time to the message to arrive
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    logger.giveTimeToUpdate();
     ASSERT_TRUE(logger.contains(
         "The data collector DelsysEmgDataCollector is now recording"));
     logger.clear();
@@ -471,9 +517,8 @@ TEST(Server, Recording) {
 
   // Start/Stop recording twice
   {
-    server::TcpServerMock server(5000, 5001, std::chrono::milliseconds(500));
+    server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
     server.startServer();
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     server::TcpClient client;
     client.connect();
@@ -493,7 +538,7 @@ TEST(Server, Recording) {
     ASSERT_TRUE(isRecordingStarted);
 
     // Give some time to the message to arrive
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    logger.giveTimeToUpdate();
     ASSERT_TRUE(logger.contains(
         "The data collector DelsysEmgDataCollector is already recording"));
     logger.clear();
@@ -507,7 +552,7 @@ TEST(Server, Recording) {
     ASSERT_TRUE(isRecordingStopped);
 
     // Give some time to the message to arrive
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    logger.giveTimeToUpdate();
     ASSERT_TRUE(logger.contains(
         "The data collector DelsysEmgDataCollector is not recording"));
   }

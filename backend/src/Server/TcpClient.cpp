@@ -21,11 +21,11 @@ bool TcpClient::connect() {
 
   // Connect
   m_IsConnected = false;
-  tcp::resolver resolver(m_CommandContext);
-  m_CommandSocket = std::make_unique<tcp::socket>(m_CommandContext);
+  tcp::resolver resolver(m_Context);
+  m_CommandSocket = std::make_unique<tcp::socket>(m_Context);
   asio::connect(*m_CommandSocket,
                 resolver.resolve(m_Host, std::to_string(m_CommandPort)));
-  m_DataSocket = std::make_unique<tcp::socket>(m_CommandContext);
+  m_DataSocket = std::make_unique<tcp::socket>(m_Context);
   asio::connect(*m_DataSocket,
                 resolver.resolve(m_Host, std::to_string(m_DataPort)));
   m_IsConnected = true;

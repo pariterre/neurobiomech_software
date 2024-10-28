@@ -56,7 +56,7 @@ TEST(Magstim, Connect) {
   ASSERT_TRUE(isConnected);
   ASSERT_TRUE(magstim->getIsConnected());
   // The logger is sometimes late
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  logger.giveTimeToUpdate();
   ASSERT_TRUE(
       logger.contains("The device MagstimRapidDevice is now connected"));
   logger.clear();

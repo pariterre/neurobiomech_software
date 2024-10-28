@@ -95,7 +95,7 @@ protected:
 
 private:
   /// @brief The asio context used for async methods of the client
-  DECLARE_PRIVATE_MEMBER_NOGET(asio::io_context, CommandContext);
+  DECLARE_PRIVATE_MEMBER_NOGET(asio::io_context, Context);
 
   /// @brief The socket that is connected to the server for commands
   DECLARE_PRIVATE_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,

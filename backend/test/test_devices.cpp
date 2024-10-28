@@ -108,7 +108,7 @@ TEST(Devices, Connect) {
   ASSERT_TRUE(areConnected);
   ASSERT_TRUE(devices.getIsConnected());
   // Even though it is sync, the messages to the logger are sometimes late
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  logger.giveTimeToUpdate();
   ASSERT_EQ(logger.count("The device DelsysEmgDevice is now connected"), 2);
   ASSERT_EQ(logger.count("The device MagstimRapidDevice is now connected"), 2);
   ASSERT_TRUE(logger.contains("All devices are now connected"));
@@ -119,7 +119,7 @@ TEST(Devices, Connect) {
   ASSERT_TRUE(areConnected);
   ASSERT_TRUE(devices.getIsConnected());
   // Even though it is sync, the messages to the logger are sometimes late
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  logger.giveTimeToUpdate();
   ASSERT_EQ(logger.count("Cannot connect to the device DelsysEmgDevice because "
                          "it is already connected"),
             2);
@@ -134,7 +134,7 @@ TEST(Devices, Connect) {
   ASSERT_TRUE(areDisconnected);
   ASSERT_FALSE(devices.getIsConnected());
   // Even though it is sync, the messages to the logger are sometimes late
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  logger.giveTimeToUpdate();
   ASSERT_EQ(logger.count("The device DelsysEmgDevice is now disconnected"), 2);
   ASSERT_EQ(logger.count("The device MagstimRapidDevice is now disconnected"),
             2);
@@ -146,7 +146,7 @@ TEST(Devices, Connect) {
   ASSERT_TRUE(areDisconnected);
   ASSERT_FALSE(devices.getIsConnected());
   // Even though it is sync, the messages to the logger are sometimes late
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  logger.giveTimeToUpdate();
   ASSERT_EQ(logger.count("Cannot disconnect from the device DelsysEmgDevice "
                          "because it is not connected"),
             2);
@@ -165,7 +165,7 @@ TEST(Devices, AutoDisconnect) {
     devices.connect();
   }
   // Even though it is sync, the messages to the logger are sometimes late
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  logger.giveTimeToUpdate();
   ASSERT_TRUE(logger.contains("All devices are now disconnected"));
   logger.clear();
 }
@@ -194,7 +194,7 @@ TEST(Devices, ConnectFailed) {
   ASSERT_FALSE(isConnected);
   ASSERT_FALSE(devices.getIsConnected());
   // Even though it is sync, the messages to the logger are sometimes late
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  logger.giveTimeToUpdate();
   ASSERT_EQ(logger.count("The device DelsysEmgDevice is now connected"), 1);
   ASSERT_EQ(logger.count("The device MagstimRapidDevice is now connected"), 2);
   ASSERT_EQ(logger.count("Could not connect to the device DelsysEmgDevice"), 1);
@@ -351,7 +351,7 @@ TEST(Devices, StartDataStreamingFailed) {
   bool isStreamingData = devices.startDataStreaming();
   ASSERT_FALSE(devices.getIsStreamingData());
   // Even though it is sync, the messages to the logger are sometimes late
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  logger.giveTimeToUpdate();
   ASSERT_EQ(
       logger.count(
           "The data collector DelsysEmgDataCollector is now streaming data"),

@@ -116,7 +116,7 @@ bool Devices::connect() {
     }
 
     // If we get here, we have to give more time for the devices to connect
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 
   // If any of the devices failed to connect, disconnect all the devices
@@ -192,7 +192,7 @@ bool Devices::startDataStreaming() {
     }
 
     // If we get here, we have to give more time for the devices to connect
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 
   // If any of the devices failed to start streaming data, stop all the devices

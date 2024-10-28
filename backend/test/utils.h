@@ -35,6 +35,10 @@ public:
   }
   ~TestLogger() { m_logger.onNewLog.clear(m_loggerId); }
 
+  void giveTimeToUpdate() {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+
   bool contains(const std::string &message) {
     for (const auto &msg : m_messagesToDevice) {
       if (msg.find(message) != std::string::npos) {
