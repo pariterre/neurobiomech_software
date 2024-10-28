@@ -562,5 +562,23 @@ TEST(Server, Recording) {
 }
 
 TEST(Server, TrialData) {
-  // TODO: Implement
+  auto logger = TestLogger();
+
+  server::TcpServerMock server(5000, 5001, sufficientTimeoutPeriod);
+  server.startServer();
+
+  server::TcpClient client;
+  client.connect();
+
+  // Add the devices
+  client.addDelsysDevice();
+  client.addMagstimDevice();
+
+  client.startRecording();
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  client.stopRecording();
+
+  // Get the data
+  auto data = client.getLastTrialData();
+  ASSERT_EQ(data["DelsysEmgDataCollector"].size(), 2);
 }
