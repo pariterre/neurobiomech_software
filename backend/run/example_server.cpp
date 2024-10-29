@@ -16,7 +16,10 @@ int main() {
 
     // Connect to this server using a TCP client
     server::TcpClient client;
-    client.connect();
+    if (!client.connect()) {
+      logger.fatal("Failed to connect to the server");
+      throw std::runtime_error("Failed to connect to the server");
+    }
 
     // Add the devices
     client.addDelsysDevice();

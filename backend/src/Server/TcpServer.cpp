@@ -15,8 +15,9 @@ const std::string DEVICE_NAME_DELSYS = "DelsysEmgDevice";
 const std::string DEVICE_NAME_MAGSTIM = "MagstimRapidDevice";
 
 TcpServer::TcpServer(int commandPort, int responsePort, int liveDataPort)
-    : m_IsServerRunning(false), m_CommandPort(commandPort),
-      m_ResponsePort(responsePort), m_LiveDataPort(liveDataPort),
+    : m_IsClientConnecting(false), m_IsServerRunning(false),
+      m_CommandPort(commandPort), m_ResponsePort(responsePort),
+      m_LiveDataPort(liveDataPort),
       m_TimeoutPeriod(std::chrono::milliseconds(5000)), m_ProtocolVersion(1) {};
 
 TcpServer::~TcpServer() { stopServer(); }
@@ -30,22 +31,25 @@ void TcpServer::startServerSync() {
 
   // Create the contexts and acceptors
   m_CommandAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
-      m_CommandContext,
-      asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_CommandPort));
+      m_Context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_CommandPort));
   logger.info("TCP Command server started on port " +
               std::to_string(m_CommandPort));
 
   m_ResponseAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
-      m_ResponseContext,
-      asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_ResponsePort));
+      m_Context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_ResponsePort));
   logger.info("TCP Response server started on port " +
               std::to_string(m_ResponsePort));
+
+  m_LiveDataAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
+      m_Context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_LiveDataPort));
+  logger.info("TCP Live Data server started on port " +
+              std::to_string(m_LiveDataPort));
 
   m_IsServerRunning = true;
   while (m_IsServerRunning) {
     // Accept a new connection
-    waitForNewConnexion();
-    if (!isClientConnected()) {
+    m_IsClientConnecting = false;
+    if (!waitForNewConnexion()) {
       // If it failed to connect, restart the process
       continue;
     }
@@ -63,9 +67,20 @@ void TcpServer::startServerSync() {
       }
     });
 
+    auto liveDataWorker = std::thread([this]() {
+      while (m_IsServerRunning && isClientConnected()) {
+        auto now = std::chrono::high_resolution_clock::now();
+        handleSendLiveData();
+        auto next = std::chrono::milliseconds(200) -
+                    (std::chrono::high_resolution_clock::now() - now);
+        std::this_thread::sleep_for(next);
+      }
+    });
+
     // Wait for the workers to finish
     commandWorker.join();
     responseWorker.join();
+    liveDataWorker.join();
   }
 }
 
@@ -89,24 +104,10 @@ void TcpServer::stopServer() {
 
   // When closing the server too soon, they can be open even if client was not
   // connected
-  {
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    if (m_CommandSocket && m_CommandSocket->is_open()) {
-      m_CommandSocket->close();
-    }
-    if (m_ResponseSocket && m_ResponseSocket->is_open()) {
-      m_ResponseSocket->close();
-    }
+  closeSockets();
 
-    if (m_CommandAcceptor) {
-      m_CommandAcceptor->close();
-    }
-    if (m_ResponseAcceptor) {
-      m_ResponseAcceptor->close();
-    }
-  }
   // Stop any running context
-  m_CommandContext.stop();
+  m_Context.stop();
 
   // Wait for the server to stop
   if (m_ServerWorker.joinable()) {
@@ -123,19 +124,11 @@ void TcpServer::disconnectClient() {
   }
 
   // Make sure all the devices are properly disconnected
-  std::lock_guard<std::mutex> lock(m_Mutex);
-  m_Devices.clear();
-  if (m_CommandSocket && m_CommandSocket->is_open()) {
-    m_CommandSocket->close();
-  }
-  if (m_ResponseSocket && m_ResponseSocket->is_open()) {
-    m_ResponseSocket->close();
-  }
-  if (m_LiveData) {
-    m_LiveData = nullptr;
-  }
+  closeSockets();
 
   // Reset the status to initializing
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  m_Devices.clear();
   m_Status = TcpServerStatus::INITIALIZING;
 }
 
@@ -144,91 +137,38 @@ bool TcpServer::isClientConnected() const {
          m_ResponseSocket->is_open();
 }
 
-void TcpServer::waitForNewConnexion() {
+bool TcpServer::waitForNewConnexion() {
   auto &logger = utils::Logger::getInstance();
   logger.info("Waiting for a new connexion");
-
   m_Status = TcpServerStatus::INITIALIZING;
 
   // Wait for the command socket to connect
-  auto commandTimer =
-      asio::steady_timer(m_CommandContext, std::chrono::milliseconds(10));
-  m_CommandSocket = std::make_unique<asio::ip::tcp::socket>(m_CommandContext);
-  m_CommandAcceptor->async_accept(*m_CommandSocket,
-                                  [](const asio::error_code &) {});
-  // Wait for a connexion while periodically checking if the server is still
-  // running
-  while (!m_CommandSocket->is_open()) {
-    commandTimer.async_wait(
-        [this](const asio::error_code &) { m_CommandContext.stop(); });
-    m_CommandContext.run();
-    m_CommandContext.restart();
-
-    std::lock_guard<std::mutex> lock(m_Mutex);
-    if (!m_IsServerRunning) {
-      if (m_CommandAcceptor && m_CommandAcceptor->is_open()) {
-        m_CommandAcceptor->cancel();
-      }
-      logger.info("Stopping listening to ports as server is shutting down");
-      return;
-    }
+  if (!waitUntilSocketIsConnected(m_CommandSocket, m_CommandAcceptor)) {
+    closeSockets();
+    return false;
   }
-  logger.info("Command socket connected to client, waiting for a connexion to "
-              "the response socket");
+  m_CommandSocket->non_blocking(true);
 
   // Wait for the response socket to connect
-  auto responseSocketTimer =
-      asio::steady_timer(m_ResponseContext, std::chrono::milliseconds(10));
-  m_ResponseSocket = std::make_unique<asio::ip::tcp::socket>(m_ResponseContext);
-  m_ResponseAcceptor->async_accept(*m_ResponseSocket, [](asio::error_code) {});
+  logger.info("Command socket connected to client, waiting for a connexion to "
+              "the response socket");
+  if (!waitUntilSocketIsConnected(m_ResponseSocket, m_ResponseAcceptor)) {
+    closeSockets();
+    return false;
+  }
+
+  // Wait for the live data socket to connect
+  logger.info("Response socket connected to client, waiting for a connexion to "
+              "the live data socket");
+  if (!waitUntilSocketIsConnected(m_LiveDataSocket, m_LiveDataAcceptor)) {
+    closeSockets();
+    return false;
+  }
+
+  // Wait for the handshake
+  logger.info("All ports are connected, waiting for the handshake");
   auto now = std::chrono::high_resolution_clock::now();
-  while (!m_ResponseSocket->is_open()) {
-    responseSocketTimer.async_wait(
-        [this](const asio::error_code &) { m_ResponseContext.stop(); });
-    m_ResponseContext.run();
-    m_ResponseContext.restart();
-
-    if (!m_IsServerRunning ||
-        std::chrono::high_resolution_clock::now() - now > m_TimeoutPeriod) {
-      std::lock_guard<std::mutex> lock(m_Mutex);
-      if (m_CommandSocket && m_CommandSocket->is_open()) {
-        m_CommandSocket->close();
-      }
-      if (m_ResponseAcceptor && m_ResponseAcceptor->is_open()) {
-        m_ResponseAcceptor->cancel();
-      }
-      if (!m_IsServerRunning) {
-        logger.info("Stopping listening to ports as server is shutting down");
-      } else if (std::chrono::high_resolution_clock::now() - now >
-                 m_TimeoutPeriod) {
-        logger.fatal("Response socket connection timeout (" +
-                     std::to_string(m_TimeoutPeriod.count()) +
-                     " ms), disconnecting client");
-      }
-      return;
-    }
-  }
-
-  {
-    logger.info("Response socket connected to client, preparing UDP connexion "
-                "for live data streaming");
-  }
-
-  {
-    auto clientIp = m_CommandSocket->remote_endpoint().address().to_string();
-    m_LiveData = std::make_unique<LiveDataStreaming>(m_LiveDataPort, clientIp);
-    logger.info("UDP Live data server started on port " +
-                std::to_string(m_LiveDataPort));
-  }
-
-  {
-    logger.info("All ports are connected, waiting for the handshake");
-    m_CommandSocket->non_blocking(true);
-  }
-
-  now = std::chrono::high_resolution_clock::now();
   while (m_Status == TcpServerStatus::INITIALIZING) {
-    // Wait for the handshake
     waitAndHandleNewCommand();
 
     // Since the command is non-blocking, we can just continue if there is no
@@ -239,8 +179,69 @@ void TcpServer::waitForNewConnexion() {
                    std::to_string(m_TimeoutPeriod.count()) +
                    " ms), disconnecting client");
       disconnectClient();
-      return;
+      return false;
     }
+  }
+  return true;
+}
+
+bool TcpServer::waitUntilSocketIsConnected(
+    std::unique_ptr<asio::ip::tcp::socket> &socket,
+    std::unique_ptr<asio::ip::tcp::acceptor> &acceptor) {
+  auto &logger = utils::Logger::getInstance();
+  logger.info("Waiting for the socket to connect");
+
+  socket = std::make_unique<asio::ip::tcp::socket>(m_Context);
+  acceptor->async_accept(*socket, [](const asio::error_code &) {});
+
+  auto now = std::chrono::high_resolution_clock::now();
+  auto timoutTimer =
+      asio::steady_timer(m_Context, std::chrono::milliseconds(50));
+  while (!socket->is_open()) {
+    timoutTimer.async_wait(
+        [this](const asio::error_code &) { m_Context.stop(); });
+    m_Context.run();
+    m_Context.restart();
+
+    if (!m_IsServerRunning ||
+        now - std::chrono::high_resolution_clock::now() > m_TimeoutPeriod) {
+      logger.info("Stopping listening to ports as server is shutting down");
+      return false;
+    }
+  }
+  return true;
+}
+
+void TcpServer::closeSockets() {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  if (m_CommandSocket && m_CommandSocket->is_open()) {
+    m_CommandSocket->close();
+  }
+  if (m_CommandAcceptor && m_CommandAcceptor->is_open()) {
+    m_CommandAcceptor->cancel();
+  }
+
+  if (m_ResponseSocket && m_ResponseSocket->is_open()) {
+    m_ResponseSocket->close();
+  }
+  if (m_ResponseAcceptor && m_ResponseAcceptor->is_open()) {
+    m_ResponseAcceptor->cancel();
+  }
+
+  if (m_LiveDataSocket && m_LiveDataSocket->is_open()) {
+    m_LiveDataSocket->close();
+  }
+  if (m_LiveDataAcceptor && m_LiveDataAcceptor->is_open()) {
+    m_LiveDataAcceptor->cancel();
+  }
+
+  auto &logger = utils::Logger::getInstance();
+  if (!m_IsServerRunning) {
+    logger.info("Stopping listening to ports as server is shutting down");
+  } else {
+    logger.fatal("Response socket connection timeout (" +
+                 std::to_string(m_TimeoutPeriod.count()) +
+                 " ms), disconnecting client");
   }
 }
 
@@ -377,9 +378,10 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
   case TcpServerCommand::GET_LAST_TRIAL_DATA: {
     auto data = m_Devices.getLastTrialDataSerialized();
     auto dataDump = data.dump();
-    response = static_cast<TcpServerResponse>(dataDump.size());
     asio::write(*m_ResponseSocket,
-                asio::buffer(constructResponsePacket(response)), error);
+                asio::buffer(constructResponsePacket(
+                    static_cast<TcpServerResponse>(dataDump.size()))),
+                error);
     auto written =
         asio::write(*m_ResponseSocket, asio::buffer(dataDump), error);
     logger.info("Data size: " + std::to_string(written));
@@ -402,6 +404,48 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
   }
 
   return true;
+}
+
+TcpServerCommand
+TcpServer::parseCommandPacket(const std::array<char, 8> &buffer) {
+  // Packets are exactly 8 bytes long, big-endian
+  // - First 4 bytes are the version number
+  // - Next 4 bytes are the command
+
+  // Check the version
+  std::uint32_t version =
+      *reinterpret_cast<const std::uint32_t *>(buffer.data());
+  if (version != m_ProtocolVersion) {
+    auto &logger = utils::Logger::getInstance();
+    logger.fatal("Invalid version: " + std::to_string(version) +
+                 ". Please "
+                 "update the client to version " +
+                 std::to_string(m_ProtocolVersion));
+    return TcpServerCommand::FAILED;
+  }
+
+  // Get the command
+  return static_cast<TcpServerCommand>(
+      *reinterpret_cast<const std::uint32_t *>(buffer.data() + 4));
+}
+
+std::array<char, 8>
+TcpServer::constructResponsePacket(TcpServerResponse response) {
+  // Packets are exactly 8 bytes long, big-endian
+  // - First 4 bytes are the version number
+  // - Next 4 bytes are the response
+
+  auto packet = std::array<char, 8>();
+  packet.fill('\0');
+
+  // Add the version number
+  std::memcpy(packet.data(), &m_ProtocolVersion, sizeof(std::uint32_t));
+
+  // Add the response
+  std::memcpy(packet.data() + sizeof(std::uint32_t), &response,
+              sizeof(TcpServerResponse));
+
+  return packet;
 }
 
 bool TcpServer::addDevice(const std::string &deviceName) {
@@ -456,46 +500,22 @@ bool TcpServer::removeDevice(const std::string &deviceName) {
   return true;
 }
 
-TcpServerCommand
-TcpServer::parseCommandPacket(const std::array<char, 8> &buffer) {
-  // Packets are exactly 8 bytes long, big-endian
-  // - First 4 bytes are the version number
-  // - Next 4 bytes are the command
-
-  // Check the version
-  std::uint32_t version =
-      *reinterpret_cast<const std::uint32_t *>(buffer.data());
-  if (version != m_ProtocolVersion) {
-    auto &logger = utils::Logger::getInstance();
-    logger.fatal("Invalid version: " + std::to_string(version) +
-                 ". Please "
-                 "update the client to version " +
-                 std::to_string(m_ProtocolVersion));
-    return TcpServerCommand::FAILED;
+void TcpServer::handleSendLiveData() {
+  // Send the live data callback in a separate thread
+  if (!isClientConnected()) {
+    return;
   }
+  auto &logger = utils::Logger::getInstance();
+  logger.info("Sending live data to client");
 
-  // Get the command
-  return static_cast<TcpServerCommand>(
-      *reinterpret_cast<const std::uint32_t *>(buffer.data() + 4));
-}
-
-std::array<char, 8>
-TcpServer::constructResponsePacket(TcpServerResponse response) {
-  // Packets are exactly 8 bytes long, big-endian
-  // - First 4 bytes are the version number
-  // - Next 4 bytes are the response
-
-  auto packet = std::array<char, 8>();
-  packet.fill('\0');
-
-  // Add the version number
-  std::memcpy(packet.data(), &m_ProtocolVersion, sizeof(std::uint32_t));
-
-  // Add the response
-  std::memcpy(packet.data() + sizeof(std::uint32_t), &response,
-              sizeof(TcpServerResponse));
-
-  return packet;
+  auto data = m_Devices.getLiveDataSerialized();
+  auto dataDump = data.dump();
+  asio::error_code error;
+  asio::write(*m_LiveDataSocket,
+              asio::buffer(constructResponsePacket(
+                  static_cast<TcpServerResponse>(dataDump.size()))),
+              error);
+  auto written = asio::write(*m_LiveDataSocket, asio::buffer(dataDump), error);
 }
 
 void TcpServerMock::makeAndAddDevice(const std::string &deviceName) {

@@ -89,6 +89,10 @@ public:
 
   /// DATA SPECIFIC METHODS ///
 public:
+  /// @brief Get the live data in serialized form
+  /// @return The live datain serialized form
+  nlohmann::json getLiveDataSerialized() const;
+
   /// @brief Get the data of the last recorded trial in serialized form
   /// @return The data of the last recorded trial in serialized form
   nlohmann::json getLastTrialDataSerialized() const;

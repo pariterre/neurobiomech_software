@@ -6,14 +6,17 @@ using asio::ip::tcp;
 using namespace STIMWALKER_NAMESPACE;
 using namespace STIMWALKER_NAMESPACE::server;
 
-TcpClient::TcpClient(std::string host, int commandPort, int responsePort)
+TcpClient::TcpClient(std::string host, int commandPort, int responsePort,
+                     int liveDataPort)
     : m_Host(host), m_CommandPort(commandPort), m_ResponsePort(responsePort),
-      m_IsConnected(false), m_ProtocolVersion(1) {};
+      m_LiveDataPort(liveDataPort), m_IsConnected(false),
+      m_ProtocolVersion(1) {};
 
 TcpClient::~TcpClient() {
   if (m_IsConnected) {
     disconnect();
   }
+  m_LiveDataWorker.join();
 }
 
 bool TcpClient::connect() {
@@ -22,17 +25,26 @@ bool TcpClient::connect() {
   // Connect
   m_IsConnected = false;
   tcp::resolver resolver(m_Context);
+
   m_CommandSocket = std::make_unique<tcp::socket>(m_Context);
   asio::connect(*m_CommandSocket,
                 resolver.resolve(m_Host, std::to_string(m_CommandPort)));
+
   m_ResponseSocket = std::make_unique<tcp::socket>(m_Context);
   asio::connect(*m_ResponseSocket,
                 resolver.resolve(m_Host, std::to_string(m_ResponsePort)));
+
+  m_LiveDataSocket = std::make_unique<tcp::socket>(m_Context);
+  asio::connect(*m_LiveDataSocket,
+                resolver.resolve(m_Host, std::to_string(m_LiveDataPort)));
+  startUpdatingLiveData();
+
   m_IsConnected = true;
 
   // Send the handshake
   if (sendCommand(TcpServerCommand::HANDSHAKE) == TcpServerResponse::NOK) {
     logger.fatal("CLIENT: Handshake failed");
+    disconnect();
     return false;
   }
 
@@ -41,15 +53,7 @@ bool TcpClient::connect() {
 }
 
 bool TcpClient::disconnect() {
-  auto &logger = utils::Logger::getInstance();
-
-  if (!m_IsConnected) {
-    logger.warning("CLIENT: Client is not connected");
-    return true;
-  }
-
-  m_CommandSocket->close();
-  m_ResponseSocket->close();
+  closeSockets();
   m_IsConnected = false;
   return true;
 }
@@ -150,6 +154,29 @@ std::map<std::string, data::TimeSeries> TcpClient::getLastTrialData() {
   return data;
 }
 
+void TcpClient::startUpdatingLiveData() {
+  m_LiveDataWorker = std::thread([this]() {
+    while (m_IsConnected) {
+      updateLiveData();
+    }
+  });
+}
+
+void TcpClient::updateLiveData() {
+  auto &logger = utils::Logger::getInstance();
+
+  auto dataBuffer = waitForResponse(*m_LiveDataSocket);
+  std::map<std::string, data::TimeSeries> data;
+  try {
+    data = devices::Devices::deserializeData(nlohmann::json::parse(dataBuffer));
+  } catch (...) {
+    logger.fatal("CLIENT: Failed to parse the last trial data");
+    return;
+  }
+
+  logger.info("CLIENT: Live data received");
+}
+
 TcpServerResponse TcpClient::sendCommand(TcpServerCommand command) {
   auto &logger = utils::Logger::getInstance();
 
@@ -164,9 +191,7 @@ TcpServerResponse TcpClient::sendCommand(TcpServerCommand command) {
 
   if (byteWritten != 8 || error) {
     logger.fatal("CLIENT: TCP write error: " + error.message());
-    m_CommandSocket->close();
-    m_ResponseSocket->close();
-    m_IsConnected = false;
+    disconnect();
     return TcpServerResponse::NOK;
   }
 
@@ -192,13 +217,11 @@ std::vector<char> TcpClient::sendCommandWithResponse(TcpServerCommand command) {
 
   if (byteWritten != 8 || error) {
     logger.fatal("CLIENT: TCP write error: " + error.message());
-    m_CommandSocket->close();
-    m_ResponseSocket->close();
-    m_IsConnected = false;
+    disconnect();
     return std::vector<char>();
   }
 
-  auto data = waitForResponse();
+  auto data = waitForResponse(*m_ResponseSocket);
   auto response = waitForCommandAcknowledgment();
   if (response == TcpServerResponse::NOK) {
     logger.warning("CLIENT: Failed to get confirmation for command: " +
@@ -221,10 +244,10 @@ TcpServerResponse TcpClient::waitForCommandAcknowledgment() {
   return parseAcknowledgmentPacket(buffer);
 }
 
-std::vector<char> TcpClient::waitForResponse() {
+std::vector<char> TcpClient::waitForResponse(asio::ip::tcp::socket &socket) {
   auto buffer = std::array<char, 8>();
   asio::error_code error;
-  size_t byteRead = asio::read(*m_ResponseSocket, asio::buffer(buffer), error);
+  size_t byteRead = asio::read(socket, asio::buffer(buffer), error);
   if (byteRead != 8 || error) {
     auto &logger = utils::Logger::getInstance();
     logger.fatal("CLIENT: TCP read error: " + error.message());
@@ -234,13 +257,25 @@ std::vector<char> TcpClient::waitForResponse() {
   std::uint32_t totalByteCount =
       static_cast<std::uint32_t>(parseAcknowledgmentPacket(buffer));
   std::vector<char> dataBuffer(totalByteCount);
-  byteRead = asio::read(*m_ResponseSocket, asio::buffer(dataBuffer), error);
+  byteRead = asio::read(socket, asio::buffer(dataBuffer), error);
   if (byteRead != totalByteCount || error) {
     utils::Logger::getInstance().fatal(
         "CLIENT: Failed to fetch the last trial data");
     return std::vector<char>();
   }
   return dataBuffer;
+}
+
+void TcpClient::closeSockets() {
+  if (m_CommandSocket && m_CommandSocket->is_open()) {
+    m_CommandSocket->close();
+  }
+  if (m_ResponseSocket && m_ResponseSocket->is_open()) {
+    m_ResponseSocket->close();
+  }
+  if (m_LiveDataSocket && m_LiveDataSocket->is_open()) {
+    m_LiveDataSocket->close();
+  }
 }
 
 std::array<char, 8>

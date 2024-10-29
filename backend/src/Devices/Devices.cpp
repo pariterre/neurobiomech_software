@@ -275,6 +275,17 @@ bool Devices::stopRecording() {
   return true;
 }
 
+nlohmann::json Devices::getLiveDataSerialized() const {
+  nlohmann::json json;
+  size_t deviceIndex = 0;
+  for (const auto &[deviceId, dataCollector] : m_DataCollectors) {
+    json[deviceIndex] = {{"name", dataCollector->dataCollectorName()},
+                         {"data", dataCollector->getLiveData().serialize()}};
+    deviceIndex++;
+  }
+  return json;
+}
+
 nlohmann::json Devices::getLastTrialDataSerialized() const {
   nlohmann::json json;
   size_t deviceIndex = 0;

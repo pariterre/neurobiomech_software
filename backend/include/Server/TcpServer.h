@@ -3,7 +3,6 @@
 
 #include "stimwalkerConfig.h"
 
-#include "Devices/Concrete/LiveDataStreaming.h"
 #include "Devices/Devices.h"
 #include "Utils/CppMacros.h"
 #include <asio.hpp>
@@ -38,7 +37,7 @@ public:
   /// @param liveDataPort The port to communicate the live data (default is
   /// 5002)
   TcpServer(int commandPort = 5000, int responsePort = 5001,
-            int liveDataPort = 4999);
+            int liveDataPort = 5002);
 
   /// @brief Destructor
   ~TcpServer();
@@ -67,8 +66,22 @@ public:
   bool isClientConnected() const;
 
 protected:
+  DECLARE_PROTECTED_MEMBER_NOGET(bool, IsClientConnecting);
+
   /// @brief Wait for a new connexion
-  void waitForNewConnexion();
+  /// @return True if everything is okay, False if connexion failed
+  bool waitForNewConnexion();
+
+  /// @brief Wait until the socket is connected
+  /// @param socket The socket to wait for
+  /// @param acceptor The acceptor to listen to
+  /// @return True if the socket is connected, false otherwise
+  bool waitUntilSocketIsConnected(
+      std::unique_ptr<asio::ip::tcp::socket> &socket,
+      std::unique_ptr<asio::ip::tcp::acceptor> &acceptor);
+
+  /// @brief Cancel the new connexion
+  void closeSockets();
 
   /// @brief Wait for a new command
   /// @return True if everything is okay, False if the server is shutting down
@@ -132,6 +145,10 @@ protected:
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
                                  ResponseSocket);
 
+  /// @brief The socket that is connected to the client for live data streaming
+  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
+                                 LiveDataSocket);
+
   /// @brief The acceptor that listens to the command port
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::acceptor>,
                                  CommandAcceptor);
@@ -140,9 +157,9 @@ protected:
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::acceptor>,
                                  ResponseAcceptor);
 
-  /// @brief The live data streamer
-  friend class LiveDataStreaming;
-  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<LiveDataStreaming>, LiveData);
+  /// @brief The acceptor that listens to the live data streaming port
+  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::acceptor>,
+                                 LiveDataAcceptor);
 
   /// @brief The current status of the server
   DECLARE_PROTECTED_MEMBER(TcpServerStatus, Status);
@@ -165,10 +182,12 @@ protected:
   /// @return True if the device is removed, false otherwise
   bool removeDevice(const std::string &deviceName);
 
+  /// @brief Handle the sending of the live data to the client
+  void handleSendLiveData();
+
 private:
   /// @brief The asio contexts used for async methods of the server
-  DECLARE_PRIVATE_MEMBER_NOGET(asio::io_context, CommandContext);
-  DECLARE_PRIVATE_MEMBER_NOGET(asio::io_context, ResponseContext);
+  DECLARE_PRIVATE_MEMBER_NOGET(asio::io_context, Context);
 
   /// @brief The worker thread for the [startServerAsync] method
   DECLARE_PRIVATE_MEMBER_NOGET(std::thread, ServerWorker);

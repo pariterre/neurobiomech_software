@@ -16,8 +16,10 @@ public:
   /// @param host The host to connect to
   /// @param commandPort The port to communicate the commands (default is 5000)
   /// @param responsePort The port to communicate the resonses (default is 5001)
+  /// @param liveDataPort The port to communicate the live data (default is
+  /// 5002)
   TcpClient(std::string host = "localhost", int commandPort = 5000,
-            int responsePort = 5001);
+            int responsePort = 5001, int liveDataPort = 5002);
 
   /// @brief Destructor
   ~TcpClient();
@@ -73,8 +75,17 @@ protected:
   /// @brief The port to communicate the responses
   DECLARE_PROTECTED_MEMBER(int, ResponsePort);
 
+  /// @brief The port to communicate the live data
+  DECLARE_PROTECTED_MEMBER(int, LiveDataPort);
+
   /// @brief If the client is connected to the server
   DECLARE_PROTECTED_MEMBER(bool, IsConnected);
+
+  /// @brief Main loop for the live data streaming
+  void startUpdatingLiveData();
+
+  /// @brief Receive and update the live data
+  void updateLiveData();
 
   /// @brief The Send a command to the server and wait for the confirmation
   /// @param command The command to send
@@ -91,8 +102,12 @@ protected:
   TcpServerResponse waitForCommandAcknowledgment();
 
   /// @brief Wait for a response from the server
+  /// @param socket The socket to wait for the response
   /// @return The response from the server
-  std::vector<char> waitForResponse();
+  std::vector<char> waitForResponse(asio::ip::tcp::socket &socket);
+
+  /// @brief Close the sockets
+  void closeSockets();
 
   /// @brief Construct a command packet to send to the server
   /// @param command The command to send
@@ -116,6 +131,13 @@ private:
   /// @brief The socket that is connected to the server for responses
   DECLARE_PRIVATE_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
                                ResponseSocket);
+
+  /// @brief The socket that is connected to the server for live data
+  DECLARE_PRIVATE_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
+                               LiveDataSocket);
+
+  /// @brief The worker thread for the live data streaming
+  DECLARE_PRIVATE_MEMBER_NOGET(std::thread, LiveDataWorker);
 
   /// @brief The protocol version of the communication with the server
   DECLARE_PRIVATE_MEMBER_NOGET(std::uint32_t, ProtocolVersion)

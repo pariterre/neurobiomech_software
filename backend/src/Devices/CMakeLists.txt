@@ -14,7 +14,6 @@ set(SRC_LIST_MODULE
     ${CMAKE_CURRENT_SOURCE_DIR}/Generic/UsbDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Concrete/NidaqDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Concrete/DelsysEmgDevice.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/Concrete/LiveDataStreaming.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Concrete/MagstimRapidDevice.cpp
 )
 
