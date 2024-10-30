@@ -575,7 +575,7 @@ TEST(Devices, LiveData) {
 
   // All the time series should have the same starting time
   for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
-    const auto &data = dataCollector->getLiveData();
+    auto data = data::TimeSeries(dataCollector->getSerializedLiveData());
     ASSERT_LE(data.getStartingTime().time_since_epoch(),
               now.time_since_epoch());
   }
@@ -583,11 +583,13 @@ TEST(Devices, LiveData) {
   // Data are supposed to be collected in the live data
   std::map<size_t, size_t> sizes;
   for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
-    sizes[deviceId] = dataCollector->getLiveData().size();
+    sizes[deviceId] =
+        data::TimeSeries(dataCollector->getSerializedLiveData()).size();
   }
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
   for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
-    ASSERT_GT(dataCollector->getLiveData().size(), sizes[deviceId]);
+    ASSERT_GT(data::TimeSeries(dataCollector->getSerializedLiveData()).size(),
+              sizes[deviceId]);
   }
 
   // Stop streaming data should stop the live data
@@ -631,14 +633,15 @@ TEST(Devices, TrialData) {
   }
 
   devices.startRecording();
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
   auto now = std::chrono::system_clock::now();
+  devices.stopRecording();
   // All the time series should have the same starting time
   for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
     const auto &data = dataCollector->getTrialData();
     ASSERT_LE(data.getStartingTime().time_since_epoch(),
               now.time_since_epoch());
   }
-  devices.stopRecording();
   for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
     ASSERT_GT(dataCollector->getTrialData().size(), sizes[deviceId]);
   }

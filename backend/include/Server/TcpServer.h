@@ -73,10 +73,12 @@ protected:
   bool waitForNewConnexion();
 
   /// @brief Wait until the socket is connected
-  /// @param socket The socket to wait for
+  /// @param socketName The name of the socket to wait for to be connected
+  /// @param socket The socket to wait for to be connected
   /// @param acceptor The acceptor to listen to
   /// @return True if the socket is connected, false otherwise
   bool waitUntilSocketIsConnected(
+      const std::string &socketName,
       std::unique_ptr<asio::ip::tcp::socket> &socket,
       std::unique_ptr<asio::ip::tcp::acceptor> &acceptor);
 

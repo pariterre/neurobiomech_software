@@ -106,18 +106,20 @@ nlohmann::json DataCollector::getSerializedLiveData() const {
 
 const TimeSeries &DataCollector::getLiveData() const {
   if (m_IsStreamingData) {
-    throw DeviceDataNotAvailableException("The data collector " +
-                                          dataCollectorName() +
-                                          " is currently streaming");
+    std::string message =
+        "The data collector " + dataCollectorName() + " is currently streaming";
+    utils::Logger::getInstance().warning(message);
+    throw DeviceDataNotAvailableException(message);
   }
   return *m_LiveTimeSeries;
 }
 
 const TimeSeries &DataCollector::getTrialData() const {
   if (m_IsRecording) {
-    throw DeviceDataNotAvailableException("The data collector " +
-                                          dataCollectorName() +
-                                          " is currently recording");
+    std::string message =
+        "The data collector " + dataCollectorName() + " is currently recording";
+    utils::Logger::getInstance().warning(message);
+    throw DeviceDataNotAvailableException(message);
   }
   return *m_TrialTimeSeries;
 }

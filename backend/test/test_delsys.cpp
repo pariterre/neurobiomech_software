@@ -363,8 +363,14 @@ TEST(Delsys, LiveData) {
   // Live data should collect even if the system is not recording
   delsys.startDataStreaming();
   ASSERT_FALSE(delsys.getIsRecording());
+  EXPECT_THROW(delsys.getLiveData(), devices::DeviceDataNotAvailableException);
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
   delsys.stopDataStreaming();
+
+  // Check that the getLiveData failed because the system was streaming
+  logger.giveTimeToUpdate();
+  ASSERT_TRUE(logger.contains(
+      "The data collector DelsysEmgDataCollector is currently streaming"));
 
   // Get the data
   const auto &data = delsys.getLiveData();
@@ -384,6 +390,9 @@ TEST(Delsys, LiveData) {
       ASSERT_NEAR(data[i].getData()[j], value, requiredPrecision);
     }
   }
+
+  // Compare the serialized live data to the live data serialized
+  ASSERT_EQ(delsys.getSerializedLiveData(), data.serialize());
 }
 
 TEST(Delsys, TrialData) {
@@ -404,6 +413,8 @@ TEST(Delsys, TrialData) {
   EXPECT_THROW(delsys.getTrialData(), devices::DeviceDataNotAvailableException);
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
   delsys.stopRecording();
+
+  // Check that the getTrialData failed because the system is recording
   logger.giveTimeToUpdate();
   ASSERT_TRUE(logger.contains(
       "The data collector DelsysEmgDataCollector is currently recording"));

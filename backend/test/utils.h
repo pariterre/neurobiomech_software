@@ -36,7 +36,11 @@ public:
   ~TestLogger() { m_logger.onNewLog.clear(m_loggerId); }
 
   void giveTimeToUpdate() {
+#ifdef WIN32
+    std::this_thread::sleep_for(std::chrono::milliseconds(30));
+#else
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
+#endif
   }
 
   bool contains(const std::string &message) {

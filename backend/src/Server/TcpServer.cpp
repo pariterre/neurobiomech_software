@@ -69,10 +69,10 @@ void TcpServer::startServerSync() {
 
     auto liveDataWorker = std::thread([this]() {
       while (m_IsServerRunning && isClientConnected()) {
-        auto now = std::chrono::high_resolution_clock::now();
+        auto startingTime = std::chrono::high_resolution_clock::now();
         handleSendLiveData();
         auto next = std::chrono::milliseconds(200) -
-                    (std::chrono::high_resolution_clock::now() - now);
+                    (std::chrono::high_resolution_clock::now() - startingTime);
         std::this_thread::sleep_for(next);
       }
     });
@@ -143,8 +143,8 @@ bool TcpServer::waitForNewConnexion() {
   m_Status = TcpServerStatus::INITIALIZING;
 
   // Wait for the command socket to connect
-  if (!waitUntilSocketIsConnected(m_CommandSocket, m_CommandAcceptor)) {
-    closeSockets();
+  if (!waitUntilSocketIsConnected("Command", m_CommandSocket,
+                                  m_CommandAcceptor)) {
     return false;
   }
   m_CommandSocket->non_blocking(true);
@@ -152,29 +152,30 @@ bool TcpServer::waitForNewConnexion() {
   // Wait for the response socket to connect
   logger.info("Command socket connected to client, waiting for a connexion to "
               "the response socket");
-  if (!waitUntilSocketIsConnected(m_ResponseSocket, m_ResponseAcceptor)) {
-    closeSockets();
+  if (!waitUntilSocketIsConnected("Response", m_ResponseSocket,
+                                  m_ResponseAcceptor)) {
     return false;
   }
 
   // Wait for the live data socket to connect
   logger.info("Response socket connected to client, waiting for a connexion to "
               "the live data socket");
-  if (!waitUntilSocketIsConnected(m_LiveDataSocket, m_LiveDataAcceptor)) {
-    closeSockets();
+  if (!waitUntilSocketIsConnected("LiveData", m_LiveDataSocket,
+                                  m_LiveDataAcceptor)) {
     return false;
   }
 
   // Wait for the handshake
   logger.info("All ports are connected, waiting for the handshake");
-  auto now = std::chrono::high_resolution_clock::now();
+  auto startingTime = std::chrono::high_resolution_clock::now();
   while (m_Status == TcpServerStatus::INITIALIZING) {
     waitAndHandleNewCommand();
 
     // Since the command is non-blocking, we can just continue if there is no
     // data
     if (!m_IsServerRunning || !isClientConnected() ||
-        std::chrono::high_resolution_clock::now() - now > m_TimeoutPeriod) {
+        std::chrono::high_resolution_clock::now() - startingTime >
+            m_TimeoutPeriod) {
       logger.fatal("Handshake timeout (" +
                    std::to_string(m_TimeoutPeriod.count()) +
                    " ms), disconnecting client");
@@ -186,15 +187,16 @@ bool TcpServer::waitForNewConnexion() {
 }
 
 bool TcpServer::waitUntilSocketIsConnected(
+    const std::string &socketName,
     std::unique_ptr<asio::ip::tcp::socket> &socket,
     std::unique_ptr<asio::ip::tcp::acceptor> &acceptor) {
   auto &logger = utils::Logger::getInstance();
-  logger.info("Waiting for the socket to connect");
+  logger.info("Waiting for " + socketName + " socket to connect");
 
   socket = std::make_unique<asio::ip::tcp::socket>(m_Context);
   acceptor->async_accept(*socket, [](const asio::error_code &) {});
 
-  auto now = std::chrono::high_resolution_clock::now();
+  auto startingTime = std::chrono::high_resolution_clock::now();
   auto timoutTimer =
       asio::steady_timer(m_Context, std::chrono::milliseconds(50));
   while (!socket->is_open()) {
@@ -203,9 +205,17 @@ bool TcpServer::waitUntilSocketIsConnected(
     m_Context.run();
     m_Context.restart();
 
-    if (!m_IsServerRunning ||
-        now - std::chrono::high_resolution_clock::now() > m_TimeoutPeriod) {
+    // Check for failing conditions
+    if (!m_IsServerRunning) {
       logger.info("Stopping listening to ports as server is shutting down");
+      closeSockets();
+      return false;
+    } else if (std::chrono::high_resolution_clock::now() - startingTime >
+               m_TimeoutPeriod) {
+      logger.fatal("Connexion to " + socketName + " socket timed out (" +
+                   std::to_string(m_TimeoutPeriod.count()) +
+                   " ms), disconnecting client");
+      closeSockets();
       return false;
     }
   }
@@ -233,15 +243,6 @@ void TcpServer::closeSockets() {
   }
   if (m_LiveDataAcceptor && m_LiveDataAcceptor->is_open()) {
     m_LiveDataAcceptor->cancel();
-  }
-
-  auto &logger = utils::Logger::getInstance();
-  if (!m_IsServerRunning) {
-    logger.info("Stopping listening to ports as server is shutting down");
-  } else {
-    logger.fatal("Response socket connection timeout (" +
-                 std::to_string(m_TimeoutPeriod.count()) +
-                 " ms), disconnecting client");
   }
 }
 
