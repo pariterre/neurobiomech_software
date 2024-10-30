@@ -68,10 +68,12 @@ void TcpServer::startServerSync() {
     });
 
     auto liveDataWorker = std::thread([this]() {
+      auto liveDataIntervals = std::chrono::milliseconds(200);
+      std::this_thread::sleep_for(liveDataIntervals);
       while (m_IsServerRunning && isClientConnected()) {
         auto startingTime = std::chrono::high_resolution_clock::now();
         handleSendLiveData();
-        auto next = std::chrono::milliseconds(200) -
+        auto next = liveDataIntervals -
                     (std::chrono::high_resolution_clock::now() - startingTime);
         std::this_thread::sleep_for(next);
       }

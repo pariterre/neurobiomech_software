@@ -16,7 +16,9 @@ TcpClient::~TcpClient() {
   if (m_IsConnected) {
     disconnect();
   }
-  m_LiveDataWorker.join();
+  if (m_LiveDataWorker.joinable()) {
+    m_LiveDataWorker.join();
+  }
 }
 
 bool TcpClient::connect() {
@@ -53,8 +55,11 @@ bool TcpClient::connect() {
 }
 
 bool TcpClient::disconnect() {
-  closeSockets();
   m_IsConnected = false;
+  if (m_LiveDataWorker.joinable()) {
+    m_LiveDataWorker.join();
+  }
+  closeSockets();
   return true;
 }
 
