@@ -99,11 +99,26 @@ bool DataCollector::stopRecording() {
   return true;
 }
 
+nlohmann::json DataCollector::getSerializedLiveData() const {
+  std::lock_guard<std::mutex> lock(const_cast<std::mutex &>(m_DataMutex));
+  return m_LiveTimeSeries->serialize();
+}
+
 const TimeSeries &DataCollector::getLiveData() const {
+  if (m_IsStreamingData) {
+    throw DeviceDataNotAvailableException("The data collector " +
+                                          dataCollectorName() +
+                                          " is currently streaming");
+  }
   return *m_LiveTimeSeries;
 }
 
 const TimeSeries &DataCollector::getTrialData() const {
+  if (m_IsRecording) {
+    throw DeviceDataNotAvailableException("The data collector " +
+                                          dataCollectorName() +
+                                          " is currently recording");
+  }
   return *m_TrialTimeSeries;
 }
 
@@ -113,6 +128,7 @@ void DataCollector::addDataPoints(
     return;
   }
 
+  std::lock_guard<std::mutex> lock(m_DataMutex);
   for (auto d : data) {
     m_LiveTimeSeries->add(d);
     if (m_IsRecording) {

@@ -280,7 +280,7 @@ nlohmann::json Devices::getLiveDataSerialized() const {
   size_t deviceIndex = 0;
   for (const auto &[deviceId, dataCollector] : m_DataCollectors) {
     json[deviceIndex] = {{"name", dataCollector->dataCollectorName()},
-                         {"data", dataCollector->getLiveData().serialize()}};
+                         {"data", dataCollector->getSerializedLiveData()}};
     deviceIndex++;
   }
   return json;

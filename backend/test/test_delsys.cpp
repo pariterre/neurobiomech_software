@@ -3,6 +3,7 @@
 #include <thread>
 
 #include "Devices/Concrete/DelsysEmgDevice.h"
+#include "Devices/Exceptions.h"
 #include "utils.h"
 
 static double requiredPrecision(1e-6);
@@ -355,6 +356,7 @@ TEST(Delsys, AutoStopRecording) {
 }
 
 TEST(Delsys, LiveData) {
+  auto logger = TestLogger();
   auto delsys = devices::DelsysEmgDeviceMock();
   delsys.connect();
 
@@ -385,6 +387,7 @@ TEST(Delsys, LiveData) {
 }
 
 TEST(Delsys, TrialData) {
+  auto logger = TestLogger();
   auto delsys = devices::DelsysEmgDeviceMock();
   delsys.connect();
 
@@ -398,8 +401,12 @@ TEST(Delsys, TrialData) {
 
   auto now = std::chrono::system_clock::now();
   delsys.startRecording();
+  EXPECT_THROW(delsys.getTrialData(), devices::DeviceDataNotAvailableException);
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
   delsys.stopRecording();
+  logger.giveTimeToUpdate();
+  ASSERT_TRUE(logger.contains(
+      "The data collector DelsysEmgDataCollector is currently recording"));
 
   ASSERT_ALMOST_NOW(data.getStartingTime(), now);
   // Technically it should have recorded be exactly 200 (2000Hz). But the

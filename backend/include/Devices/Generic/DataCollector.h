@@ -87,7 +87,20 @@ protected:
                                  TrialTimeSeries)
 
 public:
+  /// @brief Get the live data in a serialized form. This uses a mutex to ensure
+  /// that the data is not modified while being serialized
+  /// @return The live data in a serialized form
+  nlohmann::json getSerializedLiveData() const;
+
+  /// @brief Get a reference to live data. Throws an exception if the data is
+  /// currently streaming. This is proprably not the method you want to call if
+  /// you want to get the live data
+  /// @return The live data
   const data::TimeSeries &getLiveData() const;
+
+  /// @brief Get a reference to trial data. Throws an exception if the data is
+  /// currently being recorded
+  /// @return The trial data
   const data::TimeSeries &getTrialData() const;
 
   /// @brief Set the callback function to call when data is collected
@@ -106,6 +119,10 @@ protected:
   /// @brief This method is useless and only serves as a reminder that the
   /// inherited class should call [addDataPoint] when new data are ready
   virtual void handleNewData(const data::DataPoint &data) = 0;
+
+private:
+  /// @brief Mutex for adding/reading the data
+  DECLARE_PRIVATE_MEMBER_NOGET(std::mutex, DataMutex);
 };
 
 } // namespace STIMWALKER_NAMESPACE::devices

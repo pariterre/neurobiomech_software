@@ -20,6 +20,12 @@ protected:
   DECLARE_PROTECTED_MEMBER_NOGET(std::string, Message);
 };
 
+class DeviceDataNotAvailableException : public DeviceException {
+public:
+  DeviceDataNotAvailableException(const std::string &filename)
+      : DeviceException(filename) {}
+};
+
 class DeviceNotFoundException : public DeviceException {
 public:
   DeviceNotFoundException(const std::string &filename)
