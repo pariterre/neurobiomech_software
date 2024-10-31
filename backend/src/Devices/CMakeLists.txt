@@ -8,6 +8,7 @@ set(SRC_LIST_MODULE
     ${CMAKE_CURRENT_SOURCE_DIR}/Generic/Device.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Generic/AsyncDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Generic/DataCollector.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Generic/DelsysBaseDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Generic/AsyncDataCollector.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Generic/TcpDevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Generic/SerialPortDevice.cpp

@@ -3,6 +3,7 @@
 
 #include "Devices/Generic/AsyncDataCollector.h"
 #include "Devices/Generic/DataCollector.h"
+#include "Devices/Generic/DelsysBaseDevice.h"
 #include "Devices/Generic/Device.h"
 #include "Devices/Generic/SerialPortDevice.h"
 #include "Devices/Generic/Stimulator.h"
