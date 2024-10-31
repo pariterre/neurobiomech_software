@@ -74,27 +74,31 @@ public:
   };
 
 public:
-  /// @brief Constructor of the DelsysEmgDevice
+  /// @brief Constructor of the DelsysBaseDevice
   /// @param channelCount The number of channels of the device
+  /// @param deltaTime The time between each data point (1/FrameRate)
   /// @param host The host (ip) of the device
   /// @param dataPort The port of the data device
   /// @param commandPort The port of the command device (default 50040)
-  DelsysBaseDevice(size_t channelCount, const std::string &host,
-                   size_t dataPort, size_t commandPort);
+  DelsysBaseDevice(size_t channelCount, std::chrono::microseconds deltaTime,
+                   const std::string &host, size_t dataPort,
+                   size_t commandPort);
   DelsysBaseDevice(const DelsysBaseDevice &other) = delete;
 
 protected:
-  /// @brief Constructor of the DelsysEmgDevice that allows to pass mocker
+  /// @brief Constructor of the DelsysBaseDevice that allows to pass mocker
   /// devices
   DelsysBaseDevice(std::unique_ptr<CommandTcpDevice> commandDevice,
                    std::unique_ptr<DataTcpDevice> dataDevice,
-                   size_t channelCount);
+                   size_t channelCount, std::chrono::microseconds deltaTime);
 
 public:
-  /// @brief Destructor of the DelsysEmgDevice
+  /// @brief Destructor of the DelsysBaseDevice
   ~DelsysBaseDevice() = default;
 
 protected:
+  DECLARE_PROTECTED_MEMBER(std::chrono::microseconds, DeltaTime);
+
   bool handleConnect() override;
   bool handleDisconnect() override;
   bool handleStartDataStreaming() override;
@@ -175,7 +179,8 @@ protected:
 
 class DataTcpDeviceMock : public DelsysBaseDevice::DataTcpDevice {
 public:
-  DataTcpDeviceMock(size_t channelCount, const std::string &host, size_t port);
+  DataTcpDeviceMock(size_t channelCount, std::chrono::microseconds deltaTime,
+                    const std::string &host, size_t port);
   bool read(std::vector<char> &buffer) override;
 
 protected:
@@ -188,7 +193,8 @@ protected:
 
   /// @brief The time at which the data started collecting
   DECLARE_PROTECTED_MEMBER_NOGET(
-      std::chrono::time_point<std::chrono::system_clock>, StartTime)
+      std::chrono::time_point<std::chrono::system_clock>, StartTime);
+  DECLARE_PROTECTED_MEMBER_NOGET(std::chrono::microseconds, DeltaTime);
 };
 }; // namespace DelsysBaseDeviceMock
 

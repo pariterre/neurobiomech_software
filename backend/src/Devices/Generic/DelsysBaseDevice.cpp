@@ -12,11 +12,11 @@
 
 using namespace STIMWALKER_NAMESPACE::devices;
 
-std::function<std::unique_ptr<STIMWALKER_NAMESPACE::data::TimeSeries>()>
-    timeSeriesGenerator = []() {
-      return std::make_unique<STIMWALKER_NAMESPACE::data::FixedTimeSeries>(
-          std::chrono::microseconds(500));
-    };
+std::unique_ptr<STIMWALKER_NAMESPACE::data::TimeSeries>
+timeSeriesGenerator(std::chrono::microseconds deltaTime) {
+  return std::make_unique<STIMWALKER_NAMESPACE::data::FixedTimeSeries>(
+      deltaTime);
+};
 
 DelsysBaseDevice::CommandTcpDevice::CommandTcpDevice(const std::string &host,
                                                      size_t port)
@@ -49,30 +49,35 @@ DeviceResponses DelsysBaseDevice::DataTcpDevice::parseAsyncSendCommand(
       "This method should not be called for DataTcpDevice");
 }
 
-DelsysBaseDevice::DelsysBaseDevice(size_t channelCount, const std::string &host,
-                                   size_t dataPort, size_t commandPort)
-    : m_CommandDevice(std::make_unique<CommandTcpDevice>(host, commandPort)),
+DelsysBaseDevice::DelsysBaseDevice(size_t channelCount,
+                                   std::chrono::microseconds deltaTime,
+                                   const std::string &host, size_t dataPort,
+                                   size_t commandPort)
+    : m_DeltaTime(deltaTime),
+      m_CommandDevice(std::make_unique<CommandTcpDevice>(host, commandPort)),
       m_DataDevice(std::make_unique<DataTcpDevice>(host, dataPort)),
       m_BytesPerChannel(4), m_SampleCount(27),
       m_DataBuffer(
           std::vector<char>(channelCount * m_SampleCount * m_BytesPerChannel)),
       AsyncDevice(std::chrono::milliseconds(100)),
-      AsyncDataCollector(channelCount, std::chrono::milliseconds(10),
-                         timeSeriesGenerator) {
+      AsyncDataCollector(
+          channelCount, std::chrono::milliseconds(10),
+          [deltaTime]() { return timeSeriesGenerator(deltaTime); }) {
   m_IgnoreTooSlowWarning = true;
 }
 
 DelsysBaseDevice::DelsysBaseDevice(
     std::unique_ptr<DelsysBaseDevice::CommandTcpDevice> commandDevice,
     std::unique_ptr<DelsysBaseDevice::DataTcpDevice> dataDevice,
-    size_t channelCount)
-    : m_CommandDevice(std::move(commandDevice)),
+    size_t channelCount, std::chrono::microseconds deltaTime)
+    : m_DeltaTime(deltaTime), m_CommandDevice(std::move(commandDevice)),
       m_DataDevice(std::move(dataDevice)), m_BytesPerChannel(4),
       m_SampleCount(27), m_DataBuffer(std::vector<char>(
                              channelCount * m_SampleCount * m_BytesPerChannel)),
       AsyncDevice(std::chrono::milliseconds(1000)),
-      AsyncDataCollector(channelCount, std::chrono::milliseconds(10),
-                         timeSeriesGenerator) {
+      AsyncDataCollector(
+          channelCount, std::chrono::milliseconds(10),
+          [deltaTime]() { return timeSeriesGenerator(deltaTime); }) {
   m_IgnoreTooSlowWarning = true;
 }
 
@@ -200,21 +205,23 @@ bool CommandTcpDeviceMock::read(std::vector<char> &buffer) {
 bool CommandTcpDeviceMock::handleConnect() { return true; }
 
 DataTcpDeviceMock::DataTcpDeviceMock(size_t channelCount,
+                                     std::chrono::microseconds deltaTime,
                                      const std::string &host, size_t port)
-    : m_DataChannelCount(channelCount), DataTcpDevice(host, port) {}
+    : m_DataChannelCount(channelCount), m_DeltaTime(deltaTime),
+      DataTcpDevice(host, port) {}
 
 bool DataTcpDeviceMock::read(std::vector<char> &buffer) {
-  // Write the value float(1) to the buffer assuming m_DataChannelCount channels
-  // and 27 samples with 4 bytes per channel
+  // Write the value float(1) to the buffer assuming m_DataChannelCount
+  // channels and 27 samples with 4 bytes per channel
 
   size_t bytesPerChannel(4);
   size_t channelCount(m_DataChannelCount);
   size_t sampleCount(27);
 
   // Wait for the next cycle of data
-  static size_t counter = 0;
-  std::this_thread::sleep_until(
-      m_StartTime + std::chrono::microseconds(500 * sampleCount * counter));
+  static size_t counter(0);
+  std::this_thread::sleep_until(m_StartTime +
+                                m_DeltaTime * sampleCount * counter);
 
   // Copy the 4-byte representation of the float into the byte array
   unsigned char dataAsChar[4];
