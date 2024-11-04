@@ -4,6 +4,7 @@
 #include <asio/steady_timer.hpp>
 #include <thread>
 
+#include "Devices/Concrete/DelsysAnalogDevice.h"
 #include "Devices/Concrete/DelsysEmgDevice.h"
 #include "Devices/Concrete/MagstimRapidDevice.h"
 #include "Devices/Generic/Device.h"
@@ -11,7 +12,8 @@
 using namespace STIMWALKER_NAMESPACE::server;
 
 // Here are the names of the devices that can be connected (for internal use)
-const std::string DEVICE_NAME_DELSYS = "DelsysEmgDevice";
+const std::string DEVICE_NAME_DELSYS_EMG = "DelsysEmgDevice";
+const std::string DEVICE_NAME_DELSYS_ANALOG = "DelsysAnalogDevice";
 const std::string DEVICE_NAME_MAGSTIM = "MagstimRapidDevice";
 
 TcpServer::TcpServer(int commandPort, int responsePort, int liveDataPort)
@@ -350,19 +352,31 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
   // Handle the command
   TcpServerResponse response;
   switch (command) {
-  case TcpServerCommand::CONNECT_DELSYS:
-    response = addDevice(DEVICE_NAME_DELSYS) ? TcpServerResponse::OK
-                                             : TcpServerResponse::NOK;
+  case TcpServerCommand::CONNECT_DELSYS_ANALOG:
+    response = addDevice(DEVICE_NAME_DELSYS_ANALOG) ? TcpServerResponse::OK
+                                                    : TcpServerResponse::NOK;
     break;
+
+  case TcpServerCommand::CONNECT_DELSYS_EMG:
+    response = addDevice(DEVICE_NAME_DELSYS_EMG) ? TcpServerResponse::OK
+                                                 : TcpServerResponse::NOK;
+    break;
+
   case TcpServerCommand::CONNECT_MAGSTIM:
     response = addDevice(DEVICE_NAME_MAGSTIM) ? TcpServerResponse::OK
                                               : TcpServerResponse::NOK;
     break;
 
-  case TcpServerCommand::DISCONNECT_DELSYS:
-    response = removeDevice(DEVICE_NAME_DELSYS) ? TcpServerResponse::OK
-                                                : TcpServerResponse::NOK;
+  case TcpServerCommand::DISCONNECT_DELSYS_ANALOG:
+    response = removeDevice(DEVICE_NAME_DELSYS_ANALOG) ? TcpServerResponse::OK
+                                                       : TcpServerResponse::NOK;
     break;
+
+  case TcpServerCommand::DISCONNECT_DELSYS_EMG:
+    response = removeDevice(DEVICE_NAME_DELSYS_EMG) ? TcpServerResponse::OK
+                                                    : TcpServerResponse::NOK;
+    break;
+
   case TcpServerCommand::DISCONNECT_MAGSTIM:
     response = removeDevice(DEVICE_NAME_MAGSTIM) ? TcpServerResponse::OK
                                                  : TcpServerResponse::NOK;
@@ -473,12 +487,18 @@ bool TcpServer::addDevice(const std::string &deviceName) {
 void TcpServer::makeAndAddDevice(const std::string &deviceName) {
   auto &logger = utils::Logger::getInstance();
 
-  if (deviceName == DEVICE_NAME_DELSYS) {
-    m_ConnectedDeviceIds[DEVICE_NAME_DELSYS] =
+  if (deviceName == DEVICE_NAME_DELSYS_ANALOG) {
+    m_ConnectedDeviceIds[DEVICE_NAME_DELSYS_ANALOG] =
+        m_Devices.add(std::make_unique<devices::DelsysAnalogDevice>());
+
+  } else if (deviceName == DEVICE_NAME_DELSYS_EMG) {
+    m_ConnectedDeviceIds[DEVICE_NAME_DELSYS_EMG] =
         m_Devices.add(std::make_unique<devices::DelsysEmgDevice>());
+
   } else if (deviceName == DEVICE_NAME_MAGSTIM) {
     m_ConnectedDeviceIds[DEVICE_NAME_MAGSTIM] =
         m_Devices.add(devices::MagstimRapidDevice::findMagstimDevice());
+
   } else {
     logger.fatal("Invalid device name: " + deviceName);
     throw std::runtime_error("Invalid device name: " + deviceName);
@@ -524,8 +544,11 @@ void TcpServer::handleSendLiveData() {
 void TcpServerMock::makeAndAddDevice(const std::string &deviceName) {
   auto &logger = utils::Logger::getInstance();
 
-  if (deviceName == DEVICE_NAME_DELSYS) {
-    m_ConnectedDeviceIds[DEVICE_NAME_DELSYS] =
+  if (deviceName == DEVICE_NAME_DELSYS_ANALOG) {
+    m_ConnectedDeviceIds[DEVICE_NAME_DELSYS_ANALOG] =
+        m_Devices.add(std::make_unique<devices::DelsysAnalogDeviceMock>());
+  } else if (deviceName == DEVICE_NAME_DELSYS_EMG) {
+    m_ConnectedDeviceIds[DEVICE_NAME_DELSYS_EMG] =
         m_Devices.add(std::make_unique<devices::DelsysEmgDeviceMock>());
   } else if (deviceName == DEVICE_NAME_MAGSTIM) {
     m_ConnectedDeviceIds[DEVICE_NAME_MAGSTIM] =

@@ -51,12 +51,12 @@ DeviceResponses DelsysBaseDevice::DataTcpDevice::parseAsyncSendCommand(
 
 DelsysBaseDevice::DelsysBaseDevice(size_t channelCount,
                                    std::chrono::microseconds deltaTime,
-                                   const std::string &host, size_t dataPort,
-                                   size_t commandPort)
+                                   size_t sampleCount, const std::string &host,
+                                   size_t dataPort, size_t commandPort)
     : m_DeltaTime(deltaTime),
       m_CommandDevice(std::make_unique<CommandTcpDevice>(host, commandPort)),
       m_DataDevice(std::make_unique<DataTcpDevice>(host, dataPort)),
-      m_BytesPerChannel(4), m_SampleCount(27),
+      m_BytesPerChannel(4), m_SampleCount(sampleCount),
       m_DataBuffer(
           std::vector<char>(channelCount * m_SampleCount * m_BytesPerChannel)),
       AsyncDevice(std::chrono::milliseconds(100)),
@@ -69,11 +69,13 @@ DelsysBaseDevice::DelsysBaseDevice(size_t channelCount,
 DelsysBaseDevice::DelsysBaseDevice(
     std::unique_ptr<DelsysBaseDevice::CommandTcpDevice> commandDevice,
     std::unique_ptr<DelsysBaseDevice::DataTcpDevice> dataDevice,
-    size_t channelCount, std::chrono::microseconds deltaTime)
+    size_t channelCount, std::chrono::microseconds deltaTime,
+    size_t sampleCount)
     : m_DeltaTime(deltaTime), m_CommandDevice(std::move(commandDevice)),
       m_DataDevice(std::move(dataDevice)), m_BytesPerChannel(4),
-      m_SampleCount(27), m_DataBuffer(std::vector<char>(
-                             channelCount * m_SampleCount * m_BytesPerChannel)),
+      m_SampleCount(sampleCount),
+      m_DataBuffer(
+          std::vector<char>(channelCount * m_SampleCount * m_BytesPerChannel)),
       AsyncDevice(std::chrono::milliseconds(1000)),
       AsyncDataCollector(
           channelCount, std::chrono::milliseconds(10),
@@ -142,15 +144,25 @@ void DelsysBaseDevice::dataCheck() {
   std::memcpy(dataAsFloat.data(), m_DataBuffer.data(),
               m_DataChannelCount * m_SampleCount * m_BytesPerChannel);
 
-  // // Convert the data to double
+  // Convert the data to double
   std::vector<std::vector<double>> dataPoints;
   for (int i = 0; i < m_SampleCount; i++) {
     std::vector<double> dataAsDouble(m_DataChannelCount);
-    std::transform(dataAsFloat.begin() + i * m_DataChannelCount,
-                   dataAsFloat.begin() + (i + 1) * m_DataChannelCount,
-                   dataAsDouble.begin(),
-                   [](float x) { return static_cast<double>(x); });
+    float sum = 0;
+    for (int j = 0; j < m_DataChannelCount; j++) {
+      size_t index = (i * m_DataChannelCount + j) * m_BytesPerChannel;
+      float dataAsFloat;
+      std::memcpy(&dataAsFloat, m_DataBuffer.data() + index, sizeof(float));
+      // With the next line, we assure the computer is little endian (so we
+      // don't need to swap the bytes before converting to double)
+      dataAsDouble[j] = static_cast<double>(dataAsFloat);
+      sum += dataAsFloat;
+    }
 
+    if (sum == 0) {
+      // No data were received
+      continue;
+    }
     dataPoints.push_back(dataAsDouble);
   }
 
@@ -206,17 +218,15 @@ bool CommandTcpDeviceMock::handleConnect() { return true; }
 
 DataTcpDeviceMock::DataTcpDeviceMock(size_t channelCount,
                                      std::chrono::microseconds deltaTime,
+                                     size_t sampleCount,
                                      const std::string &host, size_t port)
     : m_DataChannelCount(channelCount), m_DeltaTime(deltaTime),
       DataTcpDevice(host, port) {}
 
 bool DataTcpDeviceMock::read(std::vector<char> &buffer) {
-  // Write the value float(1) to the buffer assuming m_DataChannelCount
-  // channels and 27 samples with 4 bytes per channel
-
   size_t bytesPerChannel(4);
   size_t channelCount(m_DataChannelCount);
-  size_t sampleCount(27);
+  size_t sampleCount(m_SampleCount);
 
   // Wait for the next cycle of data
   static size_t counter(0);

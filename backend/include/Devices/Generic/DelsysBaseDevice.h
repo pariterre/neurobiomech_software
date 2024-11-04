@@ -77,11 +77,12 @@ public:
   /// @brief Constructor of the DelsysBaseDevice
   /// @param channelCount The number of channels of the device
   /// @param deltaTime The time between each data point (1/FrameRate)
+  /// @param sampleCount Expected number of data at each block of sampled data
   /// @param host The host (ip) of the device
   /// @param dataPort The port of the data device
   /// @param commandPort The port of the command device (default 50040)
   DelsysBaseDevice(size_t channelCount, std::chrono::microseconds deltaTime,
-                   const std::string &host, size_t dataPort,
+                   size_t sampleCount, const std::string &host, size_t dataPort,
                    size_t commandPort);
   DelsysBaseDevice(const DelsysBaseDevice &other) = delete;
 
@@ -90,7 +91,8 @@ protected:
   /// devices
   DelsysBaseDevice(std::unique_ptr<CommandTcpDevice> commandDevice,
                    std::unique_ptr<DataTcpDevice> dataDevice,
-                   size_t channelCount, std::chrono::microseconds deltaTime);
+                   size_t channelCount, std::chrono::microseconds deltaTime,
+                   size_t sampleCount);
 
 public:
   /// @brief Destructor of the DelsysBaseDevice
@@ -180,7 +182,7 @@ protected:
 class DataTcpDeviceMock : public DelsysBaseDevice::DataTcpDevice {
 public:
   DataTcpDeviceMock(size_t channelCount, std::chrono::microseconds deltaTime,
-                    const std::string &host, size_t port);
+                    size_t sampleCount, const std::string &host, size_t port);
   bool read(std::vector<char> &buffer) override;
 
 protected:
@@ -188,6 +190,7 @@ protected:
                                         const std::any &data) override;
 
   DECLARE_PROTECTED_MEMBER_NOGET(size_t, DataChannelCount);
+  DECLARE_PROTECTED_MEMBER_NOGET(size_t, SampleCount);
 
   bool handleConnect() override;
 

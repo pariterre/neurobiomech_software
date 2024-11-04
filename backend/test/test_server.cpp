@@ -543,7 +543,7 @@ TEST(Server, AddDevices) {
     client.connect();
 
     // Add the devices
-    bool isDelsysAdded = client.addDelsysDevice();
+    bool isDelsysAdded = client.addDelsysEmgDevice();
     bool isMagstimAdded = client.addMagstimDevice();
     ASSERT_TRUE(isDelsysAdded);
     ASSERT_TRUE(isMagstimAdded);
@@ -574,13 +574,13 @@ TEST(Server, AddDevices) {
     client.connect();
 
     // Add the devices
-    bool isDelsysAdded = client.addDelsysDevice();
+    bool isDelsysAdded = client.addDelsysEmgDevice();
     bool isMagstimAdded = client.addMagstimDevice();
     ASSERT_TRUE(isDelsysAdded);
     ASSERT_TRUE(isMagstimAdded);
 
     // Add the devices again
-    isDelsysAdded = client.addDelsysDevice();
+    isDelsysAdded = client.addDelsysEmgDevice();
     isMagstimAdded = client.addMagstimDevice();
     ASSERT_FALSE(isDelsysAdded);
     ASSERT_FALSE(isMagstimAdded);
@@ -604,14 +604,14 @@ TEST(Server, AddDevices) {
     client.connect();
 
     // Add the devices
-    bool isDelsysAdded = client.addDelsysDevice();
+    bool isDelsysAdded = client.addDelsysEmgDevice();
     bool isMagstimAdded = client.addMagstimDevice();
     ASSERT_TRUE(isDelsysAdded);
     ASSERT_TRUE(isMagstimAdded);
     logger.clear();
 
     // Remove the devices
-    bool isDelsysRemoved = client.removeDelsysDevice();
+    bool isDelsysRemoved = client.removeDelsysEmgDevice();
     bool isMagstimRemoved = client.removeMagstimDevice();
     ASSERT_TRUE(isDelsysRemoved);
     ASSERT_TRUE(isMagstimRemoved);
@@ -639,7 +639,7 @@ TEST(Server, Recording) {
     client.connect();
 
     // Add the devices
-    client.addDelsysDevice();
+    client.addDelsysEmgDevice();
     client.addMagstimDevice();
 
     // Start recording
@@ -666,7 +666,7 @@ TEST(Server, Recording) {
     client.connect();
 
     // Add the devices
-    bool isDelsysAdded = client.addDelsysDevice();
+    bool isDelsysAdded = client.addDelsysEmgDevice();
     bool isMagstimAdded = client.addMagstimDevice();
     ASSERT_TRUE(isDelsysAdded);
     ASSERT_TRUE(isMagstimAdded);
@@ -711,7 +711,7 @@ TEST(Server, LastTrialData) {
   client.connect();
 
   // Add the devices
-  client.addDelsysDevice();
+  client.addDelsysEmgDevice();
   client.addMagstimDevice();
 
   client.startRecording();

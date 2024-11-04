@@ -2,20 +2,24 @@
 
 using namespace STIMWALKER_NAMESPACE::devices;
 
-size_t CHANNEL_COUNT(48);
-size_t ACQUISITION_FREQUENCY(148);
-std::chrono::microseconds FRAME_RATE(1 / ACQUISITION_FREQUENCY * 1000 * 1000);
+size_t DELSYS_ANALOG_CHANNEL_COUNT(144);
+size_t DELSYS_ANALOG_ACQUISITION_FREQUENCY(148);
+std::chrono::microseconds DELSYS_ANALOG_FRAME_RATE(
+    1000 * 1000 * 1 / DELSYS_ANALOG_ACQUISITION_FREQUENCY);
+size_t DELSYS_ANALOG_SAMPLE_COUNT(4);
 
 DelsysAnalogDevice::DelsysAnalogDevice(const std::string &host, size_t dataPort,
                                        size_t commandPort)
-    : DelsysBaseDevice(CHANNEL_COUNT, FRAME_RATE, host, dataPort, commandPort) {
-}
+    : DelsysBaseDevice(DELSYS_ANALOG_CHANNEL_COUNT, DELSYS_ANALOG_FRAME_RATE,
+                       DELSYS_ANALOG_SAMPLE_COUNT, host, dataPort,
+                       commandPort) {}
 
 DelsysAnalogDevice::DelsysAnalogDevice(
     std::unique_ptr<CommandTcpDevice> commandDevice,
     std::unique_ptr<DataTcpDevice> dataDevice)
     : DelsysBaseDevice(std::move(commandDevice), std::move(dataDevice),
-                       CHANNEL_COUNT, FRAME_RATE) {}
+                       DELSYS_ANALOG_CHANNEL_COUNT, DELSYS_ANALOG_FRAME_RATE,
+                       DELSYS_ANALOG_SAMPLE_COUNT) {}
 
 DelsysAnalogDevice::~DelsysAnalogDevice() {
   stopDataCollectorWorkers();
@@ -39,8 +43,9 @@ DelsysAnalogDeviceMock::DelsysAnalogDeviceMock(const std::string &host,
                                                size_t commandPort)
     : DelsysAnalogDevice(
           std::make_unique<CommandTcpDeviceMock>(host, commandPort),
-          std::make_unique<DataTcpDeviceMock>(CHANNEL_COUNT, FRAME_RATE, host,
-                                              dataPort)) {}
+          std::make_unique<DataTcpDeviceMock>(
+              DELSYS_ANALOG_CHANNEL_COUNT, DELSYS_ANALOG_FRAME_RATE,
+              DELSYS_ANALOG_SAMPLE_COUNT, host, dataPort)) {}
 
 bool DelsysAnalogDeviceMock::handleConnect() {
   if (shouldFailToConnect) {

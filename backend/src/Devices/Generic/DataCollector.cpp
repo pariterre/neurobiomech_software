@@ -126,7 +126,7 @@ const TimeSeries &DataCollector::getTrialData() const {
 
 void DataCollector::addDataPoints(
     const std::vector<std::vector<double>> &data) {
-  if (!m_IsStreamingData) {
+  if (!m_IsStreamingData || data.size() == 0) {
     return;
   }
 

@@ -2,20 +2,23 @@
 
 using namespace STIMWALKER_NAMESPACE::devices;
 
-size_t CHANNEL_COUNT(16);
-size_t ACQUISITION_FREQUENCY(2000);
-std::chrono::microseconds FRAME_RATE(1 / ACQUISITION_FREQUENCY * 1000 * 1000);
+size_t DELSYS_EMG_CHANNEL_COUNT(16);
+size_t DELSYS_EMG_ACQUISITION_FREQUENCY(2000);
+std::chrono::microseconds
+    DELSYS_EMG_FRAME_RATE(1000 * 1000 * 1 / DELSYS_EMG_ACQUISITION_FREQUENCY);
+size_t DELSYS_EMG_SAMPLE_COUNT(27);
 
 DelsysEmgDevice::DelsysEmgDevice(const std::string &host, size_t dataPort,
                                  size_t commandPort)
-    : DelsysBaseDevice(CHANNEL_COUNT, FRAME_RATE, host, dataPort, commandPort) {
-}
+    : DelsysBaseDevice(DELSYS_EMG_CHANNEL_COUNT, DELSYS_EMG_FRAME_RATE,
+                       DELSYS_EMG_SAMPLE_COUNT, host, dataPort, commandPort) {}
 
 DelsysEmgDevice::DelsysEmgDevice(
     std::unique_ptr<CommandTcpDevice> commandDevice,
     std::unique_ptr<DataTcpDevice> dataDevice)
     : DelsysBaseDevice(std::move(commandDevice), std::move(dataDevice),
-                       CHANNEL_COUNT, FRAME_RATE) {}
+                       DELSYS_EMG_CHANNEL_COUNT, DELSYS_EMG_FRAME_RATE,
+                       DELSYS_EMG_SAMPLE_COUNT) {}
 
 DelsysEmgDevice::~DelsysEmgDevice() {
   stopDataCollectorWorkers();
@@ -36,7 +39,8 @@ DelsysEmgDeviceMock::DelsysEmgDeviceMock(const std::string &host,
                                          size_t dataPort, size_t commandPort)
     : DelsysEmgDevice(std::make_unique<CommandTcpDeviceMock>(host, commandPort),
                       std::make_unique<DataTcpDeviceMock>(
-                          CHANNEL_COUNT, FRAME_RATE, host, dataPort)) {}
+                          DELSYS_EMG_CHANNEL_COUNT, DELSYS_EMG_FRAME_RATE,
+                          DELSYS_EMG_SAMPLE_COUNT, host, dataPort)) {}
 
 bool DelsysEmgDeviceMock::handleConnect() {
   if (shouldFailToConnect) {

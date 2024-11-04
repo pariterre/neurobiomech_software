@@ -22,8 +22,9 @@ int main() {
     }
 
     // Add the devices
-    client.addDelsysDevice();
-    client.addMagstimDevice();
+    client.addDelsysAnalogDevice();
+    // client.addDelsysEmgDevice();
+    // client.addMagstimDevice();
 
     // Start recording data
     // client.startRecording();
@@ -35,15 +36,19 @@ int main() {
     //             " data series (expected about ~4000)");
 
     // Remove the only data collector we have
-    client.removeMagstimDevice();
+    // client.removeMagstimDevice();
     client.startRecording();
-    std::this_thread::sleep_for(std::chrono::seconds(6));
+    auto recordingTime = std::chrono::seconds(2);
+    std::this_thread::sleep_for(recordingTime);
     client.stopRecording();
     auto data = client.getLastTrialData();
     logger.info("A second trial received containing: " +
                 std::to_string(data["DelsysEmgDataCollector"].size()) +
-                " data series (expected about ~" + std::to_string(6 * 2000) +
-                ")");
+                " EMG data series (expected about ~" +
+                std::to_string(recordingTime.count() * 2000) + "), and " +
+                std::to_string(data["DelsysAnalogDataCollector"].size()) +
+                " Analog data series (expected about ~" +
+                std::to_string(recordingTime.count() * 148) + ")");
 
     // Clean up things
     client.disconnect();

@@ -148,7 +148,6 @@ void AsyncDataCollector::keepDataWorkerAlive(
 
     // Otherwise, send a [dataCheck] command to allow the user to check for
     // new data
-    std::lock_guard<std::mutex> lock(m_AsyncDataMutex);
     dataCheck();
 
     // Once it's done, repeat the process, but take into account the time it

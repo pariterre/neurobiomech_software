@@ -33,17 +33,25 @@ public:
   /// @return True if the disconnection is successful, false otherwise
   bool disconnect();
 
-  /// @brief Add the Delsys device
+  /// @brief Add the Delsys Analog device
   /// @return True if the device is added, false otherwise
-  bool addDelsysDevice();
+  bool addDelsysAnalogDevice();
+
+  /// @brief Add the Delsys EMG device
+  /// @return True if the device is added, false otherwise
+  bool addDelsysEmgDevice();
 
   /// @brief Add the Magstim device
   /// @return True if the device is added, false otherwise
   bool addMagstimDevice();
 
-  /// @brief Remove the Delsys device
+  /// @brief Remove the Delsys Analog device
   /// @return True if the device is removed, false otherwise
-  bool removeDelsysDevice();
+  bool removeDelsysAnalogDevice();
+
+  /// @brief Remove the Delsys EMG device
+  /// @return True if the device is removed, false otherwise
+  bool removeDelsysEmgDevice();
 
   /// @brief Remove the Magstim device
   /// @return True if the device is removed, false otherwise

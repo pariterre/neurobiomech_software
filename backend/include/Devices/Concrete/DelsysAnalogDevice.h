@@ -14,7 +14,7 @@ public:
   /// @param dataPort The port of the data device
   /// @param commandPort The port of the command device
   DelsysAnalogDevice(const std::string &host = "localhost",
-                     size_t dataPort = 50042, size_t commandPort = 50040);
+                     size_t dataPort = 50044, size_t commandPort = 50040);
   DelsysAnalogDevice(const DelsysAnalogDevice &other) = delete;
 
 protected:

@@ -63,15 +63,29 @@ bool TcpClient::disconnect() {
   return true;
 }
 
-bool TcpClient::addDelsysDevice() {
+bool TcpClient::addDelsysAnalogDevice() {
   auto &logger = utils::Logger::getInstance();
 
-  if (sendCommand(TcpServerCommand::CONNECT_DELSYS) == TcpServerResponse::NOK) {
-    logger.fatal("CLIENT: Failed to add Delsys device");
+  if (sendCommand(TcpServerCommand::CONNECT_DELSYS_ANALOG) ==
+      TcpServerResponse::NOK) {
+    logger.fatal("CLIENT: Failed to add Delsys Analog device");
     return false;
   }
 
-  logger.info("CLIENT: Delsys device added");
+  logger.info("CLIENT: Delsys Analog device added");
+  return true;
+}
+
+bool TcpClient::addDelsysEmgDevice() {
+  auto &logger = utils::Logger::getInstance();
+
+  if (sendCommand(TcpServerCommand::CONNECT_DELSYS_EMG) ==
+      TcpServerResponse::NOK) {
+    logger.fatal("CLIENT: Failed to add Delsys EMG device");
+    return false;
+  }
+
+  logger.info("CLIENT: Delsys EMG device added");
   return true;
 }
 
@@ -88,16 +102,29 @@ bool TcpClient::addMagstimDevice() {
   return true;
 }
 
-bool TcpClient::removeDelsysDevice() {
+bool TcpClient::removeDelsysAnalogDevice() {
   auto &logger = utils::Logger::getInstance();
 
-  if (sendCommand(TcpServerCommand::DISCONNECT_DELSYS) ==
+  if (sendCommand(TcpServerCommand::DISCONNECT_DELSYS_ANALOG) ==
       TcpServerResponse::NOK) {
-    logger.fatal("CLIENT: Failed to remove Delsys device");
+    logger.fatal("CLIENT: Failed to remove Delsys EMG device");
     return false;
   }
 
-  logger.info("CLIENT: Delsys device removed");
+  logger.info("CLIENT: Delsys EMG device removed");
+  return true;
+}
+
+bool TcpClient::removeDelsysEmgDevice() {
+  auto &logger = utils::Logger::getInstance();
+
+  if (sendCommand(TcpServerCommand::DISCONNECT_DELSYS_EMG) ==
+      TcpServerResponse::NOK) {
+    logger.fatal("CLIENT: Failed to remove Delsys EMG device");
+    return false;
+  }
+
+  logger.info("CLIENT: Delsys EMG device removed");
   return true;
 }
 
