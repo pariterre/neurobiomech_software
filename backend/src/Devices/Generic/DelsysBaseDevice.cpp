@@ -140,10 +140,6 @@ DelsysBaseDevice::parseAsyncSendCommand(const DeviceCommands &command,
 void DelsysBaseDevice::dataCheck() {
   m_DataDevice->read(m_DataBuffer);
 
-  std::vector<float> dataAsFloat(m_DataChannelCount * m_SampleCount);
-  std::memcpy(dataAsFloat.data(), m_DataBuffer.data(),
-              m_DataChannelCount * m_SampleCount * m_BytesPerChannel);
-
   // Convert the data to double
   std::vector<std::vector<double>> dataPoints;
   for (int i = 0; i < m_SampleCount; i++) {
@@ -221,7 +217,7 @@ DataTcpDeviceMock::DataTcpDeviceMock(size_t channelCount,
                                      size_t sampleCount,
                                      const std::string &host, size_t port)
     : m_DataChannelCount(channelCount), m_DeltaTime(deltaTime),
-      DataTcpDevice(host, port) {}
+      m_SampleCount(sampleCount), DataTcpDevice(host, port) {}
 
 bool DataTcpDeviceMock::read(std::vector<char> &buffer) {
   size_t bytesPerChannel(4);

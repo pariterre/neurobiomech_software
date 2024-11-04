@@ -23,20 +23,13 @@ int main() {
 
     // Add the devices
     client.addDelsysAnalogDevice();
-    // client.addDelsysEmgDevice();
-    // client.addMagstimDevice();
+    client.addDelsysEmgDevice();
+    client.addMagstimDevice();
+
+    // Give some time to the server to connect to the devices
+    std::this_thread::sleep_for(std::chrono::seconds(1));
 
     // Start recording data
-    // client.startRecording();
-    // std::this_thread::sleep_for(std::chrono::seconds(2));
-    // client.stopRecording();
-    // auto data = client.getLastTrialData();
-    // logger.info("One trial received containing: " +
-    //             std::to_string(data["DelsysEmgDataCollector"].size()) +
-    //             " data series (expected about ~4000)");
-
-    // Remove the only data collector we have
-    // client.removeMagstimDevice();
     client.startRecording();
     auto recordingTime = std::chrono::seconds(2);
     std::this_thread::sleep_for(recordingTime);
@@ -49,6 +42,39 @@ int main() {
                 std::to_string(data["DelsysAnalogDataCollector"].size()) +
                 " Analog data series (expected about ~" +
                 std::to_string(recordingTime.count() * 148) + ")");
+
+    // Remove the only data collector we have
+    client.removeMagstimDevice();
+    client.startRecording();
+    recordingTime = std::chrono::seconds(2);
+    std::this_thread::sleep_for(recordingTime);
+    client.stopRecording();
+    data = client.getLastTrialData();
+    logger.info("A second trial received containing: " +
+                std::to_string(data["DelsysEmgDataCollector"].size()) +
+                " EMG data series (expected about ~" +
+                std::to_string(recordingTime.count() * 2000) + "), and " +
+                std::to_string(data["DelsysAnalogDataCollector"].size()) +
+                " Analog data series (expected about ~" +
+                std::to_string(recordingTime.count() * 148) + ")");
+
+    std::cout << "A = [";
+    for (auto &dataPoints : data["DelsysAnalogDataCollector"].getData()) {
+      std::cout << dataPoints[9] << ",";
+    }
+    std::cout << "]" << std::endl;
+
+    std::cout << "B = [";
+    for (auto &dataPoints : data["DelsysAnalogDataCollector"].getData()) {
+      std::cout << dataPoints[10] << ",";
+    }
+    std::cout << "]" << std::endl;
+
+    std::cout << "C = [";
+    for (auto &dataPoints : data["DelsysAnalogDataCollector"].getData()) {
+      std::cout << dataPoints[11] << ",";
+    }
+    std::cout << "]" << std::endl;
 
     // Clean up things
     client.disconnect();
