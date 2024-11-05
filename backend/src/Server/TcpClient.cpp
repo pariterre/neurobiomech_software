@@ -312,7 +312,7 @@ void TcpClient::closeSockets() {
 
 std::array<char, 8>
 TcpClient::constructCommandPacket(TcpServerCommand command) {
-  // Packets are exactly 8 bytes long, big-endian
+  // Packets are exactly 8 bytes long, little-endian
   // - First 4 bytes are the version number
   // - Next 4 bytes are the command
 
@@ -331,7 +331,7 @@ TcpClient::constructCommandPacket(TcpServerCommand command) {
 
 TcpServerResponse
 TcpClient::parseAcknowledgmentPacket(const std::array<char, 8> &buffer) {
-  // Packets are exactly 8 bytes long, big-endian
+  // Packets are exactly 8 bytes long, little-endian
   // - First 4 bytes are the version number
   // - Next 4 bytes are the response
 
