@@ -13,6 +13,8 @@ Logger &Logger::getInstance() {
   return instance;
 }
 
+void Logger::debug(const std::string &message) { log(message, DEBUG); }
+
 void Logger::info(const std::string &message) { log(message, INFO); }
 
 void Logger::warning(const std::string &message) { log(message, WARNING); }
@@ -89,6 +91,8 @@ void Logger::log(const std::string &message, Level level) {
 // Function to convert log level to a string label
 std::string Logger::getLabel(Level level) {
   switch (level) {
+  case DEBUG:
+    return "[DEBUG]: ";
   case INFO:
     return "[INFO]: ";
   case WARNING:

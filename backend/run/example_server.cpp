@@ -58,23 +58,23 @@ int main() {
                 " Analog data series (expected about ~" +
                 std::to_string(recordingTime.count() * 148) + ")");
 
-    std::cout << "A = [";
-    for (auto &dataPoints : data["DelsysAnalogDataCollector"].getData()) {
-      std::cout << dataPoints[9] << ",";
-    }
-    std::cout << "]" << std::endl;
+    // std::cout << "A = [";
+    // for (auto &dataPoints : data["DelsysAnalogDataCollector"].getData()) {
+    //   std::cout << dataPoints[9] << ",";
+    // }
+    // std::cout << "]" << std::endl;
 
-    std::cout << "B = [";
-    for (auto &dataPoints : data["DelsysAnalogDataCollector"].getData()) {
-      std::cout << dataPoints[10] << ",";
-    }
-    std::cout << "]" << std::endl;
+    // std::cout << "B = [";
+    // for (auto &dataPoints : data["DelsysAnalogDataCollector"].getData()) {
+    //   std::cout << dataPoints[10] << ",";
+    // }
+    // std::cout << "]" << std::endl;
 
-    std::cout << "C = [";
-    for (auto &dataPoints : data["DelsysAnalogDataCollector"].getData()) {
-      std::cout << dataPoints[11] << ",";
-    }
-    std::cout << "]" << std::endl;
+    // std::cout << "C = [";
+    // for (auto &dataPoints : data["DelsysAnalogDataCollector"].getData()) {
+    //   std::cout << dataPoints[11] << ",";
+    // }
+    // std::cout << "]" << std::endl;
 
     // Clean up things
     client.disconnect();

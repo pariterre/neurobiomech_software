@@ -13,12 +13,13 @@ namespace STIMWALKER_NAMESPACE::utils {
 class Logger {
 public:
   // Define the log levels
-  enum Level { INFO, WARNING, FATAL };
+  enum Level { DEBUG, INFO, WARNING, FATAL };
 
   // Get the singleton instance of the Logger
   static Logger &getInstance();
 
-  // Log a message at the INFO, WARNING, or FATAL level
+  // Log a message at the DEBUG, INFO, WARNING, or FATAL level
+  void debug(const std::string &message);
   void info(const std::string &message);
   void warning(const std::string &message);
   void fatal(const std::string &message);

@@ -1,5 +1,7 @@
 #include "Devices/Concrete/DelsysAnalogDevice.h"
 
+#include <thread>
+
 using namespace STIMWALKER_NAMESPACE::devices;
 
 size_t DELSYS_ANALOG_CHANNEL_COUNT(144);

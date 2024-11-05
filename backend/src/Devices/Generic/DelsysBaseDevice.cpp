@@ -217,36 +217,40 @@ DataTcpDeviceMock::DataTcpDeviceMock(size_t channelCount,
                                      size_t sampleCount,
                                      const std::string &host, size_t port)
     : m_DataChannelCount(channelCount), m_DeltaTime(deltaTime),
-      m_SampleCount(sampleCount), DataTcpDevice(host, port) {}
+      m_SampleCount(sampleCount), m_DataCounter(0), DataTcpDevice(host, port) {}
 
 bool DataTcpDeviceMock::read(std::vector<char> &buffer) {
   size_t bytesPerChannel(4);
-  size_t channelCount(m_DataChannelCount);
-  size_t sampleCount(m_SampleCount);
 
   // Wait for the next cycle of data
-  static size_t counter(0);
-  std::this_thread::sleep_until(m_StartTime +
-                                m_DeltaTime * sampleCount * counter);
+  auto newDataArrivesAt =
+      m_StartTime + m_DeltaTime * m_SampleCount * m_DataCounter;
+  if (std::chrono::high_resolution_clock::now() < newDataArrivesAt) {
+    for (auto &byte : buffer)
+      byte = 0;
+    return true; // Return a bunch of zeros
+  }
 
   // Copy the 4-byte representation of the float into the byte array
   unsigned char dataAsChar[4];
-  for (size_t i = 0; i < sampleCount; i++) {
-    float value = static_cast<float>(std::sin(
-        static_cast<float>(counter * sampleCount + i) / 2000.0f * 2 * M_PI));
+  for (size_t i = 0; i < m_SampleCount; i++) {
+    float value = static_cast<float>(
+        std::sin(static_cast<float>(m_DataCounter * m_SampleCount + i) /
+                 2000.0f * 2 * M_PI));
     std::memcpy(dataAsChar, &value, sizeof(float));
-    for (size_t j = 0; j < channelCount; j++)
+    for (size_t j = 0; j < m_DataChannelCount; j++)
       std::copy(dataAsChar, dataAsChar + 4,
-                buffer.begin() + i * bytesPerChannel * channelCount +
+                buffer.begin() + i * bytesPerChannel * m_DataChannelCount +
                     j * bytesPerChannel);
   }
 
-  counter++;
+  m_DataCounter++;
   return true;
 }
 
 bool DataTcpDeviceMock::handleConnect() {
-  m_StartTime = std::chrono::system_clock::now();
+  m_DataCounter = 0;
+  m_StartTime = std::chrono::high_resolution_clock::now();
   return true;
 }
 

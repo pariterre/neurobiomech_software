@@ -529,7 +529,7 @@ void TcpServer::handleSendLiveData() {
     return;
   }
   auto &logger = utils::Logger::getInstance();
-  logger.info("Sending live data to client");
+  logger.debug("Sending live data to client");
 
   auto data = m_Devices.getLiveDataSerialized();
   auto dataDump = data.dump();

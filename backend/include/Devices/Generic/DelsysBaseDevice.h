@@ -196,8 +196,11 @@ protected:
 
   /// @brief The time at which the data started collecting
   DECLARE_PROTECTED_MEMBER_NOGET(
-      std::chrono::time_point<std::chrono::system_clock>, StartTime);
+      std::chrono::time_point<std::chrono::high_resolution_clock>, StartTime);
   DECLARE_PROTECTED_MEMBER_NOGET(std::chrono::microseconds, DeltaTime);
+
+private:
+  DECLARE_PRIVATE_MEMBER_NOGET(size_t, DataCounter);
 };
 }; // namespace DelsysBaseDeviceMock
 

@@ -206,7 +206,7 @@ void TcpClient::updateLiveData() {
     return;
   }
 
-  logger.info("CLIENT: Live data received");
+  logger.debug("CLIENT: Live data received");
 }
 
 TcpServerResponse TcpClient::sendCommand(TcpServerCommand command) {
