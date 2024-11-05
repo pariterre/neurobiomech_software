@@ -78,11 +78,13 @@ protected:
   /// @param socketName The name of the socket to wait for to be connected
   /// @param socket The socket to wait for to be connected
   /// @param acceptor The acceptor to listen to
+  /// @param canTimeout If the waiting can timeout
   /// @return True if the socket is connected, false otherwise
-  bool waitUntilSocketIsConnected(
-      const std::string &socketName,
-      std::unique_ptr<asio::ip::tcp::socket> &socket,
-      std::unique_ptr<asio::ip::tcp::acceptor> &acceptor);
+  bool
+  waitUntilSocketIsConnected(const std::string &socketName,
+                             std::unique_ptr<asio::ip::tcp::socket> &socket,
+                             std::unique_ptr<asio::ip::tcp::acceptor> &acceptor,
+                             bool canTimeout);
 
   /// @brief Cancel the new connexion
   void closeSockets();

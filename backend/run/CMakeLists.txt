@@ -10,8 +10,9 @@ set(SOURCE_FILES
     example_devices.cpp
     example_magstim.cpp
     example_server.cpp
-    main_rehastim.cpp
-    main_lokomat.cpp
+    example_old_rehastim.cpp
+    example_old_lokomat.cpp
+    main_server.cpp
 )
 foreach(SOURCE_FILE ${SOURCE_FILES})
     get_filename_component(EXECUTABLE_NAME ${SOURCE_FILE} NAME_WE)
