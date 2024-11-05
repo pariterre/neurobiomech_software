@@ -7,79 +7,77 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/models/data.dart';
-import 'package:frontend/models/nidaq_data.dart';
-import 'package:frontend/models/rehastim_data.dart';
+import 'package:frontend/models/time_series_data.dart';
 
 void main() {
   test('Data', () {
-    final data = Data(t0: 0.1, nbNidaqChannels: 2, nbRehastimChannels: 2);
+    final data = Data(t0: 0.1, analogChannelCount: 2, emgChannelCount: 2);
 
-    data.appendFromJson({
-      "nidaq": {
-        "t": [
-          [0.01, 0.26, 0.51, 0.76],
-          [1.01, 1.26, 1.51, 1.76],
-          [2.01, 2.26, 2.51, 2.76]
-        ],
-        "data": [
-          [
-            [1.0, 1.1, 1.2, 1.3],
-            [-1.0, -1.1, -1.2, -1.3]
-          ],
-          [
-            [1.4, 1.5, 1.6, 1.7],
-            [-1.4, -1.5, -1.6, -1.7]
-          ],
-          [
-            [1.8, 1.9, 2.0, 2.1],
-            [-1.8, -1.9, -2.0, -2.1]
-          ]
-        ]
-      },
-      "rehastim": {
-        "data": [
-          [
-            0.2,
-            2.0,
-            [
-              {"channel_index": 1, "amplitude": 2},
-              {"channel_index": 2, "amplitude": 4}
-            ]
-          ],
-          [
-            1.0,
-            3.0,
-            [
-              {"channel_index": 1, "amplitude": 2},
-              {"channel_index": 2, "amplitude": 4}
-            ]
-          ]
-        ]
-      }
-    });
-
-    expect(data.t0, 0.1);
-    expect(data.length, 12);
-    expect(data.nidaq.length, 12);
-    expect(data.rehastim.length, 2);
-    expect(data.lastBlockAddedIndex, (0, 12));
-
-    data.clear();
-    expect(data.length, 0);
-    expect(data.nidaq.length, 0);
-    expect(data.rehastim.length, 0);
-    expect(data.lastBlockAddedIndex, null);
-  });
-
-  test('NidaqData', () {
-    final data = NiDaqData(nbChannels: 2, t0: 1000.0);
-    data.appendFromJson({
-      "t": [
+    data.delsysAnalog.appendFromJson({
+      't': [
         [0.01, 0.26, 0.51, 0.76],
         [1.01, 1.26, 1.51, 1.76],
         [2.01, 2.26, 2.51, 2.76]
       ],
-      "data": [
+      'data': [
+        [
+          [1.0, 1.1, 1.2, 1.3],
+          [-1.0, -1.1, -1.2, -1.3]
+        ],
+        [
+          [1.4, 1.5, 1.6, 1.7],
+          [-1.4, -1.5, -1.6, -1.7]
+        ],
+        [
+          [1.8, 1.9, 2.0, 2.1],
+          [-1.8, -1.9, -2.0, -2.1]
+        ]
+      ]
+    });
+
+    data.delsysEmg.appendFromJson({
+      't': [
+        [0.01, 0.26, 0.51, 0.76],
+        [1.01, 1.26, 1.51, 1.76],
+        [2.01, 2.26, 2.51, 2.76]
+      ],
+      'data': [
+        [
+          [1.0, 1.1, 1.2, 1.3],
+          [-1.0, -1.1, -1.2, -1.3]
+        ],
+        [
+          [1.4, 1.5, 1.6, 1.7],
+          [-1.4, -1.5, -1.6, -1.7]
+        ],
+        [
+          [1.8, 1.9, 2.0, 2.1],
+          [-1.8, -1.9, -2.0, -2.1]
+        ]
+      ]
+    });
+
+    expect(data.t0, 0.1);
+    expect(data.delsysAnalog.length, 12);
+    expect(data.delsysEmg.length, 12);
+
+    data.clear();
+    expect(data.delsysAnalog.length, 0);
+    expect(data.delsysEmg.length, 0);
+  });
+
+  test('TimeSeriesData', () {
+    final data = TimeSeriesData(
+      t0: 1000.0,
+      channelCount: 2,
+    );
+    data.appendFromJson({
+      't': [
+        [0.01, 0.26, 0.51, 0.76],
+        [1.01, 1.26, 1.51, 1.76],
+        [2.01, 2.26, 2.51, 2.76]
+      ],
+      'data': [
         [
           [1.0, 1.1, 1.2, 1.3],
           [-1.0, -1.1, -1.2, -1.3]
@@ -95,12 +93,12 @@ void main() {
       ]
     });
     data.appendFromJson({
-      "t": [
+      't': [
         [3.01, 3.26, 3.51, 3.76],
         [4.01, 4.26, 4.51, 4.76],
         [5.01, 5.26, 5.51, 5.76]
       ],
-      "data": [
+      'data': [
         [
           [2.2, 2.3, 2.4, 2.5],
           [-2.2, -2.3, -2.4, -2.5]
@@ -123,46 +121,5 @@ void main() {
         Iterable.generate(
                 24, (i) => double.parse((1.0 + i * 0.1).toStringAsFixed(2)))
             .toList());
-  });
-
-  test('RehastimData', () {
-    final data = RehastimData(nbChannels: 2, t0: 0.1);
-    data.appendFromJson({
-      "data": [
-        [
-          0.2,
-          2.0,
-          [
-            {"channel_index": 1, "amplitude": 2},
-            {"channel_index": 2, "amplitude": 4}
-          ]
-        ],
-        [
-          1.0,
-          3.0,
-          [
-            {"channel_index": 1, "amplitude": 2},
-            {"channel_index": 2, "amplitude": 4}
-          ]
-        ]
-      ]
-    });
-
-    expect(data.t0, 0.1);
-    expect(data.data.length, 2);
-    expect(data.data[0].t, 0.2);
-    expect(data.data[0].duration, 2);
-    expect(data.data[0].channels.length, 2);
-    expect(data.data[0].channels[0].index, 1);
-    expect(data.data[0].channels[0].amplitude, 2);
-    expect(data.data[0].channels[1].index, 2);
-    expect(data.data[0].channels[1].amplitude, 4);
-    expect(data.data[1].t, 1.0);
-    expect(data.data[1].duration, 3);
-    expect(data.data[1].channels.length, 2);
-    expect(data.data[1].channels[0].index, 1);
-    expect(data.data[1].channels[0].amplitude, 2);
-    expect(data.data[1].channels[1].index, 2);
-    expect(data.data[1].channels[1].amplitude, 4);
   });
 }

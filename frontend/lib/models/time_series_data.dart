@@ -1,5 +1,7 @@
-class NiDaqData {
+class TimeSeriesData {
   final double t0;
+  final int channelCount;
+
   final List<double> t = [];
   final List<List<double>> data;
 
@@ -14,10 +16,10 @@ class NiDaqData {
   bool get isEmpty => t.isEmpty;
   bool get isNotEmpty => t.isNotEmpty;
 
-  NiDaqData({
-    required nbChannels,
+  TimeSeriesData({
     required this.t0,
-  }) : data = List.generate(nbChannels, (_) => <double>[]);
+    required this.channelCount,
+  }) : data = List.generate(channelCount, (_) => <double>[]);
 
   appendFromJson(Map<String, dynamic> json) {
     final dataTp = (json['data'] as List<dynamic>);
@@ -29,7 +31,7 @@ class NiDaqData {
         ));
       }
     }
-    //print(this.t0);
+
     t.addAll((json['t'] as List<dynamic>).expand((e) => (e as List).map(
           (f) => (f as double),
         )));
