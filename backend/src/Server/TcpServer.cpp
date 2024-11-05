@@ -147,8 +147,8 @@ bool TcpServer::waitForNewConnexion() {
   m_Status = TcpServerStatus::INITIALIZING;
 
   // Wait for the command socket to connect
-  if (!waitUntilSocketIsConnected("Command", m_CommandSocket,
-                                  m_CommandAcceptor)) {
+  if (!waitUntilSocketIsConnected("Command", m_CommandSocket, m_CommandAcceptor,
+                                  false)) {
     return false;
   }
   m_CommandSocket->non_blocking(true);
@@ -157,7 +157,7 @@ bool TcpServer::waitForNewConnexion() {
   logger.info("Command socket connected to client, waiting for a connexion to "
               "the response socket");
   if (!waitUntilSocketIsConnected("Response", m_ResponseSocket,
-                                  m_ResponseAcceptor)) {
+                                  m_ResponseAcceptor, false)) {
     return false;
   }
 
@@ -165,7 +165,7 @@ bool TcpServer::waitForNewConnexion() {
   logger.info("Response socket connected to client, waiting for a connexion to "
               "the live data socket");
   if (!waitUntilSocketIsConnected("LiveData", m_LiveDataSocket,
-                                  m_LiveDataAcceptor)) {
+                                  m_LiveDataAcceptor, false)) {
     return false;
   }
 
@@ -193,7 +193,7 @@ bool TcpServer::waitForNewConnexion() {
 bool TcpServer::waitUntilSocketIsConnected(
     const std::string &socketName,
     std::unique_ptr<asio::ip::tcp::socket> &socket,
-    std::unique_ptr<asio::ip::tcp::acceptor> &acceptor) {
+    std::unique_ptr<asio::ip::tcp::acceptor> &acceptor, bool canTimeout) {
   auto &logger = utils::Logger::getInstance();
   logger.info("Waiting for " + socketName + " socket to connect");
 
@@ -214,8 +214,9 @@ bool TcpServer::waitUntilSocketIsConnected(
       logger.info("Stopping listening to ports as server is shutting down");
       closeSockets();
       return false;
-    } else if (std::chrono::high_resolution_clock::now() - startingTime >
-               m_TimeoutPeriod) {
+    } else if (canTimeout &&
+               std::chrono::high_resolution_clock::now() - startingTime >
+                   m_TimeoutPeriod) {
       logger.fatal("Connexion to " + socketName + " socket timed out (" +
                    std::to_string(m_TimeoutPeriod.count()) +
                    " ms), disconnecting client");
