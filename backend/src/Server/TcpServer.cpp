@@ -23,7 +23,12 @@ TcpServer::TcpServer(int commandPort, int responsePort, int liveDataPort)
       m_LiveDataPort(liveDataPort),
       m_TimeoutPeriod(std::chrono::milliseconds(5000)), m_ProtocolVersion(1) {};
 
-TcpServer::~TcpServer() { stopServer(); }
+TcpServer::~TcpServer() {
+  std::lock_guard<std::mutex> lock(m_Mutex);
+  if (m_IsServerRunning) {
+    stopServer();
+  }
+}
 
 void TcpServer::startServer() {
   m_ServerWorker = std::thread([this]() { startServerSync(); });
@@ -100,19 +105,14 @@ void TcpServer::stopServer() {
   {
     std::lock_guard<std::mutex> lock(m_Mutex);
     m_IsServerRunning = false;
-  }
 
-  // Make sure all the devices are properly disconnected
-  if (isClientConnected()) {
+    // When closing the server too soon, client may still be connected, so we
+    // need to disconnect it
     disconnectClient();
+
+    // Stop any running context
+    m_Context.stop();
   }
-
-  // When closing the server too soon, they can be open even if client was not
-  // connected
-  closeSockets();
-
-  // Stop any running context
-  m_Context.stop();
 
   // Wait for the server to stop
   if (m_ServerWorker.joinable()) {
@@ -123,23 +123,27 @@ void TcpServer::stopServer() {
 
 void TcpServer::disconnectClient() {
   auto &logger = utils::Logger::getInstance();
-
-  if (isClientConnected()) {
+  if (!isClientConnected()) {
     logger.info("Disconnecting client");
+    // Do not return as there is no problem actual re-resetting the status
+    // and it causes problem not doing it
   }
 
+  m_Status = TcpServerStatus::INITIALIZING;
+
   // Make sure all the devices are properly disconnected
-  closeSockets();
+  m_Devices.stopDataStreaming();
+  m_Devices.clear();
 
   // Reset the status to initializing
-  std::lock_guard<std::mutex> lock(m_Mutex);
-  m_Devices.clear();
-  m_Status = TcpServerStatus::INITIALIZING;
+  closeSockets();
 }
 
 bool TcpServer::isClientConnected() const {
-  return m_CommandSocket && m_CommandSocket->is_open() && m_ResponseSocket &&
-         m_ResponseSocket->is_open();
+  return m_Status != TcpServerStatus::INITIALIZING && m_CommandSocket &&
+         m_CommandSocket->is_open() && m_ResponseSocket &&
+         m_ResponseSocket->is_open() && m_LiveDataSocket &&
+         m_LiveDataSocket->is_open();
 }
 
 bool TcpServer::waitForNewConnexion() {
@@ -163,6 +167,7 @@ bool TcpServer::waitForNewConnexion() {
   }
 
   // Wait for the live data socket to connect
+  m_Status = TcpServerStatus::CONNECTING;
   logger.info("Response socket connected to client, waiting for a connexion to "
               "the live data socket");
   if (!waitUntilSocketIsConnected("LiveData", m_LiveDataSocket,
@@ -173,7 +178,7 @@ bool TcpServer::waitForNewConnexion() {
   // Wait for the handshake
   logger.info("All ports are connected, waiting for the handshake");
   auto startingTime = std::chrono::high_resolution_clock::now();
-  while (m_Status == TcpServerStatus::INITIALIZING) {
+  while (m_Status == TcpServerStatus::CONNECTING) {
     waitAndHandleNewCommand();
 
     // Since the command is non-blocking, we can just continue if there is no
@@ -184,11 +189,12 @@ bool TcpServer::waitForNewConnexion() {
       logger.fatal("Handshake timeout (" +
                    std::to_string(m_TimeoutPeriod.count()) +
                    " ms), disconnecting client");
+      std::lock_guard<std::mutex> lock(m_Mutex);
       disconnectClient();
       return false;
     }
   }
-  return true;
+  return m_Status == TcpServerStatus::CONNECTED;
 }
 
 bool TcpServer::waitUntilSocketIsConnected(
@@ -213,7 +219,6 @@ bool TcpServer::waitUntilSocketIsConnected(
     // Check for failing conditions
     if (!m_IsServerRunning) {
       logger.info("Stopping listening to ports as server is shutting down");
-      closeSockets();
       return false;
     } else if (canTimeout &&
                std::chrono::high_resolution_clock::now() - startingTime >
@@ -225,11 +230,11 @@ bool TcpServer::waitUntilSocketIsConnected(
       return false;
     }
   }
+
   return true;
 }
 
 void TcpServer::closeSockets() {
-  std::lock_guard<std::mutex> lock(m_Mutex);
   if (m_CommandSocket && m_CommandSocket->is_open()) {
     m_CommandSocket->close();
   }
@@ -271,6 +276,7 @@ void TcpServer::waitAndHandleNewCommand() {
 
   if (error == asio::error::eof) {
     logger.info("Client disconnected");
+    std::lock_guard<std::mutex> lock(m_Mutex);
     disconnectClient();
     return;
   }
@@ -284,6 +290,7 @@ void TcpServer::waitAndHandleNewCommand() {
   // If something went wrong, disconnect the client and stop everything
   if (byteRead > 1024 || error) {
     logger.fatal("TCP read error: " + error.message());
+    std::lock_guard<std::mutex> lock(m_Mutex);
     disconnectClient();
     return;
   }
@@ -294,7 +301,7 @@ void TcpServer::waitAndHandleNewCommand() {
   // Handle the command based on the current status
   bool isSuccessful = false;
   switch (m_Status) {
-  case (TcpServerStatus::INITIALIZING):
+  case (TcpServerStatus::CONNECTING):
     isSuccessful = handleHandshake(command);
     break;
   case (TcpServerStatus::CONNECTED):
@@ -309,6 +316,7 @@ void TcpServer::waitAndHandleNewCommand() {
 
   // If anything went wrong, disconnect the client
   if (!isSuccessful) {
+    std::lock_guard<std::mutex> lock(m_Mutex);
     disconnectClient();
   }
 

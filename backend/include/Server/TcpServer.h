@@ -10,7 +10,7 @@
 
 namespace STIMWALKER_NAMESPACE::server {
 
-enum TcpServerStatus { INITIALIZING, CONNECTED };
+enum TcpServerStatus { INITIALIZING, CONNECTING, CONNECTED };
 
 enum class TcpServerCommand : std::uint32_t {
   HANDSHAKE,

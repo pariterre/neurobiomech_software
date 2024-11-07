@@ -56,10 +56,10 @@ bool TcpClient::connect() {
 
 bool TcpClient::disconnect() {
   m_IsConnected = false;
+  closeSockets();
   if (m_LiveDataWorker.joinable()) {
     m_LiveDataWorker.join();
   }
-  closeSockets();
   return true;
 }
 
