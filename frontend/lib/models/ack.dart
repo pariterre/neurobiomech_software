@@ -1,8 +1,17 @@
 enum Ack {
-  ok,
-  nok;
+  nok,
+  ok;
+
+  int toInt() {
+    switch (this) {
+      case Ack.nok:
+        return 0;
+      case Ack.ok:
+        return 1;
+    }
+  }
 
   static Ack parse(List<int> packet) {
-    return packet[0] == 0 ? Ack.ok : Ack.nok;
+    return packet[4] == Ack.ok.toInt() ? Ack.ok : Ack.nok;
   }
 }

@@ -1,5 +1,3 @@
-import 'package:flutter/services.dart';
-
 enum Command {
   handshake,
   connectDelsysAnalog,
@@ -92,19 +90,17 @@ enum Command {
     }
   }
 
-  Uint8List toPacket() {
+  List<int> toPacket() {
     // Packets are exactly 8 bytes long, little-endian
     // - First 4 bytes are the version number
     // - Next 4 bytes are the command
 
     const protocolVersion = '0001';
     final command = toInt().toString().padLeft(4, '0');
-    final packet = protocolVersion + command;
+    final packet = protocolVersion.split('').reversed.join() +
+        command.split('').reversed.join();
 
-    // To little-endian
-    return Uint8List.fromList([
-      for (var i = 0; i < 8; i += 2)
-        int.parse(packet.substring(i, i + 2), radix: 16)
-    ]);
+    // Convert the packet to a list of bytes (0 => 0x00)
+    return packet.codeUnits.map((e) => e - 48).toList();
   }
 }

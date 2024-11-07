@@ -60,14 +60,14 @@ class StimwalkerClient {
     if (isInitialized) return;
 
     _log.info('Initializing communication with the server');
-    _connectSockets(
+    await _connectSockets(
         serverIp: serverIp,
         commandPort: commandPort,
         dataPort: dataPort,
         liveDataPort: liveDataPort,
         nbOfRetries: nbOfRetries);
 
-    if (!(await send(Command.handshake))) {
+    if (!(await _send(Command.handshake, null))) {
       _log.severe('Handshake failed');
       await disconnect();
       return;
@@ -79,8 +79,12 @@ class StimwalkerClient {
   ///
   /// Close the connection to the server.
   Future<void> disconnect() async {
-    if (_commandAckCompleter != null) _commandAckCompleter?.complete(Ack.nok);
-    if (_dataCompleter != null) _dataCompleter?.complete();
+    if (_commandAckCompleter != null && !_commandAckCompleter!.isCompleted) {
+      _commandAckCompleter?.complete(Ack.nok);
+    }
+    if (_dataCompleter != null && !_dataCompleter!.isCompleted) {
+      _dataCompleter?.complete();
+    }
 
     _disconnectSockets();
 
@@ -169,7 +173,7 @@ class StimwalkerClient {
     try {
       _currentCommand = command;
       _commandAckCompleter = Completer<Ack>();
-      _socketCommand!.write(command.toPacket());
+      _socketCommand!.add(command.toPacket());
       await _socketCommand!.flush();
       return await _commandAckCompleter!.future;
     } on SocketException {
