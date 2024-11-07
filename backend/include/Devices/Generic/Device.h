@@ -17,6 +17,10 @@ public:
 
   virtual std::string toString() const { return "UNKNOWN"; };
 
+  bool operator==(const DeviceCommands &other) const {
+    return m_Value == other.m_Value;
+  }
+
 protected:
   DECLARE_PROTECTED_MEMBER(int, Value);
 };

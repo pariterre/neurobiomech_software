@@ -20,7 +20,8 @@ timeSeriesGenerator(std::chrono::microseconds deltaTime) {
 
 DelsysBaseDevice::CommandTcpDevice::CommandTcpDevice(const std::string &host,
                                                      size_t port)
-    : TcpDevice(host, port, std::chrono::milliseconds(100)) {}
+    : m_LastCommand(DelsysCommands::STOP),
+      TcpDevice(host, port, std::chrono::milliseconds(100)) {}
 
 std::string DelsysBaseDevice::CommandTcpDevice::deviceName() const {
   return "DelsysCommandTcpDevice";
@@ -28,8 +29,11 @@ std::string DelsysBaseDevice::CommandTcpDevice::deviceName() const {
 
 DeviceResponses DelsysBaseDevice::CommandTcpDevice::parseAsyncSendCommand(
     const DeviceCommands &command, const std::any &data) {
-  auto commandAsDelsys = DelsysCommands(command.getValue());
-  write(commandAsDelsys.toString());
+  if (m_LastCommand == command) {
+    return DeviceResponses::OK;
+  }
+  m_LastCommand = DelsysCommands(command.getValue());
+  write(m_LastCommand.toString());
   std::vector<char> response = read(128);
   return std::strncmp(response.data(), "OK", 2) == 0 ? DeviceResponses::OK
                                                      : DeviceResponses::NOK;
@@ -101,13 +105,17 @@ DelsysBaseDevice::DelsysBaseDevice(
 }
 
 bool DelsysBaseDevice::handleConnect() {
-  m_CommandDevice->connect();
   if (!m_CommandDevice->getIsConnected()) {
-    utils::Logger::getInstance().fatal(
-        "The command device is not connected, did you start Trigno?");
-    return false;
+    // This is already connected if the delsys device is already connected to
+    // another stream
+    m_CommandDevice->connect();
+    if (!m_CommandDevice->getIsConnected()) {
+      utils::Logger::getInstance().fatal(
+          "The command device is not connected, did you start Trigno?");
+      return false;
+    }
+    m_CommandDevice->read(128); // Consume the welcome message
   }
-  m_CommandDevice->read(128); // Consume the welcome message
 
   m_DataDevice->connect();
   if (!m_DataDevice->getIsConnected()) {
@@ -125,7 +133,11 @@ bool DelsysBaseDevice::handleDisconnect() {
     stopDataStreaming();
   }
 
-  m_CommandDevice->disconnect();
+  if (m_CommandDevice->getIsConnected()) {
+    // This will happen if more than one devices are connected and one of them
+    // disconnected the command device already
+    m_CommandDevice->disconnect();
+  }
   m_DataDevice->disconnect();
 
   return true;

@@ -221,7 +221,7 @@ bool Devices::stopDataStreaming() {
   }
 
   // Stop all the recording (this is just to make sure in case some device is
-  // started while m_ISRecording is false)
+  // started while m_IsRecording is false)
   for (auto &[deviceId, dataCollector] : m_DataCollectors) {
     dataCollector->stopRecording();
   }

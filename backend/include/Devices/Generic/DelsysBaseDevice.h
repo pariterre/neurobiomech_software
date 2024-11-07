@@ -59,6 +59,9 @@ public:
   protected:
     DeviceResponses parseAsyncSendCommand(const DeviceCommands &command,
                                           const std::any &data) override;
+
+  private:
+    DECLARE_PROTECTED_MEMBER_NOGET(DelsysCommands, LastCommand);
   };
 
   class DataTcpDevice : public TcpDevice {
