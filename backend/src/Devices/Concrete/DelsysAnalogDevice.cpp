@@ -16,10 +16,15 @@ DelsysAnalogDevice::DelsysAnalogDevice(const std::string &host, size_t dataPort,
                        DELSYS_ANALOG_SAMPLE_COUNT, host, dataPort,
                        commandPort) {}
 
+DelsysAnalogDevice::DelsysAnalogDevice(const DelsysBaseDevice &other,
+                                       size_t dataPort)
+    : DelsysBaseDevice(DELSYS_ANALOG_CHANNEL_COUNT, DELSYS_ANALOG_FRAME_RATE,
+                       DELSYS_ANALOG_SAMPLE_COUNT, dataPort, other) {}
+
 DelsysAnalogDevice::DelsysAnalogDevice(
-    std::unique_ptr<CommandTcpDevice> commandDevice,
-    std::unique_ptr<DataTcpDevice> dataDevice)
-    : DelsysBaseDevice(std::move(commandDevice), std::move(dataDevice),
+    std::unique_ptr<DataTcpDevice> dataDevice,
+    std::shared_ptr<CommandTcpDevice> commandDevice)
+    : DelsysBaseDevice(std::move(dataDevice), commandDevice,
                        DELSYS_ANALOG_CHANNEL_COUNT, DELSYS_ANALOG_FRAME_RATE,
                        DELSYS_ANALOG_SAMPLE_COUNT) {}
 
@@ -44,10 +49,10 @@ DelsysAnalogDeviceMock::DelsysAnalogDeviceMock(const std::string &host,
                                                size_t dataPort,
                                                size_t commandPort)
     : DelsysAnalogDevice(
-          std::make_unique<CommandTcpDeviceMock>(host, commandPort),
           std::make_unique<DataTcpDeviceMock>(
               DELSYS_ANALOG_CHANNEL_COUNT, DELSYS_ANALOG_FRAME_RATE,
-              DELSYS_ANALOG_SAMPLE_COUNT, host, dataPort)) {}
+              DELSYS_ANALOG_SAMPLE_COUNT, host, dataPort),
+          std::make_unique<CommandTcpDeviceMock>(host, commandPort)) {}
 
 bool DelsysAnalogDeviceMock::handleConnect() {
   if (shouldFailToConnect) {

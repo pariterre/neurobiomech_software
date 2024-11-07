@@ -54,7 +54,7 @@ DelsysBaseDevice::DelsysBaseDevice(size_t channelCount,
                                    size_t sampleCount, const std::string &host,
                                    size_t dataPort, size_t commandPort)
     : m_DeltaTime(deltaTime),
-      m_CommandDevice(std::make_unique<CommandTcpDevice>(host, commandPort)),
+      m_CommandDevice(std::make_shared<CommandTcpDevice>(host, commandPort)),
       m_DataDevice(std::make_unique<DataTcpDevice>(host, dataPort)),
       m_BytesPerChannel(4), m_SampleCount(sampleCount),
       m_DataBuffer(
@@ -66,12 +66,29 @@ DelsysBaseDevice::DelsysBaseDevice(size_t channelCount,
   m_IgnoreTooSlowWarning = true;
 }
 
+DelsysBaseDevice::DelsysBaseDevice(size_t channelCount,
+                                   std::chrono::microseconds deltaTime,
+                                   size_t sampleCount, size_t dataPort,
+                                   const DelsysBaseDevice &other)
+    : m_DeltaTime(deltaTime), m_CommandDevice(other.m_CommandDevice),
+      m_DataDevice(std::make_unique<DataTcpDevice>(
+          other.m_CommandDevice->getHost(), dataPort)),
+      m_BytesPerChannel(4), m_SampleCount(sampleCount),
+      m_DataBuffer(
+          std::vector<char>(channelCount * m_SampleCount * m_BytesPerChannel)),
+      AsyncDevice(std::chrono::milliseconds(100)),
+      AsyncDataCollector(
+          channelCount, std::chrono::milliseconds(10),
+          [deltaTime]() { return timeSeriesGenerator(deltaTime); }) {
+  m_IgnoreTooSlowWarning = true;
+}
+
 DelsysBaseDevice::DelsysBaseDevice(
-    std::unique_ptr<DelsysBaseDevice::CommandTcpDevice> commandDevice,
     std::unique_ptr<DelsysBaseDevice::DataTcpDevice> dataDevice,
+    std::shared_ptr<DelsysBaseDevice::CommandTcpDevice> commandDevice,
     size_t channelCount, std::chrono::microseconds deltaTime,
     size_t sampleCount)
-    : m_DeltaTime(deltaTime), m_CommandDevice(std::move(commandDevice)),
+    : m_DeltaTime(deltaTime), m_CommandDevice(commandDevice),
       m_DataDevice(std::move(dataDevice)), m_BytesPerChannel(4),
       m_SampleCount(sampleCount),
       m_DataBuffer(

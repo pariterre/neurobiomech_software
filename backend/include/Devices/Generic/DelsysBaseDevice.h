@@ -84,13 +84,25 @@ public:
   DelsysBaseDevice(size_t channelCount, std::chrono::microseconds deltaTime,
                    size_t sampleCount, const std::string &host, size_t dataPort,
                    size_t commandPort);
+
+  /// @brief Constructor of the DelsysBaseDevice
+  /// @param channelCount The number of channels of the device
+  /// @param deltaTime The time between each data point (1/FrameRate)
+  /// @param sampleCount Expected number of data at each block of sampled data
+  /// @param dataPort The port of the data device
+  /// @param other The other DelsysBaseDevice to share the command device with
+  /// and the host address
+  DelsysBaseDevice(size_t channelCount, std::chrono::microseconds deltaTime,
+                   size_t sampleCount, size_t dataPort,
+                   const DelsysBaseDevice &other);
+
   DelsysBaseDevice(const DelsysBaseDevice &other) = delete;
 
 protected:
   /// @brief Constructor of the DelsysBaseDevice that allows to pass mocker
   /// devices
-  DelsysBaseDevice(std::unique_ptr<CommandTcpDevice> commandDevice,
-                   std::unique_ptr<DataTcpDevice> dataDevice,
+  DelsysBaseDevice(std::unique_ptr<DataTcpDevice> dataDevice,
+                   std::shared_ptr<CommandTcpDevice> commandDevice,
                    size_t channelCount, std::chrono::microseconds deltaTime,
                    size_t sampleCount);
 
@@ -107,7 +119,7 @@ protected:
   bool handleStopDataStreaming() override;
 
   /// @brief The command device
-  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<CommandTcpDevice>,
+  DECLARE_PROTECTED_MEMBER_NOGET(std::shared_ptr<CommandTcpDevice>,
                                  CommandDevice);
 
   /// @brief The data device

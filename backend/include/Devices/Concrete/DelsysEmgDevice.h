@@ -15,11 +15,18 @@ public:
   /// @param commandPort The port of the command device
   DelsysEmgDevice(const std::string &host = "localhost",
                   size_t dataPort = 50043, size_t commandPort = 50040);
+
+  /// @brief Constructor that share some parts of the device, namely the command
+  /// device and host address
+  /// @param other The other DelsysBaseDevice to share the command device with
+  /// @param dataPort The port of the data device
+  DelsysEmgDevice(const DelsysBaseDevice &other, size_t dataPort = 50043);
+
   DelsysEmgDevice(const DelsysEmgDevice &other) = delete;
 
 protected:
-  DelsysEmgDevice(std::unique_ptr<CommandTcpDevice> commandDevice,
-                  std::unique_ptr<DataTcpDevice> dataDevice);
+  DelsysEmgDevice(std::unique_ptr<DataTcpDevice> dataDevice,
+                  std::shared_ptr<CommandTcpDevice> commandDevice);
 
 public:
   /// @brief Destructor of the DelsysEmgDevice

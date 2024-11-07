@@ -7,6 +7,7 @@
 #include "Devices/Concrete/DelsysAnalogDevice.h"
 #include "Devices/Concrete/DelsysEmgDevice.h"
 #include "Devices/Concrete/MagstimRapidDevice.h"
+#include "Devices/Generic/DelsysBaseDevice.h"
 #include "Devices/Generic/Device.h"
 
 using namespace STIMWALKER_NAMESPACE::server;
@@ -489,12 +490,36 @@ void TcpServer::makeAndAddDevice(const std::string &deviceName) {
   auto &logger = utils::Logger::getInstance();
 
   if (deviceName == DEVICE_NAME_DELSYS_ANALOG) {
-    m_ConnectedDeviceIds[DEVICE_NAME_DELSYS_ANALOG] =
-        m_Devices.add(std::make_unique<devices::DelsysAnalogDevice>());
+    bool isInitialized = false;
+    for (size_t i = 0; i < m_Devices.size(); i++) {
+      if (dynamic_cast<const devices::DelsysBaseDevice *>(&m_Devices[i])) {
+        isInitialized = true;
+        m_ConnectedDeviceIds[DEVICE_NAME_DELSYS_ANALOG] =
+            m_Devices.add(std::make_unique<devices::DelsysAnalogDevice>(
+                static_cast<const devices::DelsysBaseDevice &>(m_Devices[i])));
+        break;
+      }
+    }
+    if (!isInitialized) {
+      m_ConnectedDeviceIds[DEVICE_NAME_DELSYS_ANALOG] =
+          m_Devices.add(std::make_unique<devices::DelsysAnalogDevice>());
+    }
 
   } else if (deviceName == DEVICE_NAME_DELSYS_EMG) {
-    m_ConnectedDeviceIds[DEVICE_NAME_DELSYS_EMG] =
-        m_Devices.add(std::make_unique<devices::DelsysEmgDevice>());
+    bool isInitialized = false;
+    for (size_t i = 0; i < m_Devices.size(); i++) {
+      if (dynamic_cast<const devices::DelsysBaseDevice *>(&m_Devices[i])) {
+        isInitialized = true;
+        m_ConnectedDeviceIds[DEVICE_NAME_DELSYS_EMG] =
+            m_Devices.add(std::make_unique<devices::DelsysEmgDevice>(
+                static_cast<const devices::DelsysBaseDevice &>(m_Devices[i])));
+        break;
+      }
+    }
+    if (!isInitialized) {
+      m_ConnectedDeviceIds[DEVICE_NAME_DELSYS_EMG] =
+          m_Devices.add(std::make_unique<devices::DelsysEmgDevice>());
+    }
 
   } else if (deviceName == DEVICE_NAME_MAGSTIM) {
     m_ConnectedDeviceIds[DEVICE_NAME_MAGSTIM] =

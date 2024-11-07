@@ -22,9 +22,14 @@ int main() {
     }
 
     // Add the devices
-    client.addDelsysAnalogDevice();
-    client.addDelsysEmgDevice();
-    client.addMagstimDevice();
+    bool areDevicesAdded = true;
+    areDevicesAdded &= client.addDelsysAnalogDevice();
+    areDevicesAdded &= client.addDelsysEmgDevice();
+    // areDevicesAdded &= client.addMagstimDevice();
+    if (!areDevicesAdded) {
+      logger.fatal("Failed to add the devices");
+      throw std::runtime_error("Failed to add the devices");
+    }
 
     // Give some time to the server to connect to the devices
     std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -75,6 +80,12 @@ int main() {
     //   std::cout << dataPoints[11] << ",";
     // }
     // std::cout << "]" << std::endl;
+
+    std::cout << "D = [";
+    for (auto &dataPoints : data["DelsysEmgDataCollector"].getData()) {
+      std::cout << dataPoints[1] << ",";
+    }
+    std::cout << "]" << std::endl;
 
     // Clean up things
     client.disconnect();

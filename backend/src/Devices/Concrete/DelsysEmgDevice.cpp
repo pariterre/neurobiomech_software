@@ -15,10 +15,14 @@ DelsysEmgDevice::DelsysEmgDevice(const std::string &host, size_t dataPort,
     : DelsysBaseDevice(DELSYS_EMG_CHANNEL_COUNT, DELSYS_EMG_FRAME_RATE,
                        DELSYS_EMG_SAMPLE_COUNT, host, dataPort, commandPort) {}
 
+DelsysEmgDevice::DelsysEmgDevice(const DelsysBaseDevice &other, size_t dataPort)
+    : DelsysBaseDevice(DELSYS_EMG_CHANNEL_COUNT, DELSYS_EMG_FRAME_RATE,
+                       DELSYS_EMG_SAMPLE_COUNT, dataPort, other) {}
+
 DelsysEmgDevice::DelsysEmgDevice(
-    std::unique_ptr<CommandTcpDevice> commandDevice,
-    std::unique_ptr<DataTcpDevice> dataDevice)
-    : DelsysBaseDevice(std::move(commandDevice), std::move(dataDevice),
+    std::unique_ptr<DataTcpDevice> dataDevice,
+    std::shared_ptr<CommandTcpDevice> commandDevice)
+    : DelsysBaseDevice(std::move(dataDevice), commandDevice,
                        DELSYS_EMG_CHANNEL_COUNT, DELSYS_EMG_FRAME_RATE,
                        DELSYS_EMG_SAMPLE_COUNT) {}
 
@@ -39,10 +43,11 @@ std::string DelsysEmgDevice::dataCollectorName() const {
 using namespace DelsysBaseDeviceMock;
 DelsysEmgDeviceMock::DelsysEmgDeviceMock(const std::string &host,
                                          size_t dataPort, size_t commandPort)
-    : DelsysEmgDevice(std::make_unique<CommandTcpDeviceMock>(host, commandPort),
-                      std::make_unique<DataTcpDeviceMock>(
-                          DELSYS_EMG_CHANNEL_COUNT, DELSYS_EMG_FRAME_RATE,
-                          DELSYS_EMG_SAMPLE_COUNT, host, dataPort)) {}
+    : DelsysEmgDevice(
+          std::make_unique<DataTcpDeviceMock>(
+              DELSYS_EMG_CHANNEL_COUNT, DELSYS_EMG_FRAME_RATE,
+              DELSYS_EMG_SAMPLE_COUNT, host, dataPort),
+          std::make_shared<CommandTcpDeviceMock>(host, commandPort)) {}
 
 bool DelsysEmgDeviceMock::handleConnect() {
   if (shouldFailToConnect) {
