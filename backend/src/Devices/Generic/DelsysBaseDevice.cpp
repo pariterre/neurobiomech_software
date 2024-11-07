@@ -27,6 +27,13 @@ std::string DelsysBaseDevice::CommandTcpDevice::deviceName() const {
   return "DelsysCommandTcpDevice";
 }
 
+std::vector<char> DelsysBaseDevice::CommandTcpDevice::read(size_t bufferSize) {
+  if (m_LastCommand == DelsysCommands::STOP) {
+    return std::vector<char>(bufferSize, '\0');
+  }
+  return TcpDevice::read(bufferSize);
+}
+
 DeviceResponses DelsysBaseDevice::CommandTcpDevice::parseAsyncSendCommand(
     const DeviceCommands &command, const std::any &data) {
   if (m_LastCommand == command) {

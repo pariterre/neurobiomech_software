@@ -97,13 +97,8 @@ void TcpServer::startServerSync() {
 void TcpServer::stopServer() {
   auto &logger = utils::Logger::getInstance();
 
-  // Give a bit of time so it things went too fast the startServerSync is
-  // actually ready
-  std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
   // Shutdown the server down
-  {
-    std::lock_guard<std::mutex> lock(m_Mutex);
+  if (m_IsServerRunning) {
     m_IsServerRunning = false;
 
     // When closing the server too soon, client may still be connected, so we
@@ -122,13 +117,10 @@ void TcpServer::stopServer() {
 }
 
 void TcpServer::disconnectClient() {
+  std::lock_guard<std::mutex> lock(m_Mutex);
   auto &logger = utils::Logger::getInstance();
-  if (!isClientConnected()) {
-    logger.info("Disconnecting client");
-    // Do not return as there is no problem actual re-resetting the status
-    // and it causes problem not doing it
-  }
 
+  logger.info("Disconnecting client");
   m_Status = TcpServerStatus::INITIALIZING;
 
   // Make sure all the devices are properly disconnected
@@ -189,7 +181,6 @@ bool TcpServer::waitForNewConnexion() {
       logger.fatal("Handshake timeout (" +
                    std::to_string(m_TimeoutPeriod.count()) +
                    " ms), disconnecting client");
-      std::lock_guard<std::mutex> lock(m_Mutex);
       disconnectClient();
       return false;
     }
@@ -226,7 +217,7 @@ bool TcpServer::waitUntilSocketIsConnected(
       logger.fatal("Connexion to " + socketName + " socket timed out (" +
                    std::to_string(m_TimeoutPeriod.count()) +
                    " ms), disconnecting client");
-      closeSockets();
+      disconnectClient();
       return false;
     }
   }
@@ -276,7 +267,6 @@ void TcpServer::waitAndHandleNewCommand() {
 
   if (error == asio::error::eof) {
     logger.info("Client disconnected");
-    std::lock_guard<std::mutex> lock(m_Mutex);
     disconnectClient();
     return;
   }
@@ -290,7 +280,6 @@ void TcpServer::waitAndHandleNewCommand() {
   // If something went wrong, disconnect the client and stop everything
   if (byteRead > 1024 || error) {
     logger.fatal("TCP read error: " + error.message());
-    std::lock_guard<std::mutex> lock(m_Mutex);
     disconnectClient();
     return;
   }
@@ -316,7 +305,6 @@ void TcpServer::waitAndHandleNewCommand() {
 
   // If anything went wrong, disconnect the client
   if (!isSuccessful) {
-    std::lock_guard<std::mutex> lock(m_Mutex);
     disconnectClient();
   }
 

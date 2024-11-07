@@ -25,7 +25,7 @@ int main() {
     bool areDevicesAdded = true;
     areDevicesAdded &= client.addDelsysAnalogDevice();
     areDevicesAdded &= client.addDelsysEmgDevice();
-    // areDevicesAdded &= client.addMagstimDevice();
+    areDevicesAdded &= client.addMagstimDevice();
     if (!areDevicesAdded) {
       logger.fatal("Failed to add the devices");
       throw std::runtime_error("Failed to add the devices");
@@ -62,30 +62,6 @@ int main() {
                 std::to_string(data["DelsysAnalogDataCollector"].size()) +
                 " Analog data series (expected about ~" +
                 std::to_string(recordingTime.count() * 148) + ")");
-
-    // std::cout << "A = [";
-    // for (auto &dataPoints : data["DelsysAnalogDataCollector"].getData()) {
-    //   std::cout << dataPoints[9] << ",";
-    // }
-    // std::cout << "]" << std::endl;
-
-    // std::cout << "B = [";
-    // for (auto &dataPoints : data["DelsysAnalogDataCollector"].getData()) {
-    //   std::cout << dataPoints[10] << ",";
-    // }
-    // std::cout << "]" << std::endl;
-
-    // std::cout << "C = [";
-    // for (auto &dataPoints : data["DelsysAnalogDataCollector"].getData()) {
-    //   std::cout << dataPoints[11] << ",";
-    // }
-    // std::cout << "]" << std::endl;
-
-    std::cout << "D = [";
-    for (auto &dataPoints : data["DelsysEmgDataCollector"].getData()) {
-      std::cout << dataPoints[1] << ",";
-    }
-    std::cout << "]" << std::endl;
 
     // Clean up things
     client.disconnect();

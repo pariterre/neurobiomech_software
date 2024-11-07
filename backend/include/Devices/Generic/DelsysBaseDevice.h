@@ -56,6 +56,8 @@ public:
 
     std::string deviceName() const override;
 
+    virtual std::vector<char> read(size_t bufferSize) override;
+
   protected:
     DeviceResponses parseAsyncSendCommand(const DeviceCommands &command,
                                           const std::any &data) override;
