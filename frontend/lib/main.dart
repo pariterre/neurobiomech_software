@@ -6,7 +6,7 @@ import 'package:logging/logging.dart';
 void main() async {
   // Configure logging
   Logger.root.onRecord.listen((record) {
-    if (record.level > Level.INFO) {
+    if (record.level >= Level.INFO) {
       debugPrint('${record.level.name}: ${record.time}: ${record.message}');
     }
   });

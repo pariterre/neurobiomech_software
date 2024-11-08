@@ -17,23 +17,23 @@ enum Command {
       case Command.handshake:
         return 0;
       case Command.connectDelsysAnalog:
-        return 1;
+        return 10;
       case Command.connectDelsysEmg:
-        return 2;
+        return 11;
       case Command.connectMagstim:
-        return 3;
+        return 12;
       case Command.disconnectDelsysAnalog:
-        return 4;
+        return 20;
       case Command.disconnectDelsysEmg:
-        return 5;
+        return 21;
       case Command.disconnectMagstim:
-        return 6;
+        return 22;
       case Command.startRecording:
-        return 7;
+        return 30;
       case Command.stopRecording:
-        return 8;
+        return 31;
       case Command.getLastTrial:
-        return 9;
+        return 32;
     }
   }
 
@@ -95,12 +95,18 @@ enum Command {
     // - First 4 bytes are the version number
     // - Next 4 bytes are the command
 
-    const protocolVersion = '0001';
-    final command = toInt().toString().padLeft(4, '0');
-    final packet = protocolVersion.split('').reversed.join() +
-        command.split('').reversed.join();
+    final protocolVersion = 1.toRadixString(16).padLeft(8, '0');
+    final command = toInt().toRadixString(16).padLeft(8, '0');
 
-    // Convert the packet to a list of bytes (0 => 0x00)
-    return packet.codeUnits.map((e) => e - 48).toList();
+    // Split the strings by pairs of char
+    final packet = <int>[];
+    for (int i = 3; i >= 0; i--) {
+      packet.add(
+          int.parse(protocolVersion.substring(i * 2, i * 2 + 2), radix: 16));
+    }
+    for (int i = 3; i >= 0; i--) {
+      packet.add(int.parse(command.substring(i * 2, i * 2 + 2), radix: 16));
+    }
+    return packet;
   }
 }

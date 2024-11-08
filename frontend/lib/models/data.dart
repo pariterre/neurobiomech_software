@@ -16,4 +16,16 @@ class Data {
     required int emgChannelCount,
   })  : delsysAnalog = TimeSeriesData(t0: t0, channelCount: analogChannelCount),
         delsysEmg = TimeSeriesData(t0: t0, channelCount: emgChannelCount);
+
+  appendFromJson(List json) {
+    for (Map data in json) {
+      final deviceName = data['name'];
+      final deviceData = data['data'] as Map<String, dynamic>;
+      if (deviceName == 'DelsysAnalogDataCollector') {
+        delsysAnalog.appendFromJson(deviceData);
+      } else if (deviceName == 'DelsysEmgDataCollector') {
+        delsysEmg.appendFromJson(deviceData);
+      }
+    }
+  }
 }

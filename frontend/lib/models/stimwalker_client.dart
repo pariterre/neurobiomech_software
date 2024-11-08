@@ -9,17 +9,24 @@ import 'package:logging/logging.dart';
 
 class StimwalkerClient {
   Socket? _socketCommand;
-  Socket? _socketData;
+  Socket? _socketResponse;
   Socket? _socketLiveData;
 
   Command? _currentCommand;
   Completer<Ack>? _commandAckCompleter;
-  Completer? _dataCompleter;
+  Completer? _responseCompleter;
+
+  int? _expectedResponseLength;
+  final _responseGetLastTrial = <int>[];
 
   bool _isConnectedToDelsysAnalog = false;
   bool _isConnectedToDelsysEmg = false;
   bool _isConnectedToLiveData = false;
   Data liveData = Data(
+      t0: DateTime.now().millisecondsSinceEpoch / 1000,
+      analogChannelCount: 144,
+      emgChannelCount: 16);
+  Data trialData = Data(
       t0: DateTime.now().millisecondsSinceEpoch / 1000,
       analogChannelCount: 144,
       emgChannelCount: 16);
@@ -38,7 +45,9 @@ class StimwalkerClient {
   ///
   /// If the communication initialized.
   bool get isInitialized =>
-      _socketCommand != null && _socketData != null && _socketLiveData != null;
+      _socketCommand != null &&
+      _socketResponse != null &&
+      _socketLiveData != null;
   bool get isConnectedToDelsysAnalog => _isConnectedToDelsysAnalog;
   bool get isConnectedToDelsysEmg => _isConnectedToDelsysEmg;
   bool get isConnectedToLiveData => _isConnectedToLiveData;
@@ -53,7 +62,7 @@ class StimwalkerClient {
   Future<void> initialize({
     String serverIp = 'localhost',
     int commandPort = 5000,
-    int dataPort = 5001,
+    int responsePort = 5001,
     int liveDataPort = 5002,
     int? nbOfRetries,
   }) async {
@@ -63,7 +72,7 @@ class StimwalkerClient {
     await _connectSockets(
         serverIp: serverIp,
         commandPort: commandPort,
-        dataPort: dataPort,
+        responsePort: responsePort,
         liveDataPort: liveDataPort,
         nbOfRetries: nbOfRetries);
 
@@ -82,8 +91,8 @@ class StimwalkerClient {
     if (_commandAckCompleter != null && !_commandAckCompleter!.isCompleted) {
       _commandAckCompleter?.complete(Ack.nok);
     }
-    if (_dataCompleter != null && !_dataCompleter!.isCompleted) {
-      _dataCompleter?.complete();
+    if (_responseCompleter != null && !_responseCompleter!.isCompleted) {
+      _responseCompleter?.complete();
     }
 
     _disconnectSockets();
@@ -100,7 +109,7 @@ class StimwalkerClient {
   Future<void> _connectSockets({
     required String serverIp,
     required int commandPort,
-    required int dataPort,
+    required int responsePort,
     required int liveDataPort,
     required int? nbOfRetries,
   }) async {
@@ -109,11 +118,11 @@ class StimwalkerClient {
         port: commandPort,
         nbOfRetries: nbOfRetries,
         hasDataCallback: _receiveCommandAck);
-    _socketData = await _connectToSocket(
+    _socketResponse = await _connectToSocket(
         ipAddress: serverIp,
-        port: dataPort,
+        port: responsePort,
         nbOfRetries: nbOfRetries,
-        hasDataCallback: _receiveData);
+        hasDataCallback: _receiveResponse);
     _socketLiveData = await _connectToSocket(
         ipAddress: serverIp,
         port: liveDataPort,
@@ -125,8 +134,8 @@ class StimwalkerClient {
     await _socketCommand?.close();
     _socketCommand = null;
 
-    await _socketData?.close();
-    _socketData = null;
+    await _socketResponse?.close();
+    _socketResponse = null;
 
     await _socketLiveData?.close();
     _socketLiveData = null;
@@ -225,10 +234,15 @@ class StimwalkerClient {
         _hasRecorded = true;
         break;
 
+      case Command.getLastTrial:
+        trialData.clear();
+        _expectedResponseLength = null;
+        _responseGetLastTrial.clear();
+        break;
+
       case Command.handshake:
       case Command.connectMagstim:
       case Command.disconnectMagstim:
-      case Command.getLastTrial:
         break;
     }
   }
@@ -238,12 +252,42 @@ class StimwalkerClient {
       analogChannelCount: liveData.delsysAnalog.channelCount,
       emgChannelCount: liveData.delsysEmg.channelCount);
 
-  void _receiveData(List<int> data) {
-    _log.info('Data received: ${utf8.decode(data)}');
+  void _receiveResponse(List<int> response) {
+    if (_currentCommand == Command.getLastTrial &&
+        _expectedResponseLength == null) {
+      _expectedResponseLength = _parseDataLength(response);
+      if (response.length > 8) {
+        // If more data came at once, recursively call the function with the rest
+        // of the data.
+        _receiveResponse(response.sublist(8));
+      }
+      return;
+    }
+
+    _responseGetLastTrial.addAll(response);
+    if (_responseGetLastTrial.length < _expectedResponseLength!) {
+      _log.info('Received ${_responseGetLastTrial.length} bytes, waiting for '
+          '$_expectedResponseLength');
+      return;
+    } else if (_responseGetLastTrial.length > _expectedResponseLength!) {
+      _log.severe('Received more data than expected, dropping everything');
+      _responseGetLastTrial.clear();
+      _expectedResponseLength = null;
+      return;
+    }
+
+    // Convert the data to a string (from json)
+    _expectedResponseLength = null;
+    final dataList = json.decode(utf8.decode(_responseGetLastTrial)) as List;
+    trialData.appendFromJson(dataList);
   }
 
   void _receiveLiveData(List<int> data) {
-    _log.info('Live data received: ${utf8.decode(data)}');
+    //_log.info('Live data received: ${data}');
+  }
+
+  int _parseDataLength(List<int> data) {
+    return data[4] + (data[5] << 8) + (data[6] << 16) + (data[7] << 24);
   }
 
   // Prepare the singleton
@@ -288,7 +332,7 @@ class StimwalkerClientMock extends StimwalkerClient {
   Future<void> initialize({
     String serverIp = 'localhost',
     int commandPort = 5000,
-    int dataPort = 5001,
+    int responsePort = 5001,
     int liveDataPort = 5002,
     int? nbOfRetries,
   }) async {
@@ -300,7 +344,7 @@ class StimwalkerClientMock extends StimwalkerClient {
   Future<void> _connectSockets({
     required String serverIp,
     required int commandPort,
-    required int dataPort,
+    required int responsePort,
     required int liveDataPort,
     required int? nbOfRetries,
   }) async {}

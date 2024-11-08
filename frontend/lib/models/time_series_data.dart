@@ -22,18 +22,15 @@ class TimeSeriesData {
   }) : data = List.generate(channelCount, (_) => <double>[]);
 
   appendFromJson(Map<String, dynamic> json) {
-    final dataTp = (json['data'] as List<dynamic>);
-    for (int block = 0; block < dataTp.length; block++) {
-      final dataBlock = dataTp[block] as List<dynamic>;
-      for (int channel = 0; channel < dataBlock.length; channel++) {
-        data[channel].addAll((dataTp[block][channel] as List).map(
-          (e) => e as double,
-        ));
-      }
-    }
+    final timeSeries = (json['data'] as List<dynamic>);
 
-    t.addAll((json['t'] as List<dynamic>).expand((e) => (e as List).map(
-          (f) => (f as double),
-        )));
+    // From microseconds to seconds
+    t.addAll(timeSeries.map((e) => (e[0] as int) / 1000.0 / 1000.0));
+
+    // Parse the data for each channel
+    for (int channelIndex = 0; channelIndex < channelCount; channelIndex++) {
+      data[channelIndex]
+          .addAll(timeSeries.map<double>((e) => e[1][channelIndex]));
+    }
   }
 }

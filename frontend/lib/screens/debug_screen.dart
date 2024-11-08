@@ -49,7 +49,7 @@ class _DebugScreenState extends State<DebugScreen> {
 
   Future<void> _connectDelsysEmg() async {
     setState(() => _isBusy = true);
-    await _connexion.send(Command.disconnectDelsysEmg);
+    await _connexion.send(Command.connectDelsysEmg);
     _resetInternalStates();
   }
 
@@ -74,6 +74,12 @@ class _DebugScreenState extends State<DebugScreen> {
   Future<void> _stopRecording() async {
     setState(() => _isBusy = true);
     await _connexion.send(Command.stopRecording);
+    setState(() => _isBusy = false);
+  }
+
+  Future<void> _getLastTrial() async {
+    setState(() => _isBusy = true);
+    await _connexion.send(Command.getLastTrial);
     setState(() => _isBusy = false);
   }
 
@@ -125,8 +131,8 @@ class _DebugScreenState extends State<DebugScreen> {
                           : _connectDelsysAnalog)
                       : null,
                   child: Text(_connexion.isConnectedToDelsysAnalog
-                      ? 'Disconnect Delsys analog'
-                      : 'Connect Delsys analog')),
+                      ? 'Disconnect Delsys Analog'
+                      : 'Connect Delsys Analog')),
               const SizedBox(height: 12),
               ElevatedButton(
                   onPressed: !_isBusy && _connexion.isInitialized
@@ -161,6 +167,15 @@ class _DebugScreenState extends State<DebugScreen> {
               const SizedBox(height: 20),
               Text('Data related commands',
                   style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: canSendCommand &&
+                        _connexion.hasRecorded &&
+                        !_connexion.isRecording
+                    ? _getLastTrial
+                    : null,
+                child: const Text('Get last trial'),
+              ),
               const SizedBox(height: 12),
               ElevatedButton(
                 onPressed: canSendCommand
