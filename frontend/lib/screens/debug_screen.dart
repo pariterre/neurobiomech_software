@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/models/command.dart';
+import 'package:frontend/models/data.dart';
 import 'package:frontend/models/stimwalker_client.dart';
+import 'package:frontend/widgets/data_graph.dart';
 
 StimwalkerClient get _connexion => StimwalkerClient.instance;
 
@@ -14,13 +16,12 @@ class DebugScreen extends StatefulWidget {
 }
 
 class _DebugScreenState extends State<DebugScreen> {
-  final _onlineGraphKey = GlobalKey<_OnlineGraphState>();
-
   bool _isBusy = false;
   bool get isServerConnected => _connexion.isInitialized;
   bool get canSendCommand => !_isBusy && isServerConnected;
 
-  bool _showGraph = false;
+  bool _showLastTrial = false;
+  bool _showLiveData = false;
 
   Future<void> _connectServer() async {
     setState(() => _isBusy = true);
@@ -37,7 +38,8 @@ class _DebugScreenState extends State<DebugScreen> {
   void _resetInternalStates() {
     setState(() {
       _isBusy = false;
-      _showGraph = false;
+      _showLastTrial = false;
+      _showLiveData = false;
     });
   }
 
@@ -66,6 +68,7 @@ class _DebugScreenState extends State<DebugScreen> {
   }
 
   Future<void> _startRecording() async {
+    await _hideLastTrialGraph();
     setState(() => _isBusy = true);
     await _connexion.send(Command.startRecording);
     setState(() => _isBusy = false);
@@ -75,26 +78,42 @@ class _DebugScreenState extends State<DebugScreen> {
     setState(() => _isBusy = true);
     await _connexion.send(Command.stopRecording);
     setState(() => _isBusy = false);
+    _showLastTrialGraph();
   }
 
-  Future<void> _getLastTrial() async {
+  Future<void> _showLastTrialGraph() async {
     setState(() => _isBusy = true);
     await _connexion.send(Command.getLastTrial);
-    setState(() => _isBusy = false);
+    await _connexion.onDataArrived;
+    setState(() {
+      _isBusy = false;
+      _showLastTrial = true;
+    });
   }
 
-  Future<void> _showOnlineGraph() async {
+  Future<void> _hideLastTrialGraph() async {
+    setState(() => _showLastTrial = false);
+  }
+
+  Widget _buildLastTrialGraph() {
+    if (!_showLastTrial) return const SizedBox();
+    return DataGraph(data: _connexion.lastTrialData);
+  }
+
+  Future<void> _showLiveDataGraph() async {
     _connexion.resetLiveData();
-    setState(() => _showGraph = true);
+    setState(() => _showLiveData = true);
   }
 
-  Future<void> _hideOnlineGraph() async {
-    setState(() => _showGraph = false);
+  Future<void> _hideLiveDataGraph() async {
+    setState(() => _showLiveData = false);
   }
 
-  Widget _buildGraph() {
-    if (!_showGraph) return const SizedBox();
-    return _OnlineGraph(key: _onlineGraphKey);
+  Widget _buildLiveDataGraph() {
+    if (!_showLiveData) return const SizedBox();
+    // https://github.com/imaNNeo/fl_chart/blob/main/example/lib/presentation/samples/line/line_chart_sample10.dart
+    return DataGraph(
+        data: Data(t0: 0, analogChannelCount: 0, emgChannelCount: 0));
   }
 
   @override
@@ -164,34 +183,27 @@ class _DebugScreenState extends State<DebugScreen> {
                   _connexion.isRecording ? 'Stop recording' : 'Start recording',
                 ),
               ),
+              const SizedBox(height: 12),
+              _buildLastTrialGraph(),
               const SizedBox(height: 20),
               Text('Data related commands',
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: canSendCommand &&
-                        _connexion.hasRecorded &&
-                        !_connexion.isRecording
-                    ? _getLastTrial
-                    : null,
-                child: const Text('Get last trial'),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton(
                 onPressed: canSendCommand
-                    ? _showGraph
-                        ? _hideOnlineGraph
-                        : _showOnlineGraph
+                    ? _showLiveData
+                        ? _hideLiveDataGraph
+                        : _showLiveDataGraph
                     : null,
                 child: Text(
-                    _showGraph ? 'Hide online graph' : 'Show online graph'),
+                    _showLiveData ? 'Hide online graph' : 'Show online graph'),
               ),
               const SizedBox(height: 12),
-              _buildGraph(),
+              _buildLiveDataGraph(),
               const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: _showGraph ? _connexion.liveData.clear : null,
-                child: const Text('Clear data'),
+                onPressed: _showLiveData ? _connexion.liveData.clear : null,
+                child: const Text('Reset live data'),
               ),
               const SizedBox(height: 12),
             ],
@@ -199,19 +211,5 @@ class _DebugScreenState extends State<DebugScreen> {
         ),
       ),
     );
-  }
-}
-
-class _OnlineGraph extends StatefulWidget {
-  const _OnlineGraph({super.key});
-
-  @override
-  State<_OnlineGraph> createState() => _OnlineGraphState();
-}
-
-class _OnlineGraphState extends State<_OnlineGraph> {
-  @override
-  Widget build(BuildContext context) {
-    return Container();
   }
 }

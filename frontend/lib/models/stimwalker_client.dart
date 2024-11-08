@@ -15,6 +15,7 @@ class StimwalkerClient {
   Command? _currentCommand;
   Completer<Ack>? _commandAckCompleter;
   Completer? _responseCompleter;
+  Future? get onDataArrived => _responseCompleter?.future;
 
   int? _expectedResponseLength;
   final _responseGetLastTrial = <int>[];
@@ -26,7 +27,7 @@ class StimwalkerClient {
       t0: DateTime.now().millisecondsSinceEpoch / 1000,
       analogChannelCount: 144,
       emgChannelCount: 16);
-  Data trialData = Data(
+  Data lastTrialData = Data(
       t0: DateTime.now().millisecondsSinceEpoch / 1000,
       analogChannelCount: 144,
       emgChannelCount: 16);
@@ -178,6 +179,10 @@ class StimwalkerClient {
   }
 
   Future<Ack> _performSend(Command command) async {
+    if (command == Command.getLastTrial) {
+      _prepareLastTrialResponse();
+    }
+
     // Construct and send the command
     try {
       _currentCommand = command;
@@ -234,15 +239,10 @@ class StimwalkerClient {
         _hasRecorded = true;
         break;
 
-      case Command.getLastTrial:
-        trialData.clear();
-        _expectedResponseLength = null;
-        _responseGetLastTrial.clear();
-        break;
-
       case Command.handshake:
       case Command.connectMagstim:
       case Command.disconnectMagstim:
+      case Command.getLastTrial:
         break;
     }
   }
@@ -251,6 +251,13 @@ class StimwalkerClient {
       t0: DateTime.now().millisecondsSinceEpoch / 1000,
       analogChannelCount: liveData.delsysAnalog.channelCount,
       emgChannelCount: liveData.delsysEmg.channelCount);
+
+  void _prepareLastTrialResponse() {
+    lastTrialData.clear();
+    _responseCompleter = Completer();
+    _expectedResponseLength = null;
+    _responseGetLastTrial.clear();
+  }
 
   void _receiveResponse(List<int> response) {
     if (_currentCommand == Command.getLastTrial &&
@@ -279,7 +286,8 @@ class StimwalkerClient {
     // Convert the data to a string (from json)
     _expectedResponseLength = null;
     final dataList = json.decode(utf8.decode(_responseGetLastTrial)) as List;
-    trialData.appendFromJson(dataList);
+    lastTrialData.appendFromJson(dataList);
+    _responseCompleter!.complete();
   }
 
   void _receiveLiveData(List<int> data) {
