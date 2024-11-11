@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/models/command.dart';
-import 'package:frontend/models/data.dart';
 import 'package:frontend/models/stimwalker_client.dart';
 import 'package:frontend/widgets/data_graph.dart';
 
@@ -25,7 +24,10 @@ class _DebugScreenState extends State<DebugScreen> {
 
   Future<void> _connectServer() async {
     setState(() => _isBusy = true);
-    await _connexion.initialize(onConnexionLost: () => setState(() {}));
+    await _connexion.initialize(
+      onConnexionLost: () => setState(() {}),
+      onNewLiveData: () => setState(() {}),
+    );
     setState(() => _isBusy = false);
   }
 
@@ -112,8 +114,7 @@ class _DebugScreenState extends State<DebugScreen> {
   Widget _buildLiveDataGraph() {
     if (!_showLiveData) return const SizedBox();
     // https://github.com/imaNNeo/fl_chart/blob/main/example/lib/presentation/samples/line/line_chart_sample10.dart
-    return DataGraph(
-        data: Data(t0: 0, analogChannelCount: 0, emgChannelCount: 0));
+    return DataGraph(data: _connexion.liveData);
   }
 
   @override

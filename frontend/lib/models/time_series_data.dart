@@ -25,12 +25,19 @@ class TimeSeriesData {
     final timeSeries = (json['data'] as List<dynamic>);
 
     // From microseconds to seconds
-    t.addAll(timeSeries.map((e) => (e[0] as int) / 1000.0 / 1000.0));
+    final maxLength = timeSeries.length;
+    final newT =
+        timeSeries.map((e) => (e[0] as int) / 1000.0 / 1000.0).toList();
+
+    // Find the first index where the new time is larger than the last time of t
+    final firstTIndex = newT.indexWhere((value) => value > t.last);
+    t.addAll(newT.getRange(firstTIndex, maxLength));
 
     // Parse the data for each channel
     for (int channelIndex = 0; channelIndex < channelCount; channelIndex++) {
-      data[channelIndex]
-          .addAll(timeSeries.map<double>((e) => e[1][channelIndex]));
+      data[channelIndex].addAll(timeSeries
+          .getRange(firstTIndex, maxLength)
+          .map<double>((e) => e[1][channelIndex]));
     }
   }
 }

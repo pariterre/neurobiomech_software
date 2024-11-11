@@ -557,6 +557,9 @@ void TcpServer::handleSendLiveData() {
   logger.debug("Sending live data to client");
 
   auto data = m_Devices.getLiveDataSerialized();
+  if (data.size() == 0) {
+    return;
+  }
   auto dataDump = data.dump();
   asio::error_code error;
   asio::write(*m_LiveDataSocket,

@@ -20,6 +20,10 @@ class StimwalkerClient {
   int? _expectedResponseLength;
   final _responseGetLastTrial = <int>[];
 
+  int? _expectedLiveDataLength;
+  final _responseLiveData = <int>[];
+  Function()? _onNewLiveData;
+
   bool _isConnectedToDelsysAnalog = false;
   bool _isConnectedToDelsysEmg = false;
   bool _isConnectedToLiveData = false;
@@ -67,6 +71,7 @@ class StimwalkerClient {
     int liveDataPort = 5002,
     int? nbOfRetries,
     required Function() onConnexionLost,
+    required Function() onNewLiveData,
   }) async {
     if (isInitialized) return;
 
@@ -84,6 +89,8 @@ class StimwalkerClient {
       await disconnect();
       return;
     }
+
+    _onNewLiveData = onNewLiveData;
 
     _log.info('Communication initialized');
   }
@@ -296,8 +303,34 @@ class StimwalkerClient {
     _responseCompleter!.complete();
   }
 
-  void _receiveLiveData(List<int> data) {
-    _log.info('Live data received (${data.length} bytes)');
+  void _receiveLiveData(List<int> response) {
+    if (_expectedLiveDataLength == null) {
+      _expectedLiveDataLength = _parseDataLength(response);
+      if (response.length > 8) {
+        // If more data came at once, recursively call the function with the rest
+        // of the data.
+        _receiveLiveData(response.sublist(8));
+        return;
+      }
+    }
+
+    _responseLiveData.addAll(response);
+    if (_responseLiveData.length < _expectedLiveDataLength!) {
+      // Waiting for the rest of the live data
+      return;
+    } else if (_responseLiveData.length > _expectedLiveDataLength!) {
+      _log.severe('Received more live data than expected, dropping everything');
+      _responseLiveData.clear();
+      _expectedLiveDataLength = null;
+      return;
+    }
+
+    // Convert the data to a string (from json)
+    _expectedLiveDataLength = null;
+    final dataList = json.decode(utf8.decode(_responseLiveData)) as List;
+    liveData.appendFromJson(dataList);
+
+    _onNewLiveData!();
   }
 
   int _parseDataLength(List<int> data) {
@@ -356,9 +389,12 @@ class StimwalkerClientMock extends StimwalkerClient {
     int liveDataPort = 5002,
     int? nbOfRetries,
     required Function() onConnexionLost,
+    required Function() onNewLiveData,
   }) async {
     if (isInitialized) return;
     _isMockInitialized = true;
+
+    _onNewLiveData = onNewLiveData;
   }
 
   @override
