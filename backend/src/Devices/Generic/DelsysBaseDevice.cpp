@@ -174,36 +174,45 @@ DelsysBaseDevice::parseAsyncSendCommand(const DeviceCommands &command,
 }
 
 void DelsysBaseDevice::dataCheck() {
+  auto now = std::chrono::high_resolution_clock::now();
   m_DataDevice->read(m_DataBuffer);
+  auto readingTime = std::chrono::high_resolution_clock::now();
 
-  // Convert the data to double
+  utils::Logger::getInstance().info(
+      "Took " +
+      std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
+                         readingTime - now)
+                         .count()) +
+      "ms to read the data");
+
+  // Allocate space for all data in a single vector of floats
+  std::vector<float> allData(m_SampleCount * m_DataChannelCount);
+
+  // Perform a single memcpy to copy the entire data buffer as float
+  std::memcpy(allData.data(), m_DataBuffer.data(),
+              m_SampleCount * m_DataChannelCount * m_BytesPerChannel);
+
+  // Now convert allData (float) to double precision
+  std::vector<double> allDataAsDouble(allData.begin(), allData.end());
+
+  // Now split the data into individual frames as doubles
   std::vector<std::vector<double>> dataPoints;
+  dataPoints.reserve(m_SampleCount); // Pre-allocate space for the frames
+
   for (int i = 0; i < m_SampleCount; i++) {
-    bool hasData = false;
-    for (auto &byte : m_DataBuffer) {
-      if (byte != 0) {
-        hasData = true;
-        break;
+    // Use iterators to create sub-vectors (views of the original data)
+    std::vector<double> frame(allDataAsDouble.begin() + i * m_DataChannelCount,
+                              allDataAsDouble.begin() +
+                                  (i + 1) * m_DataChannelCount);
+
+    // If the first frame is all zeros, assume no data were sent at all
+    if (i == 0) {
+      if (std::all_of(frame.begin(), frame.end(),
+                      [](double value) { return value == 0.0; })) {
+        return;
       }
     }
-
-    if (!hasData) {
-      // If first frame does not have data, we can assume the rest of the
-      // frames will not have data either
-      break;
-    }
-
-    std::vector<double> dataAsDouble(m_DataChannelCount);
-    for (int j = 0; j < m_DataChannelCount; j++) {
-      size_t index = (i * m_DataChannelCount + j) * m_BytesPerChannel;
-      float dataAsFloat;
-      std::memcpy(&dataAsFloat, m_DataBuffer.data() + index, sizeof(float));
-      // With the next line, we assure the computer is little endian (so we
-      // don't need to swap the bytes before converting to double)
-      dataAsDouble[j] = static_cast<double>(dataAsFloat);
-    }
-
-    dataPoints.push_back(dataAsDouble);
+    dataPoints.push_back(std::move(frame));
   }
 
   addDataPoints(dataPoints);

@@ -13,7 +13,7 @@ DataCollector::DataCollector(
     : m_DataChannelCount(channelCount), m_IsStreamingData(false),
       m_IsRecording(false), m_LiveTimeSeries(timeSeriesGenerator()),
       m_TrialTimeSeries(timeSeriesGenerator()) {
-  m_LiveTimeSeries->setRollingVectorMaxSize(10);
+  m_LiveTimeSeries->setRollingVectorMaxSize(1000);
 }
 
 bool DataCollector::startDataStreaming() {
