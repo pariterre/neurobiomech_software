@@ -297,7 +297,7 @@ class StimwalkerClient {
   }
 
   void _receiveLiveData(List<int> data) {
-    _log.info('Live data received');
+    _log.info('Live data received (${data.length} bytes)');
   }
 
   int _parseDataLength(List<int> data) {

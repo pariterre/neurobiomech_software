@@ -564,6 +564,7 @@ void TcpServer::handleSendLiveData() {
                   static_cast<TcpServerResponse>(dataDump.size()))),
               error);
   auto written = asio::write(*m_LiveDataSocket, asio::buffer(dataDump), error);
+  logger.debug("Live data size: " + std::to_string(written));
 }
 
 void TcpServerMock::makeAndAddDevice(const std::string &deviceName) {

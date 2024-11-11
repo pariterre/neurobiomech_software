@@ -10,25 +10,29 @@ TimeSeries::TimeSeries(const nlohmann::json &json)
       m_Data(utils::RollingVector<DataPoint>(
           static_cast<size_t>(json["data"].size()))) {
   for (const auto &point : json["data"]) {
-    m_Data.push_back(
-        DataPoint(std::chrono::microseconds(point[0].get<int>()), point[1]));
+    m_Data.push_back(std::move(
+        DataPoint(std::chrono::microseconds(point[0].get<int>()), point[1])));
   }
 }
 
 size_t TimeSeries::size() const { return static_cast<int>(m_Data.size()); }
 
+void TimeSeries::setRollingVectorMaxSize(size_t maxSize) {
+  m_Data.setMaxSize(maxSize);
+}
+
 void TimeSeries::clear() { m_Data.clear(); }
 
 void TimeSeries::add(const std::chrono::microseconds &timeStamp,
                      const std::vector<double> &data) {
-  m_Data.push_back(DataPoint(timeStamp, data));
+  m_Data.push_back(std::move(DataPoint(timeStamp, data)));
 }
 
 void TimeSeries::add(const std::vector<double> &data) {
-  m_Data.push_back(
+  m_Data.push_back(std::move(
       DataPoint(std::chrono::duration_cast<std::chrono::microseconds>(
                     std::chrono::high_resolution_clock::now() - m_StopWatch),
-                data));
+                data)));
 }
 
 const DataPoint &TimeSeries::operator[](size_t index) const {
@@ -38,7 +42,7 @@ const DataPoint &TimeSeries::operator[](size_t index) const {
 TimeSeries TimeSeries::tail(size_t n) const {
   TimeSeries data(m_StartingTime);
   for (size_t i = m_Data.size() - n; i < m_Data.size(); i++) {
-    data.m_Data.push_back(m_Data[i]);
+    data.m_Data.push_back(std::move(m_Data[i]));
   }
   return data;
 }
@@ -52,7 +56,7 @@ TimeSeries::since(const std::chrono::system_clock::time_point &time) const {
   TimeSeries data(m_StartingTime);
   for (const auto &point : m_Data) {
     if (m_StartingTime + point.getTimeStamp() >= time) {
-      data.m_Data.push_back(point);
+      data.m_Data.push_back(std::move(point));
     }
   }
   return data;
@@ -64,7 +68,7 @@ nlohmann::json TimeSeries::serialize() const {
   json["data"] = nlohmann::json::array();
   auto &jsonData = json["data"];
   for (const auto &point : m_Data) {
-    jsonData.push_back(point.serialize());
+    jsonData.push_back(std::move(point.serialize()));
   }
   return json;
 }

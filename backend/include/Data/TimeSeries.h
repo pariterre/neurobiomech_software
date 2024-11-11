@@ -34,6 +34,10 @@ public:
   /// @return The number of data in the collection
   size_t size() const;
 
+  /// @brief Set the maximum size of the rolling vector
+  /// @param maxSize The maximum size of the rolling vector
+  void setRollingVectorMaxSize(size_t maxSize);
+
   /// @brief Clear the data in the collection. This will not change the starting
   /// time
   void clear();

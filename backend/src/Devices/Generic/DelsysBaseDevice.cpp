@@ -72,7 +72,7 @@ DelsysBaseDevice::DelsysBaseDevice(size_t channelCount,
           std::vector<char>(channelCount * m_SampleCount * m_BytesPerChannel)),
       AsyncDevice(std::chrono::milliseconds(100)),
       AsyncDataCollector(
-          channelCount, std::chrono::milliseconds(10),
+          channelCount, std::chrono::microseconds(1),
           [deltaTime]() { return timeSeriesGenerator(deltaTime); }) {
   m_IgnoreTooSlowWarning = true;
 }
@@ -89,7 +89,7 @@ DelsysBaseDevice::DelsysBaseDevice(size_t channelCount,
           std::vector<char>(channelCount * m_SampleCount * m_BytesPerChannel)),
       AsyncDevice(std::chrono::milliseconds(100)),
       AsyncDataCollector(
-          channelCount, std::chrono::milliseconds(10),
+          channelCount, std::chrono::microseconds(1),
           [deltaTime]() { return timeSeriesGenerator(deltaTime); }) {
   m_IgnoreTooSlowWarning = true;
 }
@@ -104,9 +104,9 @@ DelsysBaseDevice::DelsysBaseDevice(
       m_SampleCount(sampleCount),
       m_DataBuffer(
           std::vector<char>(channelCount * m_SampleCount * m_BytesPerChannel)),
-      AsyncDevice(std::chrono::milliseconds(1000)),
+      AsyncDevice(std::chrono::milliseconds(100)),
       AsyncDataCollector(
-          channelCount, std::chrono::milliseconds(10),
+          channelCount, std::chrono::microseconds(1),
           [deltaTime]() { return timeSeriesGenerator(deltaTime); }) {
   m_IgnoreTooSlowWarning = true;
 }

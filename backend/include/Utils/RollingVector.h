@@ -73,12 +73,17 @@ public:
       : m_Data(size), m_MaxSize(size), m_CurrentIndex(0), m_UnwrapIndex(0),
         m_IsFull(false) {}
 
+  void setMaxSize(size_t size) {
+    m_MaxSize = size;
+    clear();
+  }
+
   /// @brief Add a new value to the vector, if the vector is full, the oldest
   /// value is replaced
   /// @param value The value to add
   void push_back(T value) {
     if (m_MaxSize == size_t(-1)) {
-      m_Data.push_back(value);
+      m_Data.push_back(std::move(value));
     } else {
       m_Data[m_CurrentIndex] = value;
     }
@@ -118,6 +123,9 @@ public:
   /// @brief Clear the vector
   void clear() {
     m_Data.clear();
+    if (m_MaxSize != size_t(-1)) {
+      m_Data.resize(m_MaxSize);
+    }
     m_CurrentIndex = 0;
     m_UnwrapIndex = 0;
     m_IsFull = false;
