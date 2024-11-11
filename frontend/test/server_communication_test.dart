@@ -14,7 +14,7 @@ void main() {
     final connexion = StimwalkerClientMock.instance;
     assert(connexion.isInitialized == false);
 
-    connexion.initialize();
+    connexion.initialize(onConnexionLost: () {});
     assert(connexion.isInitialized);
     assert(connexion.isConnectedToDelsysAnalog == false);
     assert(connexion.isConnectedToDelsysEmg == false);
@@ -32,7 +32,7 @@ void main() {
     assert(await connexion.send(Command.connectDelsysAnalog) == false);
     assert(connexion.isConnectedToDelsysAnalog == false);
 
-    connexion.initialize();
+    connexion.initialize(onConnexionLost: () {});
     assert(connexion.isConnectedToDelsysAnalog == false);
 
     assert(await connexion.send(Command.connectDelsysAnalog));
@@ -45,7 +45,7 @@ void main() {
   test('Cannot call reserved', () async {
     final connexion = StimwalkerClientMock.instance;
 
-    await connexion.initialize();
+    await connexion.initialize(onConnexionLost: () {});
     assert(await connexion.send(Command.handshake) == false);
 
     connexion.disconnect();
@@ -53,7 +53,7 @@ void main() {
 
   test('Manage recording commands', () async {
     final connexion = StimwalkerClientMock.instance;
-    connexion.initialize();
+    connexion.initialize(onConnexionLost: () {});
     assert(connexion.isRecording == false);
     assert(connexion.hasRecorded == false);
 

@@ -20,7 +20,7 @@ timeSeriesGenerator(std::chrono::microseconds deltaTime) {
 
 DelsysBaseDevice::CommandTcpDevice::CommandTcpDevice(const std::string &host,
                                                      size_t port)
-    : m_LastCommand(DelsysCommands::STOP),
+    : m_LastCommand(DelsysCommands::INITIALIZING),
       TcpDevice(host, port, std::chrono::milliseconds(100)) {}
 
 std::string DelsysBaseDevice::CommandTcpDevice::deviceName() const {
@@ -179,8 +179,21 @@ void DelsysBaseDevice::dataCheck() {
   // Convert the data to double
   std::vector<std::vector<double>> dataPoints;
   for (int i = 0; i < m_SampleCount; i++) {
+    bool hasData = false;
+    for (auto &byte : m_DataBuffer) {
+      if (byte != 0) {
+        hasData = true;
+        break;
+      }
+    }
+
+    if (!hasData) {
+      // If first frame does not have data, we can assume the rest of the
+      // frames will not have data either
+      break;
+    }
+
     std::vector<double> dataAsDouble(m_DataChannelCount);
-    float sum = 0;
     for (int j = 0; j < m_DataChannelCount; j++) {
       size_t index = (i * m_DataChannelCount + j) * m_BytesPerChannel;
       float dataAsFloat;
@@ -188,13 +201,8 @@ void DelsysBaseDevice::dataCheck() {
       // With the next line, we assure the computer is little endian (so we
       // don't need to swap the bytes before converting to double)
       dataAsDouble[j] = static_cast<double>(dataAsFloat);
-      sum += dataAsFloat;
     }
 
-    if (sum == 0) {
-      // No data were received
-      continue;
-    }
     dataPoints.push_back(dataAsDouble);
   }
 

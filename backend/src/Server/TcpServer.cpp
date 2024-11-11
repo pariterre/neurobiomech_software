@@ -76,7 +76,7 @@ void TcpServer::startServerSync() {
     });
 
     auto liveDataWorker = std::thread([this]() {
-      auto liveDataIntervals = std::chrono::milliseconds(200);
+      auto liveDataIntervals = std::chrono::milliseconds(100);
       std::this_thread::sleep_for(liveDataIntervals);
       while (m_IsServerRunning && isClientConnected()) {
         auto startingTime = std::chrono::high_resolution_clock::now();
@@ -476,7 +476,10 @@ bool TcpServer::addDevice(const std::string &deviceName) {
   // Stop the data streaming when changing the devices
   m_Devices.stopDataStreaming();
   makeAndAddDevice(deviceName);
-  m_Devices.connect();
+  if (!m_Devices.connect()) {
+    removeDevice(deviceName);
+    return false;
+  }
   m_Devices.startDataStreaming();
 
   return true;

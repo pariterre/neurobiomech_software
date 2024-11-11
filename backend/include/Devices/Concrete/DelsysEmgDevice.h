@@ -14,7 +14,7 @@ public:
   /// @param dataPort The port of the data device
   /// @param commandPort The port of the command device
   DelsysEmgDevice(const std::string &host = "localhost",
-                  size_t dataPort = 50043, size_t commandPort = 50040);
+                  size_t dataPort = 50041, size_t commandPort = 50040);
 
   /// @brief Constructor that share some parts of the device, namely the command
   /// device and host address

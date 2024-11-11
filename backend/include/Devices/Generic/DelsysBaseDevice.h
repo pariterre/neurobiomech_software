@@ -23,6 +23,7 @@ class DataTcpDeviceMock;
 
 class DelsysCommands : public DeviceCommands {
 public:
+  DECLARE_DEVICE_COMMAND(INITIALIZING, -1);
   DECLARE_DEVICE_COMMAND(START, 0);
   DECLARE_DEVICE_COMMAND(STOP, 1);
 

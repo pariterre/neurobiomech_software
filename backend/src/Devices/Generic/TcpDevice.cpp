@@ -51,10 +51,14 @@ bool TcpDevice::write(const std::string &data) {
 }
 
 bool TcpDevice::handleConnect() {
-  m_TcpSocket.connect(
-      asio::ip::tcp::endpoint(asio::ip::address::from_string(
-                                  m_Host == "localhost" ? "127.0.0.1" : m_Host),
-                              static_cast<unsigned short>(m_Port)));
+  try {
+    m_TcpSocket.connect(asio::ip::tcp::endpoint(
+        asio::ip::address::from_string(m_Host == "localhost" ? "127.0.0.1"
+                                                             : m_Host),
+        static_cast<unsigned short>(m_Port)));
+  } catch (std::exception &) {
+    return false;
+  }
 
   return true;
 }

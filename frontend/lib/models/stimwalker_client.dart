@@ -66,6 +66,7 @@ class StimwalkerClient {
     int responsePort = 5001,
     int liveDataPort = 5002,
     int? nbOfRetries,
+    required Function() onConnexionLost,
   }) async {
     if (isInitialized) return;
 
@@ -75,7 +76,8 @@ class StimwalkerClient {
         commandPort: commandPort,
         responsePort: responsePort,
         liveDataPort: liveDataPort,
-        nbOfRetries: nbOfRetries);
+        nbOfRetries: nbOfRetries,
+        onConnexionLost: onConnexionLost);
 
     if (!(await _send(Command.handshake, null))) {
       _log.severe('Handshake failed');
@@ -113,22 +115,26 @@ class StimwalkerClient {
     required int responsePort,
     required int liveDataPort,
     required int? nbOfRetries,
+    required Function()? onConnexionLost,
   }) async {
     _socketCommand = await _connectToSocket(
         ipAddress: serverIp,
         port: commandPort,
         nbOfRetries: nbOfRetries,
-        hasDataCallback: _receiveCommandAck);
+        hasDataCallback: _receiveCommandAck,
+        onConnexionLost: onConnexionLost);
     _socketResponse = await _connectToSocket(
         ipAddress: serverIp,
         port: responsePort,
         nbOfRetries: nbOfRetries,
-        hasDataCallback: _receiveResponse);
+        hasDataCallback: _receiveResponse,
+        onConnexionLost: onConnexionLost);
     _socketLiveData = await _connectToSocket(
         ipAddress: serverIp,
         port: liveDataPort,
         nbOfRetries: nbOfRetries,
-        hasDataCallback: _receiveLiveData);
+        hasDataCallback: _receiveLiveData,
+        onConnexionLost: onConnexionLost);
   }
 
   Future<void> _disconnectSockets() async {
@@ -291,7 +297,7 @@ class StimwalkerClient {
   }
 
   void _receiveLiveData(List<int> data) {
-    //_log.info('Live data received: ${data}');
+    _log.info('Live data received');
   }
 
   int _parseDataLength(List<int> data) {
@@ -307,11 +313,17 @@ class StimwalkerClient {
     required int port,
     required int? nbOfRetries,
     required Function(List<int>) hasDataCallback,
+    required Function()? onConnexionLost,
   }) async {
     while (nbOfRetries == null || nbOfRetries > 0) {
       try {
         final socket = await Socket.connect(ipAddress, port);
-        socket.listen(hasDataCallback);
+        socket.listen(hasDataCallback, onDone: () {
+          if (onConnexionLost == null) return;
+          _log.info('Connection closed');
+          disconnect();
+          onConnexionLost();
+        });
 
         return socket;
       } on SocketException {
@@ -343,6 +355,7 @@ class StimwalkerClientMock extends StimwalkerClient {
     int responsePort = 5001,
     int liveDataPort = 5002,
     int? nbOfRetries,
+    required Function() onConnexionLost,
   }) async {
     if (isInitialized) return;
     _isMockInitialized = true;
@@ -355,6 +368,7 @@ class StimwalkerClientMock extends StimwalkerClient {
     required int responsePort,
     required int liveDataPort,
     required int? nbOfRetries,
+    required Function()? onConnexionLost,
   }) async {}
 
   @override

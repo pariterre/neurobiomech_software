@@ -25,7 +25,7 @@ class _DebugScreenState extends State<DebugScreen> {
 
   Future<void> _connectServer() async {
     setState(() => _isBusy = true);
-    await _connexion.initialize();
+    await _connexion.initialize(onConnexionLost: () => setState(() {}));
     setState(() => _isBusy = false);
   }
 

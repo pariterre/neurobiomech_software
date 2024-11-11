@@ -19,8 +19,7 @@ class DataGraph extends StatelessWidget {
               spots: channel.value
                   .asMap()
                   .entries
-                  .map((entry) => FlSpot(
-                      time[entry.key], entry.value + (0.1 * channel.key)))
+                  .map((entry) => FlSpot(time[entry.key], entry.value))
                   .toList(),
               isCurved: false,
               isStrokeCapRound: false,
