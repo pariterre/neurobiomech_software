@@ -12,6 +12,9 @@
 
 using namespace STIMWALKER_NAMESPACE::server;
 
+const size_t BYTES_IN_CLIENT_PACKET_HEADER = 8;
+const size_t BYTES_IN_SERVER_PACKET_HEADER = 16;
+
 // Here are the names of the devices that can be connected (for internal use)
 const std::string DEVICE_NAME_DELSYS_EMG = "DelsysEmgDevice";
 const std::string DEVICE_NAME_DELSYS_ANALOG = "DelsysAnalogDevice";
@@ -262,7 +265,7 @@ void TcpServer::waitAndHandleNewCommand() {
     }
   }
 
-  auto buffer = std::array<char, 8>();
+  auto buffer = std::array<char, BYTES_IN_CLIENT_PACKET_HEADER>();
   asio::error_code error;
   size_t byteRead = asio::read(*m_CommandSocket, asio::buffer(buffer), error);
 
@@ -332,7 +335,7 @@ bool TcpServer::handleHandshake(TcpServerCommand command) {
   size_t byteWritten = asio::write(
       *m_CommandSocket,
       asio::buffer(constructResponsePacket(TcpServerResponse::OK)), error);
-  if (byteWritten != 8 || error) {
+  if (byteWritten != BYTES_IN_SERVER_PACKET_HEADER || error) {
     logger.fatal("TCP write error: " + error.message());
     return false;
   }
@@ -414,7 +417,7 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
   // Respond OK to the command
   size_t byteWritten = asio::write(
       *m_CommandSocket, asio::buffer(constructResponsePacket(response)), error);
-  if (byteWritten != 8 || error) {
+  if (byteWritten != BYTES_IN_SERVER_PACKET_HEADER || error) {
     logger.fatal("TCP write error: " + error.message());
     return false;
   }
@@ -422,8 +425,8 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
   return true;
 }
 
-TcpServerCommand
-TcpServer::parseCommandPacket(const std::array<char, 8> &buffer) {
+TcpServerCommand TcpServer::parseCommandPacket(
+    const std::array<char, BYTES_IN_CLIENT_PACKET_HEADER> &buffer) {
   // Packets are exactly 8 bytes long, big-endian
   // - First 4 bytes are the version number
   // - Next 4 bytes are the command
@@ -445,21 +448,31 @@ TcpServer::parseCommandPacket(const std::array<char, 8> &buffer) {
       *reinterpret_cast<const std::uint32_t *>(buffer.data() + 4));
 }
 
-std::array<char, 8>
+std::array<char, BYTES_IN_SERVER_PACKET_HEADER>
 TcpServer::constructResponsePacket(TcpServerResponse response) {
-  // Packets are exactly 8 bytes long, big-endian
+  // Packets are exactly 16 bytes long, big-endian
   // - First 4 bytes are the version number
-  // - Next 4 bytes are the response
+  // - The next 8 bytes are the timestamp of the packet (milliseconds since
+  // epoch)
+  // - Next 4 bytes are the actual response
 
-  auto packet = std::array<char, 8>();
+  auto packet = std::array<char, BYTES_IN_SERVER_PACKET_HEADER>();
   packet.fill('\0');
 
   // Add the version number
   std::memcpy(packet.data(), &m_ProtocolVersion, sizeof(std::uint32_t));
 
+  // Add the timestamps in uint64_t format
+  std::uint64_t timestamp =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count();
+  std::memcpy(packet.data() + sizeof(std::uint32_t), &timestamp,
+              sizeof(std::uint64_t));
+
   // Add the response
-  std::memcpy(packet.data() + sizeof(std::uint32_t), &response,
-              sizeof(TcpServerResponse));
+  std::memcpy(packet.data() + sizeof(std::uint32_t) + sizeof(std::uint64_t),
+              &response, sizeof(TcpServerResponse));
 
   return packet;
 }

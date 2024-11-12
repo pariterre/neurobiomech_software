@@ -44,7 +44,7 @@ class _DataGraphState extends State<DataGraph> {
   }
 
   List<LineChartBarData> _dataToLineBarsData() {
-    final time = widget.controller._data.delsysEmg.t;
+    final time = widget.controller._data.delsysEmg.time;
     return widget.controller._data.delsysEmg.data
         .asMap()
         .entries

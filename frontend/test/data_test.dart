@@ -11,7 +11,8 @@ import 'package:frontend/models/time_series_data.dart';
 
 void main() {
   test('Data', () {
-    final data = Data(t0: 0.1, analogChannelCount: 2, emgChannelCount: 2);
+    final data = Data(
+        initialTime: DateTime(1), analogChannelCount: 2, emgChannelCount: 2);
 
     data.delsysAnalog.appendFromJson({
       't': [
@@ -57,7 +58,7 @@ void main() {
       ]
     });
 
-    expect(data.t0, 0.1);
+    expect(data.initialTime, DateTime(1));
     expect(data.delsysAnalog.length, 12);
     expect(data.delsysEmg.length, 12);
 
@@ -68,7 +69,7 @@ void main() {
 
   test('TimeSeriesData', () {
     final data = TimeSeriesData(
-      t0: 1000.0,
+      initialTime: DateTime(1000),
       channelCount: 2,
     );
     data.appendFromJson({
@@ -114,8 +115,8 @@ void main() {
       ]
     });
 
-    expect(data.t0, 1000.0);
-    expect(data.t, Iterable.generate(24, (i) => 0.01 + i * 0.25).toList());
+    expect(data.initialTime, DateTime(1000));
+    expect(data.time, Iterable.generate(24, (i) => 0.01 + i * 0.25).toList());
     expect(
         data.data[0],
         Iterable.generate(

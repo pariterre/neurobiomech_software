@@ -7,6 +7,9 @@ import 'package:frontend/models/data.dart';
 import 'package:frontend/models/ack.dart';
 import 'package:logging/logging.dart';
 
+const _protocolVersion = 1; // TODO Test this
+const _serverHeaderLength = 16;
+
 class StimwalkerClient {
   Socket? _socketCommand;
   Socket? _socketResponse;
@@ -21,20 +24,21 @@ class StimwalkerClient {
   final _responseGetLastTrial = <int>[];
 
   int? _expectedLiveDataLength;
+  DateTime? _lastLiveDataTimestamp;
   final _responseLiveData = <int>[];
   var _liveDataCompleter = Completer();
-  bool _isManagingLiveData = false;
+
   Function()? _onNewLiveData;
 
   bool _isConnectedToDelsysAnalog = false;
   bool _isConnectedToDelsysEmg = false;
   bool _isConnectedToLiveData = false;
   Data liveData = Data(
-      t0: DateTime.now().millisecondsSinceEpoch / 1000,
+      initialTime: DateTime.now(),
       analogChannelCount: 144,
       emgChannelCount: 16);
   Data lastTrialData = Data(
-      t0: DateTime.now().millisecondsSinceEpoch / 1000,
+      initialTime: DateTime.now(),
       analogChannelCount: 144,
       emgChannelCount: 16);
 
@@ -92,6 +96,7 @@ class StimwalkerClient {
       return;
     }
 
+    _lastLiveDataTimestamp = null;
     _expectedLiveDataLength = null;
     _onNewLiveData = onNewLiveData;
 
@@ -120,9 +125,9 @@ class StimwalkerClient {
     _responseCompleter = null;
     _expectedResponseLength = null;
     _responseGetLastTrial.clear();
+    _lastLiveDataTimestamp = null;
     _expectedLiveDataLength = null;
     _responseLiveData.clear();
-    _isManagingLiveData = false;
     _liveDataCompleter = Completer();
     _onNewLiveData = null;
 
@@ -273,8 +278,7 @@ class StimwalkerClient {
     }
   }
 
-  void resetLiveData() =>
-      liveData.clear(t0: DateTime.now().millisecondsSinceEpoch / 1000);
+  void resetLiveData() => liveData.clear(initialTime: DateTime.now());
 
   void _prepareLastTrialResponse() {
     lastTrialData.clear();
@@ -286,11 +290,20 @@ class StimwalkerClient {
   void _receiveResponse(List<int> response) {
     if (_currentCommand == Command.getLastTrial &&
         _expectedResponseLength == null) {
-      _expectedResponseLength = _parseDataLength(response);
-      if (response.length > 8) {
+      final version = _parseVersionFromPacket(response);
+      if (version != _protocolVersion) {
+        _log.severe(
+            'Protocol version mismatch, expected $_protocolVersion, got $version. Please update the client.');
+        disconnect();
+        return;
+      }
+
+      lastTrialData.clear(initialTime: _parseTimestampFromPacket(response));
+      _expectedResponseLength = _parseDataLengthFromPacket(response);
+      if (response.length > _serverHeaderLength) {
         // If more data came at once, recursively call the function with the rest
         // of the data.
-        _receiveResponse(response.sublist(8));
+        _receiveResponse(response.sublist(_serverHeaderLength));
       }
       return;
     }
@@ -317,18 +330,14 @@ class StimwalkerClient {
   }
 
   Future<void> _receiveLiveData(List<int> response) async {
-    // while (_isManagingLiveData) {
-    //   await Future.delayed(const Duration(milliseconds: 10));
-    // }
-    _isManagingLiveData = true;
-
     if (_expectedLiveDataLength == null) {
       _liveDataCompleter = Completer();
-      _expectedLiveDataLength = _parseDataLength(response);
-      if (response.length > 8) {
+      _lastLiveDataTimestamp = _parseTimestampFromPacket(response);
+      _expectedLiveDataLength = _parseDataLengthFromPacket(response);
+      if (response.length > _serverHeaderLength) {
         // If more data came at once, recursively call the function with the rest
         // of the data.
-        _receiveLiveData(response.sublist(8));
+        _receiveLiveData(response.sublist(_serverHeaderLength));
       }
       return;
     }
@@ -351,11 +360,13 @@ class StimwalkerClient {
     // Convert the data to a string (from json)
     try {
       final dataList = json.decode(utf8.decode(_responseLiveData)) as List;
+      if (liveData.isEmpty) {
+        // If the live data were reset, we need to clear again with the current time stamp
+        liveData.clear(initialTime: _lastLiveDataTimestamp);
+      }
       liveData.appendFromJson(dataList);
-      liveData.dropBefore(DateTime.now()
-              .subtract(const Duration(seconds: 10))
-              .millisecondsSinceEpoch /
-          1000);
+      liveData.dropBefore(
+          _lastLiveDataTimestamp!.subtract(const Duration(seconds: 1)));
     } catch (e) {
       _log.severe('Error while parsing live data: $e, resetting');
       resetLiveData();
@@ -367,8 +378,26 @@ class StimwalkerClient {
     _onNewLiveData!();
   }
 
-  int _parseDataLength(List<int> data) {
-    return data[4] + (data[5] << 8) + (data[6] << 16) + (data[7] << 24);
+  int _parseVersionFromPacket(List<int> data) {
+    // Bit shifting from little-ending to 32-bits integer, starting from the 1st byte
+    return data[0] + (data[1] << 8) + (data[2] << 16) + (data[3] << 24);
+  }
+
+  DateTime _parseTimestampFromPacket(List<int> data) {
+    // Bit shifting from little-endian to 64-bits integer, starting from the 5th byte
+    return DateTime.fromMillisecondsSinceEpoch(data[4] +
+        (data[5] << 8) +
+        (data[6] << 16) +
+        (data[7] << 24) +
+        (data[8] << 32) +
+        (data[9] << 40) +
+        (data[10] << 48) +
+        (data[11] << 56));
+  }
+
+  int _parseDataLengthFromPacket(List<int> data) {
+    // Bit shifting from little-ending to 32-bits integer, starting from the 13th byte
+    return data[12] + (data[13] << 8) + (data[14] << 16) + (data[15] << 24);
   }
 
   // Prepare the singleton

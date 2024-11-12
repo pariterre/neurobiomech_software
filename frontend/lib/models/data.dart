@@ -1,15 +1,15 @@
 import 'package:frontend/models/time_series_data.dart';
 
 class Data {
-  double _t0;
-  double get t0 => _t0;
+  DateTime _initialTime;
+  DateTime get initialTime => _initialTime;
   final TimeSeriesData delsysAnalog;
   final TimeSeriesData delsysEmg;
 
-  void clear({double? t0}) {
-    _t0 = t0 ?? _t0;
-    delsysAnalog.clear();
-    delsysEmg.clear();
+  void clear({DateTime? initialTime}) {
+    _initialTime = initialTime ?? _initialTime;
+    delsysAnalog.clear(initialTime: initialTime);
+    delsysEmg.clear(initialTime: initialTime);
   }
 
   bool get isEmpty => delsysAnalog.isEmpty && delsysEmg.isEmpty;
@@ -17,12 +17,14 @@ class Data {
   bool get isNotEmpty => !isEmpty;
 
   Data({
-    required double t0,
+    required DateTime initialTime,
     required int analogChannelCount,
     required int emgChannelCount,
-  })  : _t0 = t0,
-        delsysAnalog = TimeSeriesData(t0: t0, channelCount: analogChannelCount),
-        delsysEmg = TimeSeriesData(t0: t0, channelCount: emgChannelCount);
+  })  : _initialTime = initialTime,
+        delsysAnalog = TimeSeriesData(
+            initialTime: initialTime, channelCount: analogChannelCount),
+        delsysEmg = TimeSeriesData(
+            initialTime: initialTime, channelCount: emgChannelCount);
 
   appendFromJson(List json) {
     for (Map data in json) {
@@ -36,8 +38,12 @@ class Data {
     }
   }
 
-  void dropBefore(double t) {
-    delsysAnalog.dropBefore(t - t0);
-    delsysEmg.dropBefore(t - t0);
+  void dropBefore(DateTime t) {
+    delsysAnalog.dropBefore(
+        (initialTime.millisecondsSinceEpoch - t.millisecondsSinceEpoch)
+            .toDouble());
+    delsysEmg.dropBefore(
+        (initialTime.millisecondsSinceEpoch - t.millisecondsSinceEpoch)
+            .toDouble());
   }
 }

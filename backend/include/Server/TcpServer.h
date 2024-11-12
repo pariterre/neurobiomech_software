@@ -120,7 +120,7 @@ protected:
   /// @brief Construct the packet to send to the client from a response
   /// @param response The response to send
   /// @return The packet to send
-  std::array<char, 8> constructResponsePacket(TcpServerResponse response);
+  std::array<char, 16> constructResponsePacket(TcpServerResponse response);
 
   /// @brief Parse a packet from the client to get the command
   /// @param buffer The buffer to parse

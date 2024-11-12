@@ -1,38 +1,40 @@
 class TimeSeriesData {
-  final double t0;
+  DateTime _initialTime;
+  DateTime get initialTime => _initialTime;
   final int channelCount;
 
-  final List<double> t = [];
+  final List<double> time = []; // In milliseconds since t0
   final List<List<double>> data;
 
-  void clear() {
-    t.clear();
+  void clear({DateTime? initialTime}) {
+    _initialTime = initialTime ?? _initialTime;
+    time.clear();
     for (var channel in data) {
       channel.clear();
     }
   }
 
-  int get length => t.length;
-  bool get isEmpty => t.isEmpty;
-  bool get isNotEmpty => t.isNotEmpty;
+  int get length => time.length;
+  bool get isEmpty => time.isEmpty;
+  bool get isNotEmpty => time.isNotEmpty;
 
   TimeSeriesData({
-    required this.t0,
+    required DateTime initialTime,
     required this.channelCount,
-  }) : data = List.generate(channelCount, (_) => <double>[]);
+  })  : _initialTime = initialTime,
+        data = List.generate(channelCount, (_) => <double>[]);
 
   appendFromJson(Map<String, dynamic> json) {
     final timeSeries = (json['data'] as List<dynamic>);
 
     // From microseconds to seconds
     final maxLength = timeSeries.length;
-    final newT =
-        timeSeries.map((e) => (e[0] as int) / 1000.0 / 1000.0).toList();
+    final newT = timeSeries.map((e) => (e[0] as int) / 1000.0).toList();
 
     // Find the first index where the new time is larger than the last time of t
     final firstTIndex =
-        t.isEmpty ? 0 : newT.indexWhere((value) => value > t.last);
-    t.addAll(newT.getRange(firstTIndex, maxLength));
+        time.isEmpty ? 0 : newT.indexWhere((value) => value > time.last);
+    time.addAll(newT.getRange(firstTIndex, maxLength));
 
     // Parse the data for each channel
     for (int channelIndex = 0; channelIndex < channelCount; channelIndex++) {
@@ -42,14 +44,15 @@ class TimeSeriesData {
     }
   }
 
-  void dropBefore(double t) {
-    final firstIndex = this.t.indexWhere((value) => value >= t);
-    if (firstIndex == -1) {
+  void dropBefore(double elapsedTime) {
+    final firstIndexToKeep = time.indexWhere((value) => value >= elapsedTime);
+    if (firstIndexToKeep == -1) {
+      // If we get to the end, we should drop everything
       clear();
     } else {
-      this.t.removeRange(0, firstIndex);
+      time.removeRange(0, firstIndexToKeep);
       for (var channel in data) {
-        channel.removeRange(0, firstIndex);
+        channel.removeRange(0, firstIndexToKeep);
       }
     }
   }

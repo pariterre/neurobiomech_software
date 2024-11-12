@@ -12,6 +12,6 @@ enum Ack {
   }
 
   static Ack parse(List<int> packet) {
-    return packet[4] == Ack.ok.toInt() ? Ack.ok : Ack.nok;
+    return packet[12] == Ack.ok.toInt() ? Ack.ok : Ack.nok;
   }
 }

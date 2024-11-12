@@ -126,7 +126,13 @@ protected:
   /// @param buffer The buffer to parse
   /// @return The response from the server
   TcpServerResponse
-  parseAcknowledgmentPacket(const std::array<char, 8> &buffer);
+  parseAcknowledgmentFromPacket(const std::array<char, 16> &buffer);
+
+  /// @brief Parse a response packet from the server
+  /// @param buffer The buffer to parse
+  /// @return The response from the server
+  std::chrono::system_clock::time_point
+  parseTimeStampFromPacket(const std::array<char, 16> &buffer);
 
 private:
   /// @brief The asio context used for async methods of the client

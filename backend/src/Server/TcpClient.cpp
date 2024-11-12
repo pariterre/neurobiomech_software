@@ -6,6 +6,9 @@ using asio::ip::tcp;
 using namespace STIMWALKER_NAMESPACE;
 using namespace STIMWALKER_NAMESPACE::server;
 
+const size_t BYTES_IN_CLIENT_PACKET_HEADER = 8;
+const size_t BYTES_IN_SERVER_PACKET_HEADER = 16;
+
 TcpClient::TcpClient(std::string host, int commandPort, int responsePort,
                      int liveDataPort)
     : m_Host(host), m_CommandPort(commandPort), m_ResponsePort(responsePort),
@@ -221,7 +224,7 @@ TcpServerResponse TcpClient::sendCommand(TcpServerCommand command) {
   size_t byteWritten = asio::write(
       *m_CommandSocket, asio::buffer(constructCommandPacket(command)), error);
 
-  if (byteWritten != 8 || error) {
+  if (byteWritten != BYTES_IN_CLIENT_PACKET_HEADER || error) {
     logger.fatal("CLIENT: TCP write error: " + error.message());
     disconnect();
     return TcpServerResponse::NOK;
@@ -247,7 +250,7 @@ std::vector<char> TcpClient::sendCommandWithResponse(TcpServerCommand command) {
   size_t byteWritten = asio::write(
       *m_CommandSocket, asio::buffer(constructCommandPacket(command)), error);
 
-  if (byteWritten != 8 || error) {
+  if (byteWritten != BYTES_IN_CLIENT_PACKET_HEADER || error) {
     logger.fatal("CLIENT: TCP write error: " + error.message());
     disconnect();
     return std::vector<char>();
@@ -264,30 +267,30 @@ std::vector<char> TcpClient::sendCommandWithResponse(TcpServerCommand command) {
 }
 
 TcpServerResponse TcpClient::waitForCommandAcknowledgment() {
-  auto buffer = std::array<char, 8>();
+  auto buffer = std::array<char, BYTES_IN_SERVER_PACKET_HEADER>();
   asio::error_code error;
   size_t byteRead = asio::read(*m_CommandSocket, asio::buffer(buffer), error);
-  if (byteRead != 8 || error) {
+  if (byteRead != BYTES_IN_SERVER_PACKET_HEADER || error) {
     auto &logger = utils::Logger::getInstance();
     logger.fatal("CLIENT: TCP read error: " + error.message());
     return TcpServerResponse::NOK;
   }
 
-  return parseAcknowledgmentPacket(buffer);
+  return parseAcknowledgmentFromPacket(buffer);
 }
 
 std::vector<char> TcpClient::waitForResponse(asio::ip::tcp::socket &socket) {
-  auto buffer = std::array<char, 8>();
+  auto buffer = std::array<char, BYTES_IN_SERVER_PACKET_HEADER>();
   asio::error_code error;
   size_t byteRead = asio::read(socket, asio::buffer(buffer), error);
-  if (byteRead != 8 || error) {
+  if (byteRead != BYTES_IN_SERVER_PACKET_HEADER || error) {
     auto &logger = utils::Logger::getInstance();
     logger.fatal("CLIENT: TCP read error: " + error.message());
     return std::vector<char>();
   }
 
   std::uint32_t totalByteCount =
-      static_cast<std::uint32_t>(parseAcknowledgmentPacket(buffer));
+      static_cast<std::uint32_t>(parseAcknowledgmentFromPacket(buffer));
   std::vector<char> dataBuffer(totalByteCount);
   byteRead = asio::read(socket, asio::buffer(dataBuffer), error);
   if (byteRead != totalByteCount || error) {
@@ -310,13 +313,13 @@ void TcpClient::closeSockets() {
   }
 }
 
-std::array<char, 8>
+std::array<char, BYTES_IN_CLIENT_PACKET_HEADER>
 TcpClient::constructCommandPacket(TcpServerCommand command) {
   // Packets are exactly 8 bytes long, little-endian
   // - First 4 bytes are the version number
   // - Next 4 bytes are the command
 
-  auto packet = std::array<char, 8>();
+  auto packet = std::array<char, BYTES_IN_CLIENT_PACKET_HEADER>();
   packet.fill('\0');
 
   // Add the version number
@@ -329,10 +332,12 @@ TcpClient::constructCommandPacket(TcpServerCommand command) {
   return packet;
 }
 
-TcpServerResponse
-TcpClient::parseAcknowledgmentPacket(const std::array<char, 8> &buffer) {
-  // Packets are exactly 8 bytes long, little-endian
+TcpServerResponse TcpClient::parseAcknowledgmentFromPacket(
+    const std::array<char, BYTES_IN_SERVER_PACKET_HEADER> &buffer) {
+  // Packets are exactly 16 bytes long, little-endian
   // - First 4 bytes are the version number
+  // - The next 8 bytes are the timestamp of the packet (milliseconds since
+  // epoch)
   // - Next 4 bytes are the response
 
   // Check the version
@@ -348,5 +353,31 @@ TcpClient::parseAcknowledgmentPacket(const std::array<char, 8> &buffer) {
   }
 
   // Get the response
-  return *reinterpret_cast<const TcpServerResponse *>(buffer.data() + 4);
+  return *reinterpret_cast<const TcpServerResponse *>(buffer.data() + 4 + 8);
+}
+
+std::chrono::system_clock::time_point TcpClient::parseTimeStampFromPacket(
+    const std::array<char, BYTES_IN_SERVER_PACKET_HEADER> &buffer) {
+  // Packets are exactly 16 bytes long, little-endian
+  // - First 4 bytes are the version number
+  // - The next 8 bytes are the timestamp of the packet (milliseconds since
+  // epoch)
+  // - Next 4 bytes are the response
+
+  // Check the version
+  std::uint32_t version =
+      *reinterpret_cast<const std::uint32_t *>(buffer.data());
+  if (version != m_ProtocolVersion) {
+    auto &logger = utils::Logger::getInstance();
+    logger.fatal("CLIENT: Invalid version: " + std::to_string(version) +
+                 ". Please "
+                 "update the server to version " +
+                 std::to_string(m_ProtocolVersion));
+    return std::chrono::system_clock::time_point(std::chrono::milliseconds(0));
+  }
+
+  // Get the response
+  auto timestamp = *reinterpret_cast<const std::uint64_t *>(buffer.data() + 4);
+  return std::chrono::system_clock::time_point(
+      std::chrono::milliseconds(timestamp));
 }
