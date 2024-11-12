@@ -278,11 +278,7 @@ bool DataTcpDeviceMock::read(std::vector<char> &buffer) {
   // Wait for the next cycle of data
   auto newDataArrivesAt =
       m_StartTime + m_DeltaTime * m_SampleCount * m_DataCounter;
-  if (std::chrono::high_resolution_clock::now() < newDataArrivesAt) {
-    for (auto &byte : buffer)
-      byte = 0;
-    return true; // Return a bunch of zeros
-  }
+  std::this_thread::sleep_until(newDataArrivesAt);
 
   // Copy the 4-byte representation of the float into the byte array
   unsigned char dataAsChar[4];

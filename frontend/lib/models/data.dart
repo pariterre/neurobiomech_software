@@ -10,6 +10,10 @@ class Data {
     delsysEmg.clear();
   }
 
+  bool get isEmpty => delsysAnalog.isEmpty && delsysEmg.isEmpty;
+
+  bool get isNotEmpty => !isEmpty;
+
   Data({
     required this.t0,
     required int analogChannelCount,

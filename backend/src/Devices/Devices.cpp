@@ -46,6 +46,7 @@ void Devices::clear() {
     disconnect();
   }
 
+  std::lock_guard<std::mutex> lock(m_Mutex);
   m_Devices.clear();
   m_DataCollectors.clear();
 }
@@ -278,6 +279,7 @@ bool Devices::stopRecording() {
 nlohmann::json Devices::getLiveDataSerialized() const {
   nlohmann::json json;
   size_t deviceIndex = 0;
+  std::lock_guard<std::mutex> lock(const_cast<std::mutex &>(m_Mutex));
   for (const auto &[deviceId, dataCollector] : m_DataCollectors) {
     json[deviceIndex] = {{"name", dataCollector->dataCollectorName()},
                          {"data", dataCollector->getSerializedLiveData()}};

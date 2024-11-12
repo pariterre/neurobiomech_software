@@ -298,8 +298,10 @@ class StimwalkerClient {
 
     // Convert the data to a string (from json)
     _expectedResponseLength = null;
-    final dataList = json.decode(utf8.decode(_responseGetLastTrial)) as List;
-    lastTrialData.appendFromJson(dataList);
+    final jsonRaw = json.decode(utf8.decode(_responseGetLastTrial));
+    if (jsonRaw != null) {
+      lastTrialData.appendFromJson(jsonRaw as List);
+    }
     _responseCompleter!.complete();
   }
 

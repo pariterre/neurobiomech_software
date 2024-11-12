@@ -30,7 +30,8 @@ class TimeSeriesData {
         timeSeries.map((e) => (e[0] as int) / 1000.0 / 1000.0).toList();
 
     // Find the first index where the new time is larger than the last time of t
-    final firstTIndex = newT.indexWhere((value) => value > t.last);
+    final firstTIndex =
+        t.isEmpty ? 0 : newT.indexWhere((value) => value > t.last);
     t.addAll(newT.getRange(firstTIndex, maxLength));
 
     // Parse the data for each channel

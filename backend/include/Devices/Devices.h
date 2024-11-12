@@ -4,6 +4,7 @@
 #include "stimwalkerConfig.h"
 
 #include "Utils/CppMacros.h"
+#include <mutex>
 #include <nlohmann/json.hpp>
 
 namespace STIMWALKER_NAMESPACE {
@@ -127,6 +128,10 @@ public:
     return m_DataCollectors;
   }
   std::map<size_t, std::shared_ptr<DataCollector>> m_DataCollectors;
+
+private:
+  /// @brief The mutex to lock certain operations
+  DECLARE_PRIVATE_MEMBER_NOGET(std::mutex, Mutex)
 };
 
 } // namespace devices

@@ -89,7 +89,7 @@ class _DebugScreenState extends State<DebugScreen> {
     await _connexion.onDataArrived;
     setState(() {
       _isBusy = false;
-      _showLastTrial = true;
+      _showLastTrial = _connexion.lastTrialData.isNotEmpty;
     });
   }
 

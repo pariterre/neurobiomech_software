@@ -126,6 +126,7 @@ void TcpServer::disconnectClient() {
   // Make sure all the devices are properly disconnected
   m_Devices.stopDataStreaming();
   m_Devices.clear();
+  m_ConnectedDeviceIds.clear();
 
   // Reset the status to initializing
   closeSockets();
