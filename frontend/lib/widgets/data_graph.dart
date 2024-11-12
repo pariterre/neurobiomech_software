@@ -53,7 +53,7 @@ class _DataGraphState extends State<DataGraph> {
               spots: channel.value
                   .asMap()
                   .entries
-                  .map((entry) => FlSpot(time[entry.key], entry.value))
+                  .map((entry) => FlSpot(time[entry.key] / 1000.0, entry.value))
                   .toList(),
               isCurved: false,
               isStrokeCapRound: false,

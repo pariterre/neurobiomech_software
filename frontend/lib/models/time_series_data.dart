@@ -1,6 +1,7 @@
 class TimeSeriesData {
   DateTime _initialTime;
   DateTime get initialTime => _initialTime;
+  double? _timeOffset; // How many milliseconds to subtract to the time vector
   final int channelCount;
 
   final List<double> time = []; // In milliseconds since t0
@@ -9,6 +10,7 @@ class TimeSeriesData {
   void clear({DateTime? initialTime}) {
     _initialTime = initialTime ?? _initialTime;
     time.clear();
+    _timeOffset = null;
     for (var channel in data) {
       channel.clear();
     }
@@ -27,9 +29,12 @@ class TimeSeriesData {
   appendFromJson(Map<String, dynamic> json) {
     final timeSeries = (json['data'] as List<dynamic>);
 
-    // From microseconds to seconds
+    // If this is the first time stamps, we need to set the time offset
+    _timeOffset ??= (timeSeries[0][0] as int) / 1000.0;
+
     final maxLength = timeSeries.length;
-    final newT = timeSeries.map((e) => (e[0] as int) / 1000.0).toList();
+    final newT =
+        timeSeries.map((e) => (e[0] as int) / 1000.0 - _timeOffset!).toList();
 
     // Find the first index where the new time is larger than the last time of t
     final firstTIndex =

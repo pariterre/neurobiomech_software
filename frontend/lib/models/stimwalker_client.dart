@@ -7,7 +7,7 @@ import 'package:frontend/models/data.dart';
 import 'package:frontend/models/ack.dart';
 import 'package:logging/logging.dart';
 
-const _protocolVersion = 1; // TODO Test this
+const _protocolVersion = 1;
 const _serverHeaderLength = 16;
 
 class StimwalkerClient {
@@ -240,6 +240,15 @@ class StimwalkerClient {
       return;
     }
 
+    final version = _parseVersionFromPacket(response);
+    if (version != _protocolVersion) {
+      _log.severe(
+          'Protocol version mismatch, expected $_protocolVersion, got $version. '
+          'Please update the client.');
+      disconnect();
+      return;
+    }
+
     final ack = Ack.parse(response);
     if (ack == Ack.ok) {
       _setFlagsFromCommand(_currentCommand!);
@@ -290,14 +299,6 @@ class StimwalkerClient {
   void _receiveResponse(List<int> response) {
     if (_currentCommand == Command.getLastTrial &&
         _expectedResponseLength == null) {
-      final version = _parseVersionFromPacket(response);
-      if (version != _protocolVersion) {
-        _log.severe(
-            'Protocol version mismatch, expected $_protocolVersion, got $version. Please update the client.');
-        disconnect();
-        return;
-      }
-
       lastTrialData.clear(initialTime: _parseTimestampFromPacket(response));
       _expectedResponseLength = _parseDataLengthFromPacket(response);
       if (response.length > _serverHeaderLength) {
@@ -366,7 +367,7 @@ class StimwalkerClient {
       }
       liveData.appendFromJson(dataList);
       liveData.dropBefore(
-          _lastLiveDataTimestamp!.subtract(const Duration(seconds: 1)));
+          _lastLiveDataTimestamp!.subtract(const Duration(seconds: 3)));
     } catch (e) {
       _log.severe('Error while parsing live data: $e, resetting');
       resetLiveData();

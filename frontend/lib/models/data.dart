@@ -40,10 +40,10 @@ class Data {
 
   void dropBefore(DateTime t) {
     delsysAnalog.dropBefore(
-        (initialTime.millisecondsSinceEpoch - t.millisecondsSinceEpoch)
+        (t.millisecondsSinceEpoch - initialTime.millisecondsSinceEpoch)
             .toDouble());
     delsysEmg.dropBefore(
-        (initialTime.millisecondsSinceEpoch - t.millisecondsSinceEpoch)
+        (t.millisecondsSinceEpoch - initialTime.millisecondsSinceEpoch)
             .toDouble());
   }
 }
