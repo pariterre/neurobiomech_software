@@ -1,11 +1,13 @@
 import 'package:frontend/models/time_series_data.dart';
 
 class Data {
-  final double t0;
+  double _t0;
+  double get t0 => _t0;
   final TimeSeriesData delsysAnalog;
   final TimeSeriesData delsysEmg;
 
-  void clear() {
+  void clear({double? t0}) {
+    _t0 = t0 ?? _t0;
     delsysAnalog.clear();
     delsysEmg.clear();
   }
@@ -15,10 +17,11 @@ class Data {
   bool get isNotEmpty => !isEmpty;
 
   Data({
-    required this.t0,
+    required double t0,
     required int analogChannelCount,
     required int emgChannelCount,
-  })  : delsysAnalog = TimeSeriesData(t0: t0, channelCount: analogChannelCount),
+  })  : _t0 = t0,
+        delsysAnalog = TimeSeriesData(t0: t0, channelCount: analogChannelCount),
         delsysEmg = TimeSeriesData(t0: t0, channelCount: emgChannelCount);
 
   appendFromJson(List json) {

@@ -15,6 +15,10 @@ class DebugScreen extends StatefulWidget {
 }
 
 class _DebugScreenState extends State<DebugScreen> {
+  final _liveGraphController = DataGraphController(data: _connexion.liveData);
+  final _trialGraphController =
+      DataGraphController(data: _connexion.lastTrialData);
+
   bool _isBusy = false;
   bool get isServerConnected => _connexion.isInitialized;
   bool get canSendCommand => !_isBusy && isServerConnected;
@@ -99,7 +103,7 @@ class _DebugScreenState extends State<DebugScreen> {
 
   Widget _buildLastTrialGraph() {
     if (!_showLastTrial) return const SizedBox();
-    return DataGraph(data: _connexion.lastTrialData);
+    return DataGraph(controller: _trialGraphController);
   }
 
   Future<void> _showLiveDataGraph() async {
@@ -113,8 +117,7 @@ class _DebugScreenState extends State<DebugScreen> {
 
   Widget _buildLiveDataGraph() {
     if (!_showLiveData) return const SizedBox();
-    // https://github.com/imaNNeo/fl_chart/blob/main/example/lib/presentation/samples/line/line_chart_sample10.dart
-    return DataGraph(data: _connexion.liveData);
+    return DataGraph(controller: _liveGraphController);
   }
 
   @override

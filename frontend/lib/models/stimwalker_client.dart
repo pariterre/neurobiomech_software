@@ -260,10 +260,8 @@ class StimwalkerClient {
     }
   }
 
-  void resetLiveData() => liveData = Data(
-      t0: DateTime.now().millisecondsSinceEpoch / 1000,
-      analogChannelCount: liveData.delsysAnalog.channelCount,
-      emgChannelCount: liveData.delsysEmg.channelCount);
+  void resetLiveData() =>
+      liveData.clear(t0: DateTime.now().millisecondsSinceEpoch / 1000);
 
   void _prepareLastTrialResponse() {
     lastTrialData.clear();

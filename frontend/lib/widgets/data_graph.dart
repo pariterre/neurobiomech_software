@@ -4,14 +4,50 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/models/data.dart';
 
-class DataGraph extends StatelessWidget {
-  const DataGraph({super.key, required this.data});
+class DataGraphController {
+  GlobalKey<_DataGraphState>? _graphKey;
 
-  final Data data;
+  Data _data;
+
+  set data(Data data) {
+    _data = data;
+    _graphKey?.currentState?._redraw();
+  }
+
+  DataGraphController({required Data data}) : _data = data;
+}
+
+class DataGraph extends StatefulWidget {
+  const DataGraph({super.key, required this.controller});
+
+  final DataGraphController controller;
+
+  @override
+  State<DataGraph> createState() => _DataGraphState();
+}
+
+class _DataGraphState extends State<DataGraph> {
+  @override
+  void initState() {
+    super.initState();
+    widget.controller._graphKey = GlobalKey<_DataGraphState>();
+  }
+
+  @override
+  void dispose() {
+    widget.controller._graphKey = null;
+    super.dispose();
+  }
+
+  void _redraw() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
 
   List<LineChartBarData> _dataToLineBarsData() {
-    final time = data.delsysEmg.t;
-    return data.delsysEmg.data
+    final time = widget.controller._data.delsysEmg.t;
+    return widget.controller._data.delsysEmg.data
         .asMap()
         .entries
         .map((channel) => LineChartBarData(
