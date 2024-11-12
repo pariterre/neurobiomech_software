@@ -174,16 +174,7 @@ DelsysBaseDevice::parseAsyncSendCommand(const DeviceCommands &command,
 }
 
 void DelsysBaseDevice::dataCheck() {
-  auto now = std::chrono::high_resolution_clock::now();
   m_DataDevice->read(m_DataBuffer);
-  auto readingTime = std::chrono::high_resolution_clock::now();
-
-  utils::Logger::getInstance().info(
-      "Took " +
-      std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(
-                         readingTime - now)
-                         .count()) +
-      "ms to read the data");
 
   // Allocate space for all data in a single vector of floats
   std::vector<float> allData(m_SampleCount * m_DataChannelCount);

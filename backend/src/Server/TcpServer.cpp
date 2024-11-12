@@ -561,6 +561,7 @@ void TcpServer::handleSendLiveData() {
   if (data.size() == 0) {
     return;
   }
+
   auto dataDump = data.dump();
   asio::error_code error;
   asio::write(*m_LiveDataSocket,

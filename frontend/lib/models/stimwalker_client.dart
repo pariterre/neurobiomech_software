@@ -22,6 +22,8 @@ class StimwalkerClient {
 
   int? _expectedLiveDataLength;
   final _responseLiveData = <int>[];
+  var _liveDataCompleter = Completer();
+  bool _isManagingLiveData = false;
   Function()? _onNewLiveData;
 
   bool _isConnectedToDelsysAnalog = false;
@@ -90,6 +92,7 @@ class StimwalkerClient {
       return;
     }
 
+    _expectedLiveDataLength = null;
     _onNewLiveData = onNewLiveData;
 
     _log.info('Communication initialized');
@@ -112,6 +115,16 @@ class StimwalkerClient {
     _isConnectedToLiveData = false;
     _isRecording = false;
     _hasRecorded = false;
+
+    _commandAckCompleter = null;
+    _responseCompleter = null;
+    _expectedResponseLength = null;
+    _responseGetLastTrial.clear();
+    _expectedLiveDataLength = null;
+    _responseLiveData.clear();
+    _isManagingLiveData = false;
+    _liveDataCompleter = Completer();
+    _onNewLiveData = null;
 
     _log.info('Connection closed');
   }
@@ -303,15 +316,21 @@ class StimwalkerClient {
     _responseCompleter!.complete();
   }
 
-  void _receiveLiveData(List<int> response) {
+  Future<void> _receiveLiveData(List<int> response) async {
+    // while (_isManagingLiveData) {
+    //   await Future.delayed(const Duration(milliseconds: 10));
+    // }
+    _isManagingLiveData = true;
+
     if (_expectedLiveDataLength == null) {
+      _liveDataCompleter = Completer();
       _expectedLiveDataLength = _parseDataLength(response);
       if (response.length > 8) {
         // If more data came at once, recursively call the function with the rest
         // of the data.
         _receiveLiveData(response.sublist(8));
-        return;
       }
+      return;
     }
 
     _responseLiveData.addAll(response);
@@ -319,16 +338,31 @@ class StimwalkerClient {
       // Waiting for the rest of the live data
       return;
     } else if (_responseLiveData.length > _expectedLiveDataLength!) {
-      _log.severe('Received more live data than expected, dropping everything');
-      _responseLiveData.clear();
-      _expectedLiveDataLength = null;
-      return;
+      // We received the data for the next time frame, parse the current, then
+      // call the function again with the rest of the data.
+      final responseRemaining =
+          _responseLiveData.sublist(_expectedLiveDataLength!);
+      _responseLiveData.removeRange(
+          _expectedLiveDataLength!, _responseLiveData.length);
+      _liveDataCompleter.future
+          .then((_) => _receiveLiveData(responseRemaining));
     }
 
     // Convert the data to a string (from json)
+    try {
+      final dataList = json.decode(utf8.decode(_responseLiveData)) as List;
+      liveData.appendFromJson(dataList);
+      liveData.dropBefore(DateTime.now()
+              .subtract(const Duration(seconds: 10))
+              .millisecondsSinceEpoch /
+          1000);
+    } catch (e) {
+      _log.severe('Error while parsing live data: $e, resetting');
+      resetLiveData();
+    }
+    _responseLiveData.clear();
     _expectedLiveDataLength = null;
-    final dataList = json.decode(utf8.decode(_responseLiveData)) as List;
-    liveData.appendFromJson(dataList);
+    _liveDataCompleter.complete();
 
     _onNewLiveData!();
   }

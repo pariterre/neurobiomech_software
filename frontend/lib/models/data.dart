@@ -35,4 +35,9 @@ class Data {
       }
     }
   }
+
+  void dropBefore(double t) {
+    delsysAnalog.dropBefore(t - t0);
+    delsysEmg.dropBefore(t - t0);
+  }
 }

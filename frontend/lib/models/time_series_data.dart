@@ -41,4 +41,16 @@ class TimeSeriesData {
           .map<double>((e) => e[1][channelIndex]));
     }
   }
+
+  void dropBefore(double t) {
+    final firstIndex = this.t.indexWhere((value) => value >= t);
+    if (firstIndex == -1) {
+      clear();
+    } else {
+      this.t.removeRange(0, firstIndex);
+      for (var channel in data) {
+        channel.removeRange(0, firstIndex);
+      }
+    }
+  }
 }

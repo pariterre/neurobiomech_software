@@ -5,13 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:frontend/models/data.dart';
 
 class DataGraphController {
-  GlobalKey<_DataGraphState>? _graphKey;
-
   Data _data;
+
+  Function()? _updateCallback;
 
   set data(Data data) {
     _data = data;
-    _graphKey?.currentState?._redraw();
+    if (_updateCallback != null) _updateCallback!();
   }
 
   DataGraphController({required Data data}) : _data = data;
@@ -30,19 +30,17 @@ class _DataGraphState extends State<DataGraph> {
   @override
   void initState() {
     super.initState();
-    widget.controller._graphKey = GlobalKey<_DataGraphState>();
+    widget.controller._updateCallback = _redraw;
   }
 
   @override
   void dispose() {
-    widget.controller._graphKey = null;
+    widget.controller._updateCallback = null;
     super.dispose();
   }
 
   void _redraw() {
-    if (mounted) {
-      setState(() {});
-    }
+    setState(() {});
   }
 
   List<LineChartBarData> _dataToLineBarsData() {

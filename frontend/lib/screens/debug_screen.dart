@@ -30,7 +30,7 @@ class _DebugScreenState extends State<DebugScreen> {
     setState(() => _isBusy = true);
     await _connexion.initialize(
       onConnexionLost: () => setState(() {}),
-      onNewLiveData: () => setState(() {}),
+      onNewLiveData: _onNewLiveData,
     );
     setState(() => _isBusy = false);
   }
@@ -118,6 +118,12 @@ class _DebugScreenState extends State<DebugScreen> {
   Widget _buildLiveDataGraph() {
     if (!_showLiveData) return const SizedBox();
     return DataGraph(controller: _liveGraphController);
+  }
+
+  void _onNewLiveData() {
+    if (_showLiveData) {
+      _liveGraphController.data = _connexion.liveData;
+    }
   }
 
   @override
