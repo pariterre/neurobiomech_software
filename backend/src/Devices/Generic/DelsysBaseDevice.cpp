@@ -39,9 +39,10 @@ DeviceResponses DelsysBaseDevice::CommandTcpDevice::parseAsyncSendCommand(
   if (m_LastCommand == command) {
     return DeviceResponses::OK;
   }
-  m_LastCommand = DelsysCommands(command.getValue());
-  write(m_LastCommand.toString());
+  auto commandAsDelsys = DelsysCommands(command.getValue());
+  write(commandAsDelsys.toString());
   std::vector<char> response = read(128);
+  m_LastCommand = commandAsDelsys;
   return std::strncmp(response.data(), "OK", 2) == 0 ? DeviceResponses::OK
                                                      : DeviceResponses::NOK;
 }
@@ -72,7 +73,7 @@ DelsysBaseDevice::DelsysBaseDevice(size_t channelCount,
           std::vector<char>(channelCount * m_SampleCount * m_BytesPerChannel)),
       AsyncDevice(std::chrono::milliseconds(100)),
       AsyncDataCollector(
-          channelCount, std::chrono::microseconds(1),
+          channelCount, std::chrono::microseconds(5),
           [deltaTime]() { return timeSeriesGenerator(deltaTime); }) {
   m_IgnoreTooSlowWarning = true;
 }
@@ -89,7 +90,7 @@ DelsysBaseDevice::DelsysBaseDevice(size_t channelCount,
           std::vector<char>(channelCount * m_SampleCount * m_BytesPerChannel)),
       AsyncDevice(std::chrono::milliseconds(100)),
       AsyncDataCollector(
-          channelCount, std::chrono::microseconds(1),
+          channelCount, std::chrono::microseconds(5),
           [deltaTime]() { return timeSeriesGenerator(deltaTime); }) {
   m_IgnoreTooSlowWarning = true;
 }
@@ -106,7 +107,7 @@ DelsysBaseDevice::DelsysBaseDevice(
           std::vector<char>(channelCount * m_SampleCount * m_BytesPerChannel)),
       AsyncDevice(std::chrono::milliseconds(100)),
       AsyncDataCollector(
-          channelCount, std::chrono::microseconds(1),
+          channelCount, std::chrono::microseconds(5),
           [deltaTime]() { return timeSeriesGenerator(deltaTime); }) {
   m_IgnoreTooSlowWarning = true;
 }
