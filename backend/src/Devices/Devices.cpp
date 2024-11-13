@@ -26,6 +26,7 @@ size_t Devices::add(std::unique_ptr<Device> device) {
 
   // If we can dynamic cast the device to a data collector, add it to the data
   // collector collection
+  std::lock_guard<std::mutex> lock(m_MutexDataCollectors);
   if (auto dataCollector =
           std::dynamic_pointer_cast<DataCollector>(m_Devices[deviceId])) {
     m_DataCollectors[deviceId] = dataCollector;
@@ -36,6 +37,7 @@ size_t Devices::add(std::unique_ptr<Device> device) {
 
 void Devices::remove(size_t deviceId) {
   m_Devices.erase(deviceId);
+  std::lock_guard<std::mutex> lock(m_MutexDataCollectors);
   m_DataCollectors.erase(deviceId);
 }
 
@@ -46,8 +48,8 @@ void Devices::clear() {
     disconnect();
   }
 
-  std::lock_guard<std::mutex> lock(m_Mutex);
   m_Devices.clear();
+  std::lock_guard<std::mutex> lock(m_MutexDataCollectors);
   m_DataCollectors.clear();
 }
 
@@ -75,6 +77,8 @@ const Device &Devices::getDevice(size_t deviceId) const {
 
 const DataCollector &Devices::getDataCollector(size_t deviceId) const {
   try {
+    std::lock_guard<std::mutex> lock(
+        const_cast<std::mutex &>(m_MutexDataCollectors));
     return *m_DataCollectors.at(deviceId);
   } catch (const std::out_of_range &) {
     std::string message = "Data collector with id " + std::to_string(deviceId) +
@@ -160,36 +164,39 @@ bool Devices::disconnect() {
 bool Devices::startDataStreaming() {
   // We have to set this to true now because other methods might rely on it
   m_IsStreamingData = true;
-
-  for (auto &[deviceId, dataCollector] : m_DataCollectors) {
-    try {
-      // Try to start the data streaming asynchronously so it takes less time
-      auto &asyncDataCollector =
-          dynamic_cast<AsyncDataCollector &>(*dataCollector);
-      asyncDataCollector.startDataStreamingAsync();
-    } catch (const std::bad_cast &) {
-      dataCollector->startDataStreaming();
+  {
+    std::lock_guard<std::mutex> lock(m_MutexDataCollectors);
+    for (auto &[deviceId, dataCollector] : m_DataCollectors) {
+      try {
+        // Try to start the data streaming asynchronously so it takes less time
+        auto &asyncDataCollector =
+            dynamic_cast<AsyncDataCollector &>(*dataCollector);
+        asyncDataCollector.startDataStreamingAsync();
+      } catch (const std::bad_cast &) {
+        dataCollector->startDataStreaming();
+      }
     }
   }
-
   // Wait for all the devices to start streaming data (or fail to)
   size_t hasStartedStreaming = 0;
   size_t hasFailedToStartStreaming = 0;
   while (true) {
     hasStartedStreaming = 0;
     hasFailedToStartStreaming = 0;
-
-    for (auto &[deviceId, dataCollector] : m_DataCollectors) {
-      if (dataCollector->getIsStreamingData()) {
-        hasStartedStreaming++;
+    {
+      std::lock_guard<std::mutex> lock(m_MutexDataCollectors);
+      for (auto &[deviceId, dataCollector] : m_DataCollectors) {
+        if (dataCollector->getIsStreamingData()) {
+          hasStartedStreaming++;
+        }
+        if (dataCollector->getHasFailedToStartDataStreaming()) {
+          hasFailedToStartStreaming++;
+        }
       }
-      if (dataCollector->getHasFailedToStartDataStreaming()) {
-        hasFailedToStartStreaming++;
+      if (hasStartedStreaming + hasFailedToStartStreaming ==
+          m_DataCollectors.size()) {
+        break;
       }
-    }
-    if (hasStartedStreaming + hasFailedToStartStreaming ==
-        m_DataCollectors.size()) {
-      break;
     }
 
     // If we get here, we have to give more time for the devices to connect
@@ -207,8 +214,11 @@ bool Devices::startDataStreaming() {
 
   // If all the devices are ready, reset the live time series and set the
   // starting time to now
-  for (auto &[deviceId, dataCollector] : m_DataCollectors) {
-    dataCollector->m_LiveTimeSeries->reset();
+  {
+    std::lock_guard<std::mutex> lock(m_MutexDataCollectors);
+    for (auto &[deviceId, dataCollector] : m_DataCollectors) {
+      dataCollector->resetLiveData();
+    }
   }
 
   utils::Logger::getInstance().info("All devices are now streaming data");
@@ -223,13 +233,19 @@ bool Devices::stopDataStreaming() {
 
   // Stop all the recording (this is just to make sure in case some device is
   // started while m_IsRecording is false)
-  for (auto &[deviceId, dataCollector] : m_DataCollectors) {
-    dataCollector->stopRecording();
+  {
+    std::lock_guard<std::mutex> lock(m_MutexDataCollectors);
+    for (auto &[deviceId, dataCollector] : m_DataCollectors) {
+      dataCollector->stopRecording();
+    }
   }
 
   bool allStopped = true;
-  for (auto &[deviceId, dataCollector] : m_DataCollectors) {
-    allStopped = dataCollector->stopDataStreaming() && allStopped;
+  {
+    std::lock_guard<std::mutex> lock(m_MutexDataCollectors);
+    for (auto &[deviceId, dataCollector] : m_DataCollectors) {
+      allStopped = dataCollector->stopDataStreaming() && allStopped;
+    }
   }
 
   utils::Logger::getInstance().info("All devices have stopped streaming data");
@@ -261,8 +277,12 @@ bool Devices::startRecording() {
 bool Devices::stopRecording() {
   bool hasStoppedRecording = true;
 
-  for (auto &[deviceId, dataCollector] : m_DataCollectors) {
-    hasStoppedRecording = dataCollector->stopRecording() && hasStoppedRecording;
+  {
+    std::lock_guard<std::mutex> lock(m_MutexDataCollectors);
+    for (auto &[deviceId, dataCollector] : m_DataCollectors) {
+      hasStoppedRecording =
+          dataCollector->stopRecording() && hasStoppedRecording;
+    }
   }
 
   if (!hasStoppedRecording) {
@@ -279,7 +299,8 @@ bool Devices::stopRecording() {
 nlohmann::json Devices::getLiveDataSerialized() const {
   nlohmann::json json;
   size_t deviceIndex = 0;
-  std::lock_guard<std::mutex> lock(const_cast<std::mutex &>(m_Mutex));
+  std::lock_guard<std::mutex> lock(
+      const_cast<std::mutex &>(m_MutexDataCollectors));
   for (const auto &[deviceId, dataCollector] : m_DataCollectors) {
     json[deviceIndex] = {{"name", dataCollector->dataCollectorName()},
                          {"data", dataCollector->getSerializedLiveData()}};
@@ -291,6 +312,8 @@ nlohmann::json Devices::getLiveDataSerialized() const {
 nlohmann::json Devices::getLastTrialDataSerialized() const {
   nlohmann::json json;
   size_t deviceIndex = 0;
+  std::lock_guard<std::mutex> lock(
+      const_cast<std::mutex &>(m_MutexDataCollectors));
   for (const auto &[deviceId, dataCollector] : m_DataCollectors) {
     json[deviceIndex] = {{"name", dataCollector->dataCollectorName()},
                          {"data", dataCollector->getTrialData().serialize()}};

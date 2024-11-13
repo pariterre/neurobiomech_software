@@ -363,7 +363,6 @@ TEST(Delsys, LiveData) {
   // Live data should collect even if the system is not recording
   delsys.startDataStreaming();
   ASSERT_FALSE(delsys.getIsRecording());
-  EXPECT_THROW(delsys.getLiveData(), devices::DeviceDataNotAvailableException);
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
   delsys.stopDataStreaming();
 
@@ -373,7 +372,7 @@ TEST(Delsys, LiveData) {
       "The data collector DelsysEmgDataCollector is currently streaming"));
 
   // Get the data
-  const auto &data = delsys.getLiveData();
+  const auto &data = delsys.getSerializedLiveData();
   // Technically it should have recorded be exactly 200 (2000Hz). But the
   // material is not that precise. So we just check that it is at least 150
   ASSERT_GE(data.size(), 150);
@@ -384,15 +383,12 @@ TEST(Delsys, LiveData) {
   }
 
   for (size_t i = 0; i < data.size(); i++) {
-    for (size_t j = 0; j < data[i].getData().size(); j++) {
+    for (size_t j = 0; j < data[i].size(); j++) {
       float value = static_cast<float>(
           std::sin((i + static_cast<size_t>(offset)) / 2000.0 * 2 * M_PI));
-      ASSERT_NEAR(data[i].getData()[j], value, requiredPrecision);
+      ASSERT_NEAR(data[i][j], value, requiredPrecision);
     }
   }
-
-  // Compare the serialized live data to the live data serialized
-  ASSERT_EQ(delsys.getSerializedLiveData(), data.serialize());
 }
 
 TEST(Delsys, TrialData) {

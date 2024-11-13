@@ -27,7 +27,10 @@ bool DataCollector::startDataStreaming() {
 
   m_IsStreamingData = handleStartDataStreaming();
   m_HasFailedToStartDataStreaming = !m_IsStreamingData;
-  m_LiveTimeSeries->reset();
+  {
+    std::lock_guard<std::mutex> lock(m_LiveDataMutex);
+    m_LiveTimeSeries->reset();
+  }
 
   if (m_IsStreamingData) {
     logger.info("The data collector " + dataCollectorName() +
@@ -101,19 +104,14 @@ bool DataCollector::stopRecording() {
   return true;
 }
 
-nlohmann::json DataCollector::getSerializedLiveData() const {
-  std::lock_guard<std::mutex> lock(const_cast<std::mutex &>(m_DataMutex));
-  return m_LiveTimeSeries->serialize();
+void DataCollector::resetLiveData() {
+  std::lock_guard<std::mutex> lock(m_LiveDataMutex);
+  m_LiveTimeSeries->reset();
 }
 
-const TimeSeries &DataCollector::getLiveData() const {
-  if (m_IsStreamingData) {
-    std::string message =
-        "The data collector " + dataCollectorName() + " is currently streaming";
-    utils::Logger::getInstance().warning(message);
-    throw DeviceDataNotAvailableException(message);
-  }
-  return *m_LiveTimeSeries;
+nlohmann::json DataCollector::getSerializedLiveData() const {
+  std::lock_guard<std::mutex> lock(const_cast<std::mutex &>(m_LiveDataMutex));
+  return m_LiveTimeSeries->serialize();
 }
 
 const TimeSeries &DataCollector::getTrialData() const {
@@ -131,13 +129,14 @@ void DataCollector::addDataPoints(
   if (!m_IsStreamingData || data.size() == 0) {
     return;
   }
-
-  std::lock_guard<std::mutex> lock(m_DataMutex);
-  for (auto d : data) {
-    m_LiveTimeSeries->add(d);
-    if (m_IsRecording) {
-      m_TrialTimeSeries->add(d);
+  {
+    std::lock_guard<std::mutex> lock(m_LiveDataMutex);
+    for (auto d : data) {
+      m_LiveTimeSeries->add(d);
+      if (m_IsRecording) {
+        m_TrialTimeSeries->add(d);
+      }
     }
+    onNewData.notifyListeners(m_LiveTimeSeries->back());
   }
-  onNewData.notifyListeners(m_LiveTimeSeries->back());
 }

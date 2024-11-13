@@ -131,7 +131,7 @@ public:
 
 private:
   /// @brief The mutex to lock certain operations
-  DECLARE_PRIVATE_MEMBER_NOGET(std::mutex, Mutex)
+  DECLARE_PRIVATE_MEMBER_NOGET(std::mutex, MutexDataCollectors)
 };
 
 } // namespace devices

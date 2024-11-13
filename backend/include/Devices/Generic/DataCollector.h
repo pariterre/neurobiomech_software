@@ -14,8 +14,6 @@ namespace STIMWALKER_NAMESPACE::devices {
 
 /// @brief Abstract class for data collectors
 class DataCollector {
-  friend class Devices;
-
 public:
   /// @brief Constructor
   /// @param channelCount The number of channels
@@ -87,19 +85,16 @@ protected:
                                  TrialTimeSeries)
 
 public:
+  /// @brief Reset the live data
+  void resetLiveData();
+
   /// @brief Get the live data in a serialized form. This uses a mutex to ensure
   /// that the data is not modified while being serialized
   /// @return The live data in a serialized form
   nlohmann::json getSerializedLiveData() const;
 
-  /// @brief Get a reference to live data. Throws an exception if the data is
-  /// currently streaming. This is proprably not the method you want to call if
-  /// you want to get the live data
-  /// @return The live data
-  const data::TimeSeries &getLiveData() const;
-
   /// @brief Get a reference to trial data. Throws an exception if the data is
-  /// currently being recorded
+  /// currently being recorded (for thread safe purposes)
   /// @return The trial data
   const data::TimeSeries &getTrialData() const;
 
@@ -122,7 +117,7 @@ protected:
 
 private:
   /// @brief Mutex for adding/reading the data
-  DECLARE_PRIVATE_MEMBER_NOGET(std::mutex, DataMutex);
+  DECLARE_PRIVATE_MEMBER_NOGET(std::mutex, LiveDataMutex);
 };
 
 } // namespace STIMWALKER_NAMESPACE::devices

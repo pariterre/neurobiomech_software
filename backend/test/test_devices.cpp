@@ -596,11 +596,11 @@ TEST(Devices, LiveData) {
   devices.stopDataStreaming();
   sizes.clear();
   for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
-    sizes[deviceId] = dataCollector->getLiveData().size();
+    sizes[deviceId] = dataCollector->getSerializedLiveData().size();
   }
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
   for (auto &[deviceId, dataCollector] : devices.getDataCollectors()) {
-    ASSERT_EQ(dataCollector->getLiveData().size(), sizes[deviceId]);
+    ASSERT_EQ(dataCollector->getSerializedLiveData().size(), sizes[deviceId]);
   }
 }
 
