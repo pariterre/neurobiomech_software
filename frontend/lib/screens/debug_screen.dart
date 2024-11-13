@@ -15,9 +15,14 @@ class DebugScreen extends StatefulWidget {
 }
 
 class _DebugScreenState extends State<DebugScreen> {
-  final _liveGraphController = DataGraphController(data: _connexion.liveData);
-  final _trialGraphController =
-      DataGraphController(data: _connexion.lastTrialData);
+  final _liveGraphControllerAnalog = DataGraphController(
+      data: _connexion.liveData, graphType: DataGraphType.analog);
+  final _liveGraphControllerEmg = DataGraphController(
+      data: _connexion.liveData, graphType: DataGraphType.emg);
+  final _trialGraphControllerAnalog = DataGraphController(
+      data: _connexion.lastTrialData, graphType: DataGraphType.analog);
+  final _trialGraphControllerEmg = DataGraphController(
+      data: _connexion.lastTrialData, graphType: DataGraphType.emg);
 
   bool _isBusy = false;
   bool get isServerConnected => _connexion.isInitialized;
@@ -103,7 +108,12 @@ class _DebugScreenState extends State<DebugScreen> {
 
   Widget _buildLastTrialGraph() {
     if (!_showLastTrial) return const SizedBox();
-    return DataGraph(controller: _trialGraphController);
+    return Column(
+      children: [
+        DataGraph(controller: _trialGraphControllerAnalog),
+        DataGraph(controller: _trialGraphControllerEmg),
+      ],
+    );
   }
 
   Future<void> _showLiveDataGraph() async {
@@ -117,12 +127,20 @@ class _DebugScreenState extends State<DebugScreen> {
 
   Widget _buildLiveDataGraph() {
     if (!_showLiveData) return const SizedBox();
-    return DataGraph(controller: _liveGraphController);
+
+    // TODO It cannot connect right now with both data type
+    return Column(
+      children: [
+        DataGraph(controller: _liveGraphControllerAnalog),
+        DataGraph(controller: _liveGraphControllerEmg),
+      ],
+    );
   }
 
   void _onNewLiveData() {
     if (_showLiveData) {
-      _liveGraphController.data = _connexion.liveData;
+      _liveGraphControllerAnalog.data = _connexion.liveData;
+      _liveGraphControllerEmg.data = _connexion.liveData;
     }
   }
 

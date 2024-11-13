@@ -50,6 +50,8 @@ class TimeSeriesData {
   }
 
   void dropBefore(double elapsedTime) {
+    if (time.isEmpty) return;
+
     final firstIndexToKeep = time.indexWhere((value) => value >= elapsedTime);
     if (firstIndexToKeep == -1) {
       // If we get to the end, we should drop everything

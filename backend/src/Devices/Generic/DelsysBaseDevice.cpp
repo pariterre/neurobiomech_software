@@ -198,11 +198,9 @@ void DelsysBaseDevice::dataCheck() {
                                   (i + 1) * m_DataChannelCount);
 
     // If the first frame is all zeros, assume no data were sent at all
-    if (i == 0) {
-      if (std::all_of(frame.begin(), frame.end(),
-                      [](double value) { return value == 0.0; })) {
-        return;
-      }
+    if (std::all_of(frame.begin(), frame.end(),
+                    [](double value) { return value == 0.0; })) {
+      continue;
     }
     dataPoints.push_back(std::move(frame));
   }

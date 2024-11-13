@@ -35,11 +35,11 @@ class StimwalkerClient {
   bool _isConnectedToLiveData = false;
   Data liveData = Data(
       initialTime: DateTime.now(),
-      analogChannelCount: 144,
+      analogChannelCount: 3 * 16,
       emgChannelCount: 16);
   Data lastTrialData = Data(
       initialTime: DateTime.now(),
-      analogChannelCount: 144,
+      analogChannelCount: 3 * 16,
       emgChannelCount: 16);
 
   bool _isRecording = false;
@@ -331,6 +331,8 @@ class StimwalkerClient {
   }
 
   Future<void> _receiveLiveData(List<int> response) async {
+    if (response.isEmpty) return;
+
     if (_expectedLiveDataLength == null) {
       _liveDataCompleter = Completer();
       _lastLiveDataTimestamp = _parseTimestampFromPacket(response);

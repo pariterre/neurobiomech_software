@@ -3,9 +3,13 @@ import 'dart:math';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:frontend/models/data.dart';
+import 'package:frontend/models/time_series_data.dart';
+
+enum DataGraphType { emg, analog }
 
 class DataGraphController {
   Data _data;
+  final DataGraphType graphType;
 
   Function()? _updateCallback;
 
@@ -14,12 +18,16 @@ class DataGraphController {
     if (_updateCallback != null) _updateCallback!();
   }
 
-  DataGraphController({required Data data}) : _data = data;
+  DataGraphController({required Data data, required this.graphType})
+      : _data = data;
 }
 
 class DataGraph extends StatefulWidget {
-  const DataGraph({super.key, required this.controller});
+  const DataGraph(
+      {super.key, required this.controller, this.combineGraphs = false});
 
+  // TODO Deal with the combination of graphs
+  final bool combineGraphs;
   final DataGraphController controller;
 
   @override
@@ -39,13 +47,26 @@ class _DataGraphState extends State<DataGraph> {
     super.dispose();
   }
 
+  DateTime _lastRefresh = DateTime.now();
   void _redraw() {
+    if (DateTime.now().difference(_lastRefresh).inMilliseconds < 100) return;
+    _lastRefresh = DateTime.now();
     setState(() {});
   }
 
   List<LineChartBarData> _dataToLineBarsData() {
-    final time = widget.controller._data.delsysEmg.time;
-    return widget.controller._data.delsysEmg.data
+    late final TimeSeriesData timeSeries;
+    switch (widget.controller.graphType) {
+      case DataGraphType.emg:
+        timeSeries = widget.controller._data.delsysEmg;
+        break;
+      case DataGraphType.analog:
+        timeSeries = widget.controller._data.delsysAnalog;
+        break;
+    }
+
+    final time = timeSeries.time;
+    return timeSeries.data
         .asMap()
         .entries
         .map((channel) => LineChartBarData(
@@ -93,6 +114,7 @@ class _DataGraphState extends State<DataGraph> {
                   ),
                   borderData: FlBorderData(show: true),
                 ),
+                duration: Duration.zero,
               );
             },
           ),
