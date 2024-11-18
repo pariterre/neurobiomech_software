@@ -41,6 +41,7 @@ class StimwalkerClient {
       initialTime: DateTime.now(),
       analogChannelCount: 3 * 16,
       emgChannelCount: 16);
+  Duration liveDataTimeWindow = const Duration(seconds: 3);
 
   bool _isRecording = false;
   bool _hasRecorded = false;
@@ -297,6 +298,8 @@ class StimwalkerClient {
   }
 
   void _receiveResponse(List<int> response) {
+    if (!isInitialized) return;
+
     if (_currentCommand == Command.getLastTrial &&
         _expectedResponseLength == null) {
       lastTrialData.clear(initialTime: _parseTimestampFromPacket(response));
@@ -368,8 +371,7 @@ class StimwalkerClient {
         liveData.clear(initialTime: _lastLiveDataTimestamp);
       }
       liveData.appendFromJson(dataList);
-      liveData.dropBefore(
-          _lastLiveDataTimestamp!.subtract(const Duration(seconds: 3)));
+      liveData.dropBefore(_lastLiveDataTimestamp!.subtract(liveDataTimeWindow));
     } catch (e) {
       _log.severe('Error while parsing live data: $e, resetting');
       resetLiveData();
@@ -378,7 +380,7 @@ class StimwalkerClient {
     _expectedLiveDataLength = null;
     _liveDataCompleter.complete();
 
-    _onNewLiveData!();
+    if (_onNewLiveData != null) _onNewLiveData!();
   }
 
   int _parseVersionFromPacket(List<int> data) {

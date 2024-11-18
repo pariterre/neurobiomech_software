@@ -26,7 +26,6 @@ class DataGraph extends StatefulWidget {
   const DataGraph(
       {super.key, required this.controller, this.combineGraphs = false});
 
-  // TODO Deal with the combination of graphs
   final bool combineGraphs;
   final DataGraphController controller;
 
@@ -51,74 +50,144 @@ class _DataGraphState extends State<DataGraph> {
   void _redraw() {
     if (DateTime.now().difference(_lastRefresh).inMilliseconds < 100) return;
     _lastRefresh = DateTime.now();
+    if (!mounted) return;
     setState(() {});
   }
 
-  List<LineChartBarData> _dataToLineBarsData() {
-    late final TimeSeriesData timeSeries;
-    switch (widget.controller.graphType) {
-      case DataGraphType.emg:
-        timeSeries = widget.controller._data.delsysEmg;
-        break;
-      case DataGraphType.analog:
-        timeSeries = widget.controller._data.delsysAnalog;
-        break;
-    }
+  Iterable<LineChartBarData?> _dataToLineBarsData({int? channel}) {
+    final TimeSeriesData timeSeries = _timeSeries;
 
     final time = timeSeries.time;
-    return timeSeries.data
-        .asMap()
-        .entries
-        .map((channel) => LineChartBarData(
-              color: Colors.black,
-              spots: channel.value
-                  .asMap()
-                  .entries
-                  .map((entry) => FlSpot(time[entry.key] / 1000.0, entry.value))
-                  .toList(),
-              isCurved: false,
-              isStrokeCapRound: false,
-              barWidth: 1,
-              dotData: const FlDotData(show: false),
-            ))
-        .toList();
+    return timeSeries.data.asMap().entries.map((e) => (channel != null &&
+                channel == e.key &&
+                _selectedChannels[e.key]) ||
+            (channel == null && _selectedChannels[e.key])
+        ? LineChartBarData(
+            color: Colors.black,
+            spots: e.value
+                .asMap()
+                .entries
+                .map((entry) => FlSpot(time[entry.key] / 1000.0, entry.value))
+                .toList(),
+            isCurved: false,
+            isStrokeCapRound: false,
+            barWidth: 1,
+            dotData: const FlDotData(show: false),
+          )
+        : null);
+  }
+
+  TimeSeriesData get _timeSeries {
+    switch (widget.controller.graphType) {
+      case DataGraphType.emg:
+        return widget.controller._data.delsysEmg;
+      case DataGraphType.analog:
+        return widget.controller._data.delsysAnalog;
+    }
+  }
+
+  int get _channelCount => _timeSeries.channelCount;
+
+  bool _combineChannels = true;
+  void _onChanged(bool combineChannels) {
+    setState(() {
+      _combineChannels = combineChannels;
+    });
+  }
+
+  late final List<bool> _selectedChannels =
+      List.generate(_channelCount, (_) => true);
+  void _onChannelSelected(int channel, bool newValue) {
+    setState(() {
+      _selectedChannels[channel] = newValue;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 400,
-      width: double.infinity,
-      child: Padding(
-        padding: const EdgeInsets.only(
-          left: 12,
-          bottom: 12,
-          right: 20,
-          top: 20,
-        ),
-        child: AspectRatio(
-          aspectRatio: 1,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return LineChart(
-                LineChartData(
-                  lineTouchData: _lineTouchData(),
-                  lineBarsData: _dataToLineBarsData(),
-                  titlesData: _titlesData(constraints),
-                  gridData: const FlGridData(
-                    show: true,
-                    drawHorizontalLine: true,
-                    drawVerticalLine: true,
-                    horizontalInterval: 1.0,
-                    verticalInterval: 0.1,
-                  ),
-                  borderData: FlBorderData(show: true),
+    return Stack(
+      children: [
+        Column(
+          children: [
+            const SizedBox(height: 65),
+            SizedBox(
+              height: 400,
+              width: double.infinity,
+              child: Padding(
+                padding: const EdgeInsets.only(
+                  left: 12,
+                  bottom: 12,
+                  right: 20,
+                  top: 20,
                 ),
-                duration: Duration.zero,
-              );
-            },
-          ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return _combineChannels
+                        ? _buildLineChart(constraints)
+                        : ListView.builder(
+                            itemCount: _channelCount,
+                            itemBuilder: (context, index) =>
+                                _selectedChannels[index]
+                                    ? Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 10.0),
+                                        child: SizedBox(
+                                            height: 90,
+                                            child: _buildLineChart(constraints,
+                                                channel: index)),
+                                      )
+                                    : const SizedBox(),
+                          );
+                  },
+                ),
+              ),
+            ),
+          ],
         ),
+        Stack(
+          children: [
+            Align(
+              alignment: Alignment.center,
+              child: _RadioCombineChannels(
+                combineChannels: _combineChannels,
+                onChanged: _onChanged,
+              ),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 14.0, right: 8.0),
+                child: _SelectChannelsPopup(
+                    onChannelSelected: _onChannelSelected,
+                    selectedChannels: _selectedChannels),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLineChart(BoxConstraints constraints, {int? channel}) {
+    var data = _dataToLineBarsData(channel: channel).where((e) => e != null);
+
+    return AspectRatio(
+      aspectRatio: 1,
+      child: LineChart(
+        LineChartData(
+          lineTouchData: _lineTouchData(),
+          lineBarsData: data.map((e) => e!).toList(),
+          titlesData: _titlesData(constraints),
+          gridData: const FlGridData(
+            show: true,
+            drawHorizontalLine: true,
+            drawVerticalLine: true,
+            horizontalInterval: 1.0,
+            verticalInterval: 0.1,
+          ),
+          borderData: FlBorderData(show: true),
+        ),
+        duration: Duration.zero,
       ),
     );
   }
@@ -190,3 +259,111 @@ FlTitlesData _titlesData(BoxConstraints constraints,
         sideTitles: SideTitles(showTitles: false),
       ),
     );
+
+class _RadioCombineChannels extends StatelessWidget {
+  const _RadioCombineChannels(
+      {required this.combineChannels, required this.onChanged});
+
+  final bool combineChannels;
+  final Function(bool) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 200,
+          child: RadioListTile<bool>(
+            title: const Text('Combine channels'),
+            value: true,
+            groupValue: combineChannels,
+            onChanged: (value) => onChanged(value!),
+          ),
+        ),
+        SizedBox(
+          width: 200,
+          child: RadioListTile<bool>(
+            title: const Text('Separate channels'),
+            value: false,
+            groupValue: combineChannels,
+            onChanged: (value) => onChanged(value!),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SelectChannelsPopup extends StatefulWidget {
+  const _SelectChannelsPopup(
+      {required this.onChannelSelected, required this.selectedChannels});
+
+  final Function(int index, bool value) onChannelSelected;
+  final List<bool> selectedChannels;
+
+  @override
+  State<_SelectChannelsPopup> createState() => _SelectChannelsPopupState();
+}
+
+class _SelectChannelsPopupState extends State<_SelectChannelsPopup> {
+  bool _isExpanded = false;
+
+  void _onExpand() {
+    setState(() {
+      _isExpanded = !_isExpanded;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 175,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.black),
+        ),
+        child: Column(
+          children: [
+            GestureDetector(
+              onTap: _onExpand,
+              child: Container(
+                width: double.infinity,
+                color: Colors.grey,
+                padding: const EdgeInsets.symmetric(vertical: 4.0),
+                child: Center(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text('Select channels'),
+                      const SizedBox(width: 12),
+                      Icon(_isExpanded
+                          ? Icons.arrow_drop_up
+                          : Icons.arrow_drop_down),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (_isExpanded)
+              ...List.generate(
+                16,
+                (index) => Container(
+                  color: index % 2 == 0 ? Colors.grey[200] : Colors.grey[100],
+                  child: CheckboxListTile(
+                      onChanged: (_) {
+                        widget.onChannelSelected(
+                            index, !widget.selectedChannels[index]);
+                        setState(() {});
+                      },
+                      value: widget.selectedChannels[index],
+                      title: Text(index.toString())),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

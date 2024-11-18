@@ -273,14 +273,19 @@ bool DataTcpDeviceMock::read(std::vector<char> &buffer) {
   // Copy the 4-byte representation of the float into the byte array
   unsigned char dataAsChar[4];
   for (size_t i = 0; i < m_SampleCount; i++) {
-    float value = static_cast<float>(
-        std::sin(static_cast<float>(m_DataCounter * m_SampleCount + i) /
-                 2000.0f * 2 * M_PI));
-    std::memcpy(dataAsChar, &value, sizeof(float));
-    for (size_t j = 0; j < m_DataChannelCount; j++)
+    for (size_t j = 0; j < m_DataChannelCount; j++) {
+      // Introduce a unique phase offset for each channel
+      float phaseOffset = static_cast<float>(j) *
+                          0.1f; // Adjust 0.1f as needed for desired offset
+      float value = static_cast<float>(
+          std::sin(static_cast<float>(m_DataCounter * m_SampleCount + i) /
+                       2000.0f * 2 * M_PI +
+                   phaseOffset));
+      std::memcpy(dataAsChar, &value, sizeof(float));
       std::copy(dataAsChar, dataAsChar + 4,
                 buffer.begin() + i * bytesPerChannel * m_DataChannelCount +
                     j * bytesPerChannel);
+    }
   }
 
   m_DataCounter++;

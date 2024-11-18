@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:frontend/models/command.dart';
 import 'package:frontend/models/stimwalker_client.dart';
 import 'package:frontend/widgets/data_graph.dart';
 
 StimwalkerClient get _connexion => StimwalkerClient.instance;
 
-class DebugScreen extends StatefulWidget {
-  const DebugScreen({super.key});
+class MainScreen extends StatefulWidget {
+  const MainScreen({super.key});
 
-  static const route = '/debug-screen';
+  static const route = '/main-screen';
 
   @override
-  State<DebugScreen> createState() => _DebugScreenState();
+  State<MainScreen> createState() => _MainScreenState();
 }
 
-class _DebugScreenState extends State<DebugScreen> {
+class _MainScreenState extends State<MainScreen> {
   final _liveGraphControllerAnalog = DataGraphController(
       data: _connexion.liveData, graphType: DataGraphType.analog);
   final _liveGraphControllerEmg = DataGraphController(
@@ -110,8 +111,10 @@ class _DebugScreenState extends State<DebugScreen> {
     if (!_showLastTrial) return const SizedBox();
     return Column(
       children: [
-        DataGraph(controller: _trialGraphControllerAnalog),
-        DataGraph(controller: _trialGraphControllerEmg),
+        if (_connexion.isConnectedToDelsysAnalog)
+          DataGraph(controller: _trialGraphControllerAnalog),
+        if (_connexion.isConnectedToDelsysEmg)
+          DataGraph(controller: _trialGraphControllerEmg),
       ],
     );
   }
@@ -131,8 +134,26 @@ class _DebugScreenState extends State<DebugScreen> {
     // TODO It cannot connect right now with both data type
     return Column(
       children: [
-        DataGraph(controller: _liveGraphControllerAnalog),
-        DataGraph(controller: _liveGraphControllerEmg),
+        SizedBox(
+          width: 250,
+          child: TextFormField(
+            decoration: const InputDecoration(
+              labelText: 'Live data duration',
+              hintText: 'Enter the duration in seconds',
+            ),
+            initialValue: _connexion.liveDataTimeWindow.inSeconds.toString(),
+            onChanged: (value) {
+              final valueAsInt = int.tryParse(value);
+              if (valueAsInt == null) return;
+              _connexion.liveDataTimeWindow = Duration(seconds: valueAsInt);
+            },
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          ),
+        ),
+        if (_connexion.isConnectedToDelsysAnalog)
+          DataGraph(controller: _liveGraphControllerAnalog),
+        if (_connexion.isConnectedToDelsysEmg)
+          DataGraph(controller: _liveGraphControllerEmg),
       ],
     );
   }

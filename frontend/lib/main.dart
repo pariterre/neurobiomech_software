@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/screens/debug_screen.dart';
+import 'package:frontend/screens/main_screen.dart';
 
 import 'package:logging/logging.dart';
 
@@ -26,9 +26,9 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      initialRoute: DebugScreen.route,
+      initialRoute: MainScreen.route,
       routes: {
-        DebugScreen.route: (context) => const DebugScreen(),
+        MainScreen.route: (context) => const MainScreen(),
       },
     );
   }
