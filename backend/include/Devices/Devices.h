@@ -35,6 +35,14 @@ public:
   /// @param deviceId The id of the device (the one returned by the add method)
   void remove(size_t deviceId);
 
+  /// @brief Get the ids of the devices in the collection
+  /// @return The ids of the devices in the collection
+  std::vector<size_t> getDeviceIds() const;
+
+  /// @brief Get the names of the devices in the collection
+  /// @return The names of the devices in the collection
+  std::vector<std::string> getDeviceNames() const;
+
   /// @brief Get the number of devices in the collection
   /// @return The number of devices in the collection
   size_t size() const;

@@ -185,8 +185,11 @@ protected:
 
   /// @brief Remove the requested device
   /// @param deviceName The name of the device to remove
+  /// @param restartStreaming If the data streaming should be restarted after
+  /// removing the device
   /// @return True if the device is removed, false otherwise
-  bool removeDevice(const std::string &deviceName);
+  bool removeDevice(const std::string &deviceName,
+                    bool restartStreaming = true);
 
   /// @brief Handle the sending of the live data to the client
   void handleSendLiveData();

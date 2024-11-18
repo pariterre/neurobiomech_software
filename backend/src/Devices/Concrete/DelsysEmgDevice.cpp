@@ -26,11 +26,6 @@ DelsysEmgDevice::DelsysEmgDevice(
                        DELSYS_EMG_CHANNEL_COUNT, DELSYS_EMG_FRAME_RATE,
                        DELSYS_EMG_SAMPLE_COUNT) {}
 
-DelsysEmgDevice::~DelsysEmgDevice() {
-  stopDataCollectorWorkers();
-  stopDeviceWorkers();
-}
-
 std::string DelsysEmgDevice::deviceName() const { return "DelsysEmgDevice"; }
 
 std::string DelsysEmgDevice::dataCollectorName() const {
@@ -48,6 +43,14 @@ DelsysEmgDeviceMock::DelsysEmgDeviceMock(const std::string &host,
               DELSYS_EMG_CHANNEL_COUNT, DELSYS_EMG_FRAME_RATE,
               DELSYS_EMG_SAMPLE_COUNT, host, dataPort),
           std::make_shared<CommandTcpDeviceMock>(host, commandPort)) {}
+
+DelsysEmgDeviceMock::DelsysEmgDeviceMock(const DelsysBaseDevice &other,
+                                         size_t dataPort)
+    : DelsysEmgDevice(std::make_unique<DataTcpDeviceMock>(
+                          DELSYS_EMG_CHANNEL_COUNT, DELSYS_EMG_FRAME_RATE,
+                          DELSYS_EMG_SAMPLE_COUNT,
+                          other.m_CommandDevice->getHost(), dataPort),
+                      other.m_CommandDevice) {}
 
 bool DelsysEmgDeviceMock::handleConnect() {
   if (shouldFailToConnect) {

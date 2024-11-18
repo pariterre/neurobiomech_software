@@ -127,9 +127,9 @@ void TcpServer::disconnectClient() {
   m_Status = TcpServerStatus::INITIALIZING;
 
   // Make sure all the devices are properly disconnected
-  m_Devices.stopDataStreaming();
-  m_Devices.clear();
-  m_ConnectedDeviceIds.clear();
+  for (auto &name : m_Devices.getDeviceNames()) {
+    removeDevice(name, false);
+  }
 
   // Reset the status to initializing
   closeSockets();
@@ -504,12 +504,12 @@ void TcpServer::makeAndAddDevice(const std::string &deviceName) {
 
   if (deviceName == DEVICE_NAME_DELSYS_ANALOG) {
     bool isInitialized = false;
-    for (size_t i = 0; i < m_Devices.size(); i++) {
-      if (dynamic_cast<const devices::DelsysBaseDevice *>(&m_Devices[i])) {
+    for (auto &id : m_Devices.getDeviceIds()) {
+      if (dynamic_cast<const devices::DelsysBaseDevice *>(&m_Devices[id])) {
         isInitialized = true;
         m_ConnectedDeviceIds[DEVICE_NAME_DELSYS_ANALOG] =
             m_Devices.add(std::make_unique<devices::DelsysAnalogDevice>(
-                static_cast<const devices::DelsysBaseDevice &>(m_Devices[i])));
+                static_cast<const devices::DelsysBaseDevice &>(m_Devices[id])));
         break;
       }
     }
@@ -520,12 +520,12 @@ void TcpServer::makeAndAddDevice(const std::string &deviceName) {
 
   } else if (deviceName == DEVICE_NAME_DELSYS_EMG) {
     bool isInitialized = false;
-    for (size_t i = 0; i < m_Devices.size(); i++) {
-      if (dynamic_cast<const devices::DelsysBaseDevice *>(&m_Devices[i])) {
+    for (auto &id : m_Devices.getDeviceIds()) {
+      if (dynamic_cast<const devices::DelsysBaseDevice *>(&m_Devices[id])) {
         isInitialized = true;
         m_ConnectedDeviceIds[DEVICE_NAME_DELSYS_EMG] =
             m_Devices.add(std::make_unique<devices::DelsysEmgDevice>(
-                static_cast<const devices::DelsysBaseDevice &>(m_Devices[i])));
+                static_cast<const devices::DelsysBaseDevice &>(m_Devices[id])));
         break;
       }
     }
@@ -544,7 +544,8 @@ void TcpServer::makeAndAddDevice(const std::string &deviceName) {
   }
 }
 
-bool TcpServer::removeDevice(const std::string &deviceName) {
+bool TcpServer::removeDevice(const std::string &deviceName,
+                             bool restartStreaming) {
   auto &logger = utils::Logger::getInstance();
 
   // Check if [m_ConnectedDeviceIds] contains the device
@@ -557,7 +558,9 @@ bool TcpServer::removeDevice(const std::string &deviceName) {
   m_Devices.stopDataStreaming();
   m_Devices.remove(m_ConnectedDeviceIds[deviceName]);
   m_ConnectedDeviceIds.erase(deviceName);
-  m_Devices.startDataStreaming();
+  if (restartStreaming) {
+    m_Devices.startDataStreaming();
+  }
 
   return true;
 }
@@ -589,14 +592,41 @@ void TcpServerMock::makeAndAddDevice(const std::string &deviceName) {
   auto &logger = utils::Logger::getInstance();
 
   if (deviceName == DEVICE_NAME_DELSYS_ANALOG) {
-    m_ConnectedDeviceIds[DEVICE_NAME_DELSYS_ANALOG] =
-        m_Devices.add(std::make_unique<devices::DelsysAnalogDeviceMock>());
+    bool isInitialized = false;
+    for (auto &id : m_Devices.getDeviceIds()) {
+      if (dynamic_cast<const devices::DelsysBaseDevice *>(&m_Devices[id])) {
+        isInitialized = true;
+        m_ConnectedDeviceIds[DEVICE_NAME_DELSYS_ANALOG] =
+            m_Devices.add(std::make_unique<devices::DelsysAnalogDeviceMock>(
+                static_cast<const devices::DelsysBaseDevice &>(m_Devices[id])));
+        break;
+      }
+    }
+    if (!isInitialized) {
+      m_ConnectedDeviceIds[DEVICE_NAME_DELSYS_ANALOG] =
+          m_Devices.add(std::make_unique<devices::DelsysAnalogDeviceMock>());
+    }
+
   } else if (deviceName == DEVICE_NAME_DELSYS_EMG) {
-    m_ConnectedDeviceIds[DEVICE_NAME_DELSYS_EMG] =
-        m_Devices.add(std::make_unique<devices::DelsysEmgDeviceMock>());
+    bool isInitialized = false;
+    for (auto &id : m_Devices.getDeviceIds()) {
+      if (dynamic_cast<const devices::DelsysBaseDevice *>(&m_Devices[id])) {
+        isInitialized = true;
+        m_ConnectedDeviceIds[DEVICE_NAME_DELSYS_EMG] =
+            m_Devices.add(std::make_unique<devices::DelsysEmgDeviceMock>(
+                static_cast<const devices::DelsysBaseDevice &>(m_Devices[id])));
+        break;
+      }
+    }
+    if (!isInitialized) {
+      m_ConnectedDeviceIds[DEVICE_NAME_DELSYS_EMG] =
+          m_Devices.add(std::make_unique<devices::DelsysEmgDeviceMock>());
+    }
+
   } else if (deviceName == DEVICE_NAME_MAGSTIM) {
     m_ConnectedDeviceIds[DEVICE_NAME_MAGSTIM] =
         m_Devices.add(devices::MagstimRapidDeviceMock::findMagstimDevice());
+
   } else {
     logger.fatal("Invalid device name: " + deviceName);
     throw std::runtime_error("Invalid device name: " + deviceName);

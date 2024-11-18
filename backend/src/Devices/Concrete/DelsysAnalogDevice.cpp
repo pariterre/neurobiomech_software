@@ -28,11 +28,6 @@ DelsysAnalogDevice::DelsysAnalogDevice(
                        DELSYS_ANALOG_CHANNEL_COUNT, DELSYS_ANALOG_FRAME_RATE,
                        DELSYS_ANALOG_SAMPLE_COUNT) {}
 
-DelsysAnalogDevice::~DelsysAnalogDevice() {
-  stopDataCollectorWorkers();
-  stopDeviceWorkers();
-}
-
 std::string DelsysAnalogDevice::deviceName() const {
   return "DelsysAnalogDevice";
 }
@@ -53,6 +48,15 @@ DelsysAnalogDeviceMock::DelsysAnalogDeviceMock(const std::string &host,
               DELSYS_ANALOG_CHANNEL_COUNT, DELSYS_ANALOG_FRAME_RATE,
               DELSYS_ANALOG_SAMPLE_COUNT, host, dataPort),
           std::make_unique<CommandTcpDeviceMock>(host, commandPort)) {}
+
+DelsysAnalogDeviceMock::DelsysAnalogDeviceMock(const DelsysBaseDevice &other,
+                                               size_t dataPort)
+    : DelsysAnalogDevice(std::make_unique<DataTcpDeviceMock>(
+                             DELSYS_ANALOG_CHANNEL_COUNT,
+                             DELSYS_ANALOG_FRAME_RATE,
+                             DELSYS_ANALOG_SAMPLE_COUNT,
+                             other.m_CommandDevice->getHost(), dataPort),
+                         other.m_CommandDevice) {}
 
 bool DelsysAnalogDeviceMock::handleConnect() {
   if (shouldFailToConnect) {

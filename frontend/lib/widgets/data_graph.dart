@@ -309,6 +309,8 @@ class _SelectChannelsPopup extends StatefulWidget {
 class _SelectChannelsPopupState extends State<_SelectChannelsPopup> {
   bool _isExpanded = false;
 
+  bool get _canSelectAll => widget.selectedChannels.any((element) => !element);
+
   void _onExpand() {
     setState(() {
       _isExpanded = !_isExpanded;
@@ -347,8 +349,22 @@ class _SelectChannelsPopupState extends State<_SelectChannelsPopup> {
               ),
             ),
             if (_isExpanded)
+              Container(
+                color: Colors.grey[100],
+                child: CheckboxListTile(
+                    onChanged: (_) {
+                      final value = _canSelectAll;
+                      for (var i = 0; i < widget.selectedChannels.length; i++) {
+                        widget.onChannelSelected(i, value);
+                      }
+                      setState(() {});
+                    },
+                    value: false,
+                    title: Text(_canSelectAll ? 'Select all' : 'Deselect all')),
+              ),
+            if (_isExpanded)
               ...List.generate(
-                16,
+                widget.selectedChannels.length,
                 (index) => Container(
                   color: index % 2 == 0 ? Colors.grey[200] : Colors.grey[100],
                   child: CheckboxListTile(

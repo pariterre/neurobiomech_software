@@ -334,7 +334,7 @@ class StimwalkerClient {
   }
 
   Future<void> _receiveLiveData(List<int> response) async {
-    if (response.isEmpty) return;
+    if (response.isEmpty || !isInitialized) return;
 
     if (_expectedLiveDataLength == null) {
       _liveDataCompleter = Completer();

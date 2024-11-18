@@ -27,19 +27,14 @@ std::string DelsysBaseDevice::CommandTcpDevice::deviceName() const {
   return "DelsysCommandTcpDevice";
 }
 
-std::vector<char> DelsysBaseDevice::CommandTcpDevice::read(size_t bufferSize) {
-  if (m_LastCommand == DelsysCommands::STOP) {
-    return std::vector<char>(bufferSize, '\0');
-  }
-  return TcpDevice::read(bufferSize);
-}
-
 DeviceResponses DelsysBaseDevice::CommandTcpDevice::parseAsyncSendCommand(
     const DeviceCommands &command, const std::any &data) {
-  if (m_LastCommand == command) {
+  auto commandAsDelsys = DelsysCommands(command.getValue());
+  std::lock_guard<std::mutex> lock(m_LastCommandMutex);
+  if (m_LastCommand == commandAsDelsys) {
     return DeviceResponses::OK;
   }
-  auto commandAsDelsys = DelsysCommands(command.getValue());
+
   write(commandAsDelsys.toString());
   std::vector<char> response = read(128);
   m_LastCommand = commandAsDelsys;
@@ -112,6 +107,15 @@ DelsysBaseDevice::DelsysBaseDevice(
   m_IgnoreTooSlowWarning = true;
 }
 
+DelsysBaseDevice::~DelsysBaseDevice() {
+  if (m_IsConnected) {
+    disconnect();
+  }
+
+  stopDataCollectorWorkers();
+  stopDeviceWorkers();
+}
+
 bool DelsysBaseDevice::handleConnect() {
   if (!m_CommandDevice->getIsConnected()) {
     // This is already connected if the delsys device is already connected to
@@ -141,7 +145,7 @@ bool DelsysBaseDevice::handleDisconnect() {
     stopDataStreaming();
   }
 
-  if (m_CommandDevice->getIsConnected()) {
+  if (m_CommandDevice.use_count() == 1 && m_CommandDevice->getIsConnected()) {
     // This will happen if more than one devices are connected and one of them
     // disconnected the command device already
     m_CommandDevice->disconnect();

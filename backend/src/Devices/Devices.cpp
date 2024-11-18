@@ -36,9 +36,26 @@ size_t Devices::add(std::unique_ptr<Device> device) {
 }
 
 void Devices::remove(size_t deviceId) {
-  m_Devices.erase(deviceId);
+  m_Devices[deviceId]->disconnect();
   std::lock_guard<std::mutex> lock(m_MutexDataCollectors);
   m_DataCollectors.erase(deviceId);
+  m_Devices.erase(deviceId);
+}
+
+std::vector<size_t> Devices::getDeviceIds() const {
+  std::vector<size_t> deviceIds;
+  for (auto &[deviceId, device] : m_Devices) {
+    deviceIds.push_back(deviceId);
+  }
+  return deviceIds;
+}
+
+std::vector<std::string> Devices::getDeviceNames() const {
+  std::vector<std::string> deviceNames;
+  for (auto &[deviceId, device] : m_Devices) {
+    deviceNames.push_back(device->deviceName());
+  }
+  return deviceNames;
 }
 
 size_t Devices::size() const { return m_Devices.size(); }
@@ -48,8 +65,8 @@ void Devices::clear() {
     disconnect();
   }
 
-  m_Devices.clear();
   std::lock_guard<std::mutex> lock(m_MutexDataCollectors);
+  m_Devices.clear();
   m_DataCollectors.clear();
 }
 

@@ -16,6 +16,9 @@
 #include "Utils/CppMacros.h"
 
 namespace STIMWALKER_NAMESPACE::devices {
+class DelsysEmgDeviceMock;
+class DelsysAnalogDeviceMock;
+
 namespace DelsysBaseDeviceMock {
 class CommandTcpDeviceMock;
 class DataTcpDeviceMock;
@@ -49,6 +52,9 @@ protected:
 };
 
 class DelsysBaseDevice : public AsyncDevice, public AsyncDataCollector {
+  friend devices::DelsysEmgDeviceMock;
+  friend devices::DelsysAnalogDeviceMock;
+
 public:
   class CommandTcpDevice : public TcpDevice {
   public:
@@ -57,14 +63,13 @@ public:
 
     std::string deviceName() const override;
 
-    virtual std::vector<char> read(size_t bufferSize) override;
-
   protected:
     DeviceResponses parseAsyncSendCommand(const DeviceCommands &command,
                                           const std::any &data) override;
 
   private:
     DECLARE_PROTECTED_MEMBER_NOGET(DelsysCommands, LastCommand);
+    DECLARE_PROTECTED_MEMBER_NOGET(std::mutex, LastCommandMutex);
   };
 
   class DataTcpDevice : public TcpDevice {
@@ -114,7 +119,7 @@ protected:
 
 public:
   /// @brief Destructor of the DelsysBaseDevice
-  ~DelsysBaseDevice() = default;
+  ~DelsysBaseDevice();
 
 protected:
   DECLARE_PROTECTED_MEMBER(std::chrono::microseconds, DeltaTime);
