@@ -338,8 +338,13 @@ class StimwalkerClient {
 
     if (_expectedLiveDataLength == null) {
       _liveDataCompleter = Completer();
-      _lastLiveDataTimestamp = _parseTimestampFromPacket(response);
-      _expectedLiveDataLength = _parseDataLengthFromPacket(response);
+      try {
+        _lastLiveDataTimestamp = _parseTimestampFromPacket(response);
+        _expectedLiveDataLength = _parseDataLengthFromPacket(response);
+      } catch (e) {
+        _log.severe('Error while parsing live data: $e, resetting');
+        resetLiveData();
+      }
       if (response.length > _serverHeaderLength) {
         // If more data came at once, recursively call the function with the rest
         // of the data.

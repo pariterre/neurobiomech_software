@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:frontend/models/command.dart';
+import 'package:frontend/models/database_manager.dart';
 import 'package:frontend/models/stimwalker_client.dart';
 import 'package:frontend/widgets/data_graph.dart';
+import 'package:frontend/widgets/save_trial_dialog.dart';
 
 StimwalkerClient get _connexion => StimwalkerClient.instance;
 
@@ -107,10 +109,23 @@ class _MainScreenState extends State<MainScreen> {
     setState(() => _showLastTrial = false);
   }
 
+  Future<void> _saveTrial() async {
+    final hasSaved = await showDialog(
+        context: context, builder: (context) => const SaveTrialDialog());
+    if (!hasSaved) return;
+
+    _connexion.lastTrialData.toFile(DatabaseManager.instance.savePath);
+  }
+
   Widget _buildLastTrialGraph() {
     if (!_showLastTrial) return const SizedBox();
     return Column(
       children: [
+        ElevatedButton(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green, foregroundColor: Colors.white),
+            onPressed: _saveTrial,
+            child: const Text('Save trial')),
         if (_connexion.isConnectedToDelsysAnalog)
           DataGraph(controller: _trialGraphControllerAnalog),
         if (_connexion.isConnectedToDelsysEmg)

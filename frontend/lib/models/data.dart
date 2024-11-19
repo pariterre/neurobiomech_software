@@ -46,4 +46,12 @@ class Data {
         (t.millisecondsSinceEpoch - initialTime.millisecondsSinceEpoch)
             .toDouble());
   }
+
+  Future<void> toFile(String path) async {
+    final analogPath = '$path/analog.csv';
+    final emgPath = '$path/emg.csv';
+    final analogFuture = delsysAnalog.toFile(analogPath);
+    final emgFuture = delsysEmg.toFile(emgPath);
+    await Future.wait([analogFuture, emgFuture]);
+  }
 }
