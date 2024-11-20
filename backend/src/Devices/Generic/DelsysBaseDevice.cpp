@@ -11,6 +11,7 @@
 #include "Utils/Logger.h"
 
 using namespace STIMWALKER_NAMESPACE::devices;
+std::chrono::microseconds DATA_COLLECTOR_TIMER(5);
 
 std::unique_ptr<STIMWALKER_NAMESPACE::data::TimeSeries>
 timeSeriesGenerator(std::chrono::microseconds deltaTime) {
@@ -67,9 +68,9 @@ DelsysBaseDevice::DelsysBaseDevice(size_t channelCount,
       m_DataBuffer(
           std::vector<char>(channelCount * m_SampleCount * m_BytesPerChannel)),
       AsyncDevice(std::chrono::milliseconds(100)),
-      AsyncDataCollector(
-          channelCount, std::chrono::microseconds(5),
-          [deltaTime]() { return timeSeriesGenerator(deltaTime); }) {
+      AsyncDataCollector(channelCount, DATA_COLLECTOR_TIMER, [deltaTime]() {
+        return timeSeriesGenerator(deltaTime);
+      }) {
   m_IgnoreTooSlowWarning = true;
 }
 
@@ -84,9 +85,9 @@ DelsysBaseDevice::DelsysBaseDevice(size_t channelCount,
       m_DataBuffer(
           std::vector<char>(channelCount * m_SampleCount * m_BytesPerChannel)),
       AsyncDevice(std::chrono::milliseconds(100)),
-      AsyncDataCollector(
-          channelCount, std::chrono::microseconds(5),
-          [deltaTime]() { return timeSeriesGenerator(deltaTime); }) {
+      AsyncDataCollector(channelCount, DATA_COLLECTOR_TIMER, [deltaTime]() {
+        return timeSeriesGenerator(deltaTime);
+      }) {
   m_IgnoreTooSlowWarning = true;
 }
 
@@ -101,9 +102,9 @@ DelsysBaseDevice::DelsysBaseDevice(
       m_DataBuffer(
           std::vector<char>(channelCount * m_SampleCount * m_BytesPerChannel)),
       AsyncDevice(std::chrono::milliseconds(100)),
-      AsyncDataCollector(
-          channelCount, std::chrono::microseconds(5),
-          [deltaTime]() { return timeSeriesGenerator(deltaTime); }) {
+      AsyncDataCollector(channelCount, DATA_COLLECTOR_TIMER, [deltaTime]() {
+        return timeSeriesGenerator(deltaTime);
+      }) {
   m_IgnoreTooSlowWarning = true;
 }
 
@@ -126,7 +127,10 @@ bool DelsysBaseDevice::handleConnect() {
           "The command device is not connected, did you start Trigno?");
       return false;
     }
-    m_CommandDevice->read(128); // Consume the welcome message
+    auto coucou = m_CommandDevice->read(128); // Consume the welcome message
+
+    m_CommandDevice->send(DelsysCommands::SET_BACKWARD_COMPATIBILITY);
+    m_CommandDevice->send(DelsysCommands::SET_UPSAMPLE);
   }
 
   m_DataDevice->connect();

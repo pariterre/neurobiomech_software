@@ -8,8 +8,9 @@ class Data {
 
   void clear({DateTime? initialTime}) {
     _initialTime = initialTime ?? _initialTime;
-    delsysAnalog.clear(initialTime: initialTime);
-    delsysEmg.clear(initialTime: initialTime);
+
+    delsysAnalog.clear();
+    delsysEmg.clear();
   }
 
   bool get isEmpty => delsysAnalog.isEmpty && delsysEmg.isEmpty;
@@ -20,11 +21,16 @@ class Data {
     required DateTime initialTime,
     required int analogChannelCount,
     required int emgChannelCount,
+    required bool isFromLiveData,
   })  : _initialTime = initialTime,
         delsysAnalog = TimeSeriesData(
-            initialTime: initialTime, channelCount: analogChannelCount),
+            initialTime: initialTime,
+            channelCount: analogChannelCount,
+            isFromLiveData: isFromLiveData),
         delsysEmg = TimeSeriesData(
-            initialTime: initialTime, channelCount: emgChannelCount);
+            initialTime: initialTime,
+            channelCount: emgChannelCount,
+            isFromLiveData: isFromLiveData);
 
   appendFromJson(List json) {
     for (Map data in json) {

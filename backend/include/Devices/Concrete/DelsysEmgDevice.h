@@ -21,7 +21,7 @@ public:
   /// device and host address
   /// @param other The other DelsysBaseDevice to share the command device with
   /// @param dataPort The port of the data device
-  DelsysEmgDevice(const DelsysBaseDevice &other, size_t dataPort = 50043);
+  DelsysEmgDevice(const DelsysBaseDevice &other, size_t dataPort = 50041);
 
   DelsysEmgDevice(const DelsysEmgDevice &other) = delete;
 
@@ -47,7 +47,7 @@ public:
   /// device and host address
   /// @param other The other DelsysBaseDevice to share the command device with
   /// @param dataPort The port of the data device
-  DelsysEmgDeviceMock(const DelsysBaseDevice &other, size_t dataPort = 50043);
+  DelsysEmgDeviceMock(const DelsysBaseDevice &other, size_t dataPort = 50041);
 
   bool shouldFailToConnect = false;
   bool shouldFailToStartDataStreaming = false;

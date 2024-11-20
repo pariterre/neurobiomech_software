@@ -35,7 +35,11 @@ class _MainScreenState extends State<MainScreen> {
   bool _showLiveData = false;
 
   Future<void> _connectServer() async {
-    setState(() => _isBusy = true);
+    setState(() {
+      _showLastTrial = false;
+      _showLiveData = false;
+      _isBusy = true;
+    });
     await _connexion.initialize(
       onConnexionLost: () => setState(() {}),
       onNewLiveData: _onNewLiveData,
@@ -226,13 +230,6 @@ class _MainScreenState extends State<MainScreen> {
                   child: Text(_connexion.isConnectedToDelsysEmg
                       ? 'Disconnect Delsys EMG'
                       : 'Connect Delsys EMG')),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: !_isBusy && _connexion.isInitialized
-                    ? _disconnectServer
-                    : null,
-                child: const Text('Shutdown'),
-              ),
               const SizedBox(height: 20),
               Text('Devices related commands',
                   style: Theme.of(context).textTheme.titleMedium),

@@ -29,6 +29,8 @@ public:
   DECLARE_DEVICE_COMMAND(INITIALIZING, -1);
   DECLARE_DEVICE_COMMAND(START, 0);
   DECLARE_DEVICE_COMMAND(STOP, 1);
+  DECLARE_DEVICE_COMMAND(SET_BACKWARD_COMPATIBILITY, 2);
+  DECLARE_DEVICE_COMMAND(SET_UPSAMPLE, 3);
 
   virtual std::string toString() const {
     switch (m_Value) {
@@ -36,6 +38,10 @@ public:
       return START_AS_STRING + m_TerminaisonCharacters;
     case STOP:
       return STOP_AS_STRING + m_TerminaisonCharacters;
+    case SET_BACKWARD_COMPATIBILITY:
+      return "BACKWARDS COMPATIBILITY ON" + m_TerminaisonCharacters;
+    case SET_UPSAMPLE:
+      return "UPSAMPLE ON" + m_TerminaisonCharacters;
     default:
       throw UnknownCommandException("Unknown command in DelsysCommands");
     }

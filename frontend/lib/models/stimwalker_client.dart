@@ -36,11 +36,13 @@ class StimwalkerClient {
   Data liveData = Data(
       initialTime: DateTime.now(),
       analogChannelCount: 3 * 16,
-      emgChannelCount: 16);
+      emgChannelCount: 16,
+      isFromLiveData: true);
   Data lastTrialData = Data(
       initialTime: DateTime.now(),
       analogChannelCount: 3 * 16,
-      emgChannelCount: 16);
+      emgChannelCount: 16,
+      isFromLiveData: false);
   Duration liveDataTimeWindow = const Duration(seconds: 3);
 
   bool _isRecording = false;

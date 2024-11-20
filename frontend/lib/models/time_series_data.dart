@@ -1,18 +1,17 @@
 import 'dart:io';
 
 class TimeSeriesData {
-  DateTime _initialTime;
-  DateTime get initialTime => _initialTime;
+  bool isFromLiveData;
   double? _timeOffset; // How many milliseconds to subtract to the time vector
   final int channelCount;
 
   final List<double> time = []; // In milliseconds since t0
   final List<List<double>> data;
 
-  void clear({DateTime? initialTime}) {
-    _initialTime = initialTime ?? _initialTime;
+  void clear() {
     time.clear();
     _timeOffset = null;
+
     for (var channel in data) {
       channel.clear();
     }
@@ -25,14 +24,16 @@ class TimeSeriesData {
   TimeSeriesData({
     required DateTime initialTime,
     required this.channelCount,
-  })  : _initialTime = initialTime,
-        data = List.generate(channelCount, (_) => <double>[]);
+    required this.isFromLiveData,
+  }) : data = List.generate(channelCount, (_) => <double>[]);
 
   appendFromJson(Map<String, dynamic> json) {
     final timeSeries = (json['data'] as List<dynamic>);
 
     // If this is the first time stamps, we need to set the time offset
-    _timeOffset ??= (timeSeries[0][0] as int) / 1000.0;
+    _timeOffset ??=
+        ((isFromLiveData ? timeSeries.last[0] : timeSeries.first[0]) as int) /
+            1000.0;
 
     final maxLength = timeSeries.length;
     final newT =
