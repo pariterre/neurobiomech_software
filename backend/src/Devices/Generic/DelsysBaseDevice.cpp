@@ -246,7 +246,9 @@ bool CommandTcpDeviceMock::read(std::vector<char> &buffer) {
     break;
   }
   case DelsysCommands::START:
-  case DelsysCommands::STOP: {
+  case DelsysCommands::STOP:
+  case DelsysCommands::SET_BACKWARD_COMPATIBILITY:
+  case DelsysCommands::SET_UPSAMPLE: {
     // Write the OK message
     std::string response = "OK\r\n\r\n";
     std::copy(response.begin(), response.end(), buffer.begin());

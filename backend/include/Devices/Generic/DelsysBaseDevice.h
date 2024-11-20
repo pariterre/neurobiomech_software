@@ -179,6 +179,11 @@ public:
       return START;
     } else if (command == DelsysCommandsMock(STOP).toString()) {
       return STOP;
+    } else if (command ==
+               DelsysCommandsMock(SET_BACKWARD_COMPATIBILITY).toString()) {
+      return SET_BACKWARD_COMPATIBILITY;
+    } else if (command == DelsysCommandsMock(SET_UPSAMPLE).toString()) {
+      return SET_UPSAMPLE;
     } else {
       throw UnknownCommandException("Unknown command in DelsysCommandsMock");
     }
