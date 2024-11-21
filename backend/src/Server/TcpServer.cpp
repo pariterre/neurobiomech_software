@@ -369,6 +369,18 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
                                               : TcpServerResponse::NOK;
     break;
 
+  case TcpServerCommand::ZERO_DELSYS_ANALOG:
+    response = m_Devices.zeroLevelDevice(DEVICE_NAME_DELSYS_ANALOG)
+                   ? TcpServerResponse::OK
+                   : TcpServerResponse::NOK;
+    break;
+
+  case TcpServerCommand::ZERO_DELSYS_EMG:
+    response = m_Devices.zeroLevelDevice(DEVICE_NAME_DELSYS_EMG)
+                   ? TcpServerResponse::OK
+                   : TcpServerResponse::NOK;
+    break;
+
   case TcpServerCommand::DISCONNECT_DELSYS_ANALOG:
     response = removeDevice(DEVICE_NAME_DELSYS_ANALOG) ? TcpServerResponse::OK
                                                        : TcpServerResponse::NOK;
@@ -496,6 +508,19 @@ bool TcpServer::addDevice(const std::string &deviceName) {
   }
   m_Devices.startDataStreaming();
 
+  return true;
+}
+
+bool TcpServer::setZeroLevel(const std::string &deviceName) {
+  auto &logger = utils::Logger::getInstance();
+
+  // Check if [m_ConnectedDeviceIds] contains the device
+  if (m_ConnectedDeviceIds.find(deviceName) == m_ConnectedDeviceIds.end()) {
+    logger.warning(deviceName + " not connected");
+    return false;
+  }
+
+  m_Devices.zeroLevelDevice(deviceName);
   return true;
 }
 

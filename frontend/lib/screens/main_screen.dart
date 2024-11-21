@@ -18,6 +18,11 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
+  final _liveAnalogDataKey = GlobalKey();
+  final _liveEmgDataKey = GlobalKey();
+  final _trialAnalogDataKey = GlobalKey();
+  final _trialEmgDataKey = GlobalKey();
+
   final _liveGraphControllerAnalog = DataGraphController(
       data: _connexion.liveData, graphType: DataGraphType.analog);
   final _liveGraphControllerEmg = DataGraphController(
@@ -73,6 +78,18 @@ class _MainScreenState extends State<MainScreen> {
     _resetInternalStates();
   }
 
+  Future<void> _zeroDelsysAnalog() async {
+    setState(() => _isBusy = true);
+    await _connexion.send(Command.zeroDelsysAnalog);
+    setState(() => _isBusy = false);
+  }
+
+  Future<void> _zeroDelsysEmg() async {
+    setState(() => _isBusy = true);
+    await _connexion.send(Command.zeroDelsysEmg);
+    setState(() => _isBusy = false);
+  }
+
   Future<void> _disconnectDelsysAnalog() async {
     setState(() => _isBusy = true);
     await _connexion.send(Command.disconnectDelsysAnalog);
@@ -122,18 +139,43 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Widget _buildLastTrialGraph() {
-    if (!_showLastTrial) return const SizedBox();
+    if (!_connexion.hasRecorded) return const SizedBox();
     return Column(
       children: [
-        ElevatedButton(
-            style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green, foregroundColor: Colors.white),
-            onPressed: _saveTrial,
-            child: const Text('Save trial')),
-        if (_connexion.isConnectedToDelsysAnalog)
-          DataGraph(controller: _trialGraphControllerAnalog),
-        if (_connexion.isConnectedToDelsysEmg)
-          DataGraph(controller: _trialGraphControllerEmg),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _showLastTrial
+                ? ElevatedButton(
+                    onPressed: _hideLastTrialGraph,
+                    child: const Text('Hide last trial'),
+                  )
+                : ElevatedButton(
+                    onPressed: _showLastTrialGraph,
+                    child: const Text('Show last trial'),
+                  ),
+            const SizedBox(width: 12),
+            ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white),
+                onPressed: _saveTrial,
+                child: const Text('Save trial')),
+          ],
+        ),
+        if (_showLastTrial)
+          Column(
+            children: [
+              if (_connexion.isConnectedToDelsysAnalog)
+                DataGraph(
+                    key: _trialAnalogDataKey,
+                    controller: _trialGraphControllerAnalog),
+              if (_connexion.isConnectedToDelsysEmg)
+                DataGraph(
+                    key: _trialEmgDataKey,
+                    controller: _trialGraphControllerEmg),
+            ],
+          )
       ],
     );
   }
@@ -145,6 +187,38 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _hideLiveDataGraph() async {
     setState(() => _showLiveData = false);
+  }
+
+  Widget _buildConnectDevice(String name,
+      {required bool isConnected,
+      required Function() onClickedConnect,
+      required Function() onClickedDisconnect,
+      required Function() onClickedZero}) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        isConnected
+            ? ElevatedButton(
+                onPressed: !_isBusy && _connexion.isInitialized
+                    ? onClickedDisconnect
+                    : null,
+                child: Text('Disconnect $name'))
+            : ElevatedButton(
+                onPressed: !_isBusy && _connexion.isInitialized
+                    ? onClickedConnect
+                    : null,
+                child: Text('Connect $name')),
+        if (isConnected)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(width: 12),
+              ElevatedButton(
+                  onPressed: onClickedZero, child: const Text('Zéro')),
+            ],
+          )
+      ],
+    );
   }
 
   Widget _buildLiveDataGraph() {
@@ -170,9 +244,10 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ),
         if (_connexion.isConnectedToDelsysAnalog)
-          DataGraph(controller: _liveGraphControllerAnalog),
+          DataGraph(
+              key: _liveAnalogDataKey, controller: _liveGraphControllerAnalog),
         if (_connexion.isConnectedToDelsysEmg)
-          DataGraph(controller: _liveGraphControllerEmg),
+          DataGraph(key: _liveEmgDataKey, controller: _liveGraphControllerEmg),
       ],
     );
   }
@@ -211,25 +286,17 @@ class _MainScreenState extends State<MainScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              ElevatedButton(
-                  onPressed: !_isBusy && _connexion.isInitialized
-                      ? (_connexion.isConnectedToDelsysAnalog
-                          ? _disconnectDelsysAnalog
-                          : _connectDelsysAnalog)
-                      : null,
-                  child: Text(_connexion.isConnectedToDelsysAnalog
-                      ? 'Disconnect Delsys Analog'
-                      : 'Connect Delsys Analog')),
+              _buildConnectDevice('Delsys Analog',
+                  isConnected: _connexion.isConnectedToDelsysAnalog,
+                  onClickedConnect: _connectDelsysAnalog,
+                  onClickedDisconnect: _disconnectDelsysAnalog,
+                  onClickedZero: _zeroDelsysAnalog),
               const SizedBox(height: 12),
-              ElevatedButton(
-                  onPressed: !_isBusy && _connexion.isInitialized
-                      ? (_connexion.isConnectedToDelsysEmg
-                          ? _disconnectDelsysEmg
-                          : _connectDelsysEmg)
-                      : null,
-                  child: Text(_connexion.isConnectedToDelsysEmg
-                      ? 'Disconnect Delsys EMG'
-                      : 'Connect Delsys EMG')),
+              _buildConnectDevice('Delsys EMG',
+                  isConnected: _connexion.isConnectedToDelsysEmg,
+                  onClickedConnect: _connectDelsysEmg,
+                  onClickedDisconnect: _disconnectDelsysEmg,
+                  onClickedZero: _zeroDelsysEmg),
               const SizedBox(height: 20),
               Text('Devices related commands',
                   style: Theme.of(context).textTheme.titleMedium),

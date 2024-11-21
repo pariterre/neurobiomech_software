@@ -104,6 +104,10 @@ bool DataCollector::stopRecording() {
   return true;
 }
 
+void DataCollector::setZeroLevel(const std::chrono::milliseconds &duration) {
+  m_LiveTimeSeries->setZeroLevel(duration);
+}
+
 void DataCollector::resetLiveData() {
   std::lock_guard<std::mutex> lock(m_LiveDataMutex);
   m_LiveTimeSeries->reset();

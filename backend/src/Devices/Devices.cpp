@@ -35,6 +35,15 @@ size_t Devices::add(std::unique_ptr<Device> device) {
   return deviceId++;
 }
 
+bool Devices::zeroLevelDevice(const std::string &deviceName) {
+  for (auto &[deviceId, device] : m_Devices) {
+    if (device->deviceName() == deviceName) {
+      m_DataCollectors[deviceId]->setZeroLevel(std::chrono::milliseconds(1000));
+    }
+  }
+  return true;
+}
+
 void Devices::remove(size_t deviceId) {
   m_Devices[deviceId]->disconnect();
   std::lock_guard<std::mutex> lock(m_MutexDataCollectors);

@@ -85,6 +85,10 @@ protected:
                                  TrialTimeSeries)
 
 public:
+  /// @brief Set the zero level
+  /// @param duration The duration to set the zero level
+  void setZeroLevel(const std::chrono::milliseconds &duration);
+
   /// @brief Reset the live data
   void resetLiveData();
 

@@ -46,7 +46,6 @@ class StimwalkerClient {
   Duration liveDataTimeWindow = const Duration(seconds: 3);
 
   bool _isRecording = false;
-  bool _hasRecorded = false;
 
   final _log = Logger('TcpCommunication');
 
@@ -67,7 +66,7 @@ class StimwalkerClient {
   bool get isConnectedToLiveData => _isConnectedToLiveData;
 
   bool get isRecording => _isRecording;
-  bool get hasRecorded => _hasRecorded;
+  bool get hasRecorded => !isRecording && liveData.isNotEmpty;
 
   ///
   /// Initialize the communication with the server. If the connection fails,
@@ -122,7 +121,8 @@ class StimwalkerClient {
     _isConnectedToDelsysEmg = false;
     _isConnectedToLiveData = false;
     _isRecording = false;
-    _hasRecorded = false;
+    liveData.clear(initialTime: DateTime.now());
+    lastTrialData.clear(initialTime: DateTime.now());
 
     _commandAckCompleter = null;
     _responseCompleter = null;
@@ -276,10 +276,13 @@ class StimwalkerClient {
         resetLiveData();
         break;
 
+      case Command.zeroDelsysAnalog:
+      case Command.zeroDelsysEmg:
+        break;
+
       case Command.startRecording:
       case Command.stopRecording:
         _isRecording = command == Command.startRecording;
-        _hasRecorded = true;
         break;
 
       case Command.handshake:

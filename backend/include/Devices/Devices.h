@@ -31,6 +31,10 @@ public:
   /// removed later
   size_t add(std::unique_ptr<Device> device);
 
+  /// @brief Set the zero level of the device
+  /// @param deviceName The name of the device to set the zero level
+  bool zeroLevelDevice(const std::string &deviceName);
+
   /// @brief Remove the device from the collection
   /// @param deviceId The id of the device (the one returned by the add method)
   void remove(size_t deviceId);

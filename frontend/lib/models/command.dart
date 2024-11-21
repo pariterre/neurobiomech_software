@@ -3,6 +3,8 @@ enum Command {
   connectDelsysAnalog,
   connectDelsysEmg,
   connectMagstim,
+  zeroDelsysAnalog,
+  zeroDelsysEmg,
   disconnectDelsysAnalog,
   disconnectDelsysEmg,
   disconnectMagstim,
@@ -22,6 +24,10 @@ enum Command {
         return 11;
       case Command.connectMagstim:
         return 12;
+      case Command.zeroDelsysAnalog:
+        return 40;
+      case Command.zeroDelsysEmg:
+        return 41;
       case Command.disconnectDelsysAnalog:
         return 20;
       case Command.disconnectDelsysEmg:
@@ -44,6 +50,8 @@ enum Command {
       case Command.connectDelsysAnalog:
       case Command.connectDelsysEmg:
       case Command.connectMagstim:
+      case Command.zeroDelsysAnalog:
+      case Command.zeroDelsysEmg:
       case Command.disconnectDelsysAnalog:
       case Command.disconnectDelsysEmg:
       case Command.disconnectMagstim:
@@ -61,6 +69,8 @@ enum Command {
       case Command.handshake:
       case Command.connectDelsysAnalog:
       case Command.connectDelsysEmg:
+      case Command.zeroDelsysAnalog:
+      case Command.zeroDelsysEmg:
       case Command.disconnectDelsysAnalog:
       case Command.disconnectDelsysEmg:
       case Command.startRecording:
@@ -79,6 +89,8 @@ enum Command {
       case Command.connectDelsysAnalog:
       case Command.connectDelsysEmg:
       case Command.connectMagstim:
+      case Command.zeroDelsysAnalog:
+      case Command.zeroDelsysEmg:
       case Command.disconnectDelsysAnalog:
       case Command.disconnectDelsysEmg:
       case Command.disconnectMagstim:

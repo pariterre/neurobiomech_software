@@ -25,14 +25,14 @@ void TimeSeries::clear() { m_Data.clear(); }
 
 void TimeSeries::add(const std::chrono::microseconds &timeStamp,
                      const std::vector<double> &data) {
-  m_Data.push_back(std::move(DataPoint(timeStamp, data)));
+  m_Data.push_back(std::move(DataPoint(timeStamp, zeroLevelData(data))));
 }
 
 void TimeSeries::add(const std::vector<double> &data) {
   m_Data.push_back(std::move(
       DataPoint(std::chrono::duration_cast<std::chrono::microseconds>(
                     std::chrono::high_resolution_clock::now() - m_StopWatch),
-                data)));
+                zeroLevelData(data))));
 }
 
 const DataPoint &TimeSeries::operator[](size_t index) const {
@@ -71,6 +71,49 @@ nlohmann::json TimeSeries::serialize() const {
     jsonData.push_back(std::move(point.serialize()));
   }
   return json;
+}
+
+void TimeSeries::setZeroLevel(const std::chrono::milliseconds &duration) {
+  if (m_Data.size() == 0) {
+    // We cannot set the zero level if there is no data
+    return;
+  }
+
+  auto oldZeroLevel = m_ZeroLevel;
+  if (oldZeroLevel.size() == 0) {
+    oldZeroLevel = std::vector<double>(m_Data[0].getData().size());
+  }
+  auto newZeroLevel = std::vector<double>(m_Data[0].getData().size());
+
+  int dataCount = 0;
+  auto first = m_Data.back().getTimeStamp() - duration;
+  for (auto &data : m_Data) {
+    if (data.getTimeStamp() < first) {
+      continue;
+    }
+    for (size_t i = 0; i < data.getData().size(); i++) {
+      // We add the old zero so we zero out from the actual collected values
+      newZeroLevel[i] += data.getData()[i] + oldZeroLevel[i];
+    }
+    dataCount++;
+  }
+
+  for (size_t i = 0; i < m_ZeroLevel.size(); i++) {
+    m_ZeroLevel[i] = newZeroLevel[i] / static_cast<double>(dataCount);
+  }
+}
+
+std::vector<double>
+TimeSeries::zeroLevelData(const std::vector<double> &data) const {
+  std::vector<double> zeroLevelledData(data);
+  if (m_ZeroLevel.size() == 0) {
+    return zeroLevelledData;
+  }
+
+  for (size_t i = 0; i < data.size(); i++) {
+    zeroLevelledData[i] -= m_ZeroLevel[i];
+  }
+  return zeroLevelledData;
 }
 
 void TimeSeries::reset() {

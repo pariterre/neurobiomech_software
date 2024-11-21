@@ -17,6 +17,8 @@ enum class TcpServerCommand : std::uint32_t {
   CONNECT_DELSYS_ANALOG = 10,
   CONNECT_DELSYS_EMG = 11,
   CONNECT_MAGSTIM = 12,
+  ZERO_DELSYS_ANALOG = 40,
+  ZERO_DELSYS_EMG = 41,
   DISCONNECT_DELSYS_ANALOG = 20,
   DISCONNECT_DELSYS_EMG = 21,
   DISCONNECT_MAGSTIM = 22,
@@ -174,6 +176,11 @@ protected:
   /// @param deviceName The name of the device to add
   /// @return True if the device is added, false otherwise
   bool addDevice(const std::string &deviceName);
+
+  /// @brief Set the zero level of the requested device
+  /// @param deviceName The name of the device to set the zero level
+  /// @return True if the zero level is set, false otherwise
+  bool setZeroLevel(const std::string &deviceName);
 
   /// @brief Make the device and add it to the devices. This method is called by
   /// [addDevice] when it is confirmed that it is possible to actually add the

@@ -81,6 +81,22 @@ public:
   nlohmann::json serialize() const;
 
 protected:
+  /// @brief The value of the mean of the data when set to zero. This
+  /// automatically subtract this value from the data when added
+  DECLARE_PROTECTED_MEMBER(std::vector<double>, ZeroLevel);
+
+public:
+  /// @brief Set how long from now we should mean the data to compute the zero
+  /// level
+  void setZeroLevel(const std::chrono::milliseconds &duration);
+
+protected:
+  /// @brief Transform a data set to a zero levelled data set
+  /// @param data The data to transform
+  /// @return The zero levelled data
+  std::vector<double> zeroLevelData(const std::vector<double> &data) const;
+
+protected:
   /// @brief The timestamp of the starting point. See [setStartingTime](@ref
   /// setStartingTime) for more information on how to change the starting time
   DECLARE_PROTECTED_MEMBER(std::chrono::system_clock::time_point, StartingTime);
