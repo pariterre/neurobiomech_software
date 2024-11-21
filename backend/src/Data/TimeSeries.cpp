@@ -79,11 +79,10 @@ void TimeSeries::setZeroLevel(const std::chrono::milliseconds &duration) {
     return;
   }
 
-  auto oldZeroLevel = m_ZeroLevel;
-  if (oldZeroLevel.size() == 0) {
-    oldZeroLevel = std::vector<double>(m_Data[0].getData().size());
+  if (m_ZeroLevel.size() == 0) {
+    m_ZeroLevel = std::vector<double>(m_Data[0].getData().size());
   }
-  auto newZeroLevel = std::vector<double>(m_Data[0].getData().size());
+  auto newZeroLevel = std::vector<double>(m_ZeroLevel.size(), 0.0);
 
   int dataCount = 0;
   auto first = m_Data.back().getTimeStamp() - duration;
@@ -93,7 +92,7 @@ void TimeSeries::setZeroLevel(const std::chrono::milliseconds &duration) {
     }
     for (size_t i = 0; i < data.getData().size(); i++) {
       // We add the old zero so we zero out from the actual collected values
-      newZeroLevel[i] += data.getData()[i] + oldZeroLevel[i];
+      newZeroLevel[i] += data.getData()[i] + m_ZeroLevel[i];
     }
     dataCount++;
   }

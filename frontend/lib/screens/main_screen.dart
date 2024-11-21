@@ -214,7 +214,10 @@ class _MainScreenState extends State<MainScreen> {
             children: [
               const SizedBox(width: 12),
               ElevatedButton(
-                  onPressed: onClickedZero, child: const Text('Zéro')),
+                  onPressed: !_isBusy && _connexion.isInitialized
+                      ? onClickedZero
+                      : null,
+                  child: const Text('Zéro')),
             ],
           )
       ],
@@ -223,8 +226,6 @@ class _MainScreenState extends State<MainScreen> {
 
   Widget _buildLiveDataGraph() {
     if (!_showLiveData) return const SizedBox();
-
-    // TODO It cannot connect right now with both data type
     return Column(
       children: [
         SizedBox(

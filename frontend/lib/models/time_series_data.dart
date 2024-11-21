@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:math';
+part 'emg_time_series_data.dart';
 
 class TimeSeriesData {
   bool isFromLiveData;
@@ -27,10 +29,12 @@ class TimeSeriesData {
     required this.isFromLiveData,
   }) : data = List.generate(channelCount, (_) => <double>[]);
 
-  appendFromJson(Map<String, dynamic> json) {
+  int appendFromJson(Map<String, dynamic> json) {
     final timeSeries = (json['data'] as List<dynamic>);
 
     // If this is the first time stamps, we need to set the time offset
+    if (timeSeries.isEmpty) return -1;
+    bool isNew = _timeOffset == null;
     _timeOffset ??=
         ((isFromLiveData ? timeSeries.last[0] : timeSeries.first[0]) as int) /
             1000.0;
@@ -40,16 +44,18 @@ class TimeSeriesData {
         timeSeries.map((e) => (e[0] as int) / 1000.0 - _timeOffset!).toList();
 
     // Find the first index where the new time is larger than the last time of t
-    final firstTIndex =
-        time.isEmpty ? 0 : newT.indexWhere((value) => value > time.last);
-    time.addAll(newT.getRange(firstTIndex, maxLength));
+    final firstNewIndex =
+        isNew ? 0 : newT.indexWhere((value) => value > time.last);
+    time.addAll(newT.getRange(firstNewIndex, maxLength));
 
     // Parse the data for each channel
     for (int channelIndex = 0; channelIndex < channelCount; channelIndex++) {
       data[channelIndex].addAll(timeSeries
-          .getRange(firstTIndex, maxLength)
+          .getRange(firstNewIndex, maxLength)
           .map<double>((e) => e[1][channelIndex]));
     }
+
+    return time.length - (maxLength - firstNewIndex);
   }
 
   Future<void> toFile(String path) async {
@@ -69,8 +75,8 @@ class TimeSeriesData {
     await sink.close();
   }
 
-  void dropBefore(double elapsedTime) {
-    if (time.isEmpty) return;
+  int dropBefore(double elapsedTime) {
+    if (time.isEmpty) return 0;
 
     final firstIndexToKeep = time.indexWhere((value) => value >= elapsedTime);
     if (firstIndexToKeep == -1) {
@@ -82,5 +88,6 @@ class TimeSeriesData {
         channel.removeRange(0, firstIndexToKeep);
       }
     }
+    return firstIndexToKeep;
   }
 }

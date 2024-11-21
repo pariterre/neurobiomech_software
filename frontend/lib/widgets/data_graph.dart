@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:frontend/models/data.dart';
 import 'package:frontend/models/time_series_data.dart';
 
@@ -148,9 +149,35 @@ class _DataGraphState extends State<DataGraph> {
           children: [
             Align(
               alignment: Alignment.center,
-              child: _RadioCombineChannels(
-                combineChannels: _combineChannels,
-                onChanged: _onChanged,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _RadioCombineChannels(
+                    combineChannels: _combineChannels,
+                    onChanged: _onChanged,
+                  ),
+                  if (widget.controller.graphType == DataGraphType.emg)
+                    SizedBox(
+                      width: 150,
+                      child: TextFormField(
+                        decoration: const InputDecoration(
+                          labelText: 'Sliding window size',
+                        ),
+                        initialValue: widget
+                            .controller._data.delsysEmg.slidingRmsWindowSize
+                            .toString(),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly
+                        ],
+                        onChanged: (value) {
+                          final valueAsInt = int.tryParse(value);
+                          if (valueAsInt == null) return;
+                          widget.controller._data.delsysEmg
+                              .slidingRmsWindowSize = valueAsInt;
+                        },
+                      ),
+                    )
+                ],
               ),
             ),
             Align(
@@ -199,19 +226,18 @@ LineTouchData _lineTouchData() {
       maxContentWidth: 100,
       getTooltipColor: (touchedSpot) => Colors.grey[800]!,
       getTooltipItems: (touchedSpots) {
-        return touchedSpots.map((LineBarSpot touchedSpot) {
-          const textStyle = TextStyle(
-            color: Colors.white,
-            fontSize: 12,
-          );
-          return LineTooltipItem(
-            '${touchedSpot.x}, ${touchedSpot.y.toStringAsFixed(4)}',
-            textStyle,
-          );
-        }).toList();
+        return touchedSpots
+            .map((LineBarSpot touchedSpot) => LineTooltipItem(
+                  '${touchedSpot.x}, ${touchedSpot.y.toStringAsFixed(4)}',
+                  const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                  ),
+                ))
+            .toList();
       },
     ),
-    handleBuiltInTouches: true,
+    handleBuiltInTouches: false, // Change this to add the values
     getTouchLineStart: (data, index) => 0,
   );
 }

@@ -4,7 +4,7 @@ class Data {
   DateTime _initialTime;
   DateTime get initialTime => _initialTime;
   final TimeSeriesData delsysAnalog;
-  final TimeSeriesData delsysEmg;
+  final EmgTimeSeriesData delsysEmg;
 
   void clear({DateTime? initialTime}) {
     _initialTime = initialTime ?? _initialTime;
@@ -27,7 +27,7 @@ class Data {
             initialTime: initialTime,
             channelCount: analogChannelCount,
             isFromLiveData: isFromLiveData),
-        delsysEmg = TimeSeriesData(
+        delsysEmg = EmgTimeSeriesData(
             initialTime: initialTime,
             channelCount: emgChannelCount,
             isFromLiveData: isFromLiveData);
