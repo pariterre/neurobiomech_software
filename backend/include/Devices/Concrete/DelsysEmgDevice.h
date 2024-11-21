@@ -15,13 +15,13 @@ public:
   /// @param dataPort The port of the data device
   /// @param commandPort The port of the command device
   DelsysEmgDevice(const std::string &host = "localhost",
-                  size_t dataPort = 50041, size_t commandPort = 50040);
+                  size_t dataPort = 50043, size_t commandPort = 50040);
 
   /// @brief Constructor that share some parts of the device, namely the command
   /// device and host address
   /// @param other The other DelsysBaseDevice to share the command device with
   /// @param dataPort The port of the data device
-  DelsysEmgDevice(const DelsysBaseDevice &other, size_t dataPort = 50041);
+  DelsysEmgDevice(const DelsysBaseDevice &other, size_t dataPort = 50043);
 
   DelsysEmgDevice(const DelsysEmgDevice &other) = delete;
 
@@ -41,13 +41,13 @@ public:
 class DelsysEmgDeviceMock : public devices::DelsysEmgDevice {
 public:
   DelsysEmgDeviceMock(const std::string &host = "localhost",
-                      size_t dataPort = 50041, size_t commandPort = 50040);
+                      size_t dataPort = 50043, size_t commandPort = 50040);
 
   /// @brief Constructor that share some parts of the device, namely the command
   /// device and host address
   /// @param other The other DelsysBaseDevice to share the command device with
   /// @param dataPort The port of the data device
-  DelsysEmgDeviceMock(const DelsysBaseDevice &other, size_t dataPort = 50041);
+  DelsysEmgDeviceMock(const DelsysBaseDevice &other, size_t dataPort = 50043);
 
   bool shouldFailToConnect = false;
   bool shouldFailToStartDataStreaming = false;

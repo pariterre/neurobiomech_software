@@ -4,7 +4,7 @@
 
 using namespace STIMWALKER_NAMESPACE::devices;
 
-size_t DELSYS_ANALOG_CHANNEL_COUNT(3 * 16);
+size_t DELSYS_ANALOG_CHANNEL_COUNT(9 * 16);
 std::chrono::microseconds
     DELSYS_ANALOG_FRAME_RATE(6750); // 1 / (0.0135 / 2 s in us)
 size_t DELSYS_ANALOG_SAMPLE_COUNT(2);

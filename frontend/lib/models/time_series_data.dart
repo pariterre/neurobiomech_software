@@ -8,13 +8,14 @@ class TimeSeriesData {
   final int channelCount;
 
   final List<double> time = []; // In milliseconds since t0
-  final List<List<double>> data;
+  final List<List<double>> _data;
+  List<List<double>> getData({bool raw = false}) => _data;
 
   void clear() {
     time.clear();
     _timeOffset = null;
 
-    for (var channel in data) {
+    for (var channel in _data) {
       channel.clear();
     }
   }
@@ -27,7 +28,7 @@ class TimeSeriesData {
     required DateTime initialTime,
     required this.channelCount,
     required this.isFromLiveData,
-  }) : data = List.generate(channelCount, (_) => <double>[]);
+  }) : _data = List.generate(channelCount, (_) => <double>[]);
 
   int appendFromJson(Map<String, dynamic> json) {
     final timeSeries = (json['data'] as List<dynamic>);
@@ -50,7 +51,7 @@ class TimeSeriesData {
 
     // Parse the data for each channel
     for (int channelIndex = 0; channelIndex < channelCount; channelIndex++) {
-      data[channelIndex].addAll(timeSeries
+      _data[channelIndex].addAll(timeSeries
           .getRange(firstNewIndex, maxLength)
           .map<double>((e) => e[1][channelIndex]));
     }
@@ -63,6 +64,8 @@ class TimeSeriesData {
     final sink = file.openWrite();
     sink.writeln(
         'time (s),${List.generate(channelCount, (index) => 'channel$index').join(',')}');
+
+    final data = getData(raw: true);
     for (int i = 0; i < time.length; i++) {
       sink.write((time[i] / 1000).toStringAsFixed(4));
       for (int j = 0; j < channelCount; j++) {
@@ -84,7 +87,7 @@ class TimeSeriesData {
       clear();
     } else {
       time.removeRange(0, firstIndexToKeep);
-      for (var channel in data) {
+      for (var channel in _data) {
         channel.removeRange(0, firstIndexToKeep);
       }
     }

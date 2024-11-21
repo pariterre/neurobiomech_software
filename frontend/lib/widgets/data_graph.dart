@@ -59,10 +59,10 @@ class _DataGraphState extends State<DataGraph> {
     final TimeSeriesData timeSeries = _timeSeries;
 
     final time = timeSeries.time;
-    return timeSeries.data.asMap().entries.map((e) => (channel != null &&
+    return timeSeries.getData().asMap().entries.map((e) => (channel != null &&
                 channel == e.key &&
-                _selectedChannels[e.key]) ||
-            (channel == null && _selectedChannels[e.key])
+                _showChannels[e.key]) ||
+            (channel == null && _showChannels[e.key])
         ? LineChartBarData(
             color: Colors.black,
             spots: e.value
@@ -96,11 +96,26 @@ class _DataGraphState extends State<DataGraph> {
     });
   }
 
-  late final List<bool> _selectedChannels =
+  late final List<bool> _showChannels =
       List.generate(_channelCount, (_) => true);
   void _onChannelSelected(int channel, bool newValue) {
     setState(() {
-      _selectedChannels[channel] = newValue;
+      _showChannels[channel] = newValue;
+    });
+  }
+
+  late final List<bool> _computeRms = List.generate(
+      _channelCount,
+      (i) => widget.controller.graphType == DataGraphType.emg
+          ? widget.controller._data.delsysEmg.getApplySlidingRms(channel: i)
+          : false);
+  void _onComputeRmsSelected(int channel, bool newValue) {
+    if (widget.controller.graphType != DataGraphType.emg) return;
+
+    widget.controller._data.delsysEmg
+        .setApplySlidingRms(newValue, channel: channel);
+    setState(() {
+      _computeRms[channel] = newValue;
     });
   }
 
@@ -128,7 +143,7 @@ class _DataGraphState extends State<DataGraph> {
                         : ListView.builder(
                             itemCount: _channelCount,
                             itemBuilder: (context, index) =>
-                                _selectedChannels[index]
+                                _showChannels[index]
                                     ? Padding(
                                         padding:
                                             const EdgeInsets.only(bottom: 10.0),
@@ -156,15 +171,16 @@ class _DataGraphState extends State<DataGraph> {
                     combineChannels: _combineChannels,
                     onChanged: _onChanged,
                   ),
-                  if (widget.controller.graphType == DataGraphType.emg)
+                  if (widget.controller.graphType == DataGraphType.emg &&
+                      widget.controller._data.delsysEmg.isFromLiveData)
                     SizedBox(
                       width: 150,
                       child: TextFormField(
                         decoration: const InputDecoration(
                           labelText: 'Sliding window size',
                         ),
-                        initialValue: widget
-                            .controller._data.delsysEmg.slidingRmsWindowSize
+                        initialValue: widget.controller._data.delsysEmg
+                            .getSlidingRmsWindow(channel: 0)
                             .toString(),
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly
@@ -172,8 +188,10 @@ class _DataGraphState extends State<DataGraph> {
                         onChanged: (value) {
                           final valueAsInt = int.tryParse(value);
                           if (valueAsInt == null) return;
-                          widget.controller._data.delsysEmg
-                              .slidingRmsWindowSize = valueAsInt;
+                          for (var i = 0; i < _channelCount; i++) {
+                            widget.controller._data.delsysEmg
+                                .setSlidingRmsWindow(valueAsInt, channel: i);
+                          }
                         },
                       ),
                     )
@@ -183,11 +201,17 @@ class _DataGraphState extends State<DataGraph> {
             Align(
               alignment: Alignment.centerRight,
               child: Padding(
-                padding: const EdgeInsets.only(top: 14.0, right: 8.0),
-                child: _SelectChannelsPopup(
+                  padding: const EdgeInsets.only(top: 14.0, right: 8.0),
+                  child: _ChannelOptionsPopup(
                     onChannelSelected: _onChannelSelected,
-                    selectedChannels: _selectedChannels),
-              ),
+                    showChannels: _showChannels,
+                    onComputeRmsSelected:
+                        widget.controller.graphType == DataGraphType.emg &&
+                                widget.controller._data.delsysEmg.isFromLiveData
+                            ? _onComputeRmsSelected
+                            : null,
+                    computeRms: _computeRms,
+                  )),
             ),
           ],
         ),
@@ -209,8 +233,8 @@ class _DataGraphState extends State<DataGraph> {
             show: true,
             drawHorizontalLine: true,
             drawVerticalLine: true,
-            horizontalInterval: 1.0,
-            verticalInterval: 0.1,
+            horizontalInterval: null,
+            verticalInterval: null,
           ),
           borderData: FlBorderData(show: true),
         ),
@@ -321,21 +345,32 @@ class _RadioCombineChannels extends StatelessWidget {
   }
 }
 
-class _SelectChannelsPopup extends StatefulWidget {
-  const _SelectChannelsPopup(
-      {required this.onChannelSelected, required this.selectedChannels});
+class _ChannelOptionsPopup extends StatefulWidget {
+  const _ChannelOptionsPopup({
+    required this.onChannelSelected,
+    required this.showChannels,
+    required this.onComputeRmsSelected,
+    required this.computeRms,
+  });
 
   final Function(int index, bool value) onChannelSelected;
-  final List<bool> selectedChannels;
+  final List<bool> showChannels;
+
+  final Function(int index, bool value)? onComputeRmsSelected;
+  final List<bool>? computeRms;
 
   @override
-  State<_SelectChannelsPopup> createState() => _SelectChannelsPopupState();
+  State<_ChannelOptionsPopup> createState() => _ChannelOptionsPopupState();
 }
 
-class _SelectChannelsPopupState extends State<_SelectChannelsPopup> {
+class _ChannelOptionsPopupState extends State<_ChannelOptionsPopup> {
   bool _isExpanded = false;
+  bool get _useRms =>
+      widget.computeRms != null && widget.onComputeRmsSelected != null;
 
-  bool get _canSelectAll => widget.selectedChannels.any((element) => !element);
+  bool get _canShowSelectAll => widget.showChannels.any((element) => !element);
+  bool get _canComputeRmsAll =>
+      _useRms && widget.computeRms!.any((element) => !element);
 
   void _onExpand() {
     setState(() {
@@ -364,7 +399,7 @@ class _SelectChannelsPopupState extends State<_SelectChannelsPopup> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Select channels'),
+                      const Text('Channels'),
                       const SizedBox(width: 12),
                       Icon(_isExpanded
                           ? Icons.arrow_drop_up
@@ -377,30 +412,90 @@ class _SelectChannelsPopupState extends State<_SelectChannelsPopup> {
             if (_isExpanded)
               Container(
                 color: Colors.grey[100],
-                child: CheckboxListTile(
-                    onChanged: (_) {
-                      final value = _canSelectAll;
-                      for (var i = 0; i < widget.selectedChannels.length; i++) {
-                        widget.onChannelSelected(i, value);
-                      }
-                      setState(() {});
-                    },
-                    value: false,
-                    title: Text(_canSelectAll ? 'Select all' : 'Deselect all')),
+                width: double.infinity,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(width: 50, child: Text('All')),
+                    Column(
+                      children: [
+                        const Text('Show'),
+                        Checkbox(
+                          onChanged: (_) {
+                            final value = _canShowSelectAll;
+                            for (var i = 0;
+                                i < widget.showChannels.length;
+                                i++) {
+                              widget.onChannelSelected(i, value);
+                            }
+                            setState(() {});
+                          },
+                          value: !_canShowSelectAll,
+                        ),
+                      ],
+                    ),
+                    if (_useRms)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(width: 12),
+                          Column(
+                            children: [
+                              const Text('RMS'),
+                              Checkbox(
+                                onChanged: (_) {
+                                  final value = _canComputeRmsAll;
+                                  for (var i = 0;
+                                      i < widget.computeRms!.length;
+                                      i++) {
+                                    widget.onComputeRmsSelected!(i, value);
+                                  }
+                                  setState(() {});
+                                },
+                                value: !_canComputeRmsAll,
+                              ),
+                            ],
+                          ),
+                        ],
+                      )
+                  ],
+                ),
               ),
             if (_isExpanded)
               ...List.generate(
-                widget.selectedChannels.length,
+                widget.showChannels.length,
                 (index) => Container(
                   color: index % 2 == 0 ? Colors.grey[200] : Colors.grey[100],
-                  child: CheckboxListTile(
-                      onChanged: (_) {
-                        widget.onChannelSelected(
-                            index, !widget.selectedChannels[index]);
-                        setState(() {});
-                      },
-                      value: widget.selectedChannels[index],
-                      title: Text(index.toString())),
+                  width: double.infinity,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(width: 50, child: Text(index.toString())),
+                      Checkbox(
+                          onChanged: (_) {
+                            widget.onChannelSelected(
+                                index, !widget.showChannels[index]);
+                            setState(() {});
+                          },
+                          value: widget.showChannels[index]),
+                      if (_useRms)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(width: 12),
+                            Checkbox(
+                                onChanged: (_) {
+                                  widget.onComputeRmsSelected!(
+                                      index, !widget.computeRms![index]);
+                                  setState(() {});
+                                },
+                                value: widget.computeRms![index]),
+                          ],
+                        ),
+                    ],
+                  ),
                 ),
               ),
           ],

@@ -35,12 +35,12 @@ class StimwalkerClient {
   bool _isConnectedToLiveData = false;
   Data liveData = Data(
       initialTime: DateTime.now(),
-      analogChannelCount: 3 * 16,
+      analogChannelCount: 9 * 16,
       emgChannelCount: 16,
       isFromLiveData: true);
   Data lastTrialData = Data(
       initialTime: DateTime.now(),
-      analogChannelCount: 3 * 16,
+      analogChannelCount: 9 * 16,
       emgChannelCount: 16,
       isFromLiveData: false);
   Duration liveDataTimeWindow = const Duration(seconds: 3);
@@ -66,7 +66,7 @@ class StimwalkerClient {
   bool get isConnectedToLiveData => _isConnectedToLiveData;
 
   bool get isRecording => _isRecording;
-  bool get hasRecorded => !isRecording && liveData.isNotEmpty;
+  bool get hasRecorded => !isRecording && lastTrialData.isNotEmpty;
 
   ///
   /// Initialize the communication with the server. If the connection fails,
