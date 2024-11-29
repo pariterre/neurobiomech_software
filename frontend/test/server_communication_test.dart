@@ -21,7 +21,7 @@ void main() {
     assert(connexion.isRecording == false);
     assert(connexion.isConnectedToLiveData == false);
 
-    connexion.disconnect();
+    await connexion.disconnect();
     assert(connexion.isInitialized == false);
   });
 
@@ -32,7 +32,7 @@ void main() {
     assert(await connexion.send(Command.connectDelsysAnalog) == false);
     assert(connexion.isConnectedToDelsysAnalog == false);
 
-    connexion.initialize(onConnexionLost: () {}, onNewLiveData: () {});
+    await connexion.initialize(onConnexionLost: () {}, onNewLiveData: () {});
     assert(connexion.isConnectedToDelsysAnalog == false);
 
     assert(await connexion.send(Command.connectDelsysAnalog));
@@ -59,7 +59,7 @@ void main() {
 
     assert(await connexion.send(Command.startRecording));
     assert(connexion.isRecording);
-    assert(connexion.hasRecorded);
+    assert(connexion.hasRecorded == false);
 
     assert(await connexion.send(Command.stopRecording));
     assert(connexion.isRecording == false);

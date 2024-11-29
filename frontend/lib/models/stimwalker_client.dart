@@ -486,5 +486,54 @@ class StimwalkerClientMock extends StimwalkerClient {
   }) async {}
 
   @override
-  Future<void> _disconnectSockets() async {}
+  Future<void> _disconnectSockets() async {
+    _isMockInitialized = false;
+  }
+
+  @override
+  Future<Ack> _performSend(Command command) async {
+    if (command == Command.getLastTrial) {
+      _prepareLastTrialResponse();
+    }
+
+    // Construct and send the command
+    try {
+      _currentCommand = command;
+      _commandAckCompleter = Completer<Ack>();
+      Future.delayed(const Duration(milliseconds: 500)).then((value) =>
+          _receiveCommandAck([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]));
+      return await _commandAckCompleter!.future;
+    } on SocketException {
+      _log.info('Connexion was closed by the server');
+      disconnect();
+      return Ack.nok;
+    }
+  }
+
+  bool _hasRecoredMock = false;
+  @override
+  bool get hasRecorded => !isRecording && _hasRecoredMock;
+
+  @override
+  void _setFlagsFromCommand(Command command) {
+    switch (command) {
+      case Command.startRecording:
+        _hasRecoredMock = true;
+        break;
+      case Command.connectDelsysAnalog:
+      case Command.disconnectDelsysAnalog:
+      case Command.disconnectDelsysEmg:
+      case Command.connectDelsysEmg:
+      case Command.zeroDelsysAnalog:
+      case Command.zeroDelsysEmg:
+      case Command.stopRecording:
+      case Command.handshake:
+      case Command.connectMagstim:
+      case Command.disconnectMagstim:
+      case Command.getLastTrial:
+        break;
+    }
+
+    super._setFlagsFromCommand(command);
+  }
 }
