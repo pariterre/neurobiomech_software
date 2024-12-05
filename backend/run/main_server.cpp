@@ -13,7 +13,7 @@ int main() {
 
   try {
     // Create a TCP server asynchroniously
-    server::TcpServerMock server;
+    server::TcpServer server;
     server.startServerSync();
 
   } catch (std::exception &e) {
