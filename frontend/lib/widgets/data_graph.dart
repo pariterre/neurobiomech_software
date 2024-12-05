@@ -472,7 +472,7 @@ class _ChannelOptionsPopupState extends State<_ChannelOptionsPopup> {
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      SizedBox(width: 50, child: Text(index.toString())),
+                      SizedBox(width: 50, child: Text((index + 1).toString())),
                       Checkbox(
                           onChanged: (_) {
                             widget.onChannelSelected(
