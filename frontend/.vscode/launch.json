@@ -11,5 +11,12 @@
             "flutterMode": "debug",
             "program": "lib/main.dart",
         },
+        {
+            "name": "frontend (Release)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release",
+            "program": "lib/main.dart",
+        },
     ]
 }

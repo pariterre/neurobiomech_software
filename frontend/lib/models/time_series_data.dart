@@ -59,13 +59,13 @@ class TimeSeriesData {
     return time.length - (maxLength - firstNewIndex);
   }
 
-  Future<void> toFile(String path) async {
+  Future<void> toFile(String path, {bool raw = false}) async {
     final file = File(path);
     final sink = file.openWrite();
     sink.writeln(
         'time (s),${List.generate(channelCount, (index) => 'channel$index').join(',')}');
 
-    final data = getData(raw: true);
+    final data = getData(raw: raw);
     for (int i = 0; i < time.length; i++) {
       sink.write((time[i] / 1000).toStringAsFixed(4));
       for (int j = 0; j < channelCount; j++) {
