@@ -26,6 +26,12 @@ DelsysEmgDevice::DelsysEmgDevice(
                        DELSYS_EMG_CHANNEL_COUNT, DELSYS_EMG_FRAME_RATE,
                        DELSYS_EMG_SAMPLE_COUNT) {}
 
+DelsysEmgDevice::~DelsysEmgDevice() {
+  if (m_IsConnected) {
+    disconnect();
+  }
+}
+
 std::string DelsysEmgDevice::deviceName() const { return "DelsysEmgDevice"; }
 
 std::string DelsysEmgDevice::dataCollectorName() const {

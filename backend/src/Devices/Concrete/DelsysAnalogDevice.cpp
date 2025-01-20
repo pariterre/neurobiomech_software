@@ -27,6 +27,12 @@ DelsysAnalogDevice::DelsysAnalogDevice(
                        DELSYS_ANALOG_CHANNEL_COUNT, DELSYS_ANALOG_FRAME_RATE,
                        DELSYS_ANALOG_SAMPLE_COUNT) {}
 
+DelsysAnalogDevice::~DelsysAnalogDevice() {
+  if (m_IsConnected) {
+    disconnect();
+  }
+}
+
 std::string DelsysAnalogDevice::deviceName() const {
   return "DelsysAnalogDevice";
 }

@@ -29,6 +29,10 @@ protected:
                      std::shared_ptr<CommandTcpDevice> commandDevice);
 
 public:
+  /// @brief Destructor of the DelsysAnalogDevice
+  ~DelsysAnalogDevice() override;
+
+public:
   std::string deviceName() const override;
   std::string dataCollectorName() const override;
 };

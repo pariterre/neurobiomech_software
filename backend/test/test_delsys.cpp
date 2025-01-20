@@ -369,7 +369,7 @@ TEST(Delsys, LiveData) {
   // Check that the getLiveData failed because the system was streaming
   logger.giveTimeToUpdate();
   ASSERT_TRUE(logger.contains(
-      "The data collector DelsysEmgDataCollector is currently streaming"));
+      "The data collector DelsysEmgDataCollector is now streaming data"));
 
   // Get the data
   const auto &data = delsys.getSerializedLiveData();
