@@ -157,6 +157,7 @@ TEST(Server, ClientConnexion) {
                                 std::to_string(failingTimeoutPeriod.count()) +
                                 " ms), disconnecting client"));
   }
+  logger.giveTimeToUpdate();
   ASSERT_TRUE(logger.contains("All devices are now disconnected"));
   ASSERT_TRUE(logger.contains(
       "Stopping listening to ports as server is shutting down"));
@@ -188,6 +189,7 @@ TEST(Server, ClientConnexion) {
                                 std::to_string(failingTimeoutPeriod.count()) +
                                 " ms), disconnecting client"));
   }
+  logger.giveTimeToUpdate();
   ASSERT_TRUE(logger.contains(
       "Stopping listening to ports as server is shutting down"));
   ASSERT_TRUE(logger.contains("Server has shut down"));
@@ -221,6 +223,7 @@ TEST(Server, ClientConnexion) {
     ASSERT_TRUE(
         logger.contains("All ports are connected, waiting for the handshake"));
   }
+  logger.giveTimeToUpdate();
   ASSERT_TRUE(logger.contains("Disconnecting client"));
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
@@ -256,6 +259,7 @@ TEST(Server, ClientConnexion) {
                                 +" ms), disconnecting client"));
     ASSERT_TRUE(logger.contains("Disconnecting client"));
   }
+  logger.giveTimeToUpdate();
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 
@@ -292,6 +296,7 @@ TEST(Server, ClientConnexion) {
                            "connexion to the response socket"),
               2);
   }
+  logger.giveTimeToUpdate();
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 
@@ -329,6 +334,7 @@ TEST(Server, ClientConnexion) {
                                 " ms), "
                                 "disconnecting client"));
   }
+  logger.giveTimeToUpdate();
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 
@@ -370,6 +376,7 @@ TEST(Server, ClientConnexion) {
                            "connexion to the live data socket"),
               2);
   }
+  logger.giveTimeToUpdate();
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 
@@ -415,6 +422,7 @@ TEST(Server, ClientConnexion) {
     ASSERT_EQ(
         logger.count("All ports are connected, waiting for the handshake"), 2);
   }
+  logger.giveTimeToUpdate();
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 
@@ -462,6 +470,7 @@ TEST(Server, ClientConnexion) {
                            " ms), disconnecting client"),
               2);
   }
+  logger.giveTimeToUpdate();
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 
@@ -478,6 +487,7 @@ TEST(Server, ClientConnexion) {
     logger.giveTimeToUpdate();
     ASSERT_TRUE(logger.contains("Handshake from client is valid"));
   }
+  logger.giveTimeToUpdate();
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 
@@ -497,6 +507,7 @@ TEST(Server, ClientConnexion) {
     logger.giveTimeToUpdate();
     ASSERT_TRUE(logger.contains("Disconnecting client"));
   }
+  logger.giveTimeToUpdate();
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 
@@ -520,6 +531,7 @@ TEST(Server, ClientConnexion) {
     logger.giveTimeToUpdate();
     ASSERT_EQ(logger.count("Handshake from client is valid"), 2);
   }
+  logger.giveTimeToUpdate();
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 }
