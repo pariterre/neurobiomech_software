@@ -28,17 +28,15 @@ jobs:
       - name: Setup environment
         uses: conda-incubator/setup-miniconda@v2
         with:
-          miniforge-variant: Mambaforge
           miniforge-version: latest
-          use-mamba: true
           activate-environment: neurobio
-          environment-file: environment.yml
+          environment-file: backend/environment.yml
         
-      - name: Print mamba info
+      - name: Print conda info
         run: | 
-          mamba info
-          mamba list
-  
+          conda info
+          conda list
+        
       - name: Setup Linux dependencies
         run:   |
          sudo apt update
