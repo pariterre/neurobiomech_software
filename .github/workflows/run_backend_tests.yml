@@ -1,4 +1,4 @@
-name: Run the Backend tests
+name: Run the backend tests
 
 on: [pull_request]
 
@@ -54,7 +54,7 @@ jobs:
           mkdir -p $NEUROBIO_FOLDER/$BUILD_FOLDER
           cd $NEUROBIO_FOLDER/$BUILD_FOLDER
           cmake -DCMAKE_INSTALL_PREFIX=$CONDA_ENV_PATH -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON ..
-          make install -j${{ steps.cpu-cores.outputs.count }}
+          make -j${{ steps.cpu-cores.outputs.count }}
           cd $NEUROBIO_FOLDER
         if: matrix.label != 'win-64'
 
