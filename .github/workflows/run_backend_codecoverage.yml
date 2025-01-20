@@ -32,18 +32,15 @@ jobs:
           activate-environment: neurobio
           environment-file: backend/environment.yml
         
-      - name: Install codecov
+      - name: Install extra common dependencies
         run: |
-          conda install -c conda-forge codecov
+          conda install pkgconfig codecov lcov -cconda-forge 
+          git submodule update --init --recursive
 
       - name: Print conda info
         run: | 
           conda info
           conda list
-        
-      - name: Install extra common dependencies
-        run: | 
-          git submodule update --init --recursive
 
       - name: Perform code coverage 
         run: |
