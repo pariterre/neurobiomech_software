@@ -3,7 +3,7 @@ name: Run the Backend tests
 on: [pull_request]
 
 env:
-  BUILD_FOLDER: build
+  BUILD_FOLDER: backend/build
 
 jobs:
   build:
@@ -49,7 +49,7 @@ jobs:
 
       - name: Build neurobiomech software UNIX
         run: |
-          NEUROBIO_FOLDER=`pwd`/backend
+          NEUROBIO_FOLDER=`pwd`
           CONDA_ENV_PATH=$CONDA/envs/neurobio
           mkdir -p $NEUROBIO_FOLDER/$BUILD_FOLDER
           cd $NEUROBIO_FOLDER/$BUILD_FOLDER
@@ -60,7 +60,7 @@ jobs:
 
       - name: Run tests UNIX
         run: |
-          NEUROBIO_FOLDER=`pwd`/backend
+          NEUROBIO_FOLDER=`pwd`
           cd $NEUROBIO_FOLDER/$BUILD_FOLDER/test
           ./neurobio_tests
           cd $NEUROBIO_FOLDER
@@ -68,7 +68,7 @@ jobs:
 
       - name: Build neurobiomech software WINDOWS
         run: |
-          NEUROBIO_FOLDER=`pwd`/backend
+          NEUROBIO_FOLDER=`pwd`
           CONDA_ENV_PATH=$CONDA/envs/neurobio
           mkdir -p $BUILD_FOLDER
           cd $BUILD_FOLDER
@@ -79,7 +79,7 @@ jobs:
 
       - name: Run tests WINDOWS
         run: |
-          NEUROBIO_FOLDER=`pwd`/backend
+          NEUROBIO_FOLDER=`pwd`
           cd $NEUROBIO_FOLDER/$BUILD_FOLDER/test
           cp Release/neurobio_tests.exe .
           ./neurobio_tests.exe
