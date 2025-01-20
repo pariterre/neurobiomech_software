@@ -27,7 +27,6 @@ TcpServer::TcpServer(int commandPort, int responsePort, int liveDataPort)
       m_TimeoutPeriod(std::chrono::milliseconds(5000)), m_ProtocolVersion(1) {};
 
 TcpServer::~TcpServer() {
-  std::lock_guard<std::mutex> lock(m_Mutex);
   if (m_IsServerRunning) {
     stopServer();
   }
