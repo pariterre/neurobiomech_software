@@ -157,7 +157,7 @@ bool TcpServer::waitForNewConnexion() {
   logger.info("Command socket connected to client, waiting for a connexion to "
               "the response socket");
   if (!waitUntilSocketIsConnected("Response", m_ResponseSocket,
-                                  m_ResponseAcceptor, false)) {
+                                  m_ResponseAcceptor, true)) {
     return false;
   }
 
@@ -166,7 +166,7 @@ bool TcpServer::waitForNewConnexion() {
   logger.info("Response socket connected to client, waiting for a connexion to "
               "the live data socket");
   if (!waitUntilSocketIsConnected("LiveData", m_LiveDataSocket,
-                                  m_LiveDataAcceptor, false)) {
+                                  m_LiveDataAcceptor, true)) {
     return false;
   }
 

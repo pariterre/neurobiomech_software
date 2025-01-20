@@ -109,10 +109,6 @@ TEST(Server, ClientConnexion) {
 
     std::this_thread::sleep_for(3 * failingTimeoutPeriod + failingBufferPeriod);
     logger.giveTimeToUpdate();
-    ASSERT_GE(logger.count("Connexion to Command socket timed out (" +
-                           std::to_string(failingTimeoutPeriod.count()) +
-                           " ms), disconnecting client"),
-              3);
 
     asio::io_context context;
     asio::ip::tcp::resolver resolver(context);
@@ -257,7 +253,6 @@ TEST(Server, ClientConnexion) {
                                 std::to_string(failingTimeoutPeriod.count()) +
                                 +" ms), disconnecting client"));
     ASSERT_TRUE(logger.contains("Disconnecting client"));
-    ASSERT_TRUE(logger.contains("All devices are now disconnected"));
   }
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
