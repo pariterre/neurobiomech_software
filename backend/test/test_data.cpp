@@ -220,13 +220,16 @@ TEST(TimeSeries, Serialize) {
   ASSERT_STREQ(json.dump().c_str(),
                "{\"data\":[[100000,[1.0,2.0,3.0]],[200000,[4.0,5.0,6.0]],["
                "300000,[7.0,8.0,9.0]],[400000,[10.0,11.0,12.0]],[500000,[13.0,"
-               "14.0,15.0]]],\"startingTime\":1000000000}");
+               "14.0,15.0]]],\"startingTime\":100000000}");
 }
 
 TEST(TimeSeries, Deserialize) {
   nlohmann::json json =
-      R"({"data":[[100000,[1.0,2.0,3.0]],[200000,[4.0,5.0,6.0]],[300000,[7.0,8.0,9.0]],[400000,[10.0,11.0,12.0]],[500000,[13.0,14.0,15.0]]],"startingTime":1000000000})"_json;
+      R"({"data":[[100000,[1.0,2.0,3.0]],[200000,[4.0,5.0,6.0]],[300000,[7.0,8.0,9.0]],[400000,[10.0,11.0,12.0]],[500000,[13.0,14.0,15.0]]],"startingTime":100000000})"_json;
   auto data = data::TimeSeries(json);
+  ASSERT_ALMOST_NOW(
+      data.getStartingTime(),
+      std::chrono::system_clock::time_point(std::chrono::seconds(100)));
   ASSERT_EQ(data.size(), 5);
   ASSERT_EQ(data[0].getTimeStamp(), std::chrono::milliseconds(100));
   ASSERT_EQ(data[0].getData().size(), 3);
