@@ -37,12 +37,6 @@ jobs:
           conda info
           conda list
         
-      - name: Setup Linux dependencies
-        run:   |
-         sudo apt update
-         sudo apt install libstdc++-12-dev
-        if: matrix.label == 'linux-64'
-        
       - name: Install extra common dependencies
         run: | 
           git submodule update --init --recursive
