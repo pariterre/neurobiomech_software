@@ -30,6 +30,10 @@ TcpServer::~TcpServer() {
   if (m_IsServerRunning) {
     stopServer();
   }
+
+  m_CommandAcceptor.reset();
+  m_ResponseAcceptor.reset();
+  m_LiveDataAcceptor.reset();
 }
 
 void TcpServer::startServer() {
