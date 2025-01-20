@@ -1,7 +1,7 @@
-#ifndef __STIMWALKER_DEVICES_NI_DAQ_DEVICE_H__
-#define __STIMWALKER_DEVICES_NI_DAQ_DEVICE_H__
+#ifndef __NEUROBIO_DEVICES_NI_DAQ_DEVICE_H__
+#define __NEUROBIO_DEVICES_NI_DAQ_DEVICE_H__
 
-#include "stimwalkerConfig.h"
+#include "neurobioConfig.h"
 
 #include <map>
 #include <memory>
@@ -11,7 +11,7 @@
 #include "Devices/Generic/AsyncDevice.h"
 #include "Devices/Generic/DataCollector.h"
 
-namespace STIMWALKER_NAMESPACE::devices {
+namespace NEUROBIO_NAMESPACE::devices {
 
 /// @brief Abstract class for devices
 class NidaqDevice : public AsyncDevice, public DataCollector {
@@ -66,6 +66,6 @@ protected:
 //   bool m_generateData = false;
 // };
 
-} // namespace STIMWALKER_NAMESPACE::devices
+} // namespace NEUROBIO_NAMESPACE::devices
 
-#endif // __STIMWALKER_DEVICES_NI_DAQ_DEVICE_H__
+#endif // __NEUROBIO_DEVICES_NI_DAQ_DEVICE_H__

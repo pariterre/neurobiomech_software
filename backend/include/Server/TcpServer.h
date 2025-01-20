@@ -1,14 +1,14 @@
-#ifndef __STIMWALKER_SERVER_TCP_SERVER_H__
-#define __STIMWALKER_SERVER_TCP_SERVER_H__
+#ifndef __NEUROBIO_SERVER_TCP_SERVER_H__
+#define __NEUROBIO_SERVER_TCP_SERVER_H__
 
-#include "stimwalkerConfig.h"
+#include "neurobioConfig.h"
 
 #include "Devices/Devices.h"
 #include "Utils/CppMacros.h"
 #include <asio.hpp>
 #include <mutex>
 
-namespace STIMWALKER_NAMESPACE::server {
+namespace NEUROBIO_NAMESPACE::server {
 
 enum TcpServerStatus { INITIALIZING, CONNECTING, CONNECTED };
 
@@ -246,6 +246,6 @@ protected:
   void makeAndAddDevice(const std::string &deviceName) override;
 };
 
-} // namespace STIMWALKER_NAMESPACE::server
+} // namespace NEUROBIO_NAMESPACE::server
 
-#endif // __STIMWALKER_SERVER_TCP_SERVER_H__
+#endif // __NEUROBIO_SERVER_TCP_SERVER_H__

@@ -1,5 +1,5 @@
-#ifndef __STIMWALKER_UTILS_TEST_UTILS_H__
-#define __STIMWALKER_UTILS_TEST_UTILS_H__
+#ifndef __NEUROBIO_UTILS_TEST_UTILS_H__
+#define __NEUROBIO_UTILS_TEST_UTILS_H__
 
 #include <vector>
 
@@ -23,8 +23,8 @@ ASSERT_ALMOST_NOW(const std::chrono::system_clock::time_point &time,
 
 class TestLogger {
 public:
-  TestLogger() : m_logger(STIMWALKER_NAMESPACE::utils::Logger::getInstance()) {
-    m_logger.setLogLevel(STIMWALKER_NAMESPACE::utils::Logger::INFO);
+  TestLogger() : m_logger(NEUROBIO_NAMESPACE::utils::Logger::getInstance()) {
+    m_logger.setLogLevel(NEUROBIO_NAMESPACE::utils::Logger::INFO);
     m_logger.setShouldPrintToConsole(false);
 
     std::vector<std::string> &messagesToDevice(m_messagesToDevice);
@@ -65,9 +65,9 @@ public:
   void clear() { m_messagesToDevice.clear(); }
 
 protected:
-  STIMWALKER_NAMESPACE::utils::Logger &m_logger;
+  NEUROBIO_NAMESPACE::utils::Logger &m_logger;
   std::vector<std::string> m_messagesToDevice;
   size_t m_loggerId;
 };
 
-#endif // __STIMWALKER_UTILS_TEST_UTILS_H__
+#endif // __NEUROBIO_UTILS_TEST_UTILS_H__

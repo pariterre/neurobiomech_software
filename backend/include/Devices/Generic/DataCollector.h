@@ -1,16 +1,16 @@
-#ifndef __STIMWALKER_DEVICES_GENERIC_DATA_COLLECTOR_H__
-#define __STIMWALKER_DEVICES_GENERIC_DATA_COLLECTOR_H__
+#ifndef __NEUROBIO_DEVICES_GENERIC_DATA_COLLECTOR_H__
+#define __NEUROBIO_DEVICES_GENERIC_DATA_COLLECTOR_H__
 
-#include "stimwalkerConfig.h"
+#include "neurobioConfig.h"
 #include <functional>
 #include <vector>
 
 #include "Data/TimeSeries.h"
 #include "Devices/Generic/Device.h"
 #include "Utils/CppMacros.h"
-#include "Utils/StimwalkerEvent.h"
+#include "Utils/NeurobioEvent.h"
 
-namespace STIMWALKER_NAMESPACE::devices {
+namespace NEUROBIO_NAMESPACE::devices {
 
 /// @brief Abstract class for data collectors
 class DataCollector {
@@ -104,7 +104,7 @@ public:
 
   /// @brief Set the callback function to call when data is collected
   /// @param callback The callback function
-  utils::StimwalkerEvent<data::DataPoint> onNewData;
+  utils::NeurobioEvent<data::DataPoint> onNewData;
 
 protected:
   /// @brief Add a vector of data points to the data collector. This method is
@@ -124,6 +124,6 @@ private:
   DECLARE_PRIVATE_MEMBER_NOGET(std::mutex, LiveDataMutex);
 };
 
-} // namespace STIMWALKER_NAMESPACE::devices
+} // namespace NEUROBIO_NAMESPACE::devices
 
-#endif // __STIMWALKER_DEVICES_GENERIC_DATA_COLLECTOR_H__
+#endif // __NEUROBIO_DEVICES_GENERIC_DATA_COLLECTOR_H__

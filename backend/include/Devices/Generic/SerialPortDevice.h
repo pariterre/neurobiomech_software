@@ -1,9 +1,9 @@
-#ifndef __STIMWALKER_DEVICES_GENERIC_SERIAL_PORT_DEVICE_H__
-#define __STIMWALKER_DEVICES_GENERIC_SERIAL_PORT_DEVICE_H__
+#ifndef __NEUROBIO_DEVICES_GENERIC_SERIAL_PORT_DEVICE_H__
+#define __NEUROBIO_DEVICES_GENERIC_SERIAL_PORT_DEVICE_H__
 
 #include "Devices/Generic/AsyncDevice.h"
 
-namespace STIMWALKER_NAMESPACE::devices {
+namespace NEUROBIO_NAMESPACE::devices {
 
 /// @brief A class representing a Serial port device
 /// @note This class is only available on Windows and Linux
@@ -56,6 +56,6 @@ public:
   bool operator==(const SerialPortDevice &other) const;
 };
 
-} // namespace STIMWALKER_NAMESPACE::devices
+} // namespace NEUROBIO_NAMESPACE::devices
 
-#endif // __STIMWALKER_DEVICES_GENERIC_SERIAL_PORT_DEVICE_H__
+#endif // __NEUROBIO_DEVICES_GENERIC_SERIAL_PORT_DEVICE_H__

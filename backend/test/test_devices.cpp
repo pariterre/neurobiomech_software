@@ -5,7 +5,7 @@
 #include "Devices/all.h"
 #include "utils.h"
 
-using namespace STIMWALKER_NAMESPACE;
+using namespace NEUROBIO_NAMESPACE;
 
 TEST(Devices, Add) {
   auto logger = TestLogger();

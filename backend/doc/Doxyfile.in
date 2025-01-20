@@ -9,10 +9,10 @@ INPUT                  += @CMAKE_SOURCE_DIR@/doc
 ENABLE_PREPROCESSING   = YES
 MACRO_EXPANSION        = YES
 EXPAND_ONLY_PREDEF     = YES
-PREDEFINED             = STIMWALKER_API=
+PREDEFINED             = NEUROBIO_API=
 
 # Other options
-PROJECT_NAME           = Stimwalker
+PROJECT_NAME           = neurobio
 FULL_PATH_NAMES        = NO
 SOURCE_BROWSER         = YES
 

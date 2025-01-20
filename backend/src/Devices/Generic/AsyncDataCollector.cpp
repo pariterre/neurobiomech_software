@@ -4,7 +4,7 @@
 #include <regex>
 #include <thread>
 
-using namespace STIMWALKER_NAMESPACE::devices;
+using namespace NEUROBIO_NAMESPACE::devices;
 
 AsyncDataCollector::AsyncDataCollector(
     size_t channelCount, const std::chrono::microseconds &dataCheckIntervals,

@@ -1,6 +1,6 @@
 #include "Data/FixedTimeSeries.h"
 
-using namespace STIMWALKER_NAMESPACE::data;
+using namespace NEUROBIO_NAMESPACE::data;
 
 FixedTimeSeries::FixedTimeSeries(const std::chrono::microseconds &deltaTime)
     : m_DeltaTime(deltaTime), TimeSeries() {}

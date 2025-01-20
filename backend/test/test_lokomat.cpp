@@ -6,7 +6,7 @@
 
 // static double requiredPrecision(1e-10);
 
-// using namespace STIMWALKER_NAMESPACE;
+// using namespace NEUROBIO_NAMESPACE;
 
 // // Start the tests
 

@@ -12,13 +12,13 @@ jobs:
         include:
           - os: ubuntu-20.04
             label: linux-64
-            prefix: /usr/share/miniconda3/envs/stimwalker
+            prefix: /usr/share/miniconda3/envs/neurobio
           - os: macos-latest
             label: osx-64
-            prefix: /Users/runner/miniconda3/envs/stimwalker
+            prefix: /Users/runner/miniconda3/envs/neurobio
           - os: windows-latest
             label: win-64
-            prefix: C:\Miniconda3\envs\stimwalker
+            prefix: C:\Miniconda3\envs\neurobio
     name: ${{ matrix.label }}
     runs-on: ${{ matrix.os }}
     defaults:
@@ -34,16 +34,14 @@ jobs:
       - name: Setup environment
         uses: conda-incubator/setup-miniconda@v2
         with:
-          miniforge-variant: Mambaforge
           miniforge-version: latest
-          use-mamba: true
-          activate-environment: stimwalker
-          environment-file: environment.yml
+          activate-environment: neurobio
+          environment-file: backend/environment.yml
   
-      - name: Print mamba info
+      - name: Print conda info
         run: | 
-          mamba info
-          mamba list
+          conda info
+          conda list
 
       - name: Setup Linux dependencies
         run:   |
@@ -55,41 +53,41 @@ jobs:
         run: | 
           git submodule update --init --recursive
 
-      - name: Build stimwalker UNIX
+      - name: Build neurobiomech software UNIX
         run: |
-          STIMWALKER_FOLDER=`pwd`
-          CONDA_ENV_PATH=$CONDA/envs/stimwalker
-          mkdir -p $STIMWALKER_FOLDER/$BUILD_FOLDER
-          cd $STIMWALKER_FOLDER/$BUILD_FOLDER
+          NEUROBIO_FOLDER=`pwd`/backend
+          CONDA_ENV_PATH=$CONDA/envs/neurobio
+          mkdir -p $NEUROBIO_FOLDER/$BUILD_FOLDER
+          cd $NEUROBIO_FOLDER/$BUILD_FOLDER
           cmake -DCMAKE_INSTALL_PREFIX=$CONDA_ENV_PATH -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON ..
           make install -j${{ steps.cpu-cores.outputs.count }}
-          cd $STIMWALKER_FOLDER
+          cd $NEUROBIO_FOLDER
         if: matrix.label != 'win-64'
 
       - name: Run tests UNIX
         run: |
-          STIMWALKER_FOLDER=`pwd`
-          cd $STIMWALKER_FOLDER/$BUILD_FOLDER/test
-          ./stimwalker_tests
-          cd $STIMWALKER_FOLDER
+          NEUROBIO_FOLDER=`pwd`/backend
+          cd $NEUROBIO_FOLDER/$BUILD_FOLDER/test
+          ./neurobio_tests
+          cd $NEUROBIO_FOLDER
         if: matrix.label != 'win-64'
 
-      - name: Build stimwalker WINDOWS
+      - name: Build neurobiomech software WINDOWS
         run: |
-          STIMWALKER_FOLDER=`pwd`
-          CONDA_ENV_PATH=$CONDA/envs/stimwalker
+          NEUROBIO_FOLDER=`pwd`/backend
+          CONDA_ENV_PATH=$CONDA/envs/neurobio
           mkdir -p $BUILD_FOLDER
           cd $BUILD_FOLDER
           cmake -G"Visual Studio 17 2022" -Ax64 -DCMAKE_INSTALL_PREFIX=$CONDA_ENV_PATH -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON ..
           cmake --build . --config Release --target install -j${{ steps.cpu-cores.outputs.count }}
-          cd $STIMWALKER_FOLDER
+          cd $NEUROBIO_FOLDER
         if: matrix.label == 'win-64'
 
       - name: Run tests WINDOWS
         run: |
-          STIMWALKER_FOLDER=`pwd`
-          cd $STIMWALKER_FOLDER/$BUILD_FOLDER/test
-          cp Release/stimwalker_tests.exe .
-          ./stimwalker_tests.exe
-          cd $STIMWALKER_FOLDER
+          NEUROBIO_FOLDER=`pwd`/backend
+          cd $NEUROBIO_FOLDER/$BUILD_FOLDER/test
+          cp Release/neurobio_tests.exe .
+          ./neurobio_tests.exe
+          cd $NEUROBIO_FOLDER
         if: matrix.label == 'win-64'

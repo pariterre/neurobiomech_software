@@ -1,12 +1,12 @@
-#ifndef __STIMWALKER_UTILS_ROLLING_VECTOR_H__
-#define __STIMWALKER_UTILS_ROLLING_VECTOR_H__
+#ifndef __NEUROBIO_UTILS_ROLLING_VECTOR_H__
+#define __NEUROBIO_UTILS_ROLLING_VECTOR_H__
 
 #include <iostream>
 #include <vector>
 
 #include "Utils/CppMacros.h"
 
-namespace STIMWALKER_NAMESPACE::utils {
+namespace NEUROBIO_NAMESPACE::utils {
 
 template <typename T> class RollingVector {
 
@@ -189,6 +189,6 @@ protected:
   DECLARE_PROTECTED_MEMBER(bool, IsFull);
 };
 
-} // namespace STIMWALKER_NAMESPACE::utils
+} // namespace NEUROBIO_NAMESPACE::utils
 
-#endif // __STIMWALKER_UTILS_ROLLING_VECTOR_H__
+#endif // __NEUROBIO_UTILS_ROLLING_VECTOR_H__

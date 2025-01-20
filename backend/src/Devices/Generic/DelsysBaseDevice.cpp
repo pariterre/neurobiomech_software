@@ -10,13 +10,12 @@
 #include "Devices/Exceptions.h"
 #include "Utils/Logger.h"
 
-using namespace STIMWALKER_NAMESPACE::devices;
+using namespace NEUROBIO_NAMESPACE::devices;
 std::chrono::microseconds DATA_COLLECTOR_TIMER(5);
 
-std::unique_ptr<STIMWALKER_NAMESPACE::data::TimeSeries>
+std::unique_ptr<NEUROBIO_NAMESPACE::data::TimeSeries>
 timeSeriesGenerator(std::chrono::microseconds deltaTime) {
-  return std::make_unique<STIMWALKER_NAMESPACE::data::FixedTimeSeries>(
-      deltaTime);
+  return std::make_unique<NEUROBIO_NAMESPACE::data::FixedTimeSeries>(deltaTime);
 };
 
 DelsysBaseDevice::CommandTcpDevice::CommandTcpDevice(const std::string &host,

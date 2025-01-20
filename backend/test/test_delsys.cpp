@@ -7,7 +7,7 @@
 #include "utils.h"
 
 static double requiredPrecision(1e-6);
-using namespace STIMWALKER_NAMESPACE;
+using namespace NEUROBIO_NAMESPACE;
 
 int findDataOffset(const data::TimeSeries &data) {
   // The fake data are based on a sine wave but

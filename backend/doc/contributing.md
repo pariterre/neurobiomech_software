@@ -1,16 +1,16 @@
-# Contributing to `stimwalker`
+# Contributing to `neurobiomech software`
 All contributions, bug reports, bug fixes, documentation improvements, enhancements, and ideas are welcome.
-We recommend going through the list of [`issues`](https://github.com/cr-crme/stimwalker/issues) to find issues that interest you, preferable those tagged with `good first issue`.
+We recommend going through the list of [`issues`](https://github.com/LabNNL/neurobiomech_software/issues) to find issues that interest you, preferable those tagged with `good first issue`.
 You can then get your development environment setup with the following instructions.
 
-## Forking `stimwalker
+## Forking `neurobiomech_software`
 
 You will need your own fork to work on the code.
-Go to the [stimwalker project page](https://github.com/cr-crme/stimwalker/) and hit the `Fork` button.
+Go to the [neurobiomech software project page](https://github.com/LabNNL/neurobiomech_software) and hit the `Fork` button.
 You will want to clone your fork to your machine:
 
 ```bash
-git clone https://github.com/your-user-name/stimwalker.git
+git clone https://github.com/your-user-name/neurobiomech_software.git
 ```
 
 ## Creating and activating conda environment
@@ -19,12 +19,12 @@ Before starting any development, we recommend that you create an isolated develo
 The easiest and most efficient way is to use an anaconda virtual environment and to create it based on the `environment.yml` file. 
 
 - Install [miniconda](https://conda.io/miniconda.html)
-- `cd` to the stimwalker source directory
-- Install stimwalker dependencies with:
+- `cd` to the neurobiomech software source directory
+- Install neurobiomech software dependencies with:
 
 ```bash
 conda env create -f environment.yml
-conda activate stimwalker
+conda activate neurobio
 ```
 
 ## Implementing new features
@@ -53,14 +53,14 @@ Be aware that sometimes the maintainer can push modifications directly to your b
 
 Adding tests is required to get your development merged to the master branch. 
 Therefore, it is worth getting in the habit of writing tests ahead of time so this is never an issue.
-Each time you push to your pull-request, the `stimwalker` test suite will run automatically.
+Each time you push to your pull-request, the `neurobiomech software` test suite will run automatically.
 However, we strongly encourage running the tests prior to submitting the pull-request.
 If you configured your project using CMake and set `BUILD_TEST` to `ON`, the google test toolbox should download and compile itself.
-You can thereafter run the test by running the binary `stimwalker_tests` (the file will be at different place depending on the OS you are using).
+You can thereafter run the test by running the binary `neurobio_tests` (the file will be at different place depending on the OS you are using).
 
 ## Convention of coding
 
-`stimwalker` tries to follow as much as possible a coherent standard, that is essentially:
+`neurobiomech software` tries to follow as much as possible a coherent standard, that is essentially:
   - camelCase;
   - 120 characters per line max;
   - The linting (in vscode) should be set to `ms-vscode.cpptools` (ideally on save)

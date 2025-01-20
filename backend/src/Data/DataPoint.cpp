@@ -1,6 +1,6 @@
 #include "Data/DataPoint.h"
 
-using namespace STIMWALKER_NAMESPACE::data;
+using namespace NEUROBIO_NAMESPACE::data;
 
 size_t DataPoint::size() const { return m_Data.size(); }
 

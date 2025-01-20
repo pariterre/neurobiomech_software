@@ -1,11 +1,11 @@
-#ifndef __STIMWALKER_DEVICES_DELSYS_ANALOG_DEVICE_H__
-#define __STIMWALKER_DEVICES_DELSYS_ANALOG_DEVICE_H__
+#ifndef __NEUROBIO_DEVICES_DELSYS_ANALOG_DEVICE_H__
+#define __NEUROBIO_DEVICES_DELSYS_ANALOG_DEVICE_H__
 
-#include "stimwalkerConfig.h"
+#include "neurobioConfig.h"
 
 #include "Devices/Generic/DelsysBaseDevice.h"
 
-namespace STIMWALKER_NAMESPACE::devices {
+namespace NEUROBIO_NAMESPACE::devices {
 
 class DelsysAnalogDevice : public DelsysBaseDevice {
 public:
@@ -57,5 +57,5 @@ protected:
   bool handleStartDataStreaming() override;
 };
 
-} // namespace STIMWALKER_NAMESPACE::devices
-#endif // __STIMWALKER_DEVICES_DELSYS_ANALOG_DEVICE_H__
+} // namespace NEUROBIO_NAMESPACE::devices
+#endif // __NEUROBIO_DEVICES_DELSYS_ANALOG_DEVICE_H__

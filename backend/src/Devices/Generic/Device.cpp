@@ -5,7 +5,7 @@
 
 #include "Utils/Logger.h"
 
-using namespace STIMWALKER_NAMESPACE::devices;
+using namespace NEUROBIO_NAMESPACE::devices;
 
 Device::~Device() {}
 

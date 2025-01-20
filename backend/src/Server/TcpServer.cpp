@@ -10,7 +10,7 @@
 #include "Devices/Generic/DelsysBaseDevice.h"
 #include "Devices/Generic/Device.h"
 
-using namespace STIMWALKER_NAMESPACE::server;
+using namespace NEUROBIO_NAMESPACE::server;
 
 const size_t BYTES_IN_CLIENT_PACKET_HEADER = 8;
 const size_t BYTES_IN_SERVER_PACKET_HEADER = 16;

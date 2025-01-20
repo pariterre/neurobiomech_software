@@ -5,7 +5,7 @@
 #include <regex>
 #include <thread>
 
-using namespace STIMWALKER_NAMESPACE::devices;
+using namespace NEUROBIO_NAMESPACE::devices;
 
 AsyncDevice::AsyncDevice(const std::chrono::microseconds &keepAliveInterval)
     : m_KeepDeviceWorkerAliveInterval(keepAliveInterval), Device() {}

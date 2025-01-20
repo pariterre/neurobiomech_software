@@ -1,13 +1,13 @@
-#ifndef __STIMWALKER_DEVICES_DATA_DEVICES_DATA_H__
-#define __STIMWALKER_DEVICES_DATA_DEVICES_DATA_H__
+#ifndef __NEUROBIO_DEVICES_DATA_DEVICES_DATA_H__
+#define __NEUROBIO_DEVICES_DATA_DEVICES_DATA_H__
 
-#include "stimwalkerConfig.h"
+#include "neurobioConfig.h"
 
 #include "Utils/CppMacros.h"
 #include <mutex>
 #include <nlohmann/json.hpp>
 
-namespace STIMWALKER_NAMESPACE {
+namespace NEUROBIO_NAMESPACE {
 namespace data {
 class TimeSeries;
 } // namespace data
@@ -147,6 +147,6 @@ private:
 };
 
 } // namespace devices
-} // namespace STIMWALKER_NAMESPACE
+} // namespace NEUROBIO_NAMESPACE
 
-#endif // __STIMWALKER_DEVICES_DATA_DEVICES_DATA_H__
+#endif // __NEUROBIO_DEVICES_DATA_DEVICES_DATA_H__

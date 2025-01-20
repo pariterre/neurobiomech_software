@@ -3,7 +3,7 @@
 #include <chrono>
 #include <thread>
 
-using namespace STIMWALKER_NAMESPACE;
+using namespace NEUROBIO_NAMESPACE;
 
 int main() {
   auto &logger = utils::Logger::getInstance();

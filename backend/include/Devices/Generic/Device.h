@@ -1,14 +1,14 @@
-#ifndef __STIMWALKER_DEVICES_GENERIC_DEVICE_H__
-#define __STIMWALKER_DEVICES_GENERIC_DEVICE_H__
+#ifndef __NEUROBIO_DEVICES_GENERIC_DEVICE_H__
+#define __NEUROBIO_DEVICES_GENERIC_DEVICE_H__
 
-#include "stimwalkerConfig.h"
+#include "neurobioConfig.h"
 
 #include "Utils/CppMacros.h"
 #include <any>
 #include <iostream>
 #include <vector>
 
-namespace STIMWALKER_NAMESPACE::devices {
+namespace NEUROBIO_NAMESPACE::devices {
 
 class DeviceCommands {
 public:
@@ -153,6 +153,6 @@ protected:
                                            const std::any &data) = 0;
 };
 
-} // namespace STIMWALKER_NAMESPACE::devices
+} // namespace NEUROBIO_NAMESPACE::devices
 
-#endif // __STIMWALKER_DEVICES_GENERIC_DEVICE_H__
+#endif // __NEUROBIO_DEVICES_GENERIC_DEVICE_H__

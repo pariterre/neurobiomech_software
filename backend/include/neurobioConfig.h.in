@@ -1,18 +1,18 @@
-#ifndef __STIMWALKER_CONFIG_H__
-#define __STIMWALKER_CONFIG_H__
+#ifndef __NEUROBIO_CONFIG_H__
+#define __NEUROBIO_CONFIG_H__
 
-#define STIMWALKER_VERSION                                                     \
+#define NEUROBIO_VERSION                                                       \
   "@PROJECT_VERSION_MAJOR@.@PROJECT_VERSION_MINOR@.@PROJECT_VERSION_PATCH@"
 
-#define STIMWALKER_API // We kept this so if we want to convert to a shared
-                       // library, we can do it easily
+#define NEUROBIO_API // We kept this so if we want to convert to a shared
+                     // library, we can do it easily
 #ifdef _WIN32
 #define _ENABLE_EXTENDED_ALIGNED_STORAGE
 // Windows 10 and more
 #define _WIN32_WINNT 0x0A00
 #endif
 
-#define STIMWALKER_NAMESPACE stimwalker
+#define NEUROBIO_NAMESPACE neurobio
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -27,4 +27,4 @@
 
 #cmakedefine SKIP_LONG_TESTS
 
-#endif // __STIMWALKER_CONFIG_H__
+#endif // __NEUROBIO_CONFIG_H__

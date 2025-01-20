@@ -1,12 +1,12 @@
-#ifndef __STIMWALKER_DEVICES_GENERIC_USB_DEVICE_H__
-#define __STIMWALKER_DEVICES_GENERIC_USB_DEVICE_H__
+#ifndef __NEUROBIO_DEVICES_GENERIC_USB_DEVICE_H__
+#define __NEUROBIO_DEVICES_GENERIC_USB_DEVICE_H__
 
-#include "stimwalkerConfig.h"
+#include "neurobioConfig.h"
 
 #include "Devices/Generic/SerialPortDevice.h"
 #include "Utils/CppMacros.h"
 
-namespace STIMWALKER_NAMESPACE::devices {
+namespace NEUROBIO_NAMESPACE::devices {
 
 /// @brief A class representing a USB device
 /// @note This class is only available on Windows and Linux
@@ -58,5 +58,5 @@ public:
   static std::vector<std::unique_ptr<UsbDevice>> listAllUsbDevices();
 };
 
-} // namespace STIMWALKER_NAMESPACE::devices
-#endif // __STIMWALKER_DEVICES_GENERIC_USB_DEVICE_H__
+} // namespace NEUROBIO_NAMESPACE::devices
+#endif // __NEUROBIO_DEVICES_GENERIC_USB_DEVICE_H__

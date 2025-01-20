@@ -18,7 +18,7 @@ std::chrono::milliseconds failingBufferPeriod(50);
 std::chrono::milliseconds sufficientTimeoutPeriod(500);
 #endif
 void ensureServerIsConnected(
-    const STIMWALKER_NAMESPACE::server::TcpServerMock &server) {
+    const NEUROBIO_NAMESPACE::server::TcpServerMock &server) {
   auto startingWaitingTime = std::chrono::high_resolution_clock::now();
   while (true) {
     if (server.isClientConnected() ||
@@ -31,7 +31,7 @@ void ensureServerIsConnected(
   }
 }
 void ensureServerIsDisconnected(
-    const STIMWALKER_NAMESPACE::server::TcpServerMock &server) {
+    const NEUROBIO_NAMESPACE::server::TcpServerMock &server) {
   auto startingWaitingTime = std::chrono::high_resolution_clock::now();
   while (true) {
     if (!server.isClientConnected() ||
@@ -44,7 +44,7 @@ void ensureServerIsDisconnected(
   }
 }
 
-using namespace STIMWALKER_NAMESPACE;
+using namespace NEUROBIO_NAMESPACE;
 
 TEST(Server, Ports) {
   auto logger = TestLogger();

@@ -2,7 +2,7 @@
 
 #include <thread>
 
-using namespace STIMWALKER_NAMESPACE::devices;
+using namespace NEUROBIO_NAMESPACE::devices;
 
 size_t DELSYS_EMG_CHANNEL_COUNT(16);
 size_t DELSYS_EMG_ACQUISITION_FREQUENCY(2000);

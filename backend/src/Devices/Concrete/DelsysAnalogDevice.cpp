@@ -2,7 +2,7 @@
 
 #include <thread>
 
-using namespace STIMWALKER_NAMESPACE::devices;
+using namespace NEUROBIO_NAMESPACE::devices;
 
 size_t DELSYS_ANALOG_CHANNEL_COUNT(9 * 16);
 std::chrono::microseconds

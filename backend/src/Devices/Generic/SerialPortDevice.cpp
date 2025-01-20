@@ -10,7 +10,7 @@
 
 #include "Utils/Logger.h"
 
-using namespace STIMWALKER_NAMESPACE::devices;
+using namespace NEUROBIO_NAMESPACE::devices;
 
 SerialPortDevice::SerialPortDevice(
     const std::string &port, const std::chrono::microseconds &keepAliveInterval)

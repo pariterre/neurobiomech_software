@@ -10,7 +10,7 @@ import 'package:logging/logging.dart';
 const _protocolVersion = 1;
 const _serverHeaderLength = 16;
 
-class StimwalkerClient {
+class NeurobioClient {
   Socket? _socketCommand;
   Socket? _socketResponse;
   Socket? _socketLiveData;
@@ -53,7 +53,7 @@ class StimwalkerClient {
 
   ///
   /// Get the singleton instance of the TcpCommunication class.
-  static StimwalkerClient get instance => _instance;
+  static NeurobioClient get instance => _instance;
 
   ///
   /// If the communication initialized.
@@ -416,8 +416,8 @@ class StimwalkerClient {
   }
 
   // Prepare the singleton
-  static final StimwalkerClient _instance = StimwalkerClient._();
-  StimwalkerClient._();
+  static final NeurobioClient _instance = NeurobioClient._();
+  NeurobioClient._();
 
   Future<Socket?> _connectToSocket({
     required String ipAddress,
@@ -448,11 +448,11 @@ class StimwalkerClient {
   }
 }
 
-class StimwalkerClientMock extends StimwalkerClient {
-  StimwalkerClientMock._() : super._();
+class NeurbioClientMock extends NeurobioClient {
+  NeurbioClientMock._() : super._();
 
-  static StimwalkerClient get instance => _instance;
-  static final StimwalkerClient _instance = StimwalkerClientMock._();
+  static NeurobioClient get instance => _instance;
+  static final NeurobioClient _instance = NeurbioClientMock._();
 
   bool _isMockInitialized = false;
 

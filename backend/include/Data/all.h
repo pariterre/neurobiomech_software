@@ -1,7 +1,7 @@
-#ifndef __STIMWALKER_DATA_ALL_H__
-#define __STIMWALKER_DATA_ALL_H__
+#ifndef __NEUROBIO_DATA_ALL_H__
+#define __NEUROBIO_DATA_ALL_H__
 
 #include "Data/DataPoint.h"
 #include "Data/TimeSeries.h"
 
-#endif // __STIMWALKER_DATA_ALL_H__
+#endif // __NEUROBIO_DATA_ALL_H__
