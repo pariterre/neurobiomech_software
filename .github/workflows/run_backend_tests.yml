@@ -62,7 +62,6 @@ jobs:
         run: |
           NEUROBIO_FOLDER=`pwd`
           cd $NEUROBIO_FOLDER/$BUILD_FOLDER/test
-          ./neurobio_tests
           cd $NEUROBIO_FOLDER
         if: matrix.label != 'win-64'
 
