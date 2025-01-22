@@ -228,7 +228,7 @@ public:
   TcpServerMock(
       int commandPort = 5000, int responsePort = 5001, int liveDataPort = 5002,
       std::chrono::milliseconds timeoutPeriod = std::chrono::milliseconds(5000))
-      : TcpServer(commandPort, responsePort) {
+      : TcpServer(commandPort, responsePort, liveDataPort) {
     m_TimeoutPeriod = timeoutPeriod;
   };
 
