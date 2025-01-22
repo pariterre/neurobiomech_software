@@ -137,6 +137,3 @@ sandbox
 
 # Autodownloaded folders
 external/json
-
-# Mac specific
-.DS_Store
