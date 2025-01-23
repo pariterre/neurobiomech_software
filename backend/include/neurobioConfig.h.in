@@ -26,5 +26,6 @@
 #endif // _WIN32
 
 #cmakedefine SKIP_LONG_TESTS
+#cmakedefine SKIP_CI_FAILING_TESTS
 
 #endif // __NEUROBIO_CONFIG_H__

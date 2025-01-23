@@ -1,5 +1,14 @@
 project(${NEUROBIO_NAME}_tests)
 
+# Set a define to skip or not long tests
+option(SKIP_LONG_TESTS
+    "Skip some longer tests, mostly for debug purposes" FALSE)
+
+# Set a define to skip tests that cannot pass on CI
+option(SKIP_CI_FAILING_TESTS
+    "Skip tests that cannot pass on CI" FALSE)
+
+
 # Download gtest if necessary
 set(RELATIVE_PATH_TO_GTEST external/googletest)
 find_path(GTEST_INCLUDE_DIR "gtest.h" HINTS
