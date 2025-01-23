@@ -2,7 +2,7 @@
 
 #include <thread>
 
-using namespace STIMWALKER_NAMESPACE::devices;
+using namespace NEUROBIO_NAMESPACE::devices;
 
 size_t DELSYS_ANALOG_CHANNEL_COUNT(9 * 16);
 std::chrono::microseconds
@@ -26,6 +26,12 @@ DelsysAnalogDevice::DelsysAnalogDevice(
     : DelsysBaseDevice(std::move(dataDevice), commandDevice,
                        DELSYS_ANALOG_CHANNEL_COUNT, DELSYS_ANALOG_FRAME_RATE,
                        DELSYS_ANALOG_SAMPLE_COUNT) {}
+
+DelsysAnalogDevice::~DelsysAnalogDevice() {
+  if (m_IsConnected) {
+    disconnect();
+  }
+}
 
 std::string DelsysAnalogDevice::deviceName() const {
   return "DelsysAnalogDevice";

@@ -3,7 +3,7 @@
 #include "Devices/Exceptions.h"
 
 #include <iostream>
-using namespace STIMWALKER_NAMESPACE::devices;
+using namespace NEUROBIO_NAMESPACE::devices;
 
 NidaqDevice::NidaqDevice(size_t channelCount,
                          const std::chrono::microseconds &dataCheckIntervals)

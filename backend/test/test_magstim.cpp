@@ -5,7 +5,7 @@
 #include "Devices/Concrete/MagstimRapidDevice.h"
 #include "utils.h"
 
-using namespace STIMWALKER_NAMESPACE;
+using namespace NEUROBIO_NAMESPACE;
 
 TEST(Magstim, Info) {
   auto magstim = devices::MagstimRapidDeviceMock::findMagstimDevice();

@@ -1,16 +1,16 @@
-# Stimwalker - Stimulating the rehabilitation
+# Neurobiomech software - Stimulating the rehabilitation
 
-`Stimwalker` is a piece of software designed to help clinicians during physical rehab using functional electrical stimulation.
+`neurobiomech software` is a piece of software designed to help clinicians during physical rehab using functional electrical stimulation.
 
 ## Status
 | Type | Status |
 |---|---|
 | License | <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-success" alt="License"/></a> |
-| Continuous integration | [![Build status](https://github.com/cr-crme/stimwalker/actions/workflows/run_tests.yml/badge.svg)](https://github.com/cr-crme/stimwalker/actions) |
-| Code coverage | [![codecov](https://codecov.io/gh/cr-crme/stimwalker/graph/badge.svg?token=D4HAID52MH)](https://codecov.io/gh/cr-crme/stimwalker) |
+| Continuous integration | [![Build status](https://github.com/LabNNL/neurobiomech_software/actions/workflows/run_tests.yml/badge.svg)](https://github.com/LabNNL/neurobiomech_software/actions) |
+| Code coverage | [![codecov](https://codecov.io/gh/LabNNL/neurobiomech_software/graph/badge.svg?token=D4HAID52MH)](https://codecov.io/gh/LabNNL/neurobiomech_software) |
 
 # Table of Contents 
-- [Stimwalker - Stimulating the rehabilitation](#stimwalker---stimulating-the-rehabilitation)
+- [Neurobiomech software - Stimulating the rehabilitation](#neurobiomech-software---stimulating-the-rehabilitation)
   - [Status](#status)
 - [Table of Contents](#table-of-contents)
 - [How to install](#how-to-install)
@@ -28,7 +28,7 @@
 - [Cite](#cite)
 
 # How to install
-To use the `Stimwalker` backend, you must compile the source code yourself.
+To use the `neurobiomech software` backend, you must compile the source code yourself.
 
 ## Install dependencies
 
@@ -62,21 +62,21 @@ Then, you can open the project in vscode and then press `Ctrl+Shift+P` and then 
 
 
 ### Dependencies
-`Stimwalker` relies on some other libraries that one must install prior to compiling. Fortunately, all these dependencies are also hosted on the *conda-forge* channel of Anaconda. Therefore creating (and keeping up-to-date) a conda environment should allow to install everything you need to compile
+`neurobiomech software` relies on some other libraries that one must install prior to compiling. Fortunately, all these dependencies are also hosted on the *conda-forge* channel of Anaconda. Therefore creating (and keeping up-to-date) a conda environment should allow to install everything you need to compile
 ```bash
-conda env create -f environment.yml  # This will create a conda environment called "stimwalker"
-conda activate stimwalker
+conda env create -f environment.yml  # This will create a conda environment called "neurobio"
+conda activate neurobio
 ```
 or 
 ```bash
-conda env update -f environment.yml  # This will update the conda environment called "stimwalker"
-conda activate stimwalker
+conda env update -f environment.yml  # This will update the conda environment called "neurobio"
+conda activate neurobio
 ```
 
 ### CMake
-`Stimwalker` comes with a CMake (https://cmake.org/) project. If you don't know how to use CMake, you will find many examples on Internet. The main variables to set are:
+`neurobiomech software` comes with a CMake (https://cmake.org/) project. If you don't know how to use CMake, you will find many examples on Internet. The main variables to set are:
 
-> `CMAKE_INSTALL_PREFIX` Which is the `path/to/install` `Stimwalker` in. This `path/to/install` should point the base path of the environment returned by `conda env list`. 
+> `CMAKE_INSTALL_PREFIX` Which is the `path/to/install` `neurobio` in. This `path/to/install` should point the base path of the environment returned by `conda env list`. 
 > 
 > `CMAKE_BUILD_TYPE` Which type of build you want. Options are `Debug`, `RelWithDebInfo`, `MinSizeRel` or `Release`. This is relevant only for the build done using the `make` command. Please note that the software will be slow if you compile it without any optimization (i.e. `Debug`). 
 >
@@ -93,7 +93,7 @@ TODO
 # How to contribute
 You are very welcome to contribute to the project! There are to main ways to contribute. 
 
-The first way is to actually code new features for `Stimwalker`. The easiest way to do so is to fork the project, make the modifications and then open a pull request to the main project. Don't forget to add your name to the contributor in the documentation of the page if you do so!
+The first way is to actually code new features for `neurobiomech software`. The easiest way to do so is to fork the project, make the modifications and then open a pull request to the main project. Don't forget to add your name to the contributor in the documentation of the page if you do so!
 
 The second way is to open issues to report bugs or to ask for new features. I am trying to be as reactive as possible, so don't hesitate to do so!
 
@@ -104,20 +104,20 @@ See the `frontend` folder
 The documentation is automatically generated using Doxygen (http://www.doxygen.org/). You can compile it yourself if you want (by setting `BUILD_DOC` to `ON`). 
 
 # Troubleshoots
-Despite our best effort to make a bug-free software, `Stimwalker` may fails sometimes. If it does, please refer to the section below to know what to do. We will fill this section with the issue over time.
+Despite our best effort to make a bug-free software, `neurobiomech software` may fails sometimes. If it does, please refer to the section below to know what to do. We will fill this section with the issue over time.
 
 
 # Cite
-If you use `Stimwalker`, we would be grateful if you could cite it as follows:
+If you use `neurobiomech software`, we would be grateful if you could cite it as follows:
 
 ```
 
-@misc{cherniStimwalker2021,
-  title = {The Stimwalker: Stimulating the rehabilitation},
-  shorttitle = {Stimwalker},
+@misc{cherniNeurobio2021,
+  title = {The Neurobiomech Software: Stimulating the rehabilitation},
+  shorttitle = {neurobio},
   author = {Michaud, Benjamin and Cherni, Yosra},
   date = {2024-01-01},
-  url = {https://github.com/cr-crme/stimwalker},
+  url = {https://github.com/LabNNL/neurobiomech_software},
   urldate = {2024-01-01},
   langid = {english}
 }

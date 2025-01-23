@@ -2,7 +2,7 @@
 
 #include <thread>
 
-using namespace STIMWALKER_NAMESPACE::devices;
+using namespace NEUROBIO_NAMESPACE::devices;
 
 size_t DELSYS_EMG_CHANNEL_COUNT(16);
 size_t DELSYS_EMG_ACQUISITION_FREQUENCY(2000);
@@ -25,6 +25,12 @@ DelsysEmgDevice::DelsysEmgDevice(
     : DelsysBaseDevice(std::move(dataDevice), commandDevice,
                        DELSYS_EMG_CHANNEL_COUNT, DELSYS_EMG_FRAME_RATE,
                        DELSYS_EMG_SAMPLE_COUNT) {}
+
+DelsysEmgDevice::~DelsysEmgDevice() {
+  if (m_IsConnected) {
+    disconnect();
+  }
+}
 
 std::string DelsysEmgDevice::deviceName() const { return "DelsysEmgDevice"; }
 

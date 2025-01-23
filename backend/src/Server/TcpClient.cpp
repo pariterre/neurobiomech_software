@@ -3,8 +3,8 @@
 #include "Utils/Logger.h"
 
 using asio::ip::tcp;
-using namespace STIMWALKER_NAMESPACE;
-using namespace STIMWALKER_NAMESPACE::server;
+using namespace NEUROBIO_NAMESPACE;
+using namespace NEUROBIO_NAMESPACE::server;
 
 const size_t BYTES_IN_CLIENT_PACKET_HEADER = 8;
 const size_t BYTES_IN_SERVER_PACKET_HEADER = 16;

@@ -10,7 +10,7 @@
 
 #include "Utils/Logger.h"
 
-using namespace STIMWALKER_NAMESPACE::devices;
+using namespace NEUROBIO_NAMESPACE::devices;
 
 TcpDevice::TcpDevice(const std::string &host, size_t port,
                      const std::chrono::microseconds &keepAliveInterval)

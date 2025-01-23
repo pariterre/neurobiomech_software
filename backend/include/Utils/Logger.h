@@ -1,14 +1,14 @@
-#ifndef __STIMWALKER_UTILS_LOGGER_H__
-#define __STIMWALKER_UTILS_LOGGER_H__
+#ifndef __NEUROBIO_UTILS_LOGGER_H__
+#define __NEUROBIO_UTILS_LOGGER_H__
 
-#include "stimwalkerConfig.h"
+#include "neurobioConfig.h"
 
 #include <fstream>
 #include <mutex>
 
-#include "Utils/StimwalkerEvent.h"
+#include "Utils/NeurobioEvent.h"
 
-namespace STIMWALKER_NAMESPACE::utils {
+namespace NEUROBIO_NAMESPACE::utils {
 
 class Logger {
 public:
@@ -31,7 +31,7 @@ public:
   void setLogFile(const std::string &filename);
 
   // Set a event to get a callback when a new log is added
-  StimwalkerEvent<std::string> onNewLog;
+  NeurobioEvent<std::string> onNewLog;
 
 protected:
   // Private constructor and destructor to prevent direct instantiation
@@ -60,6 +60,6 @@ protected:
   DECLARE_PROTECTED_MEMBER(Level, LogLevel)
 };
 
-} // namespace STIMWALKER_NAMESPACE::utils
+} // namespace NEUROBIO_NAMESPACE::utils
 
-#endif // __STIMWALKER_UTILS_LOGGER_H__
+#endif // __NEUROBIO_UTILS_LOGGER_H__

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
 
-project(stimwalker VERSION 0.1.0)
-set(STIMWALKER_ROOT_FOLDER ${PROJECT_SOURCE_DIR})
+project(neurobio VERSION 0.1.0)
+set(NEUROBIO_ROOT_FOLDER ${PROJECT_SOURCE_DIR})
 set (CMAKE_CXX_STANDARD 17)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
 
@@ -24,11 +24,11 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 # Prepare linkings
-set (STIMWALKER_NAME ${PROJECT_NAME})
+set (NEUROBIO_NAME ${PROJECT_NAME})
 
 # Add the configuration include
-configure_file(${CMAKE_SOURCE_DIR}/include/stimwalkerConfig.h.in
-    ${CMAKE_BINARY_DIR}/include/stimwalkerConfig.h)
+configure_file(${CMAKE_SOURCE_DIR}/include/neurobioConfig.h.in
+    ${CMAKE_BINARY_DIR}/include/neurobioConfig.h)
 
 
 find_package(nlohmann_json 3.2.0 CONFIG REQUIRED)
@@ -36,7 +36,7 @@ find_package(Asio REQUIRED)
 
 
 # Compilation directories
-set(${STIMWALKER_NAME}_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+set(${NEUROBIO_NAME}_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 # Add linker
 add_subdirectory("src/Utils")

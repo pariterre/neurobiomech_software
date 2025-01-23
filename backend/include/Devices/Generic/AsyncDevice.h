@@ -1,10 +1,10 @@
-#ifndef __STIMWALKER_DEVICES_GENERIC_REMOTE_DEVICE_H__
-#define __STIMWALKER_DEVICES_GENERIC_REMOTE_DEVICE_H__
+#ifndef __NEUROBIO_DEVICES_GENERIC_REMOTE_DEVICE_H__
+#define __NEUROBIO_DEVICES_GENERIC_REMOTE_DEVICE_H__
 
 #include "Devices/Generic/Device.h"
 #include <asio.hpp>
 
-namespace STIMWALKER_NAMESPACE::devices {
+namespace NEUROBIO_NAMESPACE::devices {
 
 /// @brief A class representing a device that is remotely connected
 /// @note This class is only available on Windows and Linux
@@ -104,5 +104,5 @@ protected:
   virtual void pingDeviceWorker();
 };
 
-} // namespace STIMWALKER_NAMESPACE::devices
-#endif // __STIMWALKER_DEVICES_REMOTE_DEVICE_H__
+} // namespace NEUROBIO_NAMESPACE::devices
+#endif // __NEUROBIO_DEVICES_REMOTE_DEVICE_H__

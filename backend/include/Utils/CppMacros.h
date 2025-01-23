@@ -1,5 +1,5 @@
-#ifndef __STIMWALKER_UTILS_CPP_MACROS_H__
-#define __STIMWALKER_UTILS_CPP_MACROS_H__
+#ifndef __NEUROBIO_UTILS_CPP_MACROS_H__
+#define __NEUROBIO_UTILS_CPP_MACROS_H__
 
 /// -------------------- ///
 /// GENERIC DECLARATIONS ///
@@ -40,8 +40,8 @@ protected:                                                                     \
 // member variable without accessors. The macro does not capitalize the first
 // letter of the member variable name, so it should be used with PascalCase
 // names.
-#define DECLARE_PRIVATE_MEMBER_NOGET(type, name)                             \
-private:                                                                     \
+#define DECLARE_PRIVATE_MEMBER_NOGET(type, name)                               \
+private:                                                                       \
   type m_##name;
 
 /// ---------------------- ///
@@ -52,4 +52,4 @@ public:                                                                        \
   static constexpr int commandName = value;                                    \
   static constexpr const char *commandName##_AS_STRING = #commandName;
 
-#endif // __STIMWALKER_UTILS_CPP_MACROS_H__
+#endif // __NEUROBIO_UTILS_CPP_MACROS_H__

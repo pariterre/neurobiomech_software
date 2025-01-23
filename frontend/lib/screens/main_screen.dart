@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:frontend/models/command.dart';
 import 'package:frontend/models/database_manager.dart';
-import 'package:frontend/models/stimwalker_client.dart';
+import 'package:frontend/models/neurobio_client.dart';
 import 'package:frontend/widgets/data_graph.dart';
 import 'package:frontend/widgets/save_trial_dialog.dart';
 
-StimwalkerClient get _connexion => StimwalkerClient.instance;
+NeurobioClient get _connexion => NeurobioClient.instance;
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -270,7 +270,7 @@ class _MainScreenState extends State<MainScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const SizedBox(width: double.infinity),
-              Text('Stimwalker controller',
+              Text('Neurobio controller',
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 20),
               Text('Connection related commands',

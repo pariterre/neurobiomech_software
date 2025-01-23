@@ -10,7 +10,7 @@
 #include "Devices/Generic/DelsysBaseDevice.h"
 #include "Devices/Generic/Device.h"
 
-using namespace STIMWALKER_NAMESPACE::server;
+using namespace NEUROBIO_NAMESPACE::server;
 
 const size_t BYTES_IN_CLIENT_PACKET_HEADER = 8;
 const size_t BYTES_IN_SERVER_PACKET_HEADER = 16;
@@ -27,10 +27,13 @@ TcpServer::TcpServer(int commandPort, int responsePort, int liveDataPort)
       m_TimeoutPeriod(std::chrono::milliseconds(5000)), m_ProtocolVersion(1) {};
 
 TcpServer::~TcpServer() {
-  std::lock_guard<std::mutex> lock(m_Mutex);
   if (m_IsServerRunning) {
     stopServer();
   }
+
+  m_CommandAcceptor.reset();
+  m_ResponseAcceptor.reset();
+  m_LiveDataAcceptor.reset();
 }
 
 void TcpServer::startServer() {
@@ -158,7 +161,7 @@ bool TcpServer::waitForNewConnexion() {
   logger.info("Command socket connected to client, waiting for a connexion to "
               "the response socket");
   if (!waitUntilSocketIsConnected("Response", m_ResponseSocket,
-                                  m_ResponseAcceptor, false)) {
+                                  m_ResponseAcceptor, true)) {
     return false;
   }
 
@@ -167,7 +170,7 @@ bool TcpServer::waitForNewConnexion() {
   logger.info("Response socket connected to client, waiting for a connexion to "
               "the live data socket");
   if (!waitUntilSocketIsConnected("LiveData", m_LiveDataSocket,
-                                  m_LiveDataAcceptor, false)) {
+                                  m_LiveDataAcceptor, true)) {
     return false;
   }
 

@@ -1,7 +1,7 @@
-#ifndef __STIMWALKER_DATA_TIME_SERIES_H__
-#define __STIMWALKER_DATA_TIME_SERIES_H__
+#ifndef __NEUROBIO_DATA_TIME_SERIES_H__
+#define __NEUROBIO_DATA_TIME_SERIES_H__
 
-#include "stimwalkerConfig.h"
+#include "neurobioConfig.h"
 
 #include "Data/DataPoint.h"
 #include "Utils/CppMacros.h"
@@ -11,7 +11,7 @@
 #include <nlohmann/json.hpp>
 #include <vector>
 
-namespace STIMWALKER_NAMESPACE::data {
+namespace NEUROBIO_NAMESPACE::data {
 
 /// @brief Class to store data
 class TimeSeries {
@@ -118,6 +118,6 @@ protected:
   DECLARE_PROTECTED_MEMBER(utils::RollingVector<DataPoint>, Data);
 };
 
-} // namespace STIMWALKER_NAMESPACE::data
+} // namespace NEUROBIO_NAMESPACE::data
 
-#endif // __STIMWALKER_DATA_TIME_SERIES_H__
+#endif // __NEUROBIO_DATA_TIME_SERIES_H__

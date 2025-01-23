@@ -8,8 +8,8 @@
 #include "Utils/Logger.h"
 #include <thread>
 
-using namespace STIMWALKER_NAMESPACE;
-using namespace STIMWALKER_NAMESPACE::devices;
+using namespace NEUROBIO_NAMESPACE;
+using namespace NEUROBIO_NAMESPACE::devices;
 
 Devices::~Devices() {
   if (m_IsConnected) {

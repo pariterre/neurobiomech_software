@@ -1,5 +1,5 @@
 # create a conda environment using `conda env create -f environment.yml`
-name: stimwalker
+name: neurobio
 channels:
 - conda-forge
 dependencies:

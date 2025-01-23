@@ -7,11 +7,11 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/models/command.dart';
-import 'package:frontend/models/stimwalker_client.dart';
+import 'package:frontend/models/neurobio_client.dart';
 
 void main() {
   test('Initialize server connexion', () async {
-    final connexion = StimwalkerClientMock.instance;
+    final connexion = NeurbioClientMock.instance;
     assert(connexion.isInitialized == false);
 
     connexion.initialize(onConnexionLost: () {}, onNewLiveData: () {});
@@ -26,7 +26,7 @@ void main() {
   });
 
   test('Send command to server', () async {
-    final connexion = StimwalkerClientMock.instance;
+    final connexion = NeurbioClientMock.instance;
 
     assert(connexion.isConnectedToDelsysAnalog == false);
     assert(await connexion.send(Command.connectDelsysAnalog) == false);
@@ -43,7 +43,7 @@ void main() {
   });
 
   test('Cannot call reserved', () async {
-    final connexion = StimwalkerClientMock.instance;
+    final connexion = NeurbioClientMock.instance;
 
     await connexion.initialize(onConnexionLost: () {}, onNewLiveData: () {});
     assert(await connexion.send(Command.handshake) == false);
@@ -52,7 +52,7 @@ void main() {
   });
 
   test('Manage recording commands', () async {
-    final connexion = StimwalkerClientMock.instance;
+    final connexion = NeurbioClientMock.instance;
     connexion.initialize(onConnexionLost: () {}, onNewLiveData: () {});
     assert(connexion.isRecording == false);
     assert(connexion.hasRecorded == false);

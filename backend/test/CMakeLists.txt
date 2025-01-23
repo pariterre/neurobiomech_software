@@ -1,4 +1,13 @@
-project(${STIMWALKER_NAME}_tests)
+project(${NEUROBIO_NAME}_tests)
+
+# Set a define to skip or not long tests
+option(SKIP_LONG_TESTS
+    "Skip some longer tests, mostly for debug purposes" FALSE)
+
+# Set a define to skip tests that cannot pass on CI
+option(SKIP_CI_FAILING_TESTS
+    "Skip tests that cannot pass on CI" FALSE)
+
 
 # Download gtest if necessary
 set(RELATIVE_PATH_TO_GTEST external/googletest)
@@ -17,11 +26,11 @@ if((NOT GTEST_INCLUDE_DIR) OR (NOT EXISTS ${GTEST_INCLUDE_DIR}))
 
     # we have a submodule setup for gtest, assume it is under external/gtest
     # now we need to clone this submodule
-    execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init -- ${STIMWALKER_ROOT_FOLDER}/${RELATIVE_PATH_TO_GTEST}
-                    WORKING_DIRECTORY ${STIMWALKER_ROOT_FOLDER}
+    execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init -- ${NEUROBIO_ROOT_FOLDER}/${RELATIVE_PATH_TO_GTEST}
+                    WORKING_DIRECTORY ${NEUROBIO_ROOT_FOLDER}
                     RESULT_VARIABLE GIT_SUBMOD_RESULT)
     if(NOT GIT_SUBMOD_RESULT EQUAL "0")
-        message(FATAL_ERROR "${GIT_EXECUTABLE} submodule update --init -- ${STIMWALKER_ROOT_FOLDER}/external/gtest failed, please checkout submodules manually")
+        message(FATAL_ERROR "${GIT_EXECUTABLE} submodule update --init -- ${NEUROBIO_ROOT_FOLDER}/external/gtest failed, please checkout submodules manually")
     endif()
     
     find_path(GTEST_INCLUDE_DIR "gtest.h" HINTS
@@ -90,7 +99,7 @@ endif()
 
 if (CMAKE_BUILD_TYPE STREQUAL "Coverage")
     include(CodeCoverage)
-    setup_target_for_coverage(${STIMWALKER_NAME}_coverage
+    setup_target_for_coverage(${NEUROBIO_NAME}_coverage
         "${PROJECT_NAME}" "coverage")
 
     SET(CMAKE_CXX_FLAGS "-g -O0 -fprofile-arcs -ftest-coverage")

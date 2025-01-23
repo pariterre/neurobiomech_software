@@ -1,14 +1,14 @@
-#ifndef __STIMWALKER_SERVER_TCP_CLIENT_H__
-#define __STIMWALKER_SERVER_TCP_CLIENT_H__
+#ifndef __NEUROBIO_SERVER_TCP_CLIENT_H__
+#define __NEUROBIO_SERVER_TCP_CLIENT_H__
 
-#include "stimwalkerConfig.h"
+#include "neurobioConfig.h"
 
 #include "Data/TimeSeries.h"
 #include "Server/TcpServer.h"
 #include "Utils/CppMacros.h"
 #include <asio.hpp>
 
-namespace STIMWALKER_NAMESPACE::server {
+namespace NEUROBIO_NAMESPACE::server {
 
 class TcpClient {
 public:
@@ -157,6 +157,6 @@ private:
   DECLARE_PRIVATE_MEMBER_NOGET(std::uint32_t, ProtocolVersion)
 };
 
-} // namespace STIMWALKER_NAMESPACE::server
+} // namespace NEUROBIO_NAMESPACE::server
 
-#endif // __STIMWALKER_SERVER_TCP_SERVER_H__
+#endif // __NEUROBIO_SERVER_TCP_SERVER_H__

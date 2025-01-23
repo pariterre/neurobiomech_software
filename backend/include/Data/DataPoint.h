@@ -1,13 +1,13 @@
-#ifndef __STIMWALKER_DATA_DATA_POINT_H__
-#define __STIMWALKER_DATA_DATA_POINT_H__
+#ifndef __NEUROBIO_DATA_DATA_POINT_H__
+#define __NEUROBIO_DATA_DATA_POINT_H__
 
-#include "stimwalkerConfig.h"
+#include "neurobioConfig.h"
 
 #include "Utils/CppMacros.h"
 #include <map>
 #include <nlohmann/json.hpp>
 
-namespace STIMWALKER_NAMESPACE::data {
+namespace NEUROBIO_NAMESPACE::data {
 
 /// @brief Class to store data
 class DataPoint {
@@ -50,6 +50,6 @@ protected:
   DECLARE_PROTECTED_MEMBER(std::vector<double>, Data);
 };
 
-} // namespace STIMWALKER_NAMESPACE::data
+} // namespace NEUROBIO_NAMESPACE::data
 
-#endif // __STIMWALKER_DATA_DATA_POINT_H__
+#endif // __NEUROBIO_DATA_DATA_POINT_H__

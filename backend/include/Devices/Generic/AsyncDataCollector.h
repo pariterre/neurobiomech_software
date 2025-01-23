@@ -1,10 +1,10 @@
-#ifndef __STIMWALKER_DEVICES_GENERIC_ASYNC_DATA_COLLECTOR_H__
-#define __STIMWALKER_DEVICES_GENERIC_ASYNC_DATA_COLLECTOR_H__
+#ifndef __NEUROBIO_DEVICES_GENERIC_ASYNC_DATA_COLLECTOR_H__
+#define __NEUROBIO_DEVICES_GENERIC_ASYNC_DATA_COLLECTOR_H__
 
 #include "Devices/Generic/DataCollector.h"
 #include <asio.hpp>
 
-namespace STIMWALKER_NAMESPACE::devices {
+namespace NEUROBIO_NAMESPACE::devices {
 
 /// @brief Abstract class for data collectors
 class AsyncDataCollector : public DataCollector {
@@ -88,6 +88,6 @@ protected:
   DECLARE_PROTECTED_MEMBER(bool, IgnoreTooSlowWarning)
 };
 
-} // namespace STIMWALKER_NAMESPACE::devices
+} // namespace NEUROBIO_NAMESPACE::devices
 
-#endif // __STIMWALKER_DEVICES_GENERIC_ASYNC_DATA_COLLECTOR_H__
+#endif // __NEUROBIO_DEVICES_GENERIC_ASYNC_DATA_COLLECTOR_H__

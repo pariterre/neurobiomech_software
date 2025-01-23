@@ -1,15 +1,15 @@
-#include "stimwalker.h"
+#include "neurobio.h"
 #include <gtest/gtest.h>
 
 #include "utils.h"
 
 #include "Utils/Logger.h"
+#include "Utils/NeurobioEvent.h"
 #include "Utils/RollingVector.h"
-#include "Utils/StimwalkerEvent.h"
 
-using namespace STIMWALKER_NAMESPACE;
+using namespace NEUROBIO_NAMESPACE;
 
-TEST(Stimwalker, Version) { ASSERT_STREQ(STIMWALKER_VERSION, "0.1.0"); }
+TEST(Neurobio, Version) { ASSERT_STREQ(NEUROBIO_VERSION, "0.1.0"); }
 
 TEST(Logger, Messages) {
   // We use the TestLogger because if any of the tests fail, the memory is not
@@ -125,9 +125,9 @@ TEST(Logger, LogFile) {
   }
 }
 
-TEST(StimwalkerEvent, Calling) {
+TEST(NeurobioEvent, Calling) {
   // Setup a listener that changes a value to test if it is properly called
-  utils::StimwalkerEvent<int> event;
+  utils::NeurobioEvent<int> event;
   int result = 0;
   auto id = event.listen([&result](int value) { result = value; });
 

@@ -1,13 +1,13 @@
-#ifndef __STIMWALKER_DEVICES_GENERIC_STIMULATOR_H__
-#define __STIMWALKER_DEVICES_GENERIC_STIMULATOR_H__
+#ifndef __NEUROBIO_DEVICES_GENERIC_STIMULATOR_H__
+#define __NEUROBIO_DEVICES_GENERIC_STIMULATOR_H__
 
-#include "stimwalkerConfig.h"
+#include "neurobioConfig.h"
 #include <vector>
 
 #include "Utils/CppMacros.h"
-#include "Utils/StimwalkerEvent.h"
+#include "Utils/NeurobioEvent.h"
 
-namespace STIMWALKER_NAMESPACE::devices {
+namespace NEUROBIO_NAMESPACE::devices {
 class DataPoint;
 
 class Stimulator {
@@ -25,7 +25,7 @@ public:
 public:
   /// @brief Set the callback function to call when a stimulation is performed
   /// @param onStimulate The callback function
-  utils::StimwalkerEvent<const DataPoint &> OnStimulation;
+  utils::NeurobioEvent<const DataPoint &> OnStimulation;
 
 protected:
   /// @brief Method that is internally called when a stimulation is performed.
@@ -34,6 +34,6 @@ protected:
   /// @param data The data of the stimulation
   virtual void HandleStimulation(const DataPoint &data) = 0;
 };
-} // namespace STIMWALKER_NAMESPACE::devices
+} // namespace NEUROBIO_NAMESPACE::devices
 
-#endif // __STIMWALKER_DEVICES_GENERIC_STIMULATOR_H__
+#endif // __NEUROBIO_DEVICES_GENERIC_STIMULATOR_H__

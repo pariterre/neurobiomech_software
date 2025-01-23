@@ -1,5 +1,5 @@
-#ifndef __STIMWALKER_DEVICES_GENERIC_ALL_H__
-#define __STIMWALKER_DEVICES_GENERIC_ALL_H__
+#ifndef __NEUROBIO_DEVICES_GENERIC_ALL_H__
+#define __NEUROBIO_DEVICES_GENERIC_ALL_H__
 
 #include "Devices/Generic/AsyncDataCollector.h"
 #include "Devices/Generic/DataCollector.h"
@@ -10,4 +10,4 @@
 #include "Devices/Generic/TcpDevice.h"
 #include "Devices/Generic/UsbDevice.h"
 
-#endif // __STIMWALKER_DEVICES_GENERIC_ALL_H__
+#endif // __NEUROBIO_DEVICES_GENERIC_ALL_H__

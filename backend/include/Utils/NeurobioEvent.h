@@ -1,5 +1,5 @@
-#ifndef __STIMWALKER_UTILS_STIMWALKER_EVENT_H__
-#define __STIMWALKER_UTILS_STIMWALKER_EVENT_H__
+#ifndef __NEUROBIO_UTILS_NEUROBIO_EVENT_H__
+#define __NEUROBIO_UTILS_NEUROBIO_EVENT_H__
 
 #include <functional>
 #include <map>
@@ -7,9 +7,9 @@
 
 #include "Utils/CppMacros.h"
 
-namespace STIMWALKER_NAMESPACE::utils {
+namespace NEUROBIO_NAMESPACE::utils {
 
-template <typename T> class StimwalkerEvent {
+template <typename T> class NeurobioEvent {
 public:
   ///
   /// @brief Listen to the callback. This method returns an id that can be used
@@ -51,6 +51,6 @@ protected:
   DECLARE_PROTECTED_MEMBER_NOGET(std::mutex, Mutex)
 };
 
-} // namespace STIMWALKER_NAMESPACE::utils
+} // namespace NEUROBIO_NAMESPACE::utils
 
-#endif // __STIMWALKER_UTILS_STIMWALKER_EVENT_H__
+#endif // __NEUROBIO_UTILS_NEUROBIO_EVENT_H__

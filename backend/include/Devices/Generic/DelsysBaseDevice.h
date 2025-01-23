@@ -1,7 +1,7 @@
-#ifndef __STIMWALKER_DEVICES_DELSYS_BASE_DEVICE_H__
-#define __STIMWALKER_DEVICES_DELSYS_BASE_DEVICE_H__
+#ifndef __NEUROBIO_DEVICES_DELSYS_BASE_DEVICE_H__
+#define __NEUROBIO_DEVICES_DELSYS_BASE_DEVICE_H__
 
-#include "stimwalkerConfig.h"
+#include "neurobioConfig.h"
 
 #include <array>
 #include <asio.hpp>
@@ -15,7 +15,7 @@
 #include "Devices/Generic/TcpDevice.h"
 #include "Utils/CppMacros.h"
 
-namespace STIMWALKER_NAMESPACE::devices {
+namespace NEUROBIO_NAMESPACE::devices {
 class DelsysEmgDeviceMock;
 class DelsysAnalogDeviceMock;
 
@@ -238,5 +238,5 @@ private:
 };
 }; // namespace DelsysBaseDeviceMock
 
-} // namespace STIMWALKER_NAMESPACE::devices
-#endif // __STIMWALKER_DEVICES_DELSYS_BASE_DEVICE_H__
+} // namespace NEUROBIO_NAMESPACE::devices
+#endif // __NEUROBIO_DEVICES_DELSYS_BASE_DEVICE_H__

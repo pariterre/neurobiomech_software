@@ -5,7 +5,7 @@
 #include <iostream>
 #include <sstream>
 
-using namespace STIMWALKER_NAMESPACE::utils;
+using namespace NEUROBIO_NAMESPACE::utils;
 
 // Get the singleton instance of the Logger
 Logger &Logger::getInstance() {

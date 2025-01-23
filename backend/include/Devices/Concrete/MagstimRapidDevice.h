@@ -1,7 +1,7 @@
-#ifndef __STIMWALKER_DEVICES_MAGSTIM_RAPID_DEVICE_H__
-#define __STIMWALKER_DEVICES_MAGSTIM_RAPID_DEVICE_H__
+#ifndef __NEUROBIO_DEVICES_MAGSTIM_RAPID_DEVICE_H__
+#define __NEUROBIO_DEVICES_MAGSTIM_RAPID_DEVICE_H__
 
-#include "stimwalkerConfig.h"
+#include "neurobioConfig.h"
 
 #include "Devices/Exceptions.h"
 #include "Devices/Generic/UsbDevice.h"
@@ -9,7 +9,7 @@
 // https://github.com/nicolasmcnair/magpy/blob/master/magpy/magstim.py#L129
 // https://github.com/nigelrogasch/MAGIC/blob/master/magstim.m#L301
 
-namespace STIMWALKER_NAMESPACE::devices {
+namespace NEUROBIO_NAMESPACE::devices {
 
 class MagstimRapidCommands : public DeviceCommands {
 public:
@@ -111,5 +111,5 @@ protected:
   void setFastCommunication(bool isFast) override;
 };
 
-} // namespace STIMWALKER_NAMESPACE::devices
-#endif // __STIMWALKER_DEVICES_MAGSTIM_RAPID_DEVICE_H__
+} // namespace NEUROBIO_NAMESPACE::devices
+#endif // __NEUROBIO_DEVICES_MAGSTIM_RAPID_DEVICE_H__

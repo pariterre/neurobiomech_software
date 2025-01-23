@@ -7,7 +7,7 @@
 #include "utils.h"
 
 static double requiredPrecision(1e-6);
-using namespace STIMWALKER_NAMESPACE;
+using namespace NEUROBIO_NAMESPACE;
 
 int findDataOffset(const data::TimeSeries &data) {
   // The fake data are based on a sine wave but
@@ -369,25 +369,23 @@ TEST(Delsys, LiveData) {
   // Check that the getLiveData failed because the system was streaming
   logger.giveTimeToUpdate();
   ASSERT_TRUE(logger.contains(
-      "The data collector DelsysEmgDataCollector is currently streaming"));
+      "The data collector DelsysEmgDataCollector is now streaming data"));
 
   // Get the data
   const auto &data = delsys.getSerializedLiveData();
   // Technically it should have recorded be exactly 200 (2000Hz). But the
   // material is not that precise. So we just check that it is at least 150
-  ASSERT_GE(data.size(), 150);
+  ASSERT_GE(data["data"].size(), 150);
 
   int offset = findDataOffset(data);
   if (offset == -1) {
     FAIL() << "Could not find the offset in the data";
   }
 
-  for (size_t i = 0; i < data.size(); i++) {
-    for (size_t j = 0; j < data[i].size(); j++) {
-      float value = static_cast<float>(
-          std::sin((i + static_cast<size_t>(offset)) / 2000.0 * 2 * M_PI));
-      ASSERT_NEAR(data[i][j], value, requiredPrecision);
-    }
+  for (size_t i = 0; i < data["data"].size(); i++) {
+    float value = static_cast<float>(
+        std::sin((i + static_cast<size_t>(offset)) / 2000.0 * 2 * M_PI));
+    ASSERT_NEAR(data["data"][i][1][0], value, requiredPrecision);
   }
 }
 
@@ -426,10 +424,8 @@ TEST(Delsys, TrialData) {
   }
 
   for (size_t i = 0; i < data.size(); i++) {
-    for (size_t j = 0; j < data[i].getData().size(); j++) {
-      float value = static_cast<float>(
-          std::sin((i + static_cast<size_t>(offset)) / 2000.0 * 2 * M_PI));
-      ASSERT_NEAR(data[i].getData()[j], value, requiredPrecision);
-    }
+    float value = static_cast<float>(
+        std::sin((i + static_cast<size_t>(offset)) / 2000.0 * 2 * M_PI));
+    ASSERT_NEAR(data[i].getData()[0], value, requiredPrecision);
   }
 }

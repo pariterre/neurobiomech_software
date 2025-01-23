@@ -13,7 +13,7 @@
 #include "Devices/Exceptions.h"
 #include "Utils/Logger.h"
 
-using namespace STIMWALKER_NAMESPACE::devices;
+using namespace NEUROBIO_NAMESPACE::devices;
 
 UsbDevice::UsbDevice(const std::string &port, const std::string &vid,
                      const std::string &pid)

@@ -1,9 +1,9 @@
-#ifndef __STIMWALKER_DEVICES_GENERIC_TCP_DEVICE_H__
-#define __STIMWALKER_DEVICES_GENERIC_TCP_DEVICE_H__
+#ifndef __NEUROBIO_DEVICES_GENERIC_TCP_DEVICE_H__
+#define __NEUROBIO_DEVICES_GENERIC_TCP_DEVICE_H__
 
 #include "Devices/Generic/AsyncDevice.h"
 
-namespace STIMWALKER_NAMESPACE::devices {
+namespace NEUROBIO_NAMESPACE::devices {
 
 /// @brief A class representing a Tcp device
 /// @note This class is only available on Windows and Linux
@@ -58,5 +58,5 @@ protected:
   bool handleDisconnect() override;
 };
 
-} // namespace STIMWALKER_NAMESPACE::devices
-#endif // __STIMWALKER_DEVICES_GENERIC_TCP_DEVICE_H__
+} // namespace NEUROBIO_NAMESPACE::devices
+#endif // __NEUROBIO_DEVICES_GENERIC_TCP_DEVICE_H__

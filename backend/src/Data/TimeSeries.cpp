@@ -1,11 +1,11 @@
 #include "Data/TimeSeries.h"
 
-using namespace STIMWALKER_NAMESPACE;
-using namespace STIMWALKER_NAMESPACE::data;
+using namespace NEUROBIO_NAMESPACE;
+using namespace NEUROBIO_NAMESPACE::data;
 
 TimeSeries::TimeSeries(const nlohmann::json &json)
-    : m_StartingTime(std::chrono::system_clock::duration(
-          json["startingTime"].get<int64_t>())),
+    : m_StartingTime(
+          std::chrono::microseconds(json["startingTime"].get<int64_t>())),
       m_StopWatch(std::chrono::high_resolution_clock::now()),
       m_Data(utils::RollingVector<DataPoint>(
           static_cast<size_t>(json["data"].size()))) {
@@ -64,7 +64,9 @@ TimeSeries::since(const std::chrono::system_clock::time_point &time) const {
 
 nlohmann::json TimeSeries::serialize() const {
   nlohmann::json json = nlohmann::json::object();
-  json["startingTime"] = m_StartingTime.time_since_epoch().count();
+  json["startingTime"] = std::chrono::duration_cast<std::chrono::microseconds>(
+                             m_StartingTime.time_since_epoch())
+                             .count();
   json["data"] = nlohmann::json::array();
   auto &jsonData = json["data"];
   for (const auto &point : m_Data) {

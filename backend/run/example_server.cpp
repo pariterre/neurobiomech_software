@@ -1,8 +1,8 @@
-#include "stimwalker.h"
+#include "neurobio.h"
 
 #include <asio.hpp>
 
-using namespace STIMWALKER_NAMESPACE;
+using namespace NEUROBIO_NAMESPACE;
 
 int main() {
   auto &logger = utils::Logger::getInstance();

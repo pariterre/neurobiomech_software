@@ -1,14 +1,14 @@
-#ifndef __STIMWALKER_DEVICES_GENERIC_EXCEPTIONS_H__
-#define __STIMWALKER_DEVICES_GENERIC_EXCEPTIONS_H__
+#ifndef __NEUROBIO_DEVICES_GENERIC_EXCEPTIONS_H__
+#define __NEUROBIO_DEVICES_GENERIC_EXCEPTIONS_H__
 // Generate the custom exceptions
 
-#include "stimwalkerConfig.h"
+#include "neurobioConfig.h"
 #include <exception>
 #include <string>
 
 #include "Utils/CppMacros.h"
 
-namespace STIMWALKER_NAMESPACE ::devices {
+namespace NEUROBIO_NAMESPACE ::devices {
 
 class DeviceException : public std::exception {
 public:
@@ -44,6 +44,6 @@ public:
       : DeviceException(filename) {}
 };
 
-} // namespace STIMWALKER_NAMESPACE::devices
+} // namespace NEUROBIO_NAMESPACE::devices
 
-#endif // __STIMWALKER_DEVICES_GENERIC_EXCEPTIONS_H__
+#endif // __NEUROBIO_DEVICES_GENERIC_EXCEPTIONS_H__

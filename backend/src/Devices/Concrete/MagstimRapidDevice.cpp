@@ -13,8 +13,8 @@
 
 #include "Utils/Logger.h"
 
-using namespace STIMWALKER_NAMESPACE;
-using namespace STIMWALKER_NAMESPACE::devices;
+using namespace NEUROBIO_NAMESPACE;
+using namespace NEUROBIO_NAMESPACE::devices;
 
 std::unique_ptr<MagstimRapidDevice> MagstimRapidDevice::findMagstimDevice() {
   return std::make_unique<MagstimRapidDevice>(

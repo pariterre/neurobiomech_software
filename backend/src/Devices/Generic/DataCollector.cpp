@@ -3,8 +3,8 @@
 #include "Devices/Exceptions.h"
 #include "Utils/Logger.h"
 
-using namespace STIMWALKER_NAMESPACE::data;
-using namespace STIMWALKER_NAMESPACE::devices;
+using namespace NEUROBIO_NAMESPACE::data;
+using namespace NEUROBIO_NAMESPACE::devices;
 
 DataCollector::DataCollector(
     size_t channelCount,
