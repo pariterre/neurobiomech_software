@@ -13,6 +13,12 @@ jobs:
           - os: ubuntu-20.04
             label: linux-64
             prefix: /usr/share/miniconda3/envs/neurobio
+          - os: macos-latest
+            label: Macos-arm
+            prefix: /Users/runner/miniconda3/envs/neurobio
+          - os: macos-13
+            label: Macos-intel
+            prefix: /Users/runner/miniconda3/envs/neurobio
           - os: windows-latest
             label: win-64
             prefix: C:\Miniconda3\envs\neurobio

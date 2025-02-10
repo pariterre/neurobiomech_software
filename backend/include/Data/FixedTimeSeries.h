@@ -28,7 +28,7 @@ public:
   /// not in the right order
   /// @param data The data to add
   virtual void add(const std::chrono::microseconds &timeStamp,
-                   const std::vector<double> &data);
+                   const std::vector<double> &data) override;
 
   /// @brief Add new data to the collection with the timestamp set to
   /// StartingTime + delta time * number of data points.

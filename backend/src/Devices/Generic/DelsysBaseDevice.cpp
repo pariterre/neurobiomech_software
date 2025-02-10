@@ -275,7 +275,7 @@ bool DataTcpDeviceMock::read(std::vector<char> &buffer) {
   size_t bytesPerChannel(4);
 
   // Wait for the next cycle of data
-  auto newDataArrivesAt =
+  std::chrono::time_point<std::chrono::high_resolution_clock> newDataArrivesAt =
       m_StartTime + m_DeltaTime * m_SampleCount * m_DataCounter;
   std::this_thread::sleep_until(newDataArrivesAt);
 
