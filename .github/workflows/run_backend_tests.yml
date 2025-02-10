@@ -19,6 +19,7 @@ jobs:
           - os: windows-latest
             label: Windows
             prefix: C:\Miniconda3\envs\neurobio
+            
     name: Backend tests on ${{ matrix.label }}
     runs-on: ${{ matrix.os }}
     defaults:
@@ -56,7 +57,7 @@ jobs:
           cmake -DCMAKE_INSTALL_PREFIX=$CONDA_ENV_PATH -DCMAKE_BUILD_TYPE=Release -DSKIP_CI_FAILING_TESTS=ON -DBUILD_TESTS=ON ..
           make -j${{ steps.cpu-cores.outputs.count }}
           cd $NEUROBIO_FOLDER
-        if: matrix.label != 'win-64'
+        if: matrix.label != 'Windows'
 
       - name: Run tests UNIX
         run: |
@@ -64,7 +65,7 @@ jobs:
           cd $NEUROBIO_FOLDER/$BUILD_FOLDER/test
           ./neurobio_tests
           cd $NEUROBIO_FOLDER
-        if: matrix.label != 'win-64'
+        if: matrix.label != 'Windows'
 
       - name: Build neurobiomech software WINDOWS
         run: |
@@ -75,7 +76,7 @@ jobs:
           cmake -G"Visual Studio 17 2022" -Ax64 -DCMAKE_INSTALL_PREFIX=$CONDA_ENV_PATH -DCMAKE_BUILD_TYPE=Release -DSKIP_CI_FAILING_TESTS=ON -DBUILD_TESTS=ON ..
           cmake --build . --config Release -j${{ steps.cpu-cores.outputs.count }}
           cd $NEUROBIO_FOLDER
-        if: matrix.label == 'win-64'
+        if: matrix.label == 'Windows'
 
       - name: Run tests WINDOWS
         run: |
@@ -84,4 +85,4 @@ jobs:
           cp Release/neurobio_tests.exe .
           ./neurobio_tests.exe
           cd $NEUROBIO_FOLDER
-        if: matrix.label == 'win-64'
+        if: matrix.label == 'Windows'
