@@ -18,7 +18,7 @@ jobs:
             label: Windows
             prefix: C:\Miniconda3\envs\neurobio
 
-    name: Tests on ${{ matrix.label }}
+    name: Frontend tests on ${{ matrix.label }}
     runs-on: ${{ matrix.os }}
     defaults:
       run:

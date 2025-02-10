@@ -10,16 +10,17 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-20.04
-            label: linux-64
+          - os: ubuntu-latest
+            label: Linux
             prefix: /usr/share/miniconda3/envs/neurobio
           - os: macos-latest
             label: Macos
             prefix: /Users/runner/miniconda3/envs/neurobio
           - os: windows-latest
-            label: win-64
+            label: Windows
             prefix: C:\Miniconda3\envs\neurobio
-    name: ${{ matrix.label }}
+
+    name: Backend tests on ${{ matrix.label }}
     runs-on: ${{ matrix.os }}
     defaults:
       run:
