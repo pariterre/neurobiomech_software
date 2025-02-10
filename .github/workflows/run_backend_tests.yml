@@ -19,7 +19,6 @@ jobs:
           - os: windows-latest
             label: Windows
             prefix: C:\Miniconda3\envs\neurobio
-
     name: Backend tests on ${{ matrix.label }}
     runs-on: ${{ matrix.os }}
     defaults:
