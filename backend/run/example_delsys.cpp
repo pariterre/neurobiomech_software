@@ -1,3 +1,4 @@
+#include "Analyzer/WalkingLiveAnalyzer.h"
 #include "Devices/Concrete/DelsysEmgDevice.h"
 #include "Utils/Logger.h"
 #include <chrono>
@@ -31,6 +32,9 @@ int main() {
     const auto &data = delsys.getTrialData();
     logger.info("The data has been collected: " + std::to_string(data.size()) +
                 " data points");
+
+    auto analyser = analyzer::WalkingLiveAnalyzer({0.1, 0.1}, {1.0, 1.0});
+    analyser.predict(data);
 
   } catch (std::exception &e) {
     logger.fatal(e.what());

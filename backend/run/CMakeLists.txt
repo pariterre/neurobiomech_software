@@ -26,12 +26,14 @@ foreach(SOURCE_FILE ${SOURCE_FILES})
         ${Asio_INCLUDE_DIR}
     )
     add_dependencies(${EXECUTABLE_NAME} 
+        ${MODULE_ANALYZER}
         ${MODULE_UTILS}
         ${MODULE_DATA}
         ${MODULE_DEVICES}
         ${MODULE_SERVER}
     )
     target_link_libraries(${EXECUTABLE_NAME} PRIVATE
+        ${MODULE_ANALYZER}
         ${MODULE_UTILS}
         ${MODULE_DATA}
         ${MODULE_DEVICES}
