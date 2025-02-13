@@ -322,6 +322,14 @@ bool Devices::stopRecording() {
   return true;
 }
 
+std::map<size_t, data::TimeSeries> Devices::getLiveData() const {
+  std::map<size_t, data::TimeSeries> data;
+  for (const auto &[deviceId, dataCollector] : m_DataCollectors) {
+    data[deviceId] = dataCollector->getLiveData();
+  }
+  return data;
+}
+
 nlohmann::json Devices::getLiveDataSerialized() const {
   nlohmann::json json;
   size_t deviceIndex = 0;

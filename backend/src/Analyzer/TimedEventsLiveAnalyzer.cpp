@@ -6,10 +6,10 @@ using namespace NEUROBIO_NAMESPACE::analyzer;
 
 TimedEventsLiveAnalyzer::TimedEventsLiveAnalyzer(
     const std::vector<std::chrono::milliseconds> &initialTimeEventModel,
-    const std::function<bool(const std::map<size_t, const data::TimeSeries &>
-                                 &)> &shouldIncrementPhase,
+    const std::function<bool(const std::map<size_t, data::TimeSeries> &)>
+        &shouldIncrementPhase,
     const std::function<std::chrono::system_clock::time_point(
-        const std::map<size_t, const data::TimeSeries &> &)> &getCurrentTime,
+        const std::map<size_t, data::TimeSeries> &)> &getCurrentTime,
     double learningRate)
     : m_ShouldIncrementPhase(shouldIncrementPhase),
       m_GetCurrentTime(getCurrentTime), m_CurrentPhaseIndex(0),
@@ -20,7 +20,7 @@ TimedEventsLiveAnalyzer::TimedEventsLiveAnalyzer(
 TimedEventsLiveAnalyzer::~TimedEventsLiveAnalyzer() {}
 
 std::unique_ptr<Prediction> TimedEventsLiveAnalyzer::predict(
-    const std::map<size_t, const data::TimeSeries &> &data) {
+    const std::map<size_t, data::TimeSeries> &data) {
   // Analyze the data from the last analyzed time stamp to the most recent.
 
   auto currentTime = m_GetCurrentTime(data);

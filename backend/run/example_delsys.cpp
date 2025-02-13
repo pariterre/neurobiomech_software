@@ -8,8 +8,7 @@ using namespace NEUROBIO_NAMESPACE;
 
 static int currentPhase = 0;
 std::chrono::milliseconds lastPhaseChangeTimestamp;
-bool shouldIncrementPhase(
-    const std::map<size_t, const data::TimeSeries &> &data) {
+bool shouldIncrementPhase(const std::map<size_t, data::TimeSeries> &data) {
   auto &dataDevice = data.begin()->second;
   auto timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(
                         dataDevice.back().getTimeStamp()) -
@@ -33,7 +32,7 @@ bool shouldIncrementPhase(
 }
 
 std::chrono::system_clock::time_point
-getCurrentTime(const std::map<size_t, const data::TimeSeries &> &data) {
+getCurrentTime(const std::map<size_t, data::TimeSeries> &data) {
   // Get the first (and only) data device
   auto &dataDevice = data.begin()->second;
 

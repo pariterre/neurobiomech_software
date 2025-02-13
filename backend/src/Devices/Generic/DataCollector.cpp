@@ -113,6 +113,10 @@ void DataCollector::resetLiveData() {
   m_LiveTimeSeries->reset();
 }
 
+const TimeSeries &DataCollector::getLiveData() const {
+  return *m_LiveTimeSeries;
+}
+
 nlohmann::json DataCollector::getSerializedLiveData() const {
   std::lock_guard<std::mutex> lock(const_cast<std::mutex &>(m_LiveDataMutex));
   return m_LiveTimeSeries->serialize();

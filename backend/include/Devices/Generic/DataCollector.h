@@ -92,6 +92,10 @@ public:
   /// @brief Reset the live data
   void resetLiveData();
 
+  /// @brief Get the live data
+  /// @return The live data
+  const data::TimeSeries &getLiveData() const;
+
   /// @brief Get the live data in a serialized form. This uses a mutex to ensure
   /// that the data is not modified while being serialized
   /// @return The live data in a serialized form

@@ -4,6 +4,8 @@
 #include <asio/steady_timer.hpp>
 #include <thread>
 
+#include "Analyzer/Analyzers.h"
+#include "Analyzer/Prediction.h"
 #include "Devices/Concrete/DelsysAnalogDevice.h"
 #include "Devices/Concrete/DelsysEmgDevice.h"
 #include "Devices/Concrete/MagstimRapidDevice.h"
@@ -87,6 +89,7 @@ void TcpServer::startServerSync() {
       while (m_IsServerRunning && isClientConnected()) {
         auto startingTime = std::chrono::high_resolution_clock::now();
         handleSendLiveData();
+        handleAnalyzeLiveData();
         auto next = liveDataIntervals -
                     (std::chrono::high_resolution_clock::now() - startingTime);
         std::this_thread::sleep_for(next);
@@ -595,9 +598,9 @@ bool TcpServer::removeDevice(const std::string &deviceName,
 
 void TcpServer::handleSendLiveData() {
   // Send the live data callback in a separate thread
-  if (!isClientConnected()) {
+  if (!isClientConnected())
     return;
-  }
+
   auto &logger = utils::Logger::getInstance();
   logger.debug("Sending live data to client");
 
@@ -614,6 +617,29 @@ void TcpServer::handleSendLiveData() {
               error);
   auto written = asio::write(*m_LiveDataSocket, asio::buffer(dataDump), error);
   logger.debug("Live data size: " + std::to_string(written));
+}
+
+void TcpServer::handleAnalyzeLiveData() {
+  // Analyze the live data callback in a separate thread
+  if (!isClientConnected())
+    return;
+
+  auto &logger = utils::Logger::getInstance();
+  logger.debug("Analyzing live data");
+
+  std::map<size_t, data::TimeSeries> data = m_Devices.getLiveData();
+  if (data.size() == 0) {
+    return;
+  }
+
+  // Analyze the data
+  auto predictions = m_Analyzers.predict(data);
+
+  // Transform the predictions into JSON
+  auto predictionsJson = nlohmann::json();
+  for (const auto &[deviceId, prediction] : predictions) {
+    predictionsJson[deviceId] = prediction->serialize();
+  }
 }
 
 void TcpServerMock::makeAndAddDevice(const std::string &deviceName) {

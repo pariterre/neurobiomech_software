@@ -19,10 +19,10 @@ public:
   /// @param learningRate The learning rate of the analyzer
   TimedEventsLiveAnalyzer(
       const std::vector<std::chrono::milliseconds> &initialPhaseTimes,
-      const std::function<bool(const std::map<size_t, const data::TimeSeries &>
-                                   &)> &shouldIncrementPhase,
+      const std::function<bool(const std::map<size_t, data::TimeSeries> &)>
+          &shouldIncrementPhase,
       const std::function<std::chrono::system_clock::time_point(
-          const std::map<size_t, const data::TimeSeries &> &)> &getCurrentTime,
+          const std::map<size_t, data::TimeSeries> &)> &getCurrentTime,
       double learningRate = 0.2);
 
 public:
@@ -31,19 +31,18 @@ public:
 
 public:
   std::unique_ptr<Prediction>
-  predict(const std::map<size_t, const data::TimeSeries &> &data) override;
+  predict(const std::map<size_t, data::TimeSeries> &data) override;
 
 protected:
   /// @brief The callback to determine if the phase should be incremented
   DECLARE_PROTECTED_MEMBER(
-      std::function<bool(const std::map<size_t, const data::TimeSeries &> &)>,
+      std::function<bool(const std::map<size_t, data::TimeSeries> &)>,
       ShouldIncrementPhase);
 
   /// @brief The callback to get the current time
-  DECLARE_PROTECTED_MEMBER(
-      std::function<std::chrono::system_clock::time_point(
-          const std::map<size_t, const data::TimeSeries &> &)>,
-      GetCurrentTime);
+  DECLARE_PROTECTED_MEMBER(std::function<std::chrono::system_clock::time_point(
+                               const std::map<size_t, data::TimeSeries> &)>,
+                           GetCurrentTime);
 
   /// @brief Increment the model to the next phase
   void incrementModel();

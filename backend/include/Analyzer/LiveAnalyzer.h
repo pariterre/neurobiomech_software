@@ -1,5 +1,5 @@
-#ifndef __NEUROBIO_ANALYZER_ANALYZER_H__
-#define __NEUROBIO_ANALYZER_ANALYZER_H__
+#ifndef __NEUROBIO_ANALYZER_LIVE_ANALYZER_H__
+#define __NEUROBIO_ANALYZER_LIVE_ANALYZER_H__
 
 #include "neurobioConfig.h"
 #include <map>
@@ -26,8 +26,8 @@ public:
   /// @brief Predict some outcome from the sensor data
   /// @param data The data to analyze
   virtual std::unique_ptr<Prediction>
-  predict(const std::map<size_t, const data::TimeSeries &> &data) = 0;
+  predict(const std::map<size_t, data::TimeSeries> &data) = 0;
 };
 
 } // namespace NEUROBIO_NAMESPACE::analyzer
-#endif // __NEUROBIO_ANALYZER_ANALYZER_H__
+#endif // __NEUROBIO_ANALYZER_LIVE_ANALYZER_H__

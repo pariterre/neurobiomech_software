@@ -3,6 +3,7 @@
 
 #include "neurobioConfig.h"
 
+#include "Analyzer/Analyzers.h"
 #include "Devices/Devices.h"
 #include "Utils/CppMacros.h"
 #include <asio.hpp>
@@ -100,6 +101,9 @@ protected:
 
   /// @brief Get the devices that are currently connected
   DECLARE_PROTECTED_MEMBER(devices::Devices, Devices);
+
+  /// @brief Get the data analyzers that are currently loaded
+  DECLARE_PROTECTED_MEMBER(analyzer::Analyzers, Analyzers);
 
 protected:
   /// @brief The id of the connected devices
@@ -200,6 +204,9 @@ protected:
 
   /// @brief Handle the sending of the live data to the client
   void handleSendLiveData();
+
+  /// @brief Handle the analysis of the live data
+  void handleAnalyzeLiveData();
 
 private:
   /// @brief The asio contexts used for async methods of the server
