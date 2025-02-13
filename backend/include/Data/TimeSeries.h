@@ -60,6 +60,11 @@ public:
   /// @return The data at the given index
   const DataPoint &operator[](size_t index) const;
 
+  /// @brief Get the slice of data from [from] to [to]
+  /// @param from The starting index
+  /// @param to The ending index
+  TimeSeries slice(size_t from, size_t to) const;
+
   /// @brief Get the last n data
   /// @param n The number of data to get from the end
   TimeSeries tail(size_t n) const;

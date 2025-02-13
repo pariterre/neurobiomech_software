@@ -4,6 +4,8 @@ project(${MODULE_ANALYZER})
 
 # Add the relevant files
 set(SRC_LIST_MODULE
+    ${CMAKE_CURRENT_SOURCE_DIR}/Prediction.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/EventPrediction.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/TimedEventsLiveAnalyzer.cpp
 )
 

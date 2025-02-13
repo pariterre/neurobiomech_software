@@ -39,6 +39,14 @@ const DataPoint &TimeSeries::operator[](size_t index) const {
   return m_Data.at(index);
 }
 
+TimeSeries TimeSeries::slice(size_t start, size_t end) const {
+  TimeSeries data(m_StartingTime);
+  for (size_t i = start; i < end; i++) {
+    data.m_Data.push_back(std::move(m_Data[i]));
+  }
+  return data;
+}
+
 TimeSeries TimeSeries::tail(size_t n) const {
   TimeSeries data(m_StartingTime);
   for (size_t i = m_Data.size() - n; i < m_Data.size(); i++) {

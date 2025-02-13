@@ -11,6 +11,7 @@ class TimeSeries;
 } // namespace NEUROBIO_NAMESPACE::data
 
 namespace NEUROBIO_NAMESPACE::analyzer {
+class Prediction;
 
 class LiveAnalyzer {
 public:
@@ -24,7 +25,7 @@ public:
 public:
   /// @brief Predict some outcome from the sensor data
   /// @param data The data to analyze
-  virtual std::vector<double>
+  virtual std::unique_ptr<Prediction>
   predict(const std::map<size_t, const data::TimeSeries &> &data) = 0;
 };
 

@@ -1,6 +1,7 @@
 #ifndef __NEUROBIO_ANALYZER_TIMED_EVENT_ANALYZER_H__
 #define __NEUROBIO_ANALYZER_TIMED_EVENT_ANALYZER_H__
 
+#include "Analyzer/EventPrediction.h"
 #include "Analyzer/LiveAnalyzer.h"
 #include "Utils/CppMacros.h"
 #include <chrono>
@@ -29,7 +30,7 @@ public:
   ~TimedEventsLiveAnalyzer() override;
 
 public:
-  std::vector<double>
+  std::unique_ptr<Prediction>
   predict(const std::map<size_t, const data::TimeSeries &> &data) override;
 
 protected:

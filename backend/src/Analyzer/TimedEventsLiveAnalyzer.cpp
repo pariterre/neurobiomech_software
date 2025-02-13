@@ -1,4 +1,5 @@
 #include "Analyzer/TimedEventsLiveAnalyzer.h"
+#include "Analyzer/Prediction.h"
 #include <numeric>
 
 using namespace NEUROBIO_NAMESPACE::analyzer;
@@ -18,7 +19,7 @@ TimedEventsLiveAnalyzer::TimedEventsLiveAnalyzer(
 
 TimedEventsLiveAnalyzer::~TimedEventsLiveAnalyzer() {}
 
-std::vector<double> TimedEventsLiveAnalyzer::predict(
+std::unique_ptr<Prediction> TimedEventsLiveAnalyzer::predict(
     const std::map<size_t, const data::TimeSeries &> &data) {
   // Analyze the data from the last analyzed time stamp to the most recent.
 
@@ -53,10 +54,13 @@ std::vector<double> TimedEventsLiveAnalyzer::predict(
               .count());
 
   // Check if we should increment the phase
-  if (m_ShouldIncrementPhase(data))
+  bool shouldIncrement = m_ShouldIncrementPhase(data);
+  if (shouldIncrement)
     incrementModel();
 
-  return {predictedValue};
+  return std::make_unique<EventPrediction>(std::vector<double>{predictedValue},
+                                           m_CurrentPhaseIndex,
+                                           shouldIncrement);
 }
 
 void TimedEventsLiveAnalyzer::incrementModel() {

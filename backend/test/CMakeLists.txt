@@ -78,12 +78,14 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 # Standard linking to gtest stuff
 add_dependencies(${PROJECT_NAME} 
+    ${MODULE_ANALYZER}
     ${MODULE_UTILS}
     ${MODULE_DATA}
     ${MODULE_DEVICES}
     ${MODULE_SERVER}
 )
 target_link_libraries(${PROJECT_NAME} PRIVATE
+    ${MODULE_ANALYZER}
     ${MODULE_UTILS}
     ${MODULE_DATA}
     ${MODULE_DEVICES}
