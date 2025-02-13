@@ -2,8 +2,13 @@
 #define __NEUROBIO_ANALYZER_ANALYZER_H__
 
 #include "neurobioConfig.h"
+#include <map>
+#include <memory>
+#include <vector>
 
-#include "Data/TimeSeries.h"
+namespace NEUROBIO_NAMESPACE::data {
+class TimeSeries;
+} // namespace NEUROBIO_NAMESPACE::data
 
 namespace NEUROBIO_NAMESPACE::analyzer {
 
@@ -18,8 +23,9 @@ public:
 
 public:
   /// @brief Predict some outcome from the sensor data
-  /// @param sensorData The data to analyze
-  virtual void predict(const neurobio::data::TimeSeries &sensorData) = 0;
+  /// @param data The data to analyze
+  virtual std::vector<double>
+  predict(const std::map<size_t, const data::TimeSeries &> &data) = 0;
 };
 
 } // namespace NEUROBIO_NAMESPACE::analyzer

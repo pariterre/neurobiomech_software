@@ -4,7 +4,7 @@ project(${MODULE_ANALYZER})
 
 # Add the relevant files
 set(SRC_LIST_MODULE
-    ${CMAKE_CURRENT_SOURCE_DIR}/WalkingLiveAnalyzer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/TimedEventsLiveAnalyzer.cpp
 )
 
 # Create the library

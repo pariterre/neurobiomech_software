@@ -1,10 +1,20 @@
-#include "Analyzer/WalkingLiveAnalyzer.h"
+#include "Analyzer/TimedEventsLiveAnalyzer.h"
 #include "Devices/Concrete/DelsysEmgDevice.h"
 #include "Utils/Logger.h"
 #include <chrono>
 #include <thread>
 
 using namespace NEUROBIO_NAMESPACE;
+
+bool shouldIncrementPhase(
+    const std::map<size_t, const data::TimeSeries &> &data) {
+  return true;
+}
+
+std::chrono::system_clock::time_point
+getCurrentTime(const std::map<size_t, const data::TimeSeries &> &data) {
+  return std::chrono::system_clock::now();
+}
 
 int main() {
   auto &logger = utils::Logger::getInstance();
@@ -33,8 +43,14 @@ int main() {
     logger.info("The data has been collected: " + std::to_string(data.size()) +
                 " data points");
 
-    auto analyser = analyzer::WalkingLiveAnalyzer({0.1, 0.1}, {1.0, 1.0});
-    analyser.predict(data);
+    auto analyser = analyzer::TimedEventsLiveAnalyzer(
+        {std::chrono::milliseconds(100), std::chrono::milliseconds(100)},
+        shouldIncrementPhase, getCurrentTime);
+    std::cout << analyser.predict({{0, data}})[0] << std::endl;
+    std::cout << analyser.predict({{0, data}})[0] << std::endl;
+    std::cout << analyser.predict({{0, data}})[0] << std::endl;
+    std::cout << analyser.predict({{0, data}})[0] << std::endl;
+    std::cout << analyser.predict({{0, data}})[0] << std::endl;
 
   } catch (std::exception &e) {
     logger.fatal(e.what());
