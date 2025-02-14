@@ -8,6 +8,10 @@
 #include <memory>
 #include <vector>
 
+enum AvailableAnalyzers {
+  WALKING_CYCLE_FROM_DELSYS_PRESSURE_ANALYZER = 0,
+};
+
 namespace NEUROBIO_NAMESPACE::data {
 class TimeSeries;
 } // namespace NEUROBIO_NAMESPACE::data
@@ -36,6 +40,12 @@ public:
   /// @return The id of the analyzer in the collection so it can be accessed or
   /// removed later
   size_t add(std::unique_ptr<LiveAnalyzer> analyzer);
+
+  /// @brief Add an analyzer fo the collection from a json object
+  /// @param json The json object to create the analyzer from
+  /// @return The id of the analyzer in the collection so it can be accessed or
+  /// removed later
+  size_t add(const nlohmann::json &json);
 
   /// @brief Remove the analyzer from the collection
   /// @param analyzerId The id of the analyzer (the one returned by the add

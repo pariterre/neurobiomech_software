@@ -23,11 +23,11 @@ public:
           &shouldIncrementPhase,
       const std::function<std::chrono::system_clock::time_point(
           const std::map<size_t, data::TimeSeries> &)> &getCurrentTime,
-      double learningRate = 0.2);
+      double learningRate);
 
 public:
   /// @brief Destructor of the TimedEventsLiveAnalyzer
-  ~TimedEventsLiveAnalyzer() override;
+  ~TimedEventsLiveAnalyzer() override = default;
 
 public:
   std::unique_ptr<Prediction>

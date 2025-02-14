@@ -1,44 +1,10 @@
-#include "Analyzer/TimedEventsLiveAnalyzer.h"
+#include "Analyzer/all.h"
 #include "Devices/Concrete/DelsysEmgDevice.h"
 #include "Utils/Logger.h"
 #include <chrono>
 #include <thread>
 
 using namespace NEUROBIO_NAMESPACE;
-
-static int currentPhase = 0;
-std::chrono::milliseconds lastPhaseChangeTimestamp;
-bool shouldIncrementPhase(const std::map<size_t, data::TimeSeries> &data) {
-  auto &dataDevice = data.begin()->second;
-  auto timePassed = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        dataDevice.back().getTimeStamp()) -
-                    lastPhaseChangeTimestamp;
-
-  if (currentPhase == 0 && timePassed >= std::chrono::milliseconds(400)) {
-    lastPhaseChangeTimestamp =
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            dataDevice.back().getTimeStamp());
-    currentPhase = 1;
-    return true;
-  } else if (currentPhase == 1 &&
-             timePassed >= std::chrono::milliseconds(600)) {
-    lastPhaseChangeTimestamp =
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            dataDevice.back().getTimeStamp());
-    currentPhase = 0;
-    return true;
-  }
-  return false;
-}
-
-std::chrono::system_clock::time_point
-getCurrentTime(const std::map<size_t, data::TimeSeries> &data) {
-  // Get the first (and only) data device
-  auto &dataDevice = data.begin()->second;
-
-  // Get the current time stamp by adding passed time to starting time
-  return dataDevice.getStartingTime() + dataDevice.back().getTimeStamp();
-}
 
 int main() {
   auto &logger = utils::Logger::getInstance();
@@ -67,30 +33,57 @@ int main() {
     logger.info("The data has been collected: " + std::to_string(data.size()) +
                 " data points");
 
-    auto eventAnalyzer = analyzer::TimedEventsLiveAnalyzer(
-        {std::chrono::milliseconds(100), std::chrono::milliseconds(100)},
-        shouldIncrementPhase, getCurrentTime, 0.5);
+    auto analyzers = analyzer::Analyzers();
+    // Add one analyzer for the left side
+    // TODO: Allows for comparison symbol (e.g. "heelStrikeCondition": ">= 0.2")
+    analyzers.add(nlohmann::json::parse(R"({
+      "type": 0,
+      "delsysDeviceIndex": 0,
+      "channelIndex": 0,
+      "heelStrikeThreshold": 0.2,
+      "toeOffThreshold": -0.2,
+      "learningRate": 0.5
+    })"));
+    // Add one analyzer for the right side
+    analyzers.add(nlohmann::json::parse(R"({
+      "type": 0,
+      "delsysDeviceIndex": 0,
+      "channelIndex": 1,
+      "heelStrikeThreshold": -0.5,
+      "toeOffThreshold": -0.5,
+      "learningRate": 0.5
+    })"));
 
-    std::cout << "Pre-trained model: "
-              << eventAnalyzer.getTimeEventModel()[0].count() << ", "
-              << eventAnalyzer.getTimeEventModel()[1].count() << std::endl;
-    for (size_t i = 0; i < 100; i++) {
-      auto prediction = std::unique_ptr<analyzer::EventPrediction>(
-          dynamic_cast<analyzer::EventPrediction *>(
-              eventAnalyzer.predict({{0, data.slice(i * 100, (i + 1) * 100)}})
-                  .release()));
+    // Simulate the live predictions
+    int packetSize = 10;
+    for (size_t i = 0; i < data.size() / packetSize; ++i) {
+      auto predictions = analyzers.predict(
+          {{0, data.slice(i * packetSize, (i + 1) * packetSize)}});
 
-      std::cout << "From " << i * 100 << " to " << (i + 1) * 100 << ": "
-                << prediction->getValues()[0];
-      if (prediction->getHasPhaseIncremented())
-        std::cout << " (phase incremented)";
+      // Since we know that it is, downcast the prediction to event prediction
+      auto predictionLeft = std::unique_ptr<analyzer::EventPrediction>(
+          dynamic_cast<analyzer::EventPrediction *>(predictions[0].release()));
+      auto predictionRight = std::unique_ptr<analyzer::EventPrediction>(
+          dynamic_cast<analyzer::EventPrediction *>(predictions[1].release()));
+
+      std::cout << "For " << std::setw(6) << std::setfill(' ')
+                << (i + 1) * packetSize << ": L-" << std::fixed
+                << std::setprecision(3) << predictionLeft->getValues()[0]
+                << ", R-" << predictionRight->getValues()[0]
+                << std::setprecision(std::cout.precision());
+
+      if (predictionLeft->getHasPhaseIncremented())
+        std::cout << " (Left phase incremented)";
+      if (predictionRight->getHasPhaseIncremented())
+        std::cout << " (Right phase incremented)";
       std::cout << std::endl;
-
-      std::cout << prediction->serialize().dump() << std::endl;
     }
-    std::cout << "Post-trained model: "
-              << eventAnalyzer.getTimeEventModel()[0].count() << ", "
-              << eventAnalyzer.getTimeEventModel()[1].count() << std::endl;
+
+    // Print the final model
+    const auto &model =
+        dynamic_cast<const analyzer::TimedEventsLiveAnalyzer &>(analyzers[0]);
+    std::cout << "Post-trained model: " << model.getTimeEventModel()[0].count()
+              << ", " << model.getTimeEventModel()[1].count() << std::endl;
 
   } catch (std::exception &e) {
     logger.fatal(e.what());

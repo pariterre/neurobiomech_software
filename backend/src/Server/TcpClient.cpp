@@ -10,10 +10,10 @@ const size_t BYTES_IN_CLIENT_PACKET_HEADER = 8;
 const size_t BYTES_IN_SERVER_PACKET_HEADER = 16;
 
 TcpClient::TcpClient(std::string host, int commandPort, int responsePort,
-                     int liveDataPort)
+                     int liveDataPort, int liveAnalysesPort)
     : m_Host(host), m_CommandPort(commandPort), m_ResponsePort(responsePort),
-      m_LiveDataPort(liveDataPort), m_IsConnected(false),
-      m_ProtocolVersion(1) {};
+      m_LiveDataPort(liveDataPort), m_LiveAnalysesPort(liveAnalysesPort),
+      m_IsConnected(false), m_ProtocolVersion(1) {};
 
 TcpClient::~TcpClient() {
   if (m_IsConnected) {
@@ -21,6 +21,9 @@ TcpClient::~TcpClient() {
   }
   if (m_LiveDataWorker.joinable()) {
     m_LiveDataWorker.join();
+  }
+  if (m_LiveAnalysesWorker.joinable()) {
+    m_LiveAnalysesWorker.join();
   }
 }
 
@@ -44,6 +47,11 @@ bool TcpClient::connect() {
                 resolver.resolve(m_Host, std::to_string(m_LiveDataPort)));
   startUpdatingLiveData();
 
+  m_LiveAnalysesSocket = std::make_unique<tcp::socket>(m_Context);
+  asio::connect(*m_LiveAnalysesSocket,
+                resolver.resolve(m_Host, std::to_string(m_LiveAnalysesPort)));
+  startUpdatingLiveAnalyses();
+
   m_IsConnected = true;
 
   // Send the handshake
@@ -62,6 +70,9 @@ bool TcpClient::disconnect() {
   closeSockets();
   if (m_LiveDataWorker.joinable()) {
     m_LiveDataWorker.join();
+  }
+  if (m_LiveAnalysesWorker.joinable()) {
+    m_LiveAnalysesWorker.join();
   }
   return true;
 }
@@ -212,6 +223,29 @@ void TcpClient::updateLiveData() {
   logger.debug("CLIENT: Live data received");
 }
 
+void TcpClient::startUpdatingLiveAnalyses() {
+  m_LiveAnalysesWorker = std::thread([this]() {
+    while (m_IsConnected) {
+      updateLiveAnalyses();
+    }
+  });
+}
+
+void TcpClient::updateLiveAnalyses() {
+  auto &logger = utils::Logger::getInstance();
+
+  auto dataBuffer = waitForResponse(*m_LiveAnalysesSocket);
+  std::map<std::string, data::TimeSeries> data;
+  try {
+    data = devices::Devices::deserializeData(nlohmann::json::parse(dataBuffer));
+  } catch (...) {
+    logger.fatal("CLIENT: Failed to parse the last trial data");
+    return;
+  }
+
+  logger.debug("CLIENT: Live data received");
+}
+
 TcpServerResponse TcpClient::sendCommand(TcpServerCommand command) {
   auto &logger = utils::Logger::getInstance();
 
@@ -310,6 +344,9 @@ void TcpClient::closeSockets() {
   }
   if (m_LiveDataSocket && m_LiveDataSocket->is_open()) {
     m_LiveDataSocket->close();
+  }
+  if (m_LiveAnalysesSocket && m_LiveAnalysesSocket->is_open()) {
+    m_LiveAnalysesSocket->close();
   }
 }
 

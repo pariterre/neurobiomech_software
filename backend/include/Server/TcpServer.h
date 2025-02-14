@@ -41,8 +41,10 @@ public:
   /// @param responsePort The port to communicate the response (default is 5001)
   /// @param liveDataPort The port to communicate the live data (default is
   /// 5002)
+  /// @param liveAnalysesPort The port to communicate the live analyses (default
+  /// is 5003)
   TcpServer(int commandPort = 5000, int responsePort = 5001,
-            int liveDataPort = 5002);
+            int liveDataPort = 5002, int liveAnalysesPort = 5003);
 
   /// @brief Destructor
   ~TcpServer();
@@ -146,6 +148,9 @@ protected:
   /// @brief The port to listen to communicate the live data
   DECLARE_PROTECTED_MEMBER(int, LiveDataPort);
 
+  /// @brief The port to listen to communicate the live analyses
+  DECLARE_PROTECTED_MEMBER(int, LiveAnalysesPort);
+
   /// @brief The timeout period for the server
   DECLARE_PROTECTED_MEMBER(std::chrono::milliseconds, TimeoutPeriod);
 
@@ -161,6 +166,10 @@ protected:
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
                                  LiveDataSocket);
 
+  /// @brief The socket that is connected to the client for live analyses
+  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
+                                 LiveAnalysesSocket);
+
   /// @brief The acceptor that listens to the command port
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::acceptor>,
                                  CommandAcceptor);
@@ -172,6 +181,10 @@ protected:
   /// @brief The acceptor that listens to the live data streaming port
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::acceptor>,
                                  LiveDataAcceptor);
+
+  /// @brief The acceptor that listens to the live analyses port
+  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::acceptor>,
+                                 LiveAnalysesAcceptor);
 
   /// @brief The current status of the server
   DECLARE_PROTECTED_MEMBER(TcpServerStatus, Status);
@@ -206,7 +219,7 @@ protected:
   void handleSendLiveData();
 
   /// @brief Handle the analysis of the live data
-  void handleAnalyzeLiveData();
+  void handleSendAnalyzedLiveData();
 
 private:
   /// @brief The asio contexts used for async methods of the server

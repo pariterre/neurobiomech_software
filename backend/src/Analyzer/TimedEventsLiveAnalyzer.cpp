@@ -17,8 +17,6 @@ TimedEventsLiveAnalyzer::TimedEventsLiveAnalyzer(
       m_NextTimeEventModel(initialTimeEventModel), m_LearningRate(learningRate),
       m_FirstPass(true), m_CurrentPhaseTime(std::chrono::milliseconds(0)) {}
 
-TimedEventsLiveAnalyzer::~TimedEventsLiveAnalyzer() {}
-
 std::unique_ptr<Prediction> TimedEventsLiveAnalyzer::predict(
     const std::map<size_t, data::TimeSeries> &data) {
   // Analyze the data from the last analyzed time stamp to the most recent.

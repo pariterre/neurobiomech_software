@@ -2,6 +2,7 @@
 
 #include "Analyzer/LiveAnalyzer.h"
 #include "Analyzer/Prediction.h"
+#include "Analyzer/WalkingCycleFromDelsysPressureAnalyzer.h"
 #include "Utils/Logger.h"
 
 using namespace NEUROBIO_NAMESPACE::analyzer;
@@ -19,6 +20,26 @@ size_t Analyzers::add(std::unique_ptr<LiveAnalyzer> analyzer) {
   static size_t analyzerId = 0;
   m_Analyzers[analyzerId] = std::move(analyzer);
   return analyzerId++;
+}
+
+size_t Analyzers::add(const nlohmann::json &json) {
+  // Get the type of the analyzer to create
+  AvailableAnalyzers type = json.at("type").get<AvailableAnalyzers>();
+
+  // Create the analyzer
+  std::unique_ptr<LiveAnalyzer> analyzer;
+  switch (type) {
+  case WALKING_CYCLE_FROM_DELSYS_PRESSURE_ANALYZER:
+    analyzer = std::make_unique<WalkingCycleFromDelsysPressureAnalyzer>(
+        json.at("delsysDeviceIndex"), json.at("channelIndex"),
+        json.at("heelStrikeThreshold"), json.at("toeOffThreshold"),
+        json.at("learningRate"));
+    break;
+  default:
+    utils::Logger::getInstance().fatal("Unknown analyzer type");
+  }
+
+  return add(std::move(analyzer));
 }
 
 void Analyzers::remove(size_t analyzerId) { m_Analyzers.erase(analyzerId); }

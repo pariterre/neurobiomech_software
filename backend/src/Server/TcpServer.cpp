@@ -22,10 +22,11 @@ const std::string DEVICE_NAME_DELSYS_EMG = "DelsysEmgDevice";
 const std::string DEVICE_NAME_DELSYS_ANALOG = "DelsysAnalogDevice";
 const std::string DEVICE_NAME_MAGSTIM = "MagstimRapidDevice";
 
-TcpServer::TcpServer(int commandPort, int responsePort, int liveDataPort)
+TcpServer::TcpServer(int commandPort, int responsePort, int liveDataPort,
+                     int liveAnalysesPort)
     : m_IsClientConnecting(false), m_IsServerRunning(false),
       m_CommandPort(commandPort), m_ResponsePort(responsePort),
-      m_LiveDataPort(liveDataPort),
+      m_LiveDataPort(liveDataPort), m_LiveAnalysesPort(liveAnalysesPort),
       m_TimeoutPeriod(std::chrono::milliseconds(5000)), m_ProtocolVersion(1) {};
 
 TcpServer::~TcpServer() {
@@ -36,6 +37,7 @@ TcpServer::~TcpServer() {
   m_CommandAcceptor.reset();
   m_ResponseAcceptor.reset();
   m_LiveDataAcceptor.reset();
+  m_LiveAnalysesAcceptor.reset();
 }
 
 void TcpServer::startServer() {
@@ -60,6 +62,12 @@ void TcpServer::startServerSync() {
       m_Context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_LiveDataPort));
   logger.info("TCP Live Data server started on port " +
               std::to_string(m_LiveDataPort));
+
+  m_LiveAnalysesAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
+      m_Context,
+      asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_LiveAnalysesPort));
+  logger.info("TCP Live Analyses server started on port " +
+              std::to_string(m_LiveAnalysesPort));
 
   m_IsServerRunning = true;
   while (m_IsServerRunning) {
@@ -89,7 +97,7 @@ void TcpServer::startServerSync() {
       while (m_IsServerRunning && isClientConnected()) {
         auto startingTime = std::chrono::high_resolution_clock::now();
         handleSendLiveData();
-        handleAnalyzeLiveData();
+        handleSendAnalyzedLiveData();
         auto next = liveDataIntervals -
                     (std::chrono::high_resolution_clock::now() - startingTime);
         std::this_thread::sleep_for(next);
@@ -145,7 +153,8 @@ bool TcpServer::isClientConnected() const {
   return m_Status != TcpServerStatus::INITIALIZING && m_CommandSocket &&
          m_CommandSocket->is_open() && m_ResponseSocket &&
          m_ResponseSocket->is_open() && m_LiveDataSocket &&
-         m_LiveDataSocket->is_open();
+         m_LiveDataSocket->is_open() && m_LiveAnalysesSocket &&
+         m_LiveAnalysesSocket->is_open();
 }
 
 bool TcpServer::waitForNewConnexion() {
@@ -174,6 +183,15 @@ bool TcpServer::waitForNewConnexion() {
               "the live data socket");
   if (!waitUntilSocketIsConnected("LiveData", m_LiveDataSocket,
                                   m_LiveDataAcceptor, true)) {
+    return false;
+  }
+
+  // Wait for the live analyses socket to connect
+  logger.info(
+      "Live data socket connected to client, waiting for a connexion to "
+      "the live analyses socket");
+  if (!waitUntilSocketIsConnected("LiveAnalyses", m_LiveAnalysesSocket,
+                                  m_LiveAnalysesAcceptor, true)) {
     return false;
   }
 
@@ -255,6 +273,13 @@ void TcpServer::closeSockets() {
   }
   if (m_LiveDataAcceptor && m_LiveDataAcceptor->is_open()) {
     m_LiveDataAcceptor->cancel();
+  }
+
+  if (m_LiveAnalysesSocket && m_LiveAnalysesSocket->is_open()) {
+    m_LiveAnalysesSocket->close();
+  }
+  if (m_LiveAnalysesAcceptor && m_LiveAnalysesAcceptor->is_open()) {
+    m_LiveAnalysesAcceptor->cancel();
   }
 }
 
@@ -619,7 +644,7 @@ void TcpServer::handleSendLiveData() {
   logger.debug("Live data size: " + std::to_string(written));
 }
 
-void TcpServer::handleAnalyzeLiveData() {
+void TcpServer::handleSendAnalyzedLiveData() {
   // Analyze the live data callback in a separate thread
   if (!isClientConnected())
     return;
@@ -640,6 +665,16 @@ void TcpServer::handleAnalyzeLiveData() {
   for (const auto &[deviceId, prediction] : predictions) {
     predictionsJson[deviceId] = prediction->serialize();
   }
+
+  auto dataDump = predictionsJson.dump();
+  asio::error_code error;
+  asio::write(*m_LiveAnalysesSocket,
+              asio::buffer(constructResponsePacket(
+                  static_cast<TcpServerResponse>(dataDump.size()))),
+              error);
+  auto written =
+      asio::write(*m_LiveAnalysesSocket, asio::buffer(dataDump), error);
+  logger.debug("Live analyses data size: " + std::to_string(written));
 }
 
 void TcpServerMock::makeAndAddDevice(const std::string &deviceName) {
