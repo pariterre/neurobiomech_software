@@ -31,6 +31,11 @@ public:
   std::map<std::string, std::unique_ptr<Prediction>>
   predict(const std::map<std::string, data::TimeSeries> &data) const;
 
+  /// @brief Get an analyzer id from its name
+  /// @param analyzerName The name of the analyzer
+  /// @return The id of the analyzer
+  size_t getAnalyzerId(const std::string &analyzerName) const;
+
   /// @brief Add an analyzer to the collection
   /// @param analyzer The analyzer to add
   /// @return The id of the analyzer in the collection so it can be accessed or
@@ -42,6 +47,10 @@ public:
   /// @return The id of the analyzer in the collection so it can be accessed or
   /// removed later
   size_t add(const nlohmann::json &json);
+
+  /// @brief Remove the analyzer from the collection
+  /// @param analyzerName The name of the analyzer to remove
+  void remove(std::string analyzerName);
 
   /// @brief Remove the analyzer from the collection
   /// @param analyzerId The id of the analyzer (the one returned by the add

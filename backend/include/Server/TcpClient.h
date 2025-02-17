@@ -104,6 +104,12 @@ protected:
   /// @brief Main loop for the live analyses streaming
   void startUpdatingLiveAnalyses();
 
+  /// @brief Add an analyzer to the collection
+  void addAnalyzer(const nlohmann::json &analyzer);
+
+  /// @brief Remove an analyzer from the collection
+  void removeAnalyzer(const std::string &analyzerName);
+
   /// @brief Receive and update the live analyses
   void updateLiveAnalyses();
 
@@ -111,6 +117,13 @@ protected:
   /// @param command The command to send
   /// @return The acknowledgment from the server
   TcpServerResponse sendCommand(TcpServerCommand command);
+
+  /// @brief The Send a command to the server and wait for the confirmation
+  /// @param command The command to send
+  /// @param data The data to send with the command
+  /// @return The acknowledgment from the server
+  TcpServerResponse sendCommandWithData(TcpServerCommand command,
+                                        const nlohmann::json &data);
 
   /// @brief The Send a command to the server and wait for the confirmation
   /// @param command The command to send

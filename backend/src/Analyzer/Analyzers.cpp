@@ -17,8 +17,18 @@ Analyzers::predict(const std::map<std::string, data::TimeSeries> &data) const {
   return predictions;
 }
 
+size_t Analyzers::getAnalyzerId(const std::string &analyzerName) const {
+  for (const auto &analyzer : m_Analyzers) {
+    if (analyzer.second->getName() == analyzerName) {
+      return analyzer.first;
+    }
+  }
+  throw std::invalid_argument("Analyzer with name " + analyzerName +
+                              " does not exist");
+}
+
 size_t Analyzers::add(std::unique_ptr<Analyzer> analyzer) {
-  static size_t analyzerId = 0;
+  static size_t analyzerId = 1;
   m_Analyzers[analyzerId] = std::move(analyzer);
   return analyzerId++;
 }
@@ -42,6 +52,10 @@ size_t Analyzers::add(const nlohmann::json &json) {
     logger.fatal("Failed to create the analyzer: " + std::string(e.what()));
     throw e;
   }
+}
+
+void Analyzers::remove(std::string analyzerName) {
+  remove(getAnalyzerId(analyzerName));
 }
 
 void Analyzers::remove(size_t analyzerId) { m_Analyzers.erase(analyzerId); }

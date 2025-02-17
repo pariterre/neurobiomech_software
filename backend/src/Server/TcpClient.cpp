@@ -231,6 +231,31 @@ void TcpClient::startUpdatingLiveAnalyses() {
   });
 }
 
+void TcpClient::addAnalyzer(const nlohmann::json &analyzer) {
+  auto &logger = utils::Logger::getInstance();
+
+  if (sendCommandWithData(TcpServerCommand::ADD_ANALYZER, analyzer) ==
+      TcpServerResponse::NOK) {
+    logger.fatal("CLIENT: Failed to add the analyzer");
+    return;
+  }
+
+  logger.info("CLIENT: Analyzer added");
+}
+
+void TcpClient::removeAnalyzer(const std::string &analyzerName) {
+  auto &logger = utils::Logger::getInstance();
+
+  if (sendCommandWithData(TcpServerCommand::REMOVE_ANALYZER,
+                          {{"analyzer", analyzerName}}) ==
+      TcpServerResponse::NOK) {
+    logger.fatal("CLIENT: Failed to remove the analyzer");
+    return;
+  }
+
+  logger.info("CLIENT: Analyzer removed");
+}
+
 void TcpClient::updateLiveAnalyses() {
   auto &logger = utils::Logger::getInstance();
 
@@ -243,7 +268,7 @@ void TcpClient::updateLiveAnalyses() {
     return;
   }
 
-  logger.debug("CLIENT: Live data received");
+  logger.debug("CLIENT: Live analyze received");
 }
 
 TcpServerResponse TcpClient::sendCommand(TcpServerCommand command) {
@@ -270,6 +295,41 @@ TcpServerResponse TcpClient::sendCommand(TcpServerCommand command) {
                    std::to_string(static_cast<std::uint32_t>(command)));
   }
   return response;
+}
+
+TcpServerResponse TcpClient::sendCommandWithData(TcpServerCommand command,
+                                                 const nlohmann::json &data) {
+  auto &logger = utils::Logger::getInstance();
+
+  // First send the command as usual
+  auto response = sendCommand(command);
+  if (response == TcpServerResponse::NOK) {
+    return TcpServerResponse::NOK;
+  }
+
+  // If the command was successful, send the length of the data
+  asio::error_code error;
+  size_t byteWritten =
+      asio::write(*m_CommandSocket,
+                  asio::buffer(constructCommandPacket(
+                      static_cast<TcpServerCommand>(data.dump().size()))),
+                  error);
+
+  if (byteWritten != BYTES_IN_CLIENT_PACKET_HEADER || error) {
+    logger.fatal("CLIENT: TCP write error: " + error.message());
+    disconnect();
+    return TcpServerResponse::NOK;
+  }
+
+  // Send the data
+  byteWritten = asio::write(*m_CommandSocket, asio::buffer(data.dump()), error);
+  if (byteWritten != data.dump().size() || error) {
+    logger.fatal("CLIENT: TCP write error: " + error.message());
+    disconnect();
+    return TcpServerResponse::NOK;
+  }
+
+  return waitForCommandAcknowledgment();
 }
 
 std::vector<char> TcpClient::sendCommandWithResponse(TcpServerCommand command) {

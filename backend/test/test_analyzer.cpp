@@ -110,6 +110,12 @@ TEST(Analyzers, Constructors) {
   auto analyzers = generateAnalyzers();
   auto ids = analyzers.getAnalyzerIds();
 
+  auto idLeftFoot = analyzers.getAnalyzerId("Left Foot Predictor");
+  auto idRightFoot = analyzers.getAnalyzerId("Right Foot Predictor");
+  EXPECT_THROW(analyzers.getAnalyzerId("Unknown"), std::invalid_argument);
+  ASSERT_EQ(idLeftFoot, ids[0]);
+  ASSERT_EQ(idRightFoot, ids[1]);
+
   auto mockData = generateData();
 
   // Check the size
@@ -218,7 +224,7 @@ TEST(Analyzers, Constructors) {
   }
 
   // Remove the first analyzer
-  analyzers.remove(0);
+  analyzers.remove("Left Foot Predictor");
   ASSERT_EQ(analyzers.size(), 1);
 
   // Check the ids

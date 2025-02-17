@@ -97,8 +97,19 @@ void TcpServer::startServerSync() {
       while (m_IsServerRunning && isClientConnected()) {
         auto startingTime = std::chrono::high_resolution_clock::now();
         handleSendLiveData();
-        handleSendAnalyzedLiveData();
         auto next = liveDataIntervals -
+                    (std::chrono::high_resolution_clock::now() - startingTime);
+        std::this_thread::sleep_for(next);
+      }
+    });
+
+    auto analyzersWorker = std::thread([this]() {
+      auto analyzersIntervals = std::chrono::milliseconds(50);
+      std::this_thread::sleep_for(analyzersIntervals);
+      while (m_IsServerRunning && isClientConnected()) {
+        auto startingTime = std::chrono::high_resolution_clock::now();
+        handleSendAnalyzedLiveData();
+        auto next = analyzersIntervals -
                     (std::chrono::high_resolution_clock::now() - startingTime);
         std::this_thread::sleep_for(next);
       }
@@ -144,6 +155,9 @@ void TcpServer::disconnectClient() {
   for (auto &name : m_Devices.getDeviceNames()) {
     removeDevice(name, false);
   }
+
+  // Clear the analyzers
+  m_Analyzers.clear();
 
   // Reset the status to initializing
   closeSockets();
@@ -450,6 +464,30 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
     response = TcpServerResponse::OK;
   } break;
 
+  case TcpServerCommand::ADD_ANALYZER: {
+    try {
+      auto data = handleCommandExtraData(error);
+      m_Analyzers.add(data);
+      response = TcpServerResponse::OK;
+    } catch (const std::exception &e) {
+      logger.fatal("Failed to get extra info: " + std::string(e.what()));
+      response = TcpServerResponse::NOK;
+      break;
+    }
+  } break;
+
+  case TcpServerCommand::REMOVE_ANALYZER: {
+    try {
+      std::string analyzerName = handleCommandExtraData(error)["analyzer"];
+      m_Analyzers.remove(analyzerName);
+      response = TcpServerResponse::OK;
+    } catch (const std::exception &e) {
+      logger.fatal("Failed to get extra info: " + std::string(e.what()));
+      response = TcpServerResponse::NOK;
+      break;
+    }
+  }
+
   default:
     logger.fatal("Invalid command: " +
                  std::to_string(static_cast<std::uint32_t>(command)));
@@ -466,6 +504,35 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
   }
 
   return true;
+}
+
+nlohmann::json TcpServer::handleCommandExtraData(asio::error_code &error) {
+  auto &logger = utils::Logger::getInstance();
+
+  // Send an acknowledgment to the client we are ready to receive the data
+  size_t byteWritten = asio::write(
+      *m_CommandSocket,
+      asio::buffer(constructResponsePacket(TcpServerResponse::OK)), error);
+
+  // Receive the size of the data
+  auto buffer = std::array<char, BYTES_IN_CLIENT_PACKET_HEADER>();
+  size_t byteRead = asio::read(*m_CommandSocket, asio::buffer(buffer), error);
+  if (byteRead != BYTES_IN_CLIENT_PACKET_HEADER || error) {
+    logger.fatal("TCP read error: " + error.message());
+    throw std::runtime_error("Failed to read the size of the data");
+  }
+
+  // Parse the size of the data
+  std::uint32_t dataSize =
+      *reinterpret_cast<const std::uint32_t *>(buffer.data());
+  auto dataBuffer = std::vector<char>(dataSize);
+  byteRead = asio::read(*m_CommandSocket, asio::buffer(dataBuffer), error);
+  if (byteRead != dataSize || error) {
+    logger.fatal("TCP read error: " + error.message());
+    throw std::runtime_error("Failed to read the data");
+  }
+
+  return nlohmann::json::parse(dataBuffer.begin(), dataBuffer.end());
 }
 
 TcpServerCommand TcpServer::parseCommandPacket(
