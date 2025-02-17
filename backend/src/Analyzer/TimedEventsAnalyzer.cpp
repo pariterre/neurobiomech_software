@@ -1,24 +1,26 @@
-#include "Analyzer/TimedEventsLiveAnalyzer.h"
+#include "Analyzer/TimedEventsAnalyzer.h"
 #include "Analyzer/Prediction.h"
 #include <numeric>
 
 using namespace NEUROBIO_NAMESPACE::analyzer;
 
-TimedEventsLiveAnalyzer::TimedEventsLiveAnalyzer(
+TimedEventsAnalyzer::TimedEventsAnalyzer(
+    const std::string &name,
     const std::vector<std::chrono::milliseconds> &initialTimeEventModel,
-    const std::function<bool(const std::map<size_t, data::TimeSeries> &)>
+    const std::function<bool(const std::map<std::string, data::TimeSeries> &)>
         &shouldIncrementPhase,
     const std::function<std::chrono::system_clock::time_point(
-        const std::map<size_t, data::TimeSeries> &)> &getCurrentTime,
+        const std::map<std::string, data::TimeSeries> &)> &getCurrentTime,
     double learningRate)
     : m_ShouldIncrementPhase(shouldIncrementPhase),
       m_GetCurrentTime(getCurrentTime), m_CurrentPhaseIndex(0),
       m_TimeEventModel(initialTimeEventModel),
       m_NextTimeEventModel(initialTimeEventModel), m_LearningRate(learningRate),
-      m_FirstPass(true), m_CurrentPhaseTime(std::chrono::milliseconds(0)) {}
+      m_FirstPass(true), m_CurrentPhaseTime(std::chrono::milliseconds(0)),
+      Analyzer(name) {}
 
-std::unique_ptr<Prediction> TimedEventsLiveAnalyzer::predict(
-    const std::map<size_t, data::TimeSeries> &data) {
+std::unique_ptr<Prediction> TimedEventsAnalyzer::predict(
+    const std::map<std::string, data::TimeSeries> &data) {
   // Analyze the data from the last analyzed time stamp to the most recent.
 
   auto currentTime = m_GetCurrentTime(data);
@@ -61,7 +63,7 @@ std::unique_ptr<Prediction> TimedEventsLiveAnalyzer::predict(
                                            shouldIncrement);
 }
 
-void TimedEventsLiveAnalyzer::incrementModel() {
+void TimedEventsAnalyzer::incrementModel() {
   // Increment the model to the next phase
 
   // Adjust the next model based on the prediction error it made

@@ -1,9 +1,12 @@
-#ifndef __NEUROBIO_ANALYZER_LIVE_ANALYZER_H__
-#define __NEUROBIO_ANALYZER_LIVE_ANALYZER_H__
+#ifndef __NEUROBIO_ANALYZER_ANALYZER_H__
+#define __NEUROBIO_ANALYZER_ANALYZER_H__
 
 #include "neurobioConfig.h"
+
+#include "Utils/CppMacros.h"
 #include <map>
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace NEUROBIO_NAMESPACE::data {
@@ -13,20 +16,23 @@ class TimeSeries;
 namespace NEUROBIO_NAMESPACE::analyzer {
 class Prediction;
 
-class LiveAnalyzer {
+class Analyzer {
 public:
   /// @brief Constructor of the Analyzer
-  LiveAnalyzer() = default;
+  Analyzer(const std::string &name) : m_Name(name) {};
 
 public:
   /// @brief Destructor of the Analyzer
-  virtual ~LiveAnalyzer() = default;
+  virtual ~Analyzer() = default;
 
-public:
   /// @brief Predict some outcome from the sensor data
   /// @param data The data to analyze
   virtual std::unique_ptr<Prediction>
-  predict(const std::map<size_t, data::TimeSeries> &data) = 0;
+  predict(const std::map<std::string, data::TimeSeries> &data) = 0;
+
+protected:
+  /// @brief The name of the analyzer
+  DECLARE_PROTECTED_MEMBER(std::string, Name);
 };
 
 } // namespace NEUROBIO_NAMESPACE::analyzer

@@ -104,7 +104,7 @@ public:
 public:
   /// @brief Get the live data
   /// @return The live data
-  std::map<size_t, data::TimeSeries> getLiveData() const;
+  std::map<std::string, data::TimeSeries> getLiveData() const;
 
   /// @brief Get the live data in serialized form
   /// @return The live datain serialized form

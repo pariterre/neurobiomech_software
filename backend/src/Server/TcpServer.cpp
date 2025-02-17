@@ -652,7 +652,7 @@ void TcpServer::handleSendAnalyzedLiveData() {
   auto &logger = utils::Logger::getInstance();
   logger.debug("Analyzing live data");
 
-  std::map<size_t, data::TimeSeries> data = m_Devices.getLiveData();
+  std::map<std::string, data::TimeSeries> data = m_Devices.getLiveData();
   if (data.size() == 0) {
     return;
   }

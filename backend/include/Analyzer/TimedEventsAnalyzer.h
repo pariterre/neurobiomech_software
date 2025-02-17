@@ -1,48 +1,51 @@
-#ifndef __NEUROBIO_ANALYZER_TIMED_EVENT_ANALYZER_H__
-#define __NEUROBIO_ANALYZER_TIMED_EVENT_ANALYZER_H__
+#ifndef __NEUROBIO_ANALYZER_TIMED_EVENTS_ANALYZER_H__
+#define __NEUROBIO_ANALYZER_TIMED_EVENTS_ANALYZER_H__
 
+#include "Analyzer/Analyzer.h"
 #include "Analyzer/EventPrediction.h"
-#include "Analyzer/LiveAnalyzer.h"
-#include "Utils/CppMacros.h"
 #include <chrono>
 #include <functional>
 #include <vector>
+
 namespace NEUROBIO_NAMESPACE::analyzer {
 
-class TimedEventsLiveAnalyzer : public LiveAnalyzer {
+class TimedEventsAnalyzer : public Analyzer {
 
 public:
-  /// @brief Constructor of the TimedEventsLiveAnalyzer
+  /// @brief Constructor of the TimedEventsAnalyzer
+  /// @param name The name of the analyzer
   /// @param initialPhaseTimes The initial times (ms) for each event
   /// @param shouldIncrementPhase If the current phase should be incremented
   /// @param getCurrentTime The current time based on the devices
   /// @param learningRate The learning rate of the analyzer
-  TimedEventsLiveAnalyzer(
+  TimedEventsAnalyzer(
+      const std::string &name,
       const std::vector<std::chrono::milliseconds> &initialPhaseTimes,
-      const std::function<bool(const std::map<size_t, data::TimeSeries> &)>
+      const std::function<bool(const std::map<std::string, data::TimeSeries> &)>
           &shouldIncrementPhase,
       const std::function<std::chrono::system_clock::time_point(
-          const std::map<size_t, data::TimeSeries> &)> &getCurrentTime,
+          const std::map<std::string, data::TimeSeries> &)> &getCurrentTime,
       double learningRate);
 
 public:
-  /// @brief Destructor of the TimedEventsLiveAnalyzer
-  ~TimedEventsLiveAnalyzer() override = default;
+  /// @brief Destructor of the TimedEventsAnalyzer
+  ~TimedEventsAnalyzer() override = default;
 
 public:
   std::unique_ptr<Prediction>
-  predict(const std::map<size_t, data::TimeSeries> &data) override;
+  predict(const std::map<std::string, data::TimeSeries> &data) override;
 
 protected:
   /// @brief The callback to determine if the phase should be incremented
   DECLARE_PROTECTED_MEMBER(
-      std::function<bool(const std::map<size_t, data::TimeSeries> &)>,
+      std::function<bool(const std::map<std::string, data::TimeSeries> &)>,
       ShouldIncrementPhase);
 
   /// @brief The callback to get the current time
-  DECLARE_PROTECTED_MEMBER(std::function<std::chrono::system_clock::time_point(
-                               const std::map<size_t, data::TimeSeries> &)>,
-                           GetCurrentTime);
+  DECLARE_PROTECTED_MEMBER(
+      std::function<std::chrono::system_clock::time_point(
+          const std::map<std::string, data::TimeSeries> &)>,
+      GetCurrentTime);
 
   /// @brief Increment the model to the next phase
   void incrementModel();
@@ -76,4 +79,4 @@ protected:
 
 } // namespace NEUROBIO_NAMESPACE::analyzer
 
-#endif // __NEUROBIO_ANALYZER_TIMED_EVENT_ANALYZER_H__
+#endif // __NEUROBIO_ANALYZER_TIMED_EVENTS_ANALYZER_H__

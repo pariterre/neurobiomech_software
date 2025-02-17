@@ -6,9 +6,10 @@ project(${MODULE_ANALYZER})
 set(SRC_LIST_MODULE
     ${CMAKE_CURRENT_SOURCE_DIR}/Analyzers.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Prediction.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/EventConditions.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/EventPrediction.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/TimedEventsLiveAnalyzer.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/WalkingCycleFromDelsysPressureAnalyzer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/TimedEventsAnalyzer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/CyclicTimedEventsAnalyzer.cpp
 )
 
 # Create the library

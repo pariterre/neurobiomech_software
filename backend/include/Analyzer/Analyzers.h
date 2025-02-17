@@ -8,16 +8,12 @@
 #include <memory>
 #include <vector>
 
-enum AvailableAnalyzers {
-  WALKING_CYCLE_FROM_DELSYS_PRESSURE_ANALYZER = 0,
-};
-
 namespace NEUROBIO_NAMESPACE::data {
 class TimeSeries;
 } // namespace NEUROBIO_NAMESPACE::data
 
 namespace NEUROBIO_NAMESPACE::analyzer {
-class LiveAnalyzer;
+class Analyzer;
 class Prediction;
 
 class Analyzers {
@@ -32,14 +28,14 @@ public:
   /// @brief Predict using all the analyzers
   /// @param data The data to predict
   /// @return The predictions
-  std::map<size_t, std::unique_ptr<Prediction>>
-  predict(const std::map<size_t, data::TimeSeries> &data) const;
+  std::map<std::string, std::unique_ptr<Prediction>>
+  predict(const std::map<std::string, data::TimeSeries> &data) const;
 
   /// @brief Add an analyzer to the collection
   /// @param analyzer The analyzer to add
   /// @return The id of the analyzer in the collection so it can be accessed or
   /// removed later
-  size_t add(std::unique_ptr<LiveAnalyzer> analyzer);
+  size_t add(std::unique_ptr<Analyzer> analyzer);
 
   /// @brief Add an analyzer fo the collection from a json object
   /// @param json The json object to create the analyzer from
@@ -67,17 +63,17 @@ public:
   /// @param analyzerId The id of the analyzer (the one returned by the add
   /// method)
   /// @return The requested analyzer
-  const LiveAnalyzer &operator[](size_t analyzerId) const;
+  const Analyzer &operator[](size_t analyzerId) const;
 
   /// @brief Get the requested analyzer
   /// @param analyzerId The id of the analyzer (the one returned by the add
   /// method)
   /// @return The requested analyzer
-  LiveAnalyzer &getAnalyzer(size_t analyzerId);
+  Analyzer &getAnalyzer(size_t analyzerId);
 
 protected:
   /// @brief The collection of analyzers
-  std::map<size_t, std::shared_ptr<LiveAnalyzer>> m_Analyzers;
+  std::map<size_t, std::shared_ptr<Analyzer>> m_Analyzers;
 };
 
 } // namespace NEUROBIO_NAMESPACE::analyzer

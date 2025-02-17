@@ -322,10 +322,10 @@ bool Devices::stopRecording() {
   return true;
 }
 
-std::map<size_t, data::TimeSeries> Devices::getLiveData() const {
-  std::map<size_t, data::TimeSeries> data;
+std::map<std::string, data::TimeSeries> Devices::getLiveData() const {
+  std::map<std::string, data::TimeSeries> data;
   for (const auto &[deviceId, dataCollector] : m_DataCollectors) {
-    data[deviceId] = dataCollector->getLiveData();
+    data[dataCollector->dataCollectorName()] = dataCollector->getLiveData();
   }
   return data;
 }
@@ -360,7 +360,7 @@ std::map<std::string, data::TimeSeries>
 Devices::deserializeData(const nlohmann::json &json) {
   auto data = std::map<std::string, data::TimeSeries>();
   for (const auto &[deviceIndex, deviceData] : json.items()) {
-    auto name = deviceData["name"].get<std::string>();
+    std::string name = deviceData["name"];
     data[name] = data::TimeSeries(deviceData["data"]);
   }
   return data;

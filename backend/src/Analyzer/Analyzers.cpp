@@ -1,45 +1,47 @@
 #include "Analyzer/Analyzers.h"
 
-#include "Analyzer/LiveAnalyzer.h"
+#include "Analyzer/Analyzer.h"
+#include "Analyzer/CyclicTimedEventsAnalyzer.h"
+#include "Analyzer/EventConditions.h"
 #include "Analyzer/Prediction.h"
-#include "Analyzer/WalkingCycleFromDelsysPressureAnalyzer.h"
 #include "Utils/Logger.h"
 
 using namespace NEUROBIO_NAMESPACE::analyzer;
 
-std::map<size_t, std::unique_ptr<Prediction>>
-Analyzers::predict(const std::map<size_t, data::TimeSeries> &data) const {
-  std::map<size_t, std::unique_ptr<Prediction>> predictions;
+std::map<std::string, std::unique_ptr<Prediction>>
+Analyzers::predict(const std::map<std::string, data::TimeSeries> &data) const {
+  std::map<std::string, std::unique_ptr<Prediction>> predictions;
   for (const auto &analyzer : m_Analyzers) {
-    predictions[analyzer.first] = analyzer.second->predict(data);
+    predictions[analyzer.second->getName()] = analyzer.second->predict(data);
   }
   return predictions;
 }
 
-size_t Analyzers::add(std::unique_ptr<LiveAnalyzer> analyzer) {
+size_t Analyzers::add(std::unique_ptr<Analyzer> analyzer) {
   static size_t analyzerId = 0;
   m_Analyzers[analyzerId] = std::move(analyzer);
   return analyzerId++;
 }
 
 size_t Analyzers::add(const nlohmann::json &json) {
+  auto &logger = utils::Logger::getInstance();
+
   // Get the type of the analyzer to create
-  AvailableAnalyzers type = json.at("type").get<AvailableAnalyzers>();
+  std::string analyzerType = json["analyzer_type"];
 
   // Create the analyzer
-  std::unique_ptr<LiveAnalyzer> analyzer;
-  switch (type) {
-  case WALKING_CYCLE_FROM_DELSYS_PRESSURE_ANALYZER:
-    analyzer = std::make_unique<WalkingCycleFromDelsysPressureAnalyzer>(
-        json.at("delsysDeviceIndex"), json.at("channelIndex"),
-        json.at("heelStrikeThreshold"), json.at("toeOffThreshold"),
-        json.at("learningRate"));
-    break;
-  default:
-    utils::Logger::getInstance().fatal("Unknown analyzer type");
+  try {
+    if (analyzerType == "cyclic_from_analogs") {
+      logger.info("Creating a cyclic timed events analyzer from analogs");
+      return add(std::make_unique<CyclicTimedEventsAnalyzer>(json));
+    } else {
+      logger.fatal("Unknown analyzer type");
+      throw std::invalid_argument("Unknown analyzer type");
+    }
+  } catch (const std::exception &e) {
+    logger.fatal("Failed to create the analyzer: " + std::string(e.what()));
+    throw e;
   }
-
-  return add(std::move(analyzer));
 }
 
 void Analyzers::remove(size_t analyzerId) { m_Analyzers.erase(analyzerId); }
@@ -56,7 +58,7 @@ size_t Analyzers::size() const { return m_Analyzers.size(); }
 
 void Analyzers::clear() { m_Analyzers.clear(); }
 
-const LiveAnalyzer &Analyzers::operator[](size_t analyzerId) const {
+const Analyzer &Analyzers::operator[](size_t analyzerId) const {
   try {
     return *m_Analyzers.at(analyzerId);
   } catch (const std::out_of_range &) {
@@ -67,7 +69,7 @@ const LiveAnalyzer &Analyzers::operator[](size_t analyzerId) const {
   }
 }
 
-LiveAnalyzer &Analyzers::getAnalyzer(size_t analyzerId) {
+Analyzer &Analyzers::getAnalyzer(size_t analyzerId) {
   try {
     return *m_Analyzers.at(analyzerId);
   } catch (const std::out_of_range &) {
