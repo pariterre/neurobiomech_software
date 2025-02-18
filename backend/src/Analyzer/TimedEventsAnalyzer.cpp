@@ -30,6 +30,10 @@ std::unique_ptr<Prediction> TimedEventsAnalyzer::predict(
     m_LastAnalyzedTimeStamp = currentTime;
     m_FirstPass = false;
   }
+  if (currentTime < m_LastAnalyzedTimeStamp) {
+    throw std::runtime_error("Time went backwards, skipping prediction");
+  }
+
   // Update the current phase time
   m_CurrentPhaseTime += std::chrono::duration_cast<std::chrono::milliseconds>(
       currentTime - m_LastAnalyzedTimeStamp);

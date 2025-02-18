@@ -109,7 +109,7 @@ void TcpServer::startServerSync() {
     });
 
     auto analyzersWorker = std::thread([this]() {
-      auto analyzersIntervals = std::chrono::milliseconds(50);
+      auto analyzersIntervals = std::chrono::milliseconds(100);
       std::this_thread::sleep_for(analyzersIntervals);
       while (m_IsServerRunning && isClientConnected()) {
         auto startingTime = std::chrono::high_resolution_clock::now();
@@ -749,7 +749,6 @@ void TcpServer::handleSendAnalyzedLiveData() {
   }
 
   auto dataDump = predictionsJson.dump();
-  logger.info(dataDump);
   asio::error_code error;
   asio::write(*m_LiveAnalysesSocket,
               asio::buffer(constructResponsePacket(
