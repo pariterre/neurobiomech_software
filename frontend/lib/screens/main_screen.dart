@@ -20,6 +20,7 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   final _liveAnalogDataKey = GlobalKey();
   final _liveEmgDataKey = GlobalKey();
+  final _liveAnalysesKey = GlobalKey();
   final _trialAnalogDataKey = GlobalKey();
   final _trialEmgDataKey = GlobalKey();
 
@@ -27,6 +28,9 @@ class _MainScreenState extends State<MainScreen> {
       data: _connexion.liveData, graphType: DataGraphType.analog);
   final _liveGraphControllerEmg = DataGraphController(
       data: _connexion.liveData, graphType: DataGraphType.emg);
+  final _liveAnalysesGraphController = DataGraphController(
+      data: _connexion.liveAnalyses, graphType: DataGraphType.analog);
+
   final _trialGraphControllerAnalog = DataGraphController(
       data: _connexion.lastTrialData, graphType: DataGraphType.analog);
   final _trialGraphControllerEmg = DataGraphController(
@@ -50,6 +54,7 @@ class _MainScreenState extends State<MainScreen> {
     await _connexion.initialize(
       onConnexionLost: () => setState(() {}),
       onNewLiveData: _onNewLiveData,
+      onNewLiveAnalyses: _onNewLiveAnalyses,
     );
     setState(() => _isBusy = false);
   }

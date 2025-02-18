@@ -14,7 +14,8 @@ void main() {
     final connexion = NeurobioClientMock.instance;
     assert(connexion.isInitialized == false);
 
-    connexion.initialize(onConnexionLost: () {}, onNewLiveData: () {});
+    connexion.initialize(
+        onConnexionLost: () {}, onNewLiveData: () {}, onNewLiveAnalyses: () {});
     assert(connexion.isInitialized);
     assert(connexion.isConnectedToDelsysAnalog == false);
     assert(connexion.isConnectedToDelsysEmg == false);
@@ -32,7 +33,8 @@ void main() {
     assert(await connexion.send(Command.connectDelsysAnalog) == false);
     assert(connexion.isConnectedToDelsysAnalog == false);
 
-    await connexion.initialize(onConnexionLost: () {}, onNewLiveData: () {});
+    await connexion.initialize(
+        onConnexionLost: () {}, onNewLiveData: () {}, onNewLiveAnalyses: () {});
     assert(connexion.isConnectedToDelsysAnalog == false);
 
     assert(await connexion.send(Command.connectDelsysAnalog));
@@ -45,7 +47,8 @@ void main() {
   test('Cannot call reserved', () async {
     final connexion = NeurobioClientMock.instance;
 
-    await connexion.initialize(onConnexionLost: () {}, onNewLiveData: () {});
+    await connexion.initialize(
+        onConnexionLost: () {}, onNewLiveData: () {}, onNewLiveAnalyses: () {});
     assert(await connexion.send(Command.handshake) == false);
 
     connexion.disconnect();
@@ -53,7 +56,8 @@ void main() {
 
   test('Manage recording commands', () async {
     final connexion = NeurobioClientMock.instance;
-    connexion.initialize(onConnexionLost: () {}, onNewLiveData: () {});
+    connexion.initialize(
+        onConnexionLost: () {}, onNewLiveData: () {}, onNewLiveAnalyses: () {});
     assert(connexion.isRecording == false);
     assert(connexion.hasRecorded == false);
 
