@@ -130,6 +130,7 @@ void TcpServer::startServerSync() {
     commandWorker.join();
     responseWorker.join();
     liveDataWorker.join();
+    analyzersWorker.join();
   }
 }
 

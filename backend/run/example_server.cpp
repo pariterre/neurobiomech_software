@@ -71,7 +71,7 @@ int main() {
     client.addAnalyzer(analyzerExample);
 
     // Give some time to the server to connect to the devices
-    std::this_thread::sleep_for(std::chrono::seconds(600));
+    std::this_thread::sleep_for(std::chrono::seconds(1));
 
     // Start recording data
     client.startRecording();
