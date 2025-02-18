@@ -20,6 +20,6 @@ nlohmann::json EventPrediction::serialize() const {
   return json;
 }
 
-std::string EventPrediction::getPredictionType() const {
-  return "EventPrediction";
+PredictionType EventPrediction::getPredictionType() const {
+  return PredictionType::ANALOG_WITH_EVENTS;
 }

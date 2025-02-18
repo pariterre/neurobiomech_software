@@ -5,7 +5,9 @@
 
 namespace NEUROBIO_NAMESPACE::analyzer {
 
+/// @brief Class to store a prediction
 class EventPrediction : public Prediction {
+
 public:
   /// @brief Constructor of the EventPrediction
   EventPrediction(const std::vector<double> &values, size_t currentPhase,
@@ -25,7 +27,7 @@ public:
 
   /// @brief Get the type of the prediction
   /// @return The type of the prediction
-  std::string getPredictionType() const override;
+  PredictionType getPredictionType() const override;
 
 protected:
   /// @brief Holds the index of the current phase

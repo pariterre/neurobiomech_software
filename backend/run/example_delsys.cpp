@@ -136,8 +136,8 @@ int main() {
 
       std::cout << "For " << std::setw(6) << std::setfill(' ')
                 << (i + 1) * packetSize << ": L-" << std::fixed
-                << std::setprecision(3) << predictionLeft->getValues()[0]
-                << ", R-" << predictionRight->getValues()[0]
+                << std::setprecision(3) << predictionLeft->getData()[0]
+                << ", R-" << predictionRight->getData()[0]
                 << std::setprecision(std::cout.precision());
 
       if (predictionLeft->getHasPhaseIncremented())
