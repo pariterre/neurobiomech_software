@@ -740,6 +740,7 @@ void TcpServer::handleSendAnalyzedLiveData() {
   logger.debug("Analyzing live data");
 
   // Analyze the data
+  // TODO: Add timestamps to Analysers (As if it was a DataCollector)
   auto predictions = m_Analyzers.predict(data);
 
   // Transform the predictions into JSON
