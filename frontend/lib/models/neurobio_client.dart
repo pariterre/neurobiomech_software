@@ -293,6 +293,8 @@ class NeurobioClient {
     }
   }
 
+  void resetLiveAnalyses() => liveAnalyses.clear(initialTime: DateTime.now());
+
   void resetLiveData() => liveData.clear(initialTime: DateTime.now());
 
   void _prepareLastTrialResponse() {
@@ -448,11 +450,11 @@ class NeurobioClient {
   }
 }
 
-class NeurbioClientMock extends NeurobioClient {
-  NeurbioClientMock._() : super._();
+class NeurobioClientMock extends NeurobioClient {
+  NeurobioClientMock._() : super._();
 
   static NeurobioClient get instance => _instance;
-  static final NeurobioClient _instance = NeurbioClientMock._();
+  static final NeurobioClient _instance = NeurobioClientMock._();
 
   bool _isMockInitialized = false;
 

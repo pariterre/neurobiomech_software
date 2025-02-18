@@ -38,11 +38,13 @@ class _MainScreenState extends State<MainScreen> {
 
   bool _showLastTrial = false;
   bool _showLiveData = false;
+  bool _showLiveAnalyses = false;
 
   Future<void> _connectServer() async {
     setState(() {
       _showLastTrial = false;
       _showLiveData = false;
+      _showLiveAnalyses = false;
       _isBusy = true;
     });
     await _connexion.initialize(
@@ -63,6 +65,7 @@ class _MainScreenState extends State<MainScreen> {
       _isBusy = false;
       _showLastTrial = false;
       _showLiveData = false;
+      _showLiveAnalyses = false;
     });
   }
 
@@ -180,6 +183,15 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  Future<void> _showLiveAnalysesGraph() async {
+    _connexion.resetLiveAnalyses();
+    setState(() => _showLiveAnalyses = true);
+  }
+
+  Future<void> _hideLiveAnalysesGraph() async {
+    setState(() => _showLiveAnalyses = false);
+  }
+
   Future<void> _showLiveDataGraph() async {
     _connexion.resetLiveData();
     setState(() => _showLiveData = true);
@@ -222,6 +234,45 @@ class _MainScreenState extends State<MainScreen> {
           )
       ],
     );
+  }
+
+  Widget _buildLiveAnalysesGraph() {
+    if (!_showLiveAnalyses) return const SizedBox();
+
+    // TODO THIS
+    return Column(
+      children: [
+        SizedBox(
+          width: 250,
+          child: TextFormField(
+            decoration: const InputDecoration(
+              labelText: 'Live data duration',
+              hintText: 'Enter the duration in seconds',
+            ),
+            initialValue: _connexion.liveDataTimeWindow.inSeconds.toString(),
+            onChanged: (value) {
+              final valueAsInt = int.tryParse(value);
+              if (valueAsInt == null) return;
+              _connexion.liveDataTimeWindow = Duration(seconds: valueAsInt);
+            },
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          ),
+        ),
+        if (_connexion.isConnectedToDelsysAnalog)
+          DataGraph(
+              key: _liveAnalogDataKey, controller: _liveGraphControllerAnalog),
+        if (_connexion.isConnectedToDelsysEmg)
+          DataGraph(key: _liveEmgDataKey, controller: _liveGraphControllerEmg),
+      ],
+    );
+  }
+
+  void _onNewLiveAnalyses() {
+    // TODO THIS
+    if (_showLiveAnalyses) {
+      _liveGraphControllerAnalog.data = _connexion.liveData;
+      _liveGraphControllerEmg.data = _connexion.liveData;
+    }
   }
 
   Widget _buildLiveDataGraph() {
@@ -314,6 +365,20 @@ class _MainScreenState extends State<MainScreen> {
               ),
               const SizedBox(height: 12),
               _buildLastTrialGraph(),
+              const SizedBox(height: 20),
+              Text('Live analyses related commands',
+                  style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: canSendCommand
+                    ? _showLiveAnalyses
+                        ? _hideLiveAnalysesGraph
+                        : _showLiveAnalysesGraph
+                    : null,
+                child: Text(_showLiveAnalyses
+                    ? 'Hide live analyses graph'
+                    : 'Show live analyses graph'),
+              ),
               const SizedBox(height: 20),
               Text('Data related commands',
                   style: Theme.of(context).textTheme.titleMedium),
