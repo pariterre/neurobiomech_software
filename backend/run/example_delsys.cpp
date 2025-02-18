@@ -36,7 +36,7 @@ int main() {
     auto analyzers = analyzer::Analyzers();
     // Add one analyzer for the left side
     analyzers.add(nlohmann::json::parse(R"({
-        "name" : "Left Foot Predictor",
+        "name" : "Left Foot",
         "analyzer_type" : "cyclic_from_analogs",
         "time_reference_device" : "DelsysAnalogDataCollector",
         "learning_rate" : 0.5,
@@ -72,7 +72,7 @@ int main() {
       })"));
     // Add one analyzer for the right side
     analyzers.add(nlohmann::json::parse(R"({
-        "name" : "Right Foot Predictor",
+        "name" : "Right Foot",
         "analyzer_type" : "cyclic_from_analogs",
         "time_reference_device" : "DelsysAnalogDataCollector",
         "learning_rate" : 0.5,
@@ -129,10 +129,10 @@ int main() {
       // Since we know that it is, downcast the prediction to event prediction
       auto predictionLeft = std::unique_ptr<analyzer::EventPrediction>(
           dynamic_cast<analyzer::EventPrediction *>(
-              predictions["Left Foot Predictor"].release()));
+              predictions["Left Foot"].release()));
       auto predictionRight = std::unique_ptr<analyzer::EventPrediction>(
           dynamic_cast<analyzer::EventPrediction *>(
-              predictions["Right Foot Predictor"].release()));
+              predictions["Right Foot"].release()));
 
       std::cout << "For " << std::setw(6) << std::setfill(' ')
                 << (i + 1) * packetSize << ": L-" << std::fixed

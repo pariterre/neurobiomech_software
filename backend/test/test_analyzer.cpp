@@ -31,7 +31,7 @@ analyzer::Analyzers generateAnalyzers() {
   auto analyzers = analyzer::Analyzers();
   // Add one analyzer for the left side
   size_t idxFirst = analyzers.add(nlohmann::json::parse(R"({
-        "name" : "Left Foot Predictor",
+        "name" : "Left Foot",
         "analyzer_type" : "cyclic_from_analogs",
         "time_reference_device" : "DelsysAnalogDataCollector",
         "learning_rate" : 0.5,
@@ -67,7 +67,7 @@ analyzer::Analyzers generateAnalyzers() {
       })"));
   // Add one analyzer for the right side
   size_t idxSecond = analyzers.add(nlohmann::json::parse(R"({
-        "name" : "Right Foot Predictor",
+        "name" : "Right Foot",
         "analyzer_type" : "cyclic_from_analogs",
         "time_reference_device" : "DelsysAnalogDataCollector",
         "learning_rate" : 0.1,
@@ -110,8 +110,8 @@ TEST(Analyzers, Constructors) {
   auto analyzers = generateAnalyzers();
   auto ids = analyzers.getAnalyzerIds();
 
-  auto idLeftFoot = analyzers.getAnalyzerId("Left Foot Predictor");
-  auto idRightFoot = analyzers.getAnalyzerId("Right Foot Predictor");
+  auto idLeftFoot = analyzers.getAnalyzerId("Left Foot");
+  auto idRightFoot = analyzers.getAnalyzerId("Right Foot");
   EXPECT_THROW(analyzers.getAnalyzerId("Unknown"), std::invalid_argument);
   ASSERT_EQ(idLeftFoot, ids[0]);
   ASSERT_EQ(idRightFoot, ids[1]);
@@ -126,7 +126,7 @@ TEST(Analyzers, Constructors) {
     const auto &analyzerFirst =
         dynamic_cast<const analyzer::CyclicTimedEventsAnalyzer &>(
             analyzers[ids[0]]);
-    ASSERT_EQ(analyzerFirst.getName(), "Left Foot Predictor");
+    ASSERT_EQ(analyzerFirst.getName(), "Left Foot");
     ASSERT_NEAR(analyzerFirst.getLearningRate(), 0.5, requiredPrecision);
     ASSERT_EQ(analyzerFirst.getTimeDeviceReferenceName(),
               "DelsysAnalogDataCollector");
@@ -174,7 +174,7 @@ TEST(Analyzers, Constructors) {
     const auto &analyzerSecond =
         dynamic_cast<const analyzer::CyclicTimedEventsAnalyzer &>(
             analyzers[ids[1]]);
-    ASSERT_EQ(analyzerSecond.getName(), "Right Foot Predictor");
+    ASSERT_EQ(analyzerSecond.getName(), "Right Foot");
     ASSERT_NEAR(analyzerSecond.getLearningRate(), 0.1, requiredPrecision);
     ASSERT_EQ(analyzerSecond.getTimeDeviceReferenceName(),
               "DelsysAnalogDataCollector");
@@ -224,7 +224,7 @@ TEST(Analyzers, Constructors) {
   }
 
   // Remove the first analyzer
-  analyzers.remove("Left Foot Predictor");
+  analyzers.remove("Left Foot");
   ASSERT_EQ(analyzers.size(), 1);
 
   // Check the ids
@@ -280,8 +280,8 @@ TEST(Analyzers, Prediction) {
   for (size_t i = 0; i < data.size(); i += 2) {
     auto prediction = analyzers.predict(
         {{"DelsysAnalogDataCollector", data.slice(i, i + 2)}});
-    predictions.push_back({prediction["Left Foot Predictor"]->getValues()[0],
-                           prediction["Right Foot Predictor"]->getValues()[0]});
+    predictions.push_back({prediction["Left Foot"]->getValues()[0],
+                           prediction["Right Foot"]->getValues()[0]});
   }
 
   // Check the predictions

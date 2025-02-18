@@ -4,6 +4,42 @@
 
 using namespace NEUROBIO_NAMESPACE;
 
+auto analyzerExample = nlohmann::json::parse(R"({
+        "name" : "Left Foot",
+        "analyzer_type" : "cyclic_from_analogs",
+        "time_reference_device" : "DelsysAnalogDataCollector",
+        "learning_rate" : 0.5,
+        "initial_phase_durations" : [400, 600],
+        "events" : [
+          {
+            "name" : "heel_strike",
+            "previous" : "toe_off",
+            "start_when" : [
+              {
+                "type": "threshold",
+                "device" : "DelsysAnalogDataCollector",
+                "channel" : 0,
+                "comparator" : ">=",
+                "value" : 0.2
+              }
+            ]
+          },
+          {
+            "name" : "toe_off",
+            "previous" : "heel_strike",
+            "start_when" : [
+              {
+                "type": "threshold",
+                "device" : "DelsysAnalogDataCollector",
+                "channel" : 0,
+                "comparator" : "<=",
+                "value" : -0.2
+              }
+            ]
+          }
+        ]
+      })");
+
 int main() {
   auto &logger = utils::Logger::getInstance();
   logger.setLogLevel(utils::Logger::INFO);
@@ -31,8 +67,11 @@ int main() {
       throw std::runtime_error("Failed to add the devices");
     }
 
+    // Add an analyzer to the server
+    client.addAnalyzer(analyzerExample);
+
     // Give some time to the server to connect to the devices
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::seconds(600));
 
     // Start recording data
     client.startRecording();

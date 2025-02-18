@@ -11,6 +11,10 @@ public:
   EventPrediction(const std::vector<double> &values, size_t currentPhase,
                   bool hasPhaseIncremented);
 
+  /// @brief Constructor of the EventPrediction from a json object
+  /// @param json The json object to deserialize
+  EventPrediction(const nlohmann::json &json);
+
 public:
   /// @brief Destructor of the EventPrediction
   virtual ~EventPrediction() = default;
@@ -18,6 +22,10 @@ public:
   /// @brief Get a serialized version of the prediction
   /// @return The serialized version of the prediction
   nlohmann::json serialize() const override;
+
+  /// @brief Get the type of the prediction
+  /// @return The type of the prediction
+  std::string getPredictionType() const override;
 
 protected:
   /// @brief Holds the index of the current phase

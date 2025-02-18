@@ -131,7 +131,7 @@ protected:
   /// @param error The error code to set if an error occurs
   /// @return The response to send by the client (raises an exception if an
   /// error occurs)
-  nlohmann::json handleCommandExtraData(asio::error_code &error);
+  nlohmann::json handleExtraData(asio::error_code &error);
 
   /// @brief Construct the packet to send to the client from a response
   /// @param response The response to send

@@ -72,6 +72,12 @@ public:
   /// @return True if the data is received, false otherwise
   std::map<std::string, data::TimeSeries> getLastTrialData();
 
+  /// @brief Add an analyzer to the collection
+  bool addAnalyzer(const nlohmann::json &analyzer);
+
+  /// @brief Remove an analyzer from the collection
+  bool removeAnalyzer(const std::string &analyzerName);
+
 protected:
   /// @brief The data received from the server
   DECLARE_PROTECTED_MEMBER(data::TimeSeries, Data);
@@ -103,12 +109,6 @@ protected:
 
   /// @brief Main loop for the live analyses streaming
   void startUpdatingLiveAnalyses();
-
-  /// @brief Add an analyzer to the collection
-  void addAnalyzer(const nlohmann::json &analyzer);
-
-  /// @brief Remove an analyzer from the collection
-  void removeAnalyzer(const std::string &analyzerName);
 
   /// @brief Receive and update the live analyses
   void updateLiveAnalyses();

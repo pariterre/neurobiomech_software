@@ -1,5 +1,6 @@
 #include "Server/TcpClient.h"
 
+#include "Analyzer/Prediction.h"
 #include "Utils/Logger.h"
 
 using asio::ip::tcp;
@@ -200,6 +201,33 @@ std::map<std::string, data::TimeSeries> TcpClient::getLastTrialData() {
   return data;
 }
 
+bool TcpClient::addAnalyzer(const nlohmann::json &analyzer) {
+  auto &logger = utils::Logger::getInstance();
+
+  if (sendCommandWithData(TcpServerCommand::ADD_ANALYZER, analyzer) ==
+      TcpServerResponse::NOK) {
+    logger.fatal("CLIENT: Failed to add the analyzer");
+    return false;
+  }
+
+  logger.info("CLIENT: Analyzer added");
+  return true;
+}
+
+bool TcpClient::removeAnalyzer(const std::string &analyzerName) {
+  auto &logger = utils::Logger::getInstance();
+
+  if (sendCommandWithData(TcpServerCommand::REMOVE_ANALYZER,
+                          {{"analyzer", analyzerName}}) ==
+      TcpServerResponse::NOK) {
+    logger.fatal("CLIENT: Failed to remove the analyzer");
+    return false;
+  }
+
+  logger.info("CLIENT: Analyzer removed");
+  return true;
+}
+
 void TcpClient::startUpdatingLiveData() {
   m_LiveDataWorker = std::thread([this]() {
     while (m_IsConnected) {
@@ -231,38 +259,18 @@ void TcpClient::startUpdatingLiveAnalyses() {
   });
 }
 
-void TcpClient::addAnalyzer(const nlohmann::json &analyzer) {
-  auto &logger = utils::Logger::getInstance();
-
-  if (sendCommandWithData(TcpServerCommand::ADD_ANALYZER, analyzer) ==
-      TcpServerResponse::NOK) {
-    logger.fatal("CLIENT: Failed to add the analyzer");
-    return;
-  }
-
-  logger.info("CLIENT: Analyzer added");
-}
-
-void TcpClient::removeAnalyzer(const std::string &analyzerName) {
-  auto &logger = utils::Logger::getInstance();
-
-  if (sendCommandWithData(TcpServerCommand::REMOVE_ANALYZER,
-                          {{"analyzer", analyzerName}}) ==
-      TcpServerResponse::NOK) {
-    logger.fatal("CLIENT: Failed to remove the analyzer");
-    return;
-  }
-
-  logger.info("CLIENT: Analyzer removed");
-}
-
 void TcpClient::updateLiveAnalyses() {
   auto &logger = utils::Logger::getInstance();
 
-  auto dataBuffer = waitForResponse(*m_LiveAnalysesSocket);
-  std::map<std::string, data::TimeSeries> data;
   try {
-    data = devices::Devices::deserializeData(nlohmann::json::parse(dataBuffer));
+    auto serialized =
+        nlohmann::json::parse(waitForResponse(*m_LiveAnalysesSocket));
+
+    auto data = std::map<std::string, std::unique_ptr<analyzer::Prediction>>();
+    for (const auto &[name, prediction] : serialized.items()) {
+      data[name] = analyzer::Prediction::deserialize(prediction);
+    }
+
   } catch (...) {
     logger.fatal("CLIENT: Failed to parse the last trial data");
     return;
@@ -310,7 +318,7 @@ TcpServerResponse TcpClient::sendCommandWithData(TcpServerCommand command,
   // If the command was successful, send the length of the data
   asio::error_code error;
   size_t byteWritten =
-      asio::write(*m_CommandSocket,
+      asio::write(*m_ResponseSocket,
                   asio::buffer(constructCommandPacket(
                       static_cast<TcpServerCommand>(data.dump().size()))),
                   error);
@@ -322,7 +330,8 @@ TcpServerResponse TcpClient::sendCommandWithData(TcpServerCommand command,
   }
 
   // Send the data
-  byteWritten = asio::write(*m_CommandSocket, asio::buffer(data.dump()), error);
+  byteWritten =
+      asio::write(*m_ResponseSocket, asio::buffer(data.dump()), error);
   if (byteWritten != data.dump().size() || error) {
     logger.fatal("CLIENT: TCP write error: " + error.message());
     disconnect();

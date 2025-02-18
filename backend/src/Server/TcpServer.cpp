@@ -96,7 +96,12 @@ void TcpServer::startServerSync() {
       std::this_thread::sleep_for(liveDataIntervals);
       while (m_IsServerRunning && isClientConnected()) {
         auto startingTime = std::chrono::high_resolution_clock::now();
-        handleSendLiveData();
+        try {
+          handleSendLiveData();
+        } catch (const std::exception &e) {
+          auto &logger = utils::Logger::getInstance();
+          logger.fatal("Failed to send live data: " + std::string(e.what()));
+        }
         auto next = liveDataIntervals -
                     (std::chrono::high_resolution_clock::now() - startingTime);
         std::this_thread::sleep_for(next);
@@ -108,7 +113,13 @@ void TcpServer::startServerSync() {
       std::this_thread::sleep_for(analyzersIntervals);
       while (m_IsServerRunning && isClientConnected()) {
         auto startingTime = std::chrono::high_resolution_clock::now();
-        handleSendAnalyzedLiveData();
+        try {
+          handleSendAnalyzedLiveData();
+        } catch (const std::exception &e) {
+          auto &logger = utils::Logger::getInstance();
+          logger.fatal("Failed to send analyzed live data: " +
+                       std::string(e.what()));
+        }
         auto next = analyzersIntervals -
                     (std::chrono::high_resolution_clock::now() - startingTime);
         std::this_thread::sleep_for(next);
@@ -466,7 +477,7 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
 
   case TcpServerCommand::ADD_ANALYZER: {
     try {
-      auto data = handleCommandExtraData(error);
+      auto data = handleExtraData(error);
       m_Analyzers.add(data);
       response = TcpServerResponse::OK;
     } catch (const std::exception &e) {
@@ -478,7 +489,7 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
 
   case TcpServerCommand::REMOVE_ANALYZER: {
     try {
-      std::string analyzerName = handleCommandExtraData(error)["analyzer"];
+      std::string analyzerName = handleExtraData(error)["analyzer"];
       m_Analyzers.remove(analyzerName);
       response = TcpServerResponse::OK;
     } catch (const std::exception &e) {
@@ -506,7 +517,7 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
   return true;
 }
 
-nlohmann::json TcpServer::handleCommandExtraData(asio::error_code &error) {
+nlohmann::json TcpServer::handleExtraData(asio::error_code &error) {
   auto &logger = utils::Logger::getInstance();
 
   // Send an acknowledgment to the client we are ready to receive the data
@@ -516,7 +527,7 @@ nlohmann::json TcpServer::handleCommandExtraData(asio::error_code &error) {
 
   // Receive the size of the data
   auto buffer = std::array<char, BYTES_IN_CLIENT_PACKET_HEADER>();
-  size_t byteRead = asio::read(*m_CommandSocket, asio::buffer(buffer), error);
+  size_t byteRead = asio::read(*m_ResponseSocket, asio::buffer(buffer), error);
   if (byteRead != BYTES_IN_CLIENT_PACKET_HEADER || error) {
     logger.fatal("TCP read error: " + error.message());
     throw std::runtime_error("Failed to read the size of the data");
@@ -524,9 +535,9 @@ nlohmann::json TcpServer::handleCommandExtraData(asio::error_code &error) {
 
   // Parse the size of the data
   std::uint32_t dataSize =
-      *reinterpret_cast<const std::uint32_t *>(buffer.data());
+      static_cast<std::uint32_t>(parseCommandPacket(buffer));
   auto dataBuffer = std::vector<char>(dataSize);
-  byteRead = asio::read(*m_CommandSocket, asio::buffer(dataBuffer), error);
+  byteRead = asio::read(*m_ResponseSocket, asio::buffer(dataBuffer), error);
   if (byteRead != dataSize || error) {
     logger.fatal("TCP read error: " + error.message());
     throw std::runtime_error("Failed to read the data");
@@ -716,24 +727,29 @@ void TcpServer::handleSendAnalyzedLiveData() {
   if (!isClientConnected())
     return;
 
-  auto &logger = utils::Logger::getInstance();
-  logger.debug("Analyzing live data");
+  if (m_Analyzers.size() == 0) {
+    return;
+  }
 
   std::map<std::string, data::TimeSeries> data = m_Devices.getLiveData();
   if (data.size() == 0) {
     return;
   }
 
+  auto &logger = utils::Logger::getInstance();
+  logger.debug("Analyzing live data");
+
   // Analyze the data
   auto predictions = m_Analyzers.predict(data);
 
   // Transform the predictions into JSON
   auto predictionsJson = nlohmann::json();
-  for (const auto &[deviceId, prediction] : predictions) {
-    predictionsJson[deviceId] = prediction->serialize();
+  for (const auto &[deviceName, prediction] : predictions) {
+    predictionsJson[deviceName] = prediction->serialize();
   }
 
   auto dataDump = predictionsJson.dump();
+  logger.info(dataDump);
   asio::error_code error;
   asio::write(*m_LiveAnalysesSocket,
               asio::buffer(constructResponsePacket(
