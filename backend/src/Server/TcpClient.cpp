@@ -1,6 +1,5 @@
 #include "Server/TcpClient.h"
 
-#include "Analyzer/Prediction.h"
 #include "Utils/Logger.h"
 
 using asio::ip::tcp;
@@ -266,9 +265,9 @@ void TcpClient::updateLiveAnalyses() {
     auto serialized =
         nlohmann::json::parse(waitForResponse(*m_LiveAnalysesSocket));
 
-    auto data = std::map<std::string, std::unique_ptr<analyzer::Prediction>>();
+    auto data = std::map<std::string, data::DataPoint>();
     for (const auto &[name, prediction] : serialized.items()) {
-      data[name] = analyzer::Prediction::deserialize(prediction);
+      data[name] = data::DataPoint(prediction);
     }
 
   } catch (...) {

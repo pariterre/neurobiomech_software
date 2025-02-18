@@ -3,14 +3,15 @@
 #include "Analyzer/Analyzer.h"
 #include "Analyzer/CyclicTimedEventsAnalyzer.h"
 #include "Analyzer/EventConditions.h"
-#include "Analyzer/Prediction.h"
+#include "Data/DataPoint.h"
 #include "Utils/Logger.h"
 
+using namespace NEUROBIO_NAMESPACE::data;
 using namespace NEUROBIO_NAMESPACE::analyzer;
 
-std::map<std::string, std::unique_ptr<Prediction>>
+std::map<std::string, DataPoint>
 Analyzers::predict(const std::map<std::string, data::TimeSeries> &data) const {
-  std::map<std::string, std::unique_ptr<Prediction>> predictions;
+  std::map<std::string, DataPoint> predictions;
   for (const auto &analyzer : m_Analyzers) {
     predictions[analyzer.second->getName()] = analyzer.second->predict(data);
   }

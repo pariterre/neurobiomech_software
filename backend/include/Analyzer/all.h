@@ -5,8 +5,6 @@
 #include "Analyzer/Analyzers.h"
 #include "Analyzer/CyclicTimedEventsAnalyzer.h"
 #include "Analyzer/EventConditions.h"
-#include "Analyzer/EventPrediction.h"
-#include "Analyzer/Prediction.h"
 #include "Analyzer/TimedEventsAnalyzer.h"
 
 #endif // __NEUROBIO_ANALYZER_ALL_H__

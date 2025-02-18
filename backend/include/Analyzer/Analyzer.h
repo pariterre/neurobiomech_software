@@ -6,15 +6,16 @@
 #include "Utils/CppMacros.h"
 #include <map>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <string>
 #include <vector>
 
 namespace NEUROBIO_NAMESPACE::data {
+class DataPoint;
 class TimeSeries;
 } // namespace NEUROBIO_NAMESPACE::data
 
 namespace NEUROBIO_NAMESPACE::analyzer {
-class Prediction;
 
 class Analyzer {
 public:
@@ -27,7 +28,7 @@ public:
 
   /// @brief Predict some outcome from the sensor data
   /// @param data The data to analyze
-  virtual std::unique_ptr<Prediction>
+  virtual data::DataPoint
   predict(const std::map<std::string, data::TimeSeries> &data) = 0;
 
 protected:

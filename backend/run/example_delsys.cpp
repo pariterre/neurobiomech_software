@@ -127,22 +127,19 @@ int main() {
             data.slice(i * packetSize, (i + 1) * packetSize)}});
 
       // Since we know that it is, downcast the prediction to event prediction
-      auto predictionLeft = std::unique_ptr<analyzer::EventPrediction>(
-          dynamic_cast<analyzer::EventPrediction *>(
-              predictions["Left Foot"].release()));
-      auto predictionRight = std::unique_ptr<analyzer::EventPrediction>(
-          dynamic_cast<analyzer::EventPrediction *>(
-              predictions["Right Foot"].release()));
+      const auto &predictionLeft = predictions["Left Foot"];
+      const auto &predictionRight = predictions["Right Foot"];
 
       std::cout << "For " << std::setw(6) << std::setfill(' ')
                 << (i + 1) * packetSize << ": L-" << std::fixed
-                << std::setprecision(3) << predictionLeft->getData()[0]
-                << ", R-" << predictionRight->getData()[0]
+                << std::setprecision(3) << predictionLeft.getData()[0] << ", R-"
+                << predictionRight.getData()[0]
                 << std::setprecision(std::cout.precision());
 
-      if (predictionLeft->getHasPhaseIncremented())
+      if (std::get<bool>(predictionLeft.getExtraInfo().at("has_changed_phase")))
         std::cout << " (Left phase incremented)";
-      if (predictionRight->getHasPhaseIncremented())
+      if (std::get<bool>(
+              predictionRight.getExtraInfo().at("has_changed_phase")))
         std::cout << " (Right phase incremented)";
       std::cout << std::endl;
     }

@@ -5,7 +5,6 @@
 #include <thread>
 
 #include "Analyzer/Analyzers.h"
-#include "Analyzer/Prediction.h"
 #include "Devices/Concrete/DelsysAnalogDevice.h"
 #include "Devices/Concrete/DelsysEmgDevice.h"
 #include "Devices/Concrete/MagstimRapidDevice.h"
@@ -746,7 +745,7 @@ void TcpServer::handleSendAnalyzedLiveData() {
   // Transform the predictions into JSON
   auto predictionsJson = nlohmann::json();
   for (const auto &[deviceName, prediction] : predictions) {
-    predictionsJson[deviceName] = prediction->serialize();
+    predictionsJson[deviceName] = prediction.serialize();
   }
 
   auto dataDump = predictionsJson.dump();

@@ -11,7 +11,7 @@
 namespace NEUROBIO_NAMESPACE::data {
 
 using ExtraInfo =
-    std::map<std::string, std::variant<int, double, bool, std::string>>;
+    std::map<std::string, std::variant<size_t, int, double, bool, std::string>>;
 
 /// @brief Class to store data
 class DataPoint {

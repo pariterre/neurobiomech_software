@@ -280,8 +280,8 @@ TEST(Analyzers, Prediction) {
   for (size_t i = 0; i < data.size(); i += 2) {
     auto prediction = analyzers.predict(
         {{"DelsysAnalogDataCollector", data.slice(i, i + 2)}});
-    predictions.push_back({prediction["Left Foot"]->getData()[0],
-                           prediction["Right Foot"]->getData()[0]});
+    predictions.push_back({prediction["Left Foot"].getData()[0],
+                           prediction["Right Foot"].getData()[0]});
   }
 
   // Check the predictions

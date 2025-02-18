@@ -1,14 +1,16 @@
 #ifndef __NEUROBIO_ANALYZER_ANALYZERS_H__
 #define __NEUROBIO_ANALYZER_ANALYZERS_H__
 
-#include "Utils/CppMacros.h"
 #include "neurobioConfig.h"
+
+#include "Utils/CppMacros.h"
 #include "nlohmann/json.hpp"
 #include <map>
 #include <memory>
 #include <vector>
 
 namespace NEUROBIO_NAMESPACE::data {
+class DataPoint;
 class TimeSeries;
 } // namespace NEUROBIO_NAMESPACE::data
 
@@ -28,7 +30,7 @@ public:
   /// @brief Predict using all the analyzers
   /// @param data The data to predict
   /// @return The predictions
-  std::map<std::string, std::unique_ptr<Prediction>>
+  std::map<std::string, data::DataPoint>
   predict(const std::map<std::string, data::TimeSeries> &data) const;
 
   /// @brief Get an analyzer id from its name

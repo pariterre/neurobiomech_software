@@ -1,7 +1,8 @@
 #include "Analyzer/TimedEventsAnalyzer.h"
-#include "Analyzer/Prediction.h"
+#include "Data/DataPoint.h"
 #include <numeric>
 
+using namespace NEUROBIO_NAMESPACE::data;
 using namespace NEUROBIO_NAMESPACE::analyzer;
 
 TimedEventsAnalyzer::TimedEventsAnalyzer(
@@ -19,7 +20,7 @@ TimedEventsAnalyzer::TimedEventsAnalyzer(
       m_FirstPass(true), m_CurrentPhaseTime(std::chrono::milliseconds(0)),
       Analyzer(name) {}
 
-std::unique_ptr<Prediction> TimedEventsAnalyzer::predict(
+DataPoint TimedEventsAnalyzer::predict(
     const std::map<std::string, data::TimeSeries> &data) {
   // Analyze the data from the last analyzed time stamp to the most recent.
 
@@ -62,9 +63,11 @@ std::unique_ptr<Prediction> TimedEventsAnalyzer::predict(
   if (shouldIncrement)
     incrementModel();
 
-  return std::make_unique<EventPrediction>(std::vector<double>{predictedValue},
-                                           m_CurrentPhaseIndex,
-                                           shouldIncrement);
+  // TODO ADD TIMESTAMPS
+  return DataPoint(std::chrono::microseconds(0),
+                   std::vector<double>{predictedValue},
+                   {{"current_phase", m_CurrentPhaseIndex},
+                    {"has_changed_phase", shouldIncrement}});
 }
 
 void TimedEventsAnalyzer::incrementModel() {
