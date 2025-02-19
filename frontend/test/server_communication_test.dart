@@ -7,7 +7,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/models/command.dart';
-import 'package:frontend/models/neurobio_client.dart';
+import 'package:frontend/managers/neurobio_client.dart';
 
 void main() {
   test('Initialize server connexion', () async {

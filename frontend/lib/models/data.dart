@@ -5,17 +5,21 @@ class Data {
   DateTime get initialTime => _initialTime;
   final TimeSeriesData delsysAnalog;
   final EmgTimeSeriesData delsysEmg;
+  final PredictionData predictions;
 
   void clear({DateTime? initialTime}) {
     _initialTime = initialTime ?? _initialTime;
 
     delsysAnalog.clear();
     delsysEmg.clear();
+    predictions.clear();
   }
 
-  bool get isEmpty => delsysAnalog.isEmpty && delsysEmg.isEmpty;
+  bool get hasData => delsysAnalog.isEmpty && delsysEmg.isEmpty;
+  bool get notHasData => !hasData;
 
-  bool get isNotEmpty => !isEmpty;
+  bool get hasPredictions => predictions.isNotEmpty;
+  bool get notHasPredictions => !hasPredictions;
 
   Data({
     required DateTime initialTime,
@@ -30,9 +34,13 @@ class Data {
         delsysEmg = EmgTimeSeriesData(
             initialTime: initialTime,
             channelCount: emgChannelCount,
-            isFromLiveData: isFromLiveData);
+            isFromLiveData: isFromLiveData),
+        predictions = PredictionData(
+          initialTime: initialTime,
+          channelCount: 0,
+        );
 
-  appendFromJson(List json) {
+  appendDataFromJson(List json) {
     for (Map data in json) {
       final deviceName = data['name'];
       final deviceData = data['data'] as Map<String, dynamic>;
@@ -44,11 +52,19 @@ class Data {
     }
   }
 
+  appendPredictionFromJson(Map<String, dynamic> json) {
+    // TODO Implement this
+    predictions.appendFromJson(json);
+  }
+
   void dropBefore(DateTime t) {
     delsysAnalog.dropBefore(
         (t.millisecondsSinceEpoch - initialTime.millisecondsSinceEpoch)
             .toDouble());
     delsysEmg.dropBefore(
+        (t.millisecondsSinceEpoch - initialTime.millisecondsSinceEpoch)
+            .toDouble());
+    predictions.dropBefore(
         (t.millisecondsSinceEpoch - initialTime.millisecondsSinceEpoch)
             .toDouble());
   }

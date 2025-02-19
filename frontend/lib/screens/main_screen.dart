@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:frontend/models/command.dart';
-import 'package:frontend/models/database_manager.dart';
-import 'package:frontend/models/neurobio_client.dart';
+import 'package:frontend/managers/database_manager.dart';
+import 'package:frontend/managers/neurobio_client.dart';
+import 'package:frontend/screens/predictions_dialog.dart';
 import 'package:frontend/widgets/data_graph.dart';
 import 'package:frontend/widgets/save_trial_dialog.dart';
 
@@ -29,7 +30,7 @@ class _MainScreenState extends State<MainScreen> {
   final _liveGraphControllerEmg = DataGraphController(
       data: _connexion.liveData, graphType: DataGraphType.emg);
   final _liveAnalysesGraphController = DataGraphController(
-      data: _connexion.liveAnalyses, graphType: DataGraphType.analog);
+      data: _connexion.liveAnalyses, graphType: DataGraphType.predictions);
 
   final _trialGraphControllerAnalog = DataGraphController(
       data: _connexion.lastTrialData, graphType: DataGraphType.analog);
@@ -130,7 +131,7 @@ class _MainScreenState extends State<MainScreen> {
     await _connexion.onDataArrived;
     setState(() {
       _isBusy = false;
-      _showLastTrial = _connexion.lastTrialData.isNotEmpty;
+      _showLastTrial = _connexion.lastTrialData.notHasData;
     });
   }
 
@@ -197,6 +198,13 @@ class _MainScreenState extends State<MainScreen> {
     setState(() => _showLiveAnalyses = false);
   }
 
+  Future<void> _showLiveAnalysesManagerDialog() async {
+    await showDialog(
+      context: context,
+      builder: (context) => const PredictionsDialog(),
+    );
+  }
+
   Future<void> _showLiveDataGraph() async {
     _connexion.resetLiveData();
     setState(() => _showLiveData = true);
@@ -244,7 +252,6 @@ class _MainScreenState extends State<MainScreen> {
   Widget _buildLiveAnalysesGraph() {
     if (!_showLiveAnalyses) return const SizedBox();
 
-    // TODO THIS
     return Column(
       children: [
         SizedBox(
@@ -254,29 +261,26 @@ class _MainScreenState extends State<MainScreen> {
               labelText: 'Live data duration',
               hintText: 'Enter the duration in seconds',
             ),
-            initialValue: _connexion.liveDataTimeWindow.inSeconds.toString(),
+            initialValue:
+                _connexion.liveAnalysesTimeWindow.inSeconds.toString(),
             onChanged: (value) {
               final valueAsInt = int.tryParse(value);
               if (valueAsInt == null) return;
-              _connexion.liveDataTimeWindow = Duration(seconds: valueAsInt);
+              _connexion.liveAnalysesTimeWindow = Duration(seconds: valueAsInt);
             },
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           ),
         ),
-        if (_connexion.isConnectedToDelsysAnalog)
+        if (_connexion.isConnectedToLiveAnalyses)
           DataGraph(
-              key: _liveAnalogDataKey, controller: _liveGraphControllerAnalog),
-        if (_connexion.isConnectedToDelsysEmg)
-          DataGraph(key: _liveEmgDataKey, controller: _liveGraphControllerEmg),
+              key: _liveAnalysesKey, controller: _liveAnalysesGraphController),
       ],
     );
   }
 
   void _onNewLiveAnalyses() {
-    // TODO THIS
     if (_showLiveAnalyses) {
-      _liveGraphControllerAnalog.data = _connexion.liveData;
-      _liveGraphControllerEmg.data = _connexion.liveData;
+      _liveAnalysesGraphController.data = _connexion.liveAnalyses;
     }
   }
 
@@ -329,7 +333,7 @@ class _MainScreenState extends State<MainScreen> {
               Text('Neurobio controller',
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 20),
-              Text('Connection related commands',
+              Text('Connection commands',
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
               ElevatedButton(
@@ -355,7 +359,7 @@ class _MainScreenState extends State<MainScreen> {
                   onClickedDisconnect: _disconnectDelsysEmg,
                   onClickedZero: _zeroDelsysEmg),
               const SizedBox(height: 20),
-              Text('Devices related commands',
+              Text('Devices commands',
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
               ElevatedButton(
@@ -371,8 +375,14 @@ class _MainScreenState extends State<MainScreen> {
               const SizedBox(height: 12),
               _buildLastTrialGraph(),
               const SizedBox(height: 20),
-              Text('Live analyses related commands',
+              Text('Live analyses commands',
                   style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed:
+                    canSendCommand ? _showLiveAnalysesManagerDialog : null,
+                child: const Text('Manager'),
+              ),
               const SizedBox(height: 12),
               ElevatedButton(
                 onPressed: canSendCommand
@@ -384,8 +394,10 @@ class _MainScreenState extends State<MainScreen> {
                     ? 'Hide live analyses graph'
                     : 'Show live analyses graph'),
               ),
+              const SizedBox(height: 12),
+              _buildLiveAnalysesGraph(),
               const SizedBox(height: 20),
-              Text('Data related commands',
+              Text('Data commands',
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
               ElevatedButton(

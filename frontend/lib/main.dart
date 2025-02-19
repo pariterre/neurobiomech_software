@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/models/database_manager.dart';
+import 'package:frontend/managers/database_manager.dart';
 import 'package:frontend/screens/main_screen.dart';
 import 'package:logging/logging.dart';
 

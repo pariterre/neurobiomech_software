@@ -1,23 +1,28 @@
 import 'dart:io';
 import 'dart:math';
 part 'emg_time_series_data.dart';
+part 'prediction_data.dart';
 
 class TimeSeriesData {
   bool isFromLiveData;
   double? _timeOffset; // How many milliseconds to subtract to the time vector
-  final int channelCount;
+  int _channelCount;
+  int get channelCount => _channelCount;
 
   final List<double> time = []; // In milliseconds since t0
   final List<List<double>> _data;
   List<List<double>> getData({bool raw = false}) => _data;
 
   void clear() {
-    time.clear();
-    _timeOffset = null;
-
+    resetTime();
     for (var channel in _data) {
       channel.clear();
     }
+  }
+
+  void resetTime() {
+    time.clear();
+    _timeOffset = null;
   }
 
   int get length => time.length;
@@ -26,9 +31,10 @@ class TimeSeriesData {
 
   TimeSeriesData({
     required DateTime initialTime,
-    required this.channelCount,
+    required int channelCount,
     required this.isFromLiveData,
-  }) : _data = List.generate(channelCount, (_) => <double>[]);
+  })  : _channelCount = channelCount,
+        _data = List.generate(channelCount, (_) => <double>[]);
 
   int appendFromJson(Map<String, dynamic> json) {
     final timeSeries = (json['data'] as List<dynamic>);

@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:frontend/models/data.dart';
 import 'package:frontend/models/time_series_data.dart';
 
-enum DataGraphType { emg, analog }
+enum DataGraphType { emg, analog, predictions }
 
 class DataGraphController {
   Data _data;
@@ -84,6 +84,8 @@ class _DataGraphState extends State<DataGraph> {
         return widget.controller._data.delsysEmg;
       case DataGraphType.analog:
         return widget.controller._data.delsysAnalog;
+      case DataGraphType.predictions:
+        return widget.controller._data.predictions;
     }
   }
 

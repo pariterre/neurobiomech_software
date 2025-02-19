@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:frontend/models/command.dart';
 import 'package:frontend/models/data.dart';
 import 'package:frontend/models/ack.dart';
-import 'package:frontend/models/predictions.dart';
 import 'package:logging/logging.dart';
 
 const _protocolVersion = 1;
@@ -48,8 +47,12 @@ class NeurobioClient {
       emgChannelCount: 16,
       isFromLiveData: false);
   Duration liveDataTimeWindow = const Duration(seconds: 3);
-
-  Predictions liveAnalyses = Predictions();
+  Data liveAnalyses = Data(
+      initialTime: DateTime.now(),
+      analogChannelCount: 0,
+      emgChannelCount: 0,
+      isFromLiveData: true);
+  Duration liveAnalysesTimeWindow = const Duration(seconds: 3);
 
   bool _isRecording = false;
 
@@ -74,7 +77,7 @@ class NeurobioClient {
   bool get isConnectedToLiveAnalyses => _isConnectedToLiveAnalyses;
 
   bool get isRecording => _isRecording;
-  bool get hasRecorded => !isRecording && lastTrialData.isNotEmpty;
+  bool get hasRecorded => !isRecording && lastTrialData.notHasData;
 
   ///
   /// Initialize the communication with the server. If the connection fails,
@@ -135,6 +138,7 @@ class NeurobioClient {
     _isConnectedToLiveAnalyses = false;
     _isRecording = false;
     liveData.clear(initialTime: DateTime.now());
+    liveAnalyses.clear(initialTime: DateTime.now());
     lastTrialData.clear(initialTime: DateTime.now());
 
     _commandAckCompleter = null;
@@ -326,7 +330,7 @@ class NeurobioClient {
     _responseGetLastTrial.clear();
   }
 
-  void resetLiveAnalyses() => liveAnalyses.clear();
+  void resetLiveAnalyses() => liveAnalyses.predictions.clear();
 
   void resetLiveData() => liveData.clear(initialTime: DateTime.now());
 
@@ -361,13 +365,15 @@ class NeurobioClient {
     _expectedResponseLength = null;
     final jsonRaw = json.decode(utf8.decode(_responseGetLastTrial));
     if (jsonRaw != null) {
-      lastTrialData.appendFromJson(jsonRaw as List);
+      lastTrialData.appendDataFromJson(jsonRaw as List);
     }
     _responseCompleter!.complete();
   }
 
   Future<void> _receiveLiveAnalyses(List<int> response) async {
     // TODO Complete this
+    liveAnalyses
+        .dropBefore(_lastLiveDataTimestamp!.subtract(liveAnalysesTimeWindow));
     if (_onNewLiveAnalyses != null) _onNewLiveAnalyses!();
   }
 
@@ -409,11 +415,11 @@ class NeurobioClient {
     // Convert the data to a string (from json)
     try {
       final dataList = json.decode(utf8.decode(_responseLiveData)) as List;
-      if (liveData.isEmpty) {
+      if (liveData.hasData) {
         // If the live data were reset, we need to clear again with the current time stamp
         liveData.clear(initialTime: _lastLiveDataTimestamp);
       }
-      liveData.appendFromJson(dataList);
+      liveData.appendDataFromJson(dataList);
       liveData.dropBefore(_lastLiveDataTimestamp!.subtract(liveDataTimeWindow));
     } catch (e) {
       _log.severe('Error while parsing live data: $e, resetting');
