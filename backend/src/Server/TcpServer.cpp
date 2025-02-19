@@ -740,16 +740,10 @@ void TcpServer::handleSendAnalyzedLiveData() {
   logger.debug("Analyzing live data");
 
   // Analyze the data
-  // TODO: Add timestamps to Analysers (As if it was a DataCollector)
   auto predictions = m_Analyzers.predict(data);
 
   // Transform the predictions into JSON
-  auto predictionsJson = nlohmann::json();
-  for (const auto &[deviceName, prediction] : predictions) {
-    predictionsJson[deviceName] = prediction.serialize();
-  }
-
-  auto dataDump = predictionsJson.dump();
+  auto dataDump = predictions.serialize().dump();
   asio::error_code error;
   asio::write(*m_LiveAnalysesSocket,
               asio::buffer(constructResponsePacket(

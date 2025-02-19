@@ -265,11 +265,7 @@ void TcpClient::updateLiveAnalyses() {
     auto serialized =
         nlohmann::json::parse(waitForResponse(*m_LiveAnalysesSocket));
 
-    auto data = std::map<std::string, data::DataPoint>();
-    for (const auto &[name, prediction] : serialized.items()) {
-      data[name] = data::DataPoint(prediction);
-    }
-
+    auto data = analyzer::Predictions(serialized);
   } catch (...) {
     logger.fatal("CLIENT: Failed to parse the last trial data");
     return;

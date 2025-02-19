@@ -63,8 +63,8 @@ DataPoint TimedEventsAnalyzer::predict(
   if (shouldIncrement)
     incrementModel();
 
-  // TODO ADD TIMESTAMPS
-  return DataPoint(std::chrono::microseconds(0),
+  return DataPoint(std::chrono::duration_cast<std::chrono::microseconds>(
+                       currentTime - m_ReferenceTime),
                    std::vector<double>{predictedValue},
                    {{"current_phase", m_CurrentPhaseIndex},
                     {"has_changed_phase", shouldIncrement}});

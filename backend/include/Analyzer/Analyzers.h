@@ -3,20 +3,14 @@
 
 #include "neurobioConfig.h"
 
-#include "Utils/CppMacros.h"
-#include "nlohmann/json.hpp"
-#include <map>
-#include <memory>
-#include <vector>
+#include "Analyzer/Predictions.h"
 
 namespace NEUROBIO_NAMESPACE::data {
-class DataPoint;
 class TimeSeries;
 } // namespace NEUROBIO_NAMESPACE::data
 
 namespace NEUROBIO_NAMESPACE::analyzer {
 class Analyzer;
-class Prediction;
 
 class Analyzers {
 public:
@@ -30,8 +24,7 @@ public:
   /// @brief Predict using all the analyzers
   /// @param data The data to predict
   /// @return The predictions
-  std::map<std::string, data::DataPoint>
-  predict(const std::map<std::string, data::TimeSeries> &data) const;
+  Predictions predict(const std::map<std::string, data::TimeSeries> &data);
 
   /// @brief Get an analyzer id from its name
   /// @param analyzerName The name of the analyzer
@@ -52,7 +45,7 @@ public:
 
   /// @brief Remove the analyzer from the collection
   /// @param analyzerName The name of the analyzer to remove
-  void remove(std::string analyzerName);
+  void remove(const std::string &analyzerName);
 
   /// @brief Remove the analyzer from the collection
   /// @param analyzerId The id of the analyzer (the one returned by the add
@@ -85,6 +78,10 @@ public:
 protected:
   /// @brief The collection of analyzers
   std::map<size_t, std::shared_ptr<Analyzer>> m_Analyzers;
+
+  /// @brief The predictions made by the analyzers
+  Predictions m_LastPredictions;
+  Predictions getLastPredictions() const { return m_LastPredictions; }
 };
 
 } // namespace NEUROBIO_NAMESPACE::analyzer

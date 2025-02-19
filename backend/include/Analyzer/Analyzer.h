@@ -34,6 +34,17 @@ public:
 protected:
   /// @brief The name of the analyzer
   DECLARE_PROTECTED_MEMBER(std::string, Name);
+
+  /// @brief The reference time to base the DataPoint timeframe on
+  DECLARE_PROTECTED_MEMBER(std::chrono::system_clock::time_point,
+                           ReferenceTime);
+
+public:
+  /// @brief Set the reference time
+  /// @param time The reference time
+  void setReferenceTime(const std::chrono::system_clock::time_point &time) {
+    m_ReferenceTime = time;
+  }
 };
 
 } // namespace NEUROBIO_NAMESPACE::analyzer

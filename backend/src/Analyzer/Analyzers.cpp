@@ -9,13 +9,13 @@
 using namespace NEUROBIO_NAMESPACE::data;
 using namespace NEUROBIO_NAMESPACE::analyzer;
 
-std::map<std::string, DataPoint>
-Analyzers::predict(const std::map<std::string, data::TimeSeries> &data) const {
-  std::map<std::string, DataPoint> predictions;
+Predictions
+Analyzers::predict(const std::map<std::string, data::TimeSeries> &data) {
   for (const auto &analyzer : m_Analyzers) {
-    predictions[analyzer.second->getName()] = analyzer.second->predict(data);
+    m_LastPredictions[analyzer.second->getName()] =
+        analyzer.second->predict(data);
   }
-  return predictions;
+  return m_LastPredictions;
 }
 
 size_t Analyzers::getAnalyzerId(const std::string &analyzerName) const {
@@ -29,9 +29,11 @@ size_t Analyzers::getAnalyzerId(const std::string &analyzerName) const {
 }
 
 size_t Analyzers::add(std::unique_ptr<Analyzer> analyzer) {
-  static size_t analyzerId = 1;
-  m_Analyzers[analyzerId] = std::move(analyzer);
-  return analyzerId++;
+  static size_t uniqueId = 1;
+  m_Analyzers[uniqueId] = std::move(analyzer);
+  m_Analyzers[uniqueId]->setReferenceTime(m_LastPredictions.getStartingTime());
+  m_LastPredictions.add(m_Analyzers[uniqueId]->getName());
+  return uniqueId++;
 }
 
 size_t Analyzers::add(const nlohmann::json &json) {
@@ -55,11 +57,14 @@ size_t Analyzers::add(const nlohmann::json &json) {
   }
 }
 
-void Analyzers::remove(std::string analyzerName) {
+void Analyzers::remove(const std::string &analyzerName) {
   remove(getAnalyzerId(analyzerName));
 }
 
-void Analyzers::remove(size_t analyzerId) { m_Analyzers.erase(analyzerId); }
+void Analyzers::remove(size_t analyzerId) {
+  m_LastPredictions.remove(m_Analyzers[analyzerId]->getName());
+  m_Analyzers.erase(analyzerId);
+}
 
 std::vector<size_t> Analyzers::getAnalyzerIds() const {
   std::vector<size_t> analyzerIds;
@@ -71,7 +76,10 @@ std::vector<size_t> Analyzers::getAnalyzerIds() const {
 
 size_t Analyzers::size() const { return m_Analyzers.size(); }
 
-void Analyzers::clear() { m_Analyzers.clear(); }
+void Analyzers::clear() {
+  m_Analyzers.clear();
+  m_LastPredictions.reset();
+}
 
 const Analyzer &Analyzers::operator[](size_t analyzerId) const {
   try {

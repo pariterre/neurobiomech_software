@@ -227,7 +227,7 @@ TEST(TimeSeries, Serialize) {
 
   auto json = data.serialize();
   ASSERT_EQ(json.size(), 2);
-  ASSERT_EQ(json["startingTime"], 100 * 1000 * 1000);
+  ASSERT_EQ(json["starting_time"], 100 * 1000 * 1000);
   ASSERT_EQ(json["data"].size(), 5);
   ASSERT_EQ(json["data"][0][0], 100 * 1000);
   ASSERT_EQ(json["data"][0][1].size(), 3);

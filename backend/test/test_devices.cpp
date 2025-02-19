@@ -683,7 +683,7 @@ TEST(Devices, SerializeTrialData) {
   auto data = devices.getLastTrialDataSerialized();
   ASSERT_EQ(data.size(), 2);
   ASSERT_EQ(data[0]["name"], "DelsysEmgDataCollector");
-  ASSERT_EQ(data[0]["data"]["startingTime"],
+  ASSERT_EQ(data[0]["data"]["starting_time"],
             std::chrono::duration_cast<std::chrono::microseconds>(
                 devices.getDataCollector(deviceIds[0])
                     .getTrialData()
@@ -693,7 +693,7 @@ TEST(Devices, SerializeTrialData) {
   ASSERT_EQ(data[0]["data"]["data"].size(),
             devices.getDataCollector(deviceIds[0]).getTrialData().size());
   ASSERT_EQ(data[1]["name"], "DelsysEmgDataCollector");
-  ASSERT_EQ(data[1]["data"]["startingTime"],
+  ASSERT_EQ(data[1]["data"]["starting_time"],
             std::chrono::duration_cast<std::chrono::microseconds>(
                 devices.getDataCollector(deviceIds[2])
                     .getTrialData()
