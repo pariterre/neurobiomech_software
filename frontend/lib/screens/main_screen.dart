@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:frontend/models/command.dart';
 import 'package:frontend/managers/database_manager.dart';
 import 'package:frontend/managers/neurobio_client.dart';
+import 'package:frontend/managers/predictions_manager.dart';
+import 'package:frontend/models/command.dart';
 import 'package:frontend/screens/predictions_dialog.dart';
 import 'package:frontend/widgets/data_graph.dart';
 import 'package:frontend/widgets/save_trial_dialog.dart';
@@ -199,10 +200,18 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Future<void> _showLiveAnalysesManagerDialog() async {
-    await showDialog(
+    final predictionManager = (await PredictionsManager.instance);
+    if (!mounted) return;
+
+    final predictions = await showDialog(
+      barrierDismissible: false,
       context: context,
-      builder: (context) => const PredictionsDialog(),
+      builder: (context) => PredictionsDialog(
+          predictions: predictionManager.predictions.toList()),
     );
+    if (predictions == null) return;
+
+    predictionManager.save(predictions);
   }
 
   Future<void> _showLiveDataGraph() async {

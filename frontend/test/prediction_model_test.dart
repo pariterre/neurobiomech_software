@@ -2,6 +2,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/models/prediction_model.dart';
 
 void main() {
+  test('PredictionStartWhenTypes enum Constructor', () {
+    expect(PredictionStartWhenTypes.fromString('threshold'),
+        PredictionStartWhenTypes.threshold);
+    expect(PredictionStartWhenTypes.fromString('direction'),
+        PredictionStartWhenTypes.direction);
+  });
+
+  test('PredictionStartWhenTypes enum values', () {
+    expect(PredictionStartWhenTypes.values.length, 2);
+
+    expect(PredictionStartWhenTypes.threshold.toString(), 'threshold');
+    expect(PredictionStartWhenTypes.direction.toString(), 'direction');
+  });
+
   test('PredictionComparator enum Constructor', () {
     expect(PredictionComparators.fromString('>'),
         PredictionComparators.greaterThan);
@@ -71,11 +85,14 @@ void main() {
 
   test('PredictionStartWhenThreshold', () {
     final event = PredictionStartWhenThreshold.fromJson({
+      'type': 'threshold',
       'device': 'DelsysAnalogDataCollector',
       'channel': 0,
       'comparator': '>',
       'value': 0.5
     });
+
+    expect(event.type, PredictionStartWhenTypes.threshold);
 
     expect(event.device, PredictionDevices.delsysAnalogDataCollector);
     expect(event.channel, 0);
@@ -100,10 +117,13 @@ void main() {
 
   test('PredictionStartWhenDirection', () {
     final event = PredictionStartWhenDirection.fromJson({
+      'type': 'direction',
       'device': 'DelsysAnalogDataCollector',
       'channel': 0,
       'direction': 'positive'
     });
+
+    expect(event.type, PredictionStartWhenTypes.direction);
 
     expect(event.device, PredictionDevices.delsysAnalogDataCollector);
     expect(event.channel, 0);

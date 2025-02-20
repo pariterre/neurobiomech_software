@@ -80,7 +80,10 @@ class PredictionsManager {
 
   ///
   /// Save the data to the disk
-  Future<void> save() async {
+  Future<void> save(List<PredictionModel> predictions) async {
+    _predictions.clear();
+    _predictions.addAll(predictions);
+
     final preferences = await SharedPreferences.getInstance();
     await preferences.setStringList(
       'predictions',

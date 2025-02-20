@@ -1,257 +1,411 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:frontend/managers/predictions_manager.dart';
 import 'package:frontend/models/prediction_model.dart';
+import 'package:frontend/widgets/animated_expanding_card.dart';
 
 class DecimalInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
       TextEditingValue oldValue, TextEditingValue newValue) {
-    if (newValue.text.isEmpty) {
-      return newValue;
-    }
-
-    final text = newValue.text;
+    if (newValue.text.isEmpty) return newValue;
 
     // Ensure only valid float format (digits and at most one dot)
-    if (RegExp(r'^\d*\.?\d*$').hasMatch(text)) {
-      return newValue;
-    }
+    final text = newValue.text;
+    if (RegExp(r'^\d*\.?\d*$').hasMatch(text)) return newValue;
 
     // Reject the change if it's invalid
     return oldValue;
   }
 }
 
-class PredictionsDialog extends StatelessWidget {
-  const PredictionsDialog({super.key});
+class PredictionsDialog extends StatefulWidget {
+  const PredictionsDialog({super.key, required this.predictions});
+
+  final List<PredictionModel> predictions;
+
+  @override
+  State<PredictionsDialog> createState() => _PredictionsDialogState();
+}
+
+class _PredictionsDialogState extends State<PredictionsDialog> {
+  void _onPredictionChanged(PredictionModel model, int modelIndex) {
+    setState(() {
+      widget.predictions[modelIndex] = model;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-        future: PredictionsManager.instance,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final predictions = snapshot.data?.predictions;
-          if (predictions == null || predictions.isEmpty) {
-            return const Center(child: Text('No live analyses'));
-          }
-
-          return AlertDialog(
-            title: const Text('Live Analyses'),
-            content: SingleChildScrollView(
-              child: Column(
-                children: predictions
-                    .map((predictionModel) =>
-                        _PredictionModelTile(predictionModel: predictionModel))
-                    .toList(),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: const Text('Close'),
-              ),
-            ],
-          );
-        });
+    return AlertDialog(
+      title: const Text('Live Analyses'),
+      content: SingleChildScrollView(
+        child: Column(
+          children: widget.predictions
+              .asMap()
+              .keys
+              .map(
+                (modelIndex) => _PredictionModelTile(
+                    model: widget.predictions[modelIndex],
+                    modelIndex: modelIndex,
+                    onChanged: (newModel) =>
+                        _onPredictionChanged(newModel, modelIndex)),
+              )
+              .toList(),
+        ),
+      ),
+      actions: [
+        TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            child: const Text('Cancel')),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.of(context).pop(widget.predictions);
+          },
+          child: const Text('Save'),
+        ),
+      ],
+    );
   }
 }
 
 class _PredictionModelTile extends StatelessWidget {
-  const _PredictionModelTile({required this.predictionModel});
+  const _PredictionModelTile(
+      {required this.model, required this.modelIndex, required this.onChanged});
 
-  final PredictionModel predictionModel;
+  final int modelIndex;
+  final PredictionModel model;
+  final Function(PredictionModel) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedExpandingCard(
+      header: Text('Analyses ${modelIndex + 1} (${model.name})',
+          style: Theme.of(context).textTheme.titleMedium),
+      child: Padding(
+        padding: const EdgeInsets.only(left: 12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _SaveOnFocusLostTextField(
+              label: 'Name',
+              initialValue: model.name,
+              onChanged: (value) => onChanged(model.copyWith(name: value)),
+            ),
+            const SizedBox(height: 8),
+            _LabelledDropdownButton(
+                label: 'Analyzer type',
+                value: model.analyzer,
+                items: PredictionAnalyzers.values,
+                onChanged: (value) =>
+                    onChanged(model.copyWith(analyzer: value))),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                SizedBox(
+                  width: 100,
+                  child: _SaveOnFocusLostTextField(
+                    label: 'Learning rate',
+                    initialValue: model.learningRate.toString(),
+                    onChanged: (value) => onChanged(
+                        model.copyWith(learningRate: double.parse(value))),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [DecimalInputFormatter()],
+                  ),
+                ),
+                const SizedBox(width: 24),
+                _LabelledDropdownButton(
+                    label: 'Time reference device',
+                    value: model.timeReferenceDevice,
+                    items: PredictionDevices.values,
+                    onChanged: (newValue) => onChanged(
+                        model.copyWith(timeReferenceDevice: newValue))),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...model.events
+                .asMap()
+                .keys
+                .map((eventIndex) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: _buildEventTile(
+                          event: model.events[eventIndex],
+                          eventIndex: eventIndex,
+                          onChanged: (event) {
+                            final events = model.events.toList();
+
+                            final oldName = events[eventIndex].name;
+                            events[eventIndex] = event;
+
+                            // Change the name of the "previous event"
+                            for (int i = 0; i < events.length; i++) {
+                              if (events[i].previousEventName == oldName) {
+                                events[i] = events[i]
+                                    .copyWith(previousEventName: event.name);
+                              }
+                            }
+
+                            // Copy the new event to the list and send it
+                            onChanged(model.copyWith(events: events));
+                          }),
+                    ))
+                .toList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEventTile({
+    required PredictionEvent event,
+    required int eventIndex,
+    required Function(PredictionEvent) onChanged,
+  }) {
+    return AnimatedExpandingCard(
+      header: Text('Event ${eventIndex + 1} (${event.name})'),
+      child: Padding(
+        padding: const EdgeInsets.only(left: 12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _SaveOnFocusLostTextField(
+              label: 'Name',
+              initialValue: event.name,
+              onChanged: (value) => onChanged(event.copyWith(name: value)),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                SizedBox(
+                  width: 100,
+                  child: _SaveOnFocusLostTextField(
+                    label: 'Duration (ms)',
+                    initialValue: event.duration.inMilliseconds.toString(),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    onChanged: (value) => onChanged(event.copyWith(
+                        duration: Duration(milliseconds: int.parse(value)))),
+                  ),
+                ),
+                const SizedBox(width: 24),
+                _LabelledDropdownButton(
+                  label: 'Previous event name',
+                  value: event.previousEventName,
+                  items: model.events.map((e) => e.name).toList(),
+                  onChanged: (value) =>
+                      onChanged(event.copyWith(previousEventName: value)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...event.startWhen
+                .asMap()
+                .keys
+                .map((startWhenIndex) => _buildStartWhenTile(
+                    startWhen: event.startWhen[startWhenIndex],
+                    startWhenIndex: startWhenIndex,
+                    onChanged: (newStartWhen) {
+                      final startWhens = event.startWhen.toList();
+                      startWhens[startWhenIndex] = newStartWhen;
+                      onChanged(event.copyWith(startWhen: startWhens));
+                    }))
+                .toList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStartWhenTile(
+      {required PredictionStartWhen startWhen,
+      required int startWhenIndex,
+      required Function(PredictionStartWhen) onChanged}) {
+    return AnimatedExpandingCard(
+      header: Text('Start condition ${startWhenIndex + 1}'),
+      child: Padding(
+        padding: const EdgeInsets.only(left: 12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _LabelledDropdownButton(
+              label: 'Type',
+              value: startWhen.type,
+              items: PredictionStartWhenTypes.values,
+              onChanged: (value) {
+                onChanged(switch (value) {
+                  PredictionStartWhenTypes.threshold =>
+                    PredictionStartWhenThreshold.empty(),
+                  PredictionStartWhenTypes.direction =>
+                    PredictionStartWhenDirection.empty(),
+                });
+              },
+            ),
+            const SizedBox(height: 8),
+            switch (startWhen.runtimeType) {
+              PredictionStartWhenDirection => _buildStartWhenDirectionTile(
+                  startWhen: startWhen as PredictionStartWhenDirection,
+                  onChanged: onChanged),
+              PredictionStartWhenThreshold => _buildStartWhenThresholdTile(
+                  startWhen: startWhen as PredictionStartWhenThreshold,
+                  onChanged: onChanged),
+              _ => throw UnimplementedError(
+                  'Unsupported PredictionStartWhen type: ${startWhen.runtimeType}'),
+            },
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStartWhenDirectionTile(
+      {required PredictionStartWhenDirection startWhen,
+      required Function(PredictionStartWhen) onChanged}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            _LabelledDropdownButton(
+              label: 'Device',
+              value: startWhen.device,
+              items: PredictionDevices.values,
+              onChanged: (value) =>
+                  onChanged(startWhen.copyWith(device: value)),
+            ),
+            const SizedBox(width: 24),
+            SizedBox(
+              width: 100,
+              child: _SaveOnFocusLostTextField(
+                label: 'Channel',
+                initialValue: startWhen.channel.toString(),
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                onChanged: (value) =>
+                    onChanged(startWhen.copyWith(channel: int.parse(value))),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _LabelledDropdownButton(
+          label: 'Direction',
+          value: startWhen.direction,
+          items: PredictionDirections.values,
+          onChanged: (value) => onChanged(startWhen.copyWith(direction: value)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStartWhenThresholdTile(
+      {required PredictionStartWhenThreshold startWhen,
+      required Function(PredictionStartWhen) onChanged}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            _LabelledDropdownButton(
+              label: 'Device',
+              value: startWhen.device,
+              items: PredictionDevices.values,
+              onChanged: (value) =>
+                  onChanged(startWhen.copyWith(device: value)),
+            ),
+            const SizedBox(width: 24),
+            SizedBox(
+              width: 100,
+              child: _SaveOnFocusLostTextField(
+                label: 'Channel',
+                initialValue: startWhen.channel.toString(),
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                onChanged: (value) =>
+                    onChanged(startWhen.copyWith(channel: int.parse(value))),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        SizedBox(
+          width: 100,
+          child: _SaveOnFocusLostTextField(
+              label: 'Threshold',
+              initialValue: startWhen.value.toString(),
+              keyboardType: TextInputType.number,
+              inputFormatters: [DecimalInputFormatter()],
+              onChanged: (value) =>
+                  onChanged(startWhen.copyWith(value: double.parse(value)))),
+        ),
+      ],
+    );
+  }
+}
+
+class _SaveOnFocusLostTextField extends StatelessWidget {
+  const _SaveOnFocusLostTextField(
+      {required this.label,
+      required this.initialValue,
+      this.keyboardType,
+      this.inputFormatters,
+      required this.onChanged});
+
+  final String label;
+  final String initialValue;
+  final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
+  final Function(String) onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = TextEditingController(text: initialValue);
+    final focusNode = FocusNode();
+    focusNode.addListener(() {
+      if (!focusNode.hasFocus) onChanged(controller.text);
+    });
+
+    focusNode.addListener(() {
+      if (!focusNode.hasFocus) {
+        onChanged(controller.text);
+      }
+    });
+
+    return TextField(
+      controller: controller,
+      focusNode: focusNode,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      decoration: InputDecoration(labelText: label),
+    );
+  }
+}
+
+class _LabelledDropdownButton<T> extends StatelessWidget {
+  const _LabelledDropdownButton(
+      {required this.label,
+      required this.value,
+      required this.items,
+      required this.onChanged});
+
+  final String label;
+  final T value;
+  final List<T> items;
+  final Function(T) onChanged;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TextField(
-          controller: TextEditingController(text: predictionModel.name),
-          decoration: const InputDecoration(labelText: 'Name'),
-        ),
-        const SizedBox(height: 8),
-        const Text('Analyzer type'),
+        Text(label, style: Theme.of(context).textTheme.labelSmall),
         DropdownButton(
-            value: predictionModel.analyzer,
-            items: PredictionAnalyzers.values
-                .map((e) => DropdownMenuItem(
-                      value: e,
-                      child: Text(e.toString()),
-                    ))
-                .toList(),
-            onChanged: (value) {}),
-        const SizedBox(height: 8),
-        TextField(
-          controller: TextEditingController(
-            text: predictionModel.learningRate.toString(),
-          ),
-          keyboardType: TextInputType.number,
-          inputFormatters: [DecimalInputFormatter()],
-          decoration: const InputDecoration(labelText: 'Learning rate'),
-        ),
-        const SizedBox(height: 8),
-        const Text('Time reference device'),
-        DropdownButton(
-            value: predictionModel.timeReferenceDevice,
-            items: PredictionDevices.values
+            value: value,
+            items: items
                 .map((e) =>
                     DropdownMenuItem(value: e, child: Text(e.toString())))
                 .toList(),
-            onChanged: (value) {}),
-        const SizedBox(height: 8),
-        ...predictionModel.events
-            .asMap()
-            .keys
-            .map((index) => Column(
-                  children: [
-                    _buildEventTile(index, predictionModel.events[index]),
-                    const SizedBox(height: 16),
-                  ],
-                ))
-            .toList(),
-      ],
-    );
-  }
-
-  Widget _buildEventTile(int index, PredictionEvent event) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Event ${index + 1}'),
-        const SizedBox(height: 8),
-        Padding(
-            padding: const EdgeInsets.only(left: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: TextEditingController(text: event.name),
-                  decoration: const InputDecoration(labelText: 'Name'),
-                ),
-                const SizedBox(height: 8),
-                const Text('Previous event name'),
-                DropdownButton(
-                  value: event.previousEventName,
-                  items: predictionModel.events
-                      .map((e) =>
-                          DropdownMenuItem(value: e.name, child: Text(e.name)))
-                      .toList(),
-                  onChanged: (value) {},
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: TextEditingController(
-                    text: event.duration.inMilliseconds.toString(),
-                  ),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(labelText: 'Duration (ms)'),
-                ),
-                const SizedBox(height: 8),
-                ...event.startWhen.map((e) => _buildStartWhenTile(e)).toList(),
-              ],
-            )),
-      ],
-    );
-  }
-
-  Widget _buildStartWhenTile(PredictionStartWhen startWhen) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Start when'),
-        const SizedBox(height: 8),
-        const Text('Type'),
-        DropdownButton(
-          value: startWhen.runtimeType,
-          items: const [
-            DropdownMenuItem(
-                value: PredictionStartWhenDirection,
-                child: Text('Direction of device channel')),
-            DropdownMenuItem(
-                value: PredictionStartWhenThreshold,
-                child: Text('Threshold of device channel')),
-          ],
-          onChanged: (value) {},
-        ),
-        const SizedBox(height: 8),
-        switch (startWhen.runtimeType) {
-          PredictionStartWhenDirection => _buildStartWhenDirectionTile(
-              startWhen as PredictionStartWhenDirection),
-          PredictionStartWhenThreshold => _buildStartWhenThresholdTile(
-              startWhen as PredictionStartWhenThreshold),
-          _ => throw UnimplementedError(
-              'Unsupported PredictionStartWhen type: ${startWhen.runtimeType}'),
-        },
-      ],
-    );
-  }
-
-  Widget _buildStartWhenDirectionTile(PredictionStartWhenDirection startWhen) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Device'),
-        DropdownButton(
-          value: startWhen.device,
-          items: PredictionDevices.values
-              .map((e) => DropdownMenuItem(value: e, child: Text(e.toString())))
-              .toList(),
-          onChanged: (value) {},
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: TextEditingController(text: startWhen.channel.toString()),
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: const InputDecoration(labelText: 'Channel'),
-        ),
-        const SizedBox(height: 8),
-        const Text('Direction'),
-        DropdownButton(
-          value: startWhen.direction,
-          items: PredictionDirections.values
-              .map((e) => DropdownMenuItem(value: e, child: Text(e.toString())))
-              .toList(),
-          onChanged: (value) {},
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStartWhenThresholdTile(PredictionStartWhenThreshold startWhen) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Device'),
-        DropdownButton(
-          value: startWhen.device,
-          items: PredictionDevices.values
-              .map((e) => DropdownMenuItem(value: e, child: Text(e.toString())))
-              .toList(),
-          onChanged: (value) {},
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: TextEditingController(text: startWhen.channel.toString()),
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: const InputDecoration(labelText: 'Channel'),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: TextEditingController(text: startWhen.value.toString()),
-          keyboardType: TextInputType.number,
-          inputFormatters: [DecimalInputFormatter()],
-          decoration: const InputDecoration(labelText: 'Threshold'),
-        ),
+            onChanged: (value) => onChanged(value as T)),
       ],
     );
   }

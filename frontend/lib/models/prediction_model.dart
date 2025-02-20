@@ -1,15 +1,38 @@
+enum PredictionStartWhenTypes {
+  threshold,
+  direction;
+
+  @override
+  String toString() {
+    switch (this) {
+      case threshold:
+        return 'threshold';
+      case direction:
+        return 'direction';
+    }
+  }
+
+  static PredictionStartWhenTypes fromString(String s) =>
+      PredictionStartWhenTypes.values.firstWhere((e) => e.toString() == s,
+          orElse: () {
+        throw Exception('Unknown event type: $s');
+      });
+}
+
 abstract class PredictionStartWhen {
   Map<String, dynamic> serialize();
 
+  PredictionStartWhen copyWith();
+
+  PredictionStartWhenTypes get type;
+
   static PredictionStartWhen factory(Map<String, dynamic> json) {
-    final type = json['type'];
+    final type = PredictionStartWhenTypes.fromString(json['type']);
     switch (type) {
-      case 'threshold':
+      case PredictionStartWhenTypes.threshold:
         return PredictionStartWhenThreshold.fromJson(json);
-      case 'direction':
+      case PredictionStartWhenTypes.direction:
         return PredictionStartWhenDirection.fromJson(json);
-      default:
-        throw Exception('Unknown event type: $type');
     }
   }
 }
@@ -60,10 +83,20 @@ class PredictionStartWhenThreshold implements PredictionStartWhen {
     required this.value,
   });
 
+  PredictionStartWhenThreshold.empty()
+      : this(
+            device: PredictionDevices.delsysEmgDataCollector,
+            channel: 0,
+            comparator: PredictionComparators.greaterThanOrEqual,
+            value: 0.0);
+
+  @override
+  PredictionStartWhenTypes get type => PredictionStartWhenTypes.threshold;
+
   @override
   Map<String, dynamic> serialize() {
     return {
-      'type': 'threshold',
+      'type': type.toString(),
       'device': device.toString(),
       'channel': channel,
       'comparator': comparator.toString(),
@@ -77,6 +110,21 @@ class PredictionStartWhenThreshold implements PredictionStartWhen {
         channel = json['channel'],
         comparator = PredictionComparators.fromString(json['comparator']),
         value = json['value'];
+
+  @override
+  PredictionStartWhenThreshold copyWith({
+    PredictionDevices? device,
+    int? channel,
+    PredictionComparators? comparator,
+    double? value,
+  }) {
+    return PredictionStartWhenThreshold(
+      device: device ?? this.device,
+      channel: channel ?? this.channel,
+      comparator: comparator ?? this.comparator,
+      value: value ?? this.value,
+    );
+  }
 }
 
 enum PredictionDirections {
@@ -112,32 +160,55 @@ class PredictionStartWhenDirection implements PredictionStartWhen {
   });
 
   @override
+  PredictionStartWhenTypes get type => PredictionStartWhenTypes.direction;
+
+  @override
   Map<String, dynamic> serialize() {
     return {
-      'type': 'direction',
+      'type': type.toString(),
       'device': device.toString(),
       'channel': channel,
       'direction': direction.toString(),
     };
   }
 
+  PredictionStartWhenDirection.empty()
+      : this(
+            device: PredictionDevices.delsysEmgDataCollector,
+            channel: 0,
+            direction: PredictionDirections.positive);
+
   PredictionStartWhenDirection.fromJson(Map<String, dynamic> json)
       : device = PredictionDevices.fromString(json['device']),
         channel = json['channel'],
         direction = PredictionDirections.fromString(json['direction']);
+
+  @override
+  PredictionStartWhenDirection copyWith({
+    PredictionDevices? device,
+    int? channel,
+    PredictionDirections? direction,
+  }) {
+    return PredictionStartWhenDirection(
+      device: device ?? this.device,
+      channel: channel ?? this.channel,
+      direction: direction ?? this.direction,
+    );
+  }
 }
 
 class PredictionEvent {
   PredictionEvent({
     required this.name,
     required this.previousEventName,
-    required this.startWhen,
+    required List<PredictionStartWhen> startWhen,
     required this.duration,
-  });
+  }) : _startWhen = startWhen;
 
   final String name;
   final String previousEventName;
-  final List<PredictionStartWhen> startWhen;
+  final List<PredictionStartWhen> _startWhen;
+  List<PredictionStartWhen> get startWhen => List.unmodifiable(_startWhen);
   final Duration duration;
 
   Map<String, dynamic> serialize() {
@@ -151,9 +222,23 @@ class PredictionEvent {
   PredictionEvent.fromSerialized(Map<String, dynamic> json, this.duration)
       : name = json['name'],
         previousEventName = json['previous'],
-        startWhen = (json['start_when'] as List<dynamic>)
+        _startWhen = (json['start_when'] as List<dynamic>)
             .map((e) => PredictionStartWhen.factory(e))
             .toList();
+
+  PredictionEvent copyWith({
+    String? name,
+    String? previousEventName,
+    List<PredictionStartWhen>? startWhen,
+    Duration? duration,
+  }) {
+    return PredictionEvent(
+      name: name ?? this.name,
+      previousEventName: previousEventName ?? this.previousEventName,
+      startWhen: startWhen ?? this.startWhen,
+      duration: duration ?? this.duration,
+    );
+  }
 }
 
 enum PredictionAnalyzers {
@@ -199,14 +284,15 @@ class PredictionModel {
     required this.analyzer,
     required this.timeReferenceDevice,
     required this.learningRate,
-    required this.events,
-  });
+    required List<PredictionEvent> events,
+  }) : _events = events;
 
   final String name;
   final PredictionAnalyzers analyzer;
   final PredictionDevices timeReferenceDevice;
   final double learningRate;
-  final List<PredictionEvent> events;
+  final List<PredictionEvent> _events;
+  List<PredictionEvent> get events => List.unmodifiable(_events);
 
   Map<String, dynamic> serialize() => {
         'name': name,
@@ -224,11 +310,27 @@ class PredictionModel {
         timeReferenceDevice =
             PredictionDevices.fromString(json['time_reference_device']),
         learningRate = json['learning_rate'],
-        events = (json['events'] as List<dynamic>)
+        _events = (json['events'] as List<dynamic>)
             .asMap()
             .keys
             .map((index) => PredictionEvent.fromSerialized(
                 json['events'][index],
                 Duration(milliseconds: json['initial_phase_durations'][index])))
             .toList();
+
+  PredictionModel copyWith({
+    String? name,
+    PredictionAnalyzers? analyzer,
+    PredictionDevices? timeReferenceDevice,
+    double? learningRate,
+    List<PredictionEvent>? events,
+  }) {
+    return PredictionModel(
+      name: name ?? this.name,
+      analyzer: analyzer ?? this.analyzer,
+      timeReferenceDevice: timeReferenceDevice ?? this.timeReferenceDevice,
+      learningRate: learningRate ?? this.learningRate,
+      events: events ?? this.events,
+    );
+  }
 }
