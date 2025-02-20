@@ -438,15 +438,27 @@ class _PredictionModelTile extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        SizedBox(
-          width: 100,
-          child: _SaveOnFocusLostTextField(
-              label: 'Threshold',
-              initialValue: startWhen.value.toString(),
-              keyboardType: TextInputType.number,
-              inputFormatters: [DecimalInputFormatter()],
+        Row(
+          children: [
+            _LabelledDropdownButton(
+              label: 'Comparator',
+              value: startWhen.comparator,
+              items: PredictionComparators.values,
               onChanged: (value) =>
-                  onChanged(startWhen.copyWith(value: double.parse(value)))),
+                  onChanged(startWhen.copyWith(comparator: value)),
+            ),
+            const SizedBox(width: 24),
+            SizedBox(
+              width: 100,
+              child: _SaveOnFocusLostTextField(
+                  label: 'Threshold',
+                  initialValue: startWhen.value.toString(),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [DecimalInputFormatter()],
+                  onChanged: (value) => onChanged(
+                      startWhen.copyWith(value: double.parse(value)))),
+            ),
+          ],
         ),
       ],
     );

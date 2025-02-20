@@ -388,8 +388,7 @@ class _MainScreenState extends State<MainScreen> {
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
               ElevatedButton(
-                onPressed:
-                    canSendCommand ? _showLiveAnalysesManagerDialog : null,
+                onPressed: _showLiveAnalysesManagerDialog,
                 child: const Text('Manager'),
               ),
               const SizedBox(height: 12),
