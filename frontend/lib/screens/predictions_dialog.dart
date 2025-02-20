@@ -28,12 +28,6 @@ class PredictionsDialog extends StatefulWidget {
 }
 
 class _PredictionsDialogState extends State<PredictionsDialog> {
-  void _onPredictionChanged(PredictionModel model, int modelIndex) {
-    setState(() {
-      widget.predictions[modelIndex] = model;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -44,8 +38,24 @@ class _PredictionsDialogState extends State<PredictionsDialog> {
                 (modelIndex) => _PredictionModelTile(
                   model: widget.predictions[modelIndex],
                   modelIndex: modelIndex,
-                  onChanged: (newModel) =>
-                      _onPredictionChanged(newModel, modelIndex),
+                  onChanged: (newModel) => setState(() {
+                    // Make sure the newModel does not share the same name with any other model
+                    for (int i = 0; i < widget.predictions.length; i++) {
+                      if (i == modelIndex) continue;
+                      if (widget.predictions[i].name == newModel.name) {
+                        // Show snackbar
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                'The name "${newModel.name}" is already in use by another analysis.'),
+                          ),
+                        );
+                        return;
+                      }
+                    }
+
+                    widget.predictions[modelIndex] = newModel;
+                  }),
                   onDeleted: () {
                     setState(() {
                       widget.predictions.removeAt(modelIndex);
@@ -164,6 +174,24 @@ class _PredictionModelTile extends StatelessWidget {
                         eventIndex: eventIndex,
                         onChanged: (event) {
                           final events = model.events.toList();
+
+                          // Make sure the new event does not share the same name with any other event
+                          for (int i = 0; i < events.length; i++) {
+                            if (i == eventIndex) continue;
+                            if (events[i].name == event.name) {
+                              // Show snackbar
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                      'The name "${event.name}" is already in use by another event.'),
+                                ),
+                              );
+
+                              // Force the rebuild of the dialog
+                              onChanged(model);
+                              return;
+                            }
+                          }
 
                           final oldName = events[eventIndex].name;
                           events[eventIndex] = event;
