@@ -44,7 +44,7 @@ size_t Analyzers::add(const nlohmann::json &json) {
 
   // Create the analyzer
   try {
-    if (analyzerType == "cyclic_from_analogs") {
+    if (analyzerType == "cyclic_timed_events") {
       logger.info("Creating a cyclic timed events analyzer from analogs");
       return add(std::make_unique<CyclicTimedEventsAnalyzer>(json));
     } else {

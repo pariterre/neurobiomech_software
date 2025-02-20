@@ -56,15 +56,15 @@ void main() {
   });
 
   test('PredictionAnalyzers enum Constructor', () {
-    expect(PredictionAnalyzers.fromString('cyclic_from_analogs'),
-        PredictionAnalyzers.cyclicFromAnalogs);
+    expect(PredictionAnalyzers.fromJsonString('cyclic_timed_events'),
+        PredictionAnalyzers.cyclicTimedEvents);
   });
 
   test('PredictionAnalyzers enum values', () {
     expect(PredictionAnalyzers.values.length, 1);
 
-    expect(PredictionAnalyzers.cyclicFromAnalogs.toString(),
-        'cyclic_from_analogs');
+    expect(PredictionAnalyzers.cyclicTimedEvents.toString(),
+        'cyclic_timed_events');
   });
 
   test('PredictionDevices enum Constructor', () {
@@ -196,7 +196,7 @@ void main() {
   test('PredictionModel', () {
     final model = PredictionModel(
         name: 'Test Model',
-        analyzer: PredictionAnalyzers.cyclicFromAnalogs,
+        analyzer: PredictionAnalyzers.cyclicTimedEvents,
         timeReferenceDevice: PredictionDevices.delsysAnalogDataCollector,
         learningRate: 0.1,
         events: [
@@ -219,7 +219,7 @@ void main() {
 
     final serialized = model.serialize();
     expect(serialized['name'], 'Test Model');
-    expect(serialized['analyzer_type'], 'cyclic_from_analogs');
+    expect(serialized['analyzer_type'], 'cyclic_timed_events');
     expect(serialized['time_reference_device'], 'DelsysAnalogDataCollector');
     expect(serialized['learning_rate'], 0.1);
     expect(serialized['initial_phase_durations'], [123]);
@@ -239,7 +239,7 @@ void main() {
 
     final created = PredictionModel.fromSerialized(serialized);
     expect(created.name, 'Test Model');
-    expect(created.analyzer, PredictionAnalyzers.cyclicFromAnalogs);
+    expect(created.analyzer, PredictionAnalyzers.cyclicTimedEvents);
     expect(created.timeReferenceDevice,
         PredictionDevices.delsysAnalogDataCollector);
     expect(created.learningRate, 0.1);

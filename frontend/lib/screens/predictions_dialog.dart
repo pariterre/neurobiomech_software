@@ -9,9 +9,9 @@ class DecimalInputFormatter extends TextInputFormatter {
       TextEditingValue oldValue, TextEditingValue newValue) {
     if (newValue.text.isEmpty) return newValue;
 
-    // Ensure only valid float format (digits and at most one dot)
+    // Ensure only valid positive and negative float format (digits and at most one dot)
     final text = newValue.text;
-    if (RegExp(r'^\d*\.?\d*$').hasMatch(text)) return newValue;
+    if (RegExp(r'^-?\d*\.?\d*$').hasMatch(text)) return newValue;
 
     // Reject the change if it's invalid
     return oldValue;
@@ -39,19 +39,30 @@ class _PredictionsDialogState extends State<PredictionsDialog> {
     return AlertDialog(
       title: const Text('Live Analyses'),
       content: SingleChildScrollView(
-        child: Column(
-          children: widget.predictions
-              .asMap()
-              .keys
-              .map(
+        child: Column(children: [
+          ...widget.predictions.asMap().keys.map(
                 (modelIndex) => _PredictionModelTile(
-                    model: widget.predictions[modelIndex],
-                    modelIndex: modelIndex,
-                    onChanged: (newModel) =>
-                        _onPredictionChanged(newModel, modelIndex)),
-              )
-              .toList(),
-        ),
+                  model: widget.predictions[modelIndex],
+                  modelIndex: modelIndex,
+                  onChanged: (newModel) =>
+                      _onPredictionChanged(newModel, modelIndex),
+                  onDeleted: () {
+                    setState(() {
+                      widget.predictions.removeAt(modelIndex);
+                    });
+                  },
+                ),
+              ),
+          _AddNewTile(
+              label: 'Add new analysis',
+              labelStyle: Theme.of(context).textTheme.titleMedium,
+              onTap: () {
+                setState(() {
+                  widget.predictions.add(PredictionModel.empty(
+                      name: 'New analysis ${widget.predictions.length + 1}'));
+                });
+              }),
+        ]),
       ),
       actions: [
         TextButton(
@@ -72,11 +83,15 @@ class _PredictionsDialogState extends State<PredictionsDialog> {
 
 class _PredictionModelTile extends StatelessWidget {
   const _PredictionModelTile(
-      {required this.model, required this.modelIndex, required this.onChanged});
+      {required this.model,
+      required this.modelIndex,
+      required this.onChanged,
+      required this.onDeleted});
 
   final int modelIndex;
   final PredictionModel model;
   final Function(PredictionModel) onChanged;
+  final Function() onDeleted;
 
   @override
   Widget build(BuildContext context) {
@@ -88,10 +103,24 @@ class _PredictionModelTile extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _SaveOnFocusLostTextField(
-              label: 'Name',
-              initialValue: model.name,
-              onChanged: (value) => onChanged(model.copyWith(name: value)),
+            Row(
+              children: [
+                Flexible(
+                  child: _SaveOnFocusLostTextField(
+                    label: 'Name',
+                    initialValue: model.name,
+                    onChanged: (value) =>
+                        onChanged(model.copyWith(name: value)),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                    onPressed: onDeleted,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             _LabelledDropdownButton(
@@ -130,27 +159,58 @@ class _PredictionModelTile extends StatelessWidget {
                 .map((eventIndex) => Padding(
                       padding: const EdgeInsets.only(bottom: 8.0),
                       child: _buildEventTile(
-                          event: model.events[eventIndex],
-                          eventIndex: eventIndex,
-                          onChanged: (event) {
-                            final events = model.events.toList();
+                        event: model.events[eventIndex],
+                        eventIndex: eventIndex,
+                        onChanged: (event) {
+                          final events = model.events.toList();
 
-                            final oldName = events[eventIndex].name;
-                            events[eventIndex] = event;
+                          final oldName = events[eventIndex].name;
+                          events[eventIndex] = event;
 
-                            // Change the name of the "previous event"
-                            for (int i = 0; i < events.length; i++) {
-                              if (events[i].previousEventName == oldName) {
-                                events[i] = events[i]
-                                    .copyWith(previousEventName: event.name);
-                              }
+                          // Change the name of the "previous event"
+                          for (int i = 0; i < events.length; i++) {
+                            if (events[i].previousEventName == oldName) {
+                              events[i] = events[i]
+                                  .copyWith(previousEventName: event.name);
                             }
+                          }
 
-                            // Copy the new event to the list and send it
-                            onChanged(model.copyWith(events: events));
-                          }),
+                          // Copy the new event to the list and send it
+                          onChanged(model.copyWith(events: events));
+                        },
+                        onDeleted: () {
+                          final events = model.events.toList();
+                          final oldName = events[eventIndex].name;
+
+                          // Change the name of the "previous event"
+                          final newOldNameIndex =
+                              (eventIndex - 1) % events.length;
+                          for (int i = 0; i < events.length; i++) {
+                            if (events[i].previousEventName == oldName) {
+                              events[i] = events[i].copyWith(
+                                  previousEventName:
+                                      events[newOldNameIndex].name);
+                            }
+                          }
+
+                          events.removeAt(eventIndex);
+                          onChanged(model.copyWith(events: events));
+                        },
+                      ),
                     ))
                 .toList(),
+            _AddNewTile(
+              label: 'Add new event',
+              onTap: () {
+                onChanged(model.copyWith(
+                  events: [
+                    ...model.events,
+                    PredictionEvent.empty(
+                        name: 'New event ${model.events.length + 1}'),
+                  ],
+                ));
+              },
+            ),
           ],
         ),
       ),
@@ -161,6 +221,7 @@ class _PredictionModelTile extends StatelessWidget {
     required PredictionEvent event,
     required int eventIndex,
     required Function(PredictionEvent) onChanged,
+    required Function() onDeleted,
   }) {
     return AnimatedExpandingCard(
       header: Text('Event ${eventIndex + 1} (${event.name})'),
@@ -169,10 +230,24 @@ class _PredictionModelTile extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _SaveOnFocusLostTextField(
-              label: 'Name',
-              initialValue: event.name,
-              onChanged: (value) => onChanged(event.copyWith(name: value)),
+            Row(
+              children: [
+                Flexible(
+                  child: _SaveOnFocusLostTextField(
+                    label: 'Name',
+                    initialValue: event.name,
+                    onChanged: (value) =>
+                        onChanged(event.copyWith(name: value)),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                    onPressed: onDeleted,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             Row(
@@ -203,56 +278,91 @@ class _PredictionModelTile extends StatelessWidget {
                 .asMap()
                 .keys
                 .map((startWhenIndex) => _buildStartWhenTile(
-                    startWhen: event.startWhen[startWhenIndex],
-                    startWhenIndex: startWhenIndex,
-                    onChanged: (newStartWhen) {
-                      final startWhens = event.startWhen.toList();
-                      startWhens[startWhenIndex] = newStartWhen;
-                      onChanged(event.copyWith(startWhen: startWhens));
-                    }))
+                      startWhen: event.startWhen[startWhenIndex],
+                      startWhenIndex: startWhenIndex,
+                      onChanged: (newStartWhen) {
+                        final startWhens = event.startWhen.toList();
+                        startWhens[startWhenIndex] = newStartWhen;
+                        onChanged(event.copyWith(startWhen: startWhens));
+                      },
+                      onDeleted: () {
+                        final startWhens = event.startWhen.toList();
+                        startWhens.removeAt(startWhenIndex);
+                        onChanged(event.copyWith(startWhen: startWhens));
+                      },
+                    ))
                 .toList(),
+            _AddNewTile(
+              label: 'Add new start condition',
+              onTap: () {
+                onChanged(event.copyWith(
+                  startWhen: [
+                    ...event.startWhen,
+                    PredictionStartWhenThreshold.empty()
+                  ],
+                ));
+              },
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStartWhenTile(
-      {required PredictionStartWhen startWhen,
-      required int startWhenIndex,
-      required Function(PredictionStartWhen) onChanged}) {
-    return AnimatedExpandingCard(
-      header: Text('Start condition ${startWhenIndex + 1}'),
-      child: Padding(
-        padding: const EdgeInsets.only(left: 12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _LabelledDropdownButton(
-              label: 'Type',
-              value: startWhen.type,
-              items: PredictionStartWhenTypes.values,
-              onChanged: (value) {
-                onChanged(switch (value) {
-                  PredictionStartWhenTypes.threshold =>
-                    PredictionStartWhenThreshold.empty(),
-                  PredictionStartWhenTypes.direction =>
-                    PredictionStartWhenDirection.empty(),
-                });
+  Widget _buildStartWhenTile({
+    required PredictionStartWhen startWhen,
+    required int startWhenIndex,
+    required Function(PredictionStartWhen) onChanged,
+    required Function() onDeleted,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2.0),
+      child: AnimatedExpandingCard(
+        header: Text('Start condition ${startWhenIndex + 1}'),
+        child: Padding(
+          padding: const EdgeInsets.only(left: 12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _LabelledDropdownButton(
+                    label: 'Type',
+                    value: startWhen.type,
+                    items: PredictionStartWhenTypes.values,
+                    onChanged: (value) {
+                      onChanged(switch (value) {
+                        PredictionStartWhenTypes.threshold =>
+                          PredictionStartWhenThreshold.empty(),
+                        PredictionStartWhenTypes.direction =>
+                          PredictionStartWhenDirection.empty(),
+                      });
+                    },
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: IconButton(
+                      icon:
+                          const Icon(Icons.delete, color: Colors.red, size: 20),
+                      onPressed: onDeleted,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              switch (startWhen.runtimeType) {
+                PredictionStartWhenDirection => _buildStartWhenDirectionTile(
+                    startWhen: startWhen as PredictionStartWhenDirection,
+                    onChanged: onChanged),
+                PredictionStartWhenThreshold => _buildStartWhenThresholdTile(
+                    startWhen: startWhen as PredictionStartWhenThreshold,
+                    onChanged: onChanged),
+                _ => throw UnimplementedError(
+                    'Unsupported PredictionStartWhen type: ${startWhen.runtimeType}'),
               },
-            ),
-            const SizedBox(height: 8),
-            switch (startWhen.runtimeType) {
-              PredictionStartWhenDirection => _buildStartWhenDirectionTile(
-                  startWhen: startWhen as PredictionStartWhenDirection,
-                  onChanged: onChanged),
-              PredictionStartWhenThreshold => _buildStartWhenThresholdTile(
-                  startWhen: startWhen as PredictionStartWhenThreshold,
-                  onChanged: onChanged),
-              _ => throw UnimplementedError(
-                  'Unsupported PredictionStartWhen type: ${startWhen.runtimeType}'),
-            },
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -339,6 +449,41 @@ class _PredictionModelTile extends StatelessWidget {
                   onChanged(startWhen.copyWith(value: double.parse(value)))),
         ),
       ],
+    );
+  }
+}
+
+class _AddNewTile extends StatelessWidget {
+  const _AddNewTile(
+      {required this.label, this.labelStyle, required this.onTap});
+
+  final String label;
+  final TextStyle? labelStyle;
+  final Function() onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 2.0, bottom: 2.0),
+        child:
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text(label, style: labelStyle),
+          Padding(
+            padding: const EdgeInsets.only(right: 20.0),
+            child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                child: const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: Icon(Icons.add, color: Colors.white, size: 16))),
+          ),
+        ]),
+      ),
     );
   }
 }

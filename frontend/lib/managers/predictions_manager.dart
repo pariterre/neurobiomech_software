@@ -44,36 +44,6 @@ class PredictionsManager {
       }
     }
 
-    _predictions.add(PredictionModel(
-        name: 'Left Foot',
-        analyzer: PredictionAnalyzers.cyclicFromAnalogs,
-        timeReferenceDevice: PredictionDevices.delsysEmgDataCollector,
-        learningRate: 0.5,
-        events: [
-          PredictionEvent(
-              name: 'heel_strike',
-              previousEventName: 'toe_off',
-              duration: const Duration(milliseconds: 400),
-              startWhen: [
-                PredictionStartWhenThreshold(
-                    device: PredictionDevices.delsysEmgDataCollector,
-                    channel: 0,
-                    comparator: PredictionComparators.greaterThanOrEqual,
-                    value: 0.2)
-              ]),
-          PredictionEvent(
-              name: 'toe_off',
-              previousEventName: 'heel_strike',
-              duration: const Duration(milliseconds: 600),
-              startWhen: [
-                PredictionStartWhenThreshold(
-                    device: PredictionDevices.delsysEmgDataCollector,
-                    channel: 0,
-                    comparator: PredictionComparators.lessThanOrEqual,
-                    value: -0.2)
-              ]),
-        ]));
-
     _isLoaded = true;
     _isLoading = false;
   }

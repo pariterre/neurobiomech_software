@@ -6,7 +6,7 @@ using namespace NEUROBIO_NAMESPACE;
 
 auto analyzerExample = nlohmann::json::parse(R"({
         "name" : "Left Foot",
-        "analyzer_type" : "cyclic_from_analogs",
+        "analyzer_type" : "cyclic_timed_events",
         "time_reference_device" : "DelsysAnalogDataCollector",
         "learning_rate" : 0.5,
         "initial_phase_durations" : [400, 600],

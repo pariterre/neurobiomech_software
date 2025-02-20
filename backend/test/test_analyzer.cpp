@@ -32,7 +32,7 @@ analyzer::Analyzers generateAnalyzers() {
   // Add one analyzer for the left side
   size_t idxFirst = analyzers.add(nlohmann::json::parse(R"({
         "name" : "Left Foot",
-        "analyzer_type" : "cyclic_from_analogs",
+        "analyzer_type" : "cyclic_timed_events",
         "time_reference_device" : "DelsysAnalogDataCollector",
         "learning_rate" : 0.5,
         "initial_phase_durations" : [400, 600],
@@ -68,7 +68,7 @@ analyzer::Analyzers generateAnalyzers() {
   // Add one analyzer for the right side
   size_t idxSecond = analyzers.add(nlohmann::json::parse(R"({
         "name" : "Right Foot",
-        "analyzer_type" : "cyclic_from_analogs",
+        "analyzer_type" : "cyclic_timed_events",
         "time_reference_device" : "DelsysAnalogDataCollector",
         "learning_rate" : 0.1,
         "initial_phase_durations" : [100, 150],

@@ -226,6 +226,11 @@ class PredictionEvent {
             .map((e) => PredictionStartWhen.factory(e))
             .toList();
 
+  PredictionEvent.empty({required this.name})
+      : duration = const Duration(milliseconds: 0),
+        previousEventName = name,
+        _startWhen = [];
+
   PredictionEvent copyWith({
     String? name,
     String? previousEventName,
@@ -242,20 +247,28 @@ class PredictionEvent {
 }
 
 enum PredictionAnalyzers {
-  cyclicFromAnalogs;
+  cyclicTimedEvents;
 
   @override
   String toString() {
     switch (this) {
-      case cyclicFromAnalogs:
-        return 'cyclic_from_analogs';
+      case cyclicTimedEvents:
+        return 'Cyclic timed events';
     }
   }
 
-  static PredictionAnalyzers fromString(String s) => PredictionAnalyzers.values
-          .firstWhere((e) => e.toString() == s, orElse: () {
+  static PredictionAnalyzers fromJsonString(String s) =>
+      PredictionAnalyzers.values.firstWhere((e) => e.jsonString() == s,
+          orElse: () {
         throw Exception('Unknown analyzer: $s');
       });
+
+  String jsonString() {
+    switch (this) {
+      case cyclicTimedEvents:
+        return 'cyclic_timed_events';
+    }
+  }
 }
 
 enum PredictionDevices {
@@ -296,7 +309,7 @@ class PredictionModel {
 
   Map<String, dynamic> serialize() => {
         'name': name,
-        'analyzer_type': analyzer.toString(),
+        'analyzer_type': analyzer.jsonString(),
         'time_reference_device': timeReferenceDevice.toString(),
         'learning_rate': learningRate,
         'initial_phase_durations':
@@ -306,7 +319,7 @@ class PredictionModel {
 
   PredictionModel.fromSerialized(Map<String, dynamic> json)
       : name = json['name'],
-        analyzer = PredictionAnalyzers.fromString(json['analyzer_type']),
+        analyzer = PredictionAnalyzers.fromJsonString(json['analyzer_type']),
         timeReferenceDevice =
             PredictionDevices.fromString(json['time_reference_device']),
         learningRate = json['learning_rate'],
@@ -317,6 +330,12 @@ class PredictionModel {
                 json['events'][index],
                 Duration(milliseconds: json['initial_phase_durations'][index])))
             .toList();
+
+  PredictionModel.empty({required this.name})
+      : analyzer = PredictionAnalyzers.cyclicTimedEvents,
+        timeReferenceDevice = PredictionDevices.delsysEmgDataCollector,
+        learningRate = 0.0,
+        _events = [];
 
   PredictionModel copyWith({
     String? name,
