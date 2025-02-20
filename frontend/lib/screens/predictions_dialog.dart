@@ -57,10 +57,11 @@ class _PredictionsDialogState extends State<PredictionsDialog> {
               label: 'Add new analysis',
               labelStyle: Theme.of(context).textTheme.titleMedium,
               onTap: () {
-                setState(() {
-                  widget.predictions.add(PredictionModel.empty(
-                      name: 'New analysis ${widget.predictions.length + 1}'));
-                });
+                setState(() => widget.predictions.add(PredictionModel.empty(
+                    name: Iterable<int>.generate(widget.predictions.length + 2)
+                        .map((i) => 'New analysis ${i + 1}')
+                        .firstWhere((name) =>
+                            !widget.predictions.any((e) => e.name == name)))));
               }),
         ]),
       ),
@@ -206,7 +207,10 @@ class _PredictionModelTile extends StatelessWidget {
                   events: [
                     ...model.events,
                     PredictionEvent.empty(
-                        name: 'New event ${model.events.length + 1}'),
+                        name: Iterable<int>.generate(model.events.length + 2)
+                            .map((i) => 'New event ${i + 1}')
+                            .firstWhere((name) =>
+                                !model.events.any((e) => e.name == name))),
                   ],
                 ));
               },
