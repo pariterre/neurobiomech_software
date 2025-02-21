@@ -102,6 +102,9 @@ int main() {
                 " Analog data series (expected about ~" +
                 std::to_string(recordingTime.count() * 148) + ")");
 
+    // Remove the data analysez we have
+    client.removeAnalyzer("Left Foot");
+
     // Clean up things
     client.disconnect();
     server.stopServer();

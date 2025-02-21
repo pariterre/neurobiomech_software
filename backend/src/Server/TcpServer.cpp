@@ -497,7 +497,7 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
       response = TcpServerResponse::NOK;
       break;
     }
-  }
+  } break;
 
   default:
     logger.fatal("Invalid command: " +

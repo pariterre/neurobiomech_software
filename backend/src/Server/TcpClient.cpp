@@ -223,7 +223,7 @@ bool TcpClient::removeAnalyzer(const std::string &analyzerName) {
     return false;
   }
 
-  logger.info("CLIENT: Analyzer removed");
+  logger.info("CLIENT: Analyzer " + analyzerName + " removed");
   return true;
 }
 
