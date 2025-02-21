@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:frontend/managers/predictions_manager.dart';
 import 'package:frontend/models/prediction_model.dart';
 import 'package:frontend/widgets/animated_expanding_card.dart';
 
@@ -19,30 +20,35 @@ class DecimalInputFormatter extends TextInputFormatter {
 }
 
 class PredictionsDialog extends StatefulWidget {
-  const PredictionsDialog({super.key, required this.predictions});
+  const PredictionsDialog({super.key, required this.lockedPredictions});
 
-  final List<PredictionModel> predictions;
+  final List<PredictionModel> lockedPredictions;
 
   @override
   State<PredictionsDialog> createState() => _PredictionsDialogState();
 }
 
 class _PredictionsDialogState extends State<PredictionsDialog> {
+  late final List<PredictionModel> predictions =
+      PredictionsManager.instance.predictions.toList();
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Live Analyses'),
       content: SingleChildScrollView(
         child: Column(children: [
-          ...widget.predictions.asMap().keys.map(
+          ...predictions.asMap().keys.map(
                 (modelIndex) => _PredictionModelTile(
-                  model: widget.predictions[modelIndex],
+                  model: predictions[modelIndex],
+                  isLocked: widget.lockedPredictions
+                      .any((e) => e.name == predictions[modelIndex].name),
                   modelIndex: modelIndex,
                   onChanged: (newModel) => setState(() {
                     // Make sure the newModel does not share the same name with any other model
-                    for (int i = 0; i < widget.predictions.length; i++) {
+                    for (int i = 0; i < predictions.length; i++) {
                       if (i == modelIndex) continue;
-                      if (widget.predictions[i].name == newModel.name) {
+                      if (predictions[i].name == newModel.name) {
                         // Show snackbar
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -54,24 +60,22 @@ class _PredictionsDialogState extends State<PredictionsDialog> {
                       }
                     }
 
-                    widget.predictions[modelIndex] = newModel;
+                    predictions[modelIndex] = newModel;
                   }),
-                  onDeleted: () {
-                    setState(() {
-                      widget.predictions.removeAt(modelIndex);
-                    });
-                  },
+                  onDeleted: () =>
+                      setState(() => predictions.removeAt(modelIndex)),
                 ),
               ),
           _AddNewTile(
               label: 'Add new analysis',
+              isLocked: false,
               labelStyle: Theme.of(context).textTheme.titleMedium,
               onTap: () {
-                setState(() => widget.predictions.add(PredictionModel.empty(
-                    name: Iterable<int>.generate(widget.predictions.length + 2)
+                setState(() => predictions.add(PredictionModel.empty(
+                    name: Iterable<int>.generate(predictions.length + 2)
                         .map((i) => 'New analysis ${i + 1}')
                         .firstWhere((name) =>
-                            !widget.predictions.any((e) => e.name == name)))));
+                            !predictions.any((e) => e.name == name)))));
               }),
         ]),
       ),
@@ -83,7 +87,7 @@ class _PredictionsDialogState extends State<PredictionsDialog> {
             child: const Text('Cancel')),
         ElevatedButton(
           onPressed: () {
-            Navigator.of(context).pop(widget.predictions);
+            Navigator.of(context).pop(predictions);
           },
           child: const Text('Save'),
         ),
@@ -93,14 +97,17 @@ class _PredictionsDialogState extends State<PredictionsDialog> {
 }
 
 class _PredictionModelTile extends StatelessWidget {
-  const _PredictionModelTile(
-      {required this.model,
-      required this.modelIndex,
-      required this.onChanged,
-      required this.onDeleted});
+  const _PredictionModelTile({
+    required this.model,
+    required this.isLocked,
+    required this.modelIndex,
+    required this.onChanged,
+    required this.onDeleted,
+  });
 
-  final int modelIndex;
   final PredictionModel model;
+  final bool isLocked;
+  final int modelIndex;
   final Function(PredictionModel) onChanged;
   final Function() onDeleted;
 
@@ -119,6 +126,7 @@ class _PredictionModelTile extends StatelessWidget {
                 Flexible(
                   child: _SaveOnFocusLostTextField(
                     label: 'Name',
+                    isLocked: isLocked,
                     initialValue: model.name,
                     onChanged: (value) =>
                         onChanged(model.copyWith(name: value)),
@@ -127,8 +135,9 @@ class _PredictionModelTile extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(right: 8.0),
                   child: IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                    onPressed: onDeleted,
+                    icon: Icon(Icons.delete,
+                        color: isLocked ? Colors.grey : Colors.red, size: 20),
+                    onPressed: isLocked ? null : onDeleted,
                   ),
                 ),
               ],
@@ -136,6 +145,7 @@ class _PredictionModelTile extends StatelessWidget {
             const SizedBox(height: 8),
             _LabelledDropdownButton(
                 label: 'Analyzer type',
+                isLocked: isLocked,
                 value: model.analyzer,
                 items: PredictionAnalyzers.values,
                 onChanged: (value) =>
@@ -147,6 +157,7 @@ class _PredictionModelTile extends StatelessWidget {
                   width: 100,
                   child: _SaveOnFocusLostTextField(
                     label: 'Learning rate',
+                    isLocked: isLocked,
                     initialValue: model.learningRate.toString(),
                     onChanged: (value) => onChanged(
                         model.copyWith(learningRate: double.parse(value))),
@@ -157,6 +168,7 @@ class _PredictionModelTile extends StatelessWidget {
                 const SizedBox(width: 24),
                 _LabelledDropdownButton(
                     label: 'Time reference device',
+                    isLocked: isLocked,
                     value: model.timeReferenceDevice,
                     items: PredictionDevices.values,
                     onChanged: (newValue) => onChanged(
@@ -230,6 +242,7 @@ class _PredictionModelTile extends StatelessWidget {
                 .toList(),
             _AddNewTile(
               label: 'Add new event',
+              isLocked: isLocked,
               onTap: () {
                 onChanged(model.copyWith(
                   events: [
@@ -267,6 +280,7 @@ class _PredictionModelTile extends StatelessWidget {
                 Flexible(
                   child: _SaveOnFocusLostTextField(
                     label: 'Name',
+                    isLocked: isLocked,
                     initialValue: event.name,
                     onChanged: (value) =>
                         onChanged(event.copyWith(name: value)),
@@ -275,8 +289,9 @@ class _PredictionModelTile extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(right: 8.0),
                   child: IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                    onPressed: onDeleted,
+                    icon: Icon(Icons.delete,
+                        color: isLocked ? Colors.grey : Colors.red, size: 20),
+                    onPressed: isLocked ? null : onDeleted,
                   ),
                 ),
               ],
@@ -288,6 +303,7 @@ class _PredictionModelTile extends StatelessWidget {
                   width: 100,
                   child: _SaveOnFocusLostTextField(
                     label: 'Duration (ms)',
+                    isLocked: isLocked,
                     initialValue: event.duration.inMilliseconds.toString(),
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -298,6 +314,7 @@ class _PredictionModelTile extends StatelessWidget {
                 const SizedBox(width: 24),
                 _LabelledDropdownButton(
                   label: 'Previous event name',
+                  isLocked: isLocked,
                   value: event.previousEventName,
                   items: model.events.map((e) => e.name).toList(),
                   onChanged: (value) =>
@@ -326,6 +343,7 @@ class _PredictionModelTile extends StatelessWidget {
                 .toList(),
             _AddNewTile(
               label: 'Add new start condition',
+              isLocked: isLocked,
               onTap: () {
                 onChanged(event.copyWith(
                   startWhen: [
@@ -361,6 +379,7 @@ class _PredictionModelTile extends StatelessWidget {
                 children: [
                   _LabelledDropdownButton(
                     label: 'Type',
+                    isLocked: isLocked,
                     value: startWhen.type,
                     items: PredictionStartWhenTypes.values,
                     onChanged: (value) {
@@ -375,9 +394,9 @@ class _PredictionModelTile extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.only(right: 8.0),
                     child: IconButton(
-                      icon:
-                          const Icon(Icons.delete, color: Colors.red, size: 20),
-                      onPressed: onDeleted,
+                      icon: Icon(Icons.delete,
+                          color: isLocked ? Colors.grey : Colors.red, size: 20),
+                      onPressed: isLocked ? null : onDeleted,
                     ),
                   ),
                 ],
@@ -410,6 +429,7 @@ class _PredictionModelTile extends StatelessWidget {
           children: [
             _LabelledDropdownButton(
               label: 'Device',
+              isLocked: isLocked,
               value: startWhen.device,
               items: PredictionDevices.values,
               onChanged: (value) =>
@@ -420,6 +440,7 @@ class _PredictionModelTile extends StatelessWidget {
               width: 100,
               child: _SaveOnFocusLostTextField(
                 label: 'Channel',
+                isLocked: isLocked,
                 initialValue: startWhen.channel.toString(),
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -432,6 +453,7 @@ class _PredictionModelTile extends StatelessWidget {
         const SizedBox(height: 8),
         _LabelledDropdownButton(
           label: 'Direction',
+          isLocked: isLocked,
           value: startWhen.direction,
           items: PredictionDirections.values,
           onChanged: (value) => onChanged(startWhen.copyWith(direction: value)),
@@ -450,6 +472,7 @@ class _PredictionModelTile extends StatelessWidget {
           children: [
             _LabelledDropdownButton(
               label: 'Device',
+              isLocked: isLocked,
               value: startWhen.device,
               items: PredictionDevices.values,
               onChanged: (value) =>
@@ -460,6 +483,7 @@ class _PredictionModelTile extends StatelessWidget {
               width: 100,
               child: _SaveOnFocusLostTextField(
                 label: 'Channel',
+                isLocked: isLocked,
                 initialValue: startWhen.channel.toString(),
                 keyboardType: TextInputType.number,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
@@ -474,6 +498,7 @@ class _PredictionModelTile extends StatelessWidget {
           children: [
             _LabelledDropdownButton(
               label: 'Comparator',
+              isLocked: isLocked,
               value: startWhen.comparator,
               items: PredictionComparators.values,
               onChanged: (value) =>
@@ -484,6 +509,7 @@ class _PredictionModelTile extends StatelessWidget {
               width: 100,
               child: _SaveOnFocusLostTextField(
                   label: 'Threshold',
+                  isLocked: isLocked,
                   initialValue: startWhen.value.toString(),
                   keyboardType: TextInputType.number,
                   inputFormatters: [DecimalInputFormatter()],
@@ -498,17 +524,22 @@ class _PredictionModelTile extends StatelessWidget {
 }
 
 class _AddNewTile extends StatelessWidget {
-  const _AddNewTile(
-      {required this.label, this.labelStyle, required this.onTap});
+  const _AddNewTile({
+    required this.label,
+    required this.isLocked,
+    this.labelStyle,
+    required this.onTap,
+  });
 
   final String label;
+  final bool isLocked;
   final TextStyle? labelStyle;
   final Function() onTap;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: onTap,
+      onTap: isLocked ? null : onTap,
       child: Padding(
         padding: const EdgeInsets.only(top: 2.0, bottom: 2.0),
         child:
@@ -518,7 +549,7 @@ class _AddNewTile extends StatelessWidget {
             padding: const EdgeInsets.only(right: 20.0),
             child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.green,
+                  color: isLocked ? Colors.grey : Colors.green,
                   borderRadius: BorderRadius.circular(25),
                 ),
                 child: const SizedBox(
@@ -533,14 +564,17 @@ class _AddNewTile extends StatelessWidget {
 }
 
 class _SaveOnFocusLostTextField extends StatelessWidget {
-  const _SaveOnFocusLostTextField(
-      {required this.label,
-      required this.initialValue,
-      this.keyboardType,
-      this.inputFormatters,
-      required this.onChanged});
+  const _SaveOnFocusLostTextField({
+    required this.label,
+    required this.isLocked,
+    required this.initialValue,
+    this.keyboardType,
+    this.inputFormatters,
+    required this.onChanged,
+  });
 
   final String label;
+  final bool isLocked;
   final String initialValue;
   final TextInputType? keyboardType;
   final List<TextInputFormatter>? inputFormatters;
@@ -561,6 +595,7 @@ class _SaveOnFocusLostTextField extends StatelessWidget {
     });
 
     return TextField(
+      enabled: !isLocked,
       controller: controller,
       focusNode: focusNode,
       keyboardType: keyboardType,
@@ -571,13 +606,16 @@ class _SaveOnFocusLostTextField extends StatelessWidget {
 }
 
 class _LabelledDropdownButton<T> extends StatelessWidget {
-  const _LabelledDropdownButton(
-      {required this.label,
-      required this.value,
-      required this.items,
-      required this.onChanged});
+  const _LabelledDropdownButton({
+    required this.label,
+    required this.isLocked,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
 
   final String label;
+  final bool isLocked;
   final T value;
   final List<T> items;
   final Function(T) onChanged;
@@ -588,13 +626,17 @@ class _LabelledDropdownButton<T> extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: Theme.of(context).textTheme.labelSmall),
-        DropdownButton(
-            value: value,
-            items: items
-                .map((e) =>
-                    DropdownMenuItem(value: e, child: Text(e.toString())))
-                .toList(),
-            onChanged: (value) => onChanged(value as T)),
+        IgnorePointer(
+          ignoring: isLocked,
+          child: DropdownButton(
+              value: value,
+              isDense: true,
+              items: items
+                  .map((e) =>
+                      DropdownMenuItem(value: e, child: Text(e.toString())))
+                  .toList(),
+              onChanged: (value) => onChanged(value as T)),
+        ),
       ],
     );
   }

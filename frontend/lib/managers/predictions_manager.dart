@@ -5,33 +5,25 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class PredictionsManager {
   static final PredictionsManager _instance = PredictionsManager._internal();
-  static Future<PredictionsManager> get instance async {
-    if (!_instance._isLoaded) {
-      await _instance.load();
-    }
-    return _instance;
-  }
+  static PredictionsManager get instance => _instance;
 
-  bool _isLoaded = false;
-  bool _isLoading = false;
+  bool _isInitialized = false;
 
   final List<PredictionModel> _predictions = [];
-  List<PredictionModel> get predictions => List.unmodifiable(_predictions);
+  List<PredictionModel> get predictions {
+    if (!_isInitialized) {
+      throw StateError('PredictionsManager is not initialized');
+    }
 
-  PredictionsManager._internal() {
-    load();
+    return List.unmodifiable(_predictions);
   }
+
+  PredictionsManager._internal();
 
   ///
   /// Load the data from the disk
-  Future<void> load() async {
-    if (_isLoading) {
-      while (!_isLoaded) {
-        await Future.delayed(const Duration(milliseconds: 100));
-      }
-      return;
-    }
-    _isLoading = true;
+  Future<void> initialize() async {
+    if (_isInitialized) return;
 
     _predictions.clear();
 
@@ -44,8 +36,7 @@ class PredictionsManager {
       }
     }
 
-    _isLoaded = true;
-    _isLoading = false;
+    _isInitialized = true;
   }
 
   ///

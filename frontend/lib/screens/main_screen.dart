@@ -4,6 +4,7 @@ import 'package:frontend/managers/database_manager.dart';
 import 'package:frontend/managers/neurobio_client.dart';
 import 'package:frontend/managers/predictions_manager.dart';
 import 'package:frontend/models/command.dart';
+import 'package:frontend/models/prediction_model.dart';
 import 'package:frontend/screens/predictions_dialog.dart';
 import 'package:frontend/widgets/data_graph.dart';
 import 'package:frontend/widgets/save_trial_dialog.dart';
@@ -45,6 +46,7 @@ class _MainScreenState extends State<MainScreen> {
   bool _showLastTrial = false;
   bool _showLiveData = false;
   bool _showLiveAnalyses = false;
+  final List<PredictionModel> _activePredictions = [];
 
   Future<void> _connectServer() async {
     setState(() {
@@ -73,6 +75,7 @@ class _MainScreenState extends State<MainScreen> {
       _showLastTrial = false;
       _showLiveData = false;
       _showLiveAnalyses = false;
+      _activePredictions.clear();
     });
   }
 
@@ -199,19 +202,56 @@ class _MainScreenState extends State<MainScreen> {
     setState(() => _showLiveAnalyses = false);
   }
 
-  Future<void> _showLiveAnalysesManagerDialog() async {
-    final predictionManager = (await PredictionsManager.instance);
-    if (!mounted) return;
+  Widget _buildLiveAnalysesSelector() {
+    final predictions = PredictionsManager.instance.predictions;
 
+    return Column(
+      children: [
+        ...predictions.map((prediction) => SizedBox(
+              width: 400,
+              child: CheckboxListTile(
+                title: Text(prediction.name),
+                value: _activePredictions.contains(prediction),
+                onChanged: canSendCommand
+                    ? (value) async {
+                        if (value!) {
+                          final response = await _connexion.send(
+                              Command.addAnalyzer,
+                              parameters: prediction.serialize());
+                          if (response) {
+                            setState(() {
+                              _activePredictions.add(prediction);
+                            });
+                          }
+                        } else {
+                          final response = await _connexion.send(
+                              Command.removeAnalyzer,
+                              parameters: {'analyzer': prediction.name});
+                          if (response) {
+                            setState(() {
+                              _activePredictions.remove(prediction);
+                            });
+                          }
+                        }
+                      }
+                    : null,
+              ),
+            )),
+      ],
+    );
+  }
+
+  Future<void> _showLiveAnalysesManagerDialog() async {
     final predictions = await showDialog(
       barrierDismissible: false,
       context: context,
-      builder: (context) => PredictionsDialog(
-          predictions: predictionManager.predictions.toList()),
+      builder: (context) =>
+          PredictionsDialog(lockedPredictions: _activePredictions),
     );
     if (predictions == null) return;
 
-    predictionManager.save(predictions);
+    PredictionsManager.instance.save(predictions);
+    setState(() {});
   }
 
   Future<void> _showLiveDataGraph() async {
@@ -386,6 +426,8 @@ class _MainScreenState extends State<MainScreen> {
               const SizedBox(height: 20),
               Text('Live analyses commands',
                   style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              _buildLiveAnalysesSelector(),
               const SizedBox(height: 12),
               ElevatedButton(
                 onPressed: _showLiveAnalysesManagerDialog,

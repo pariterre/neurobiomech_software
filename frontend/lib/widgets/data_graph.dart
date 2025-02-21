@@ -172,6 +172,7 @@ class _DataGraphState extends State<DataGraph> {
                   _RadioCombineChannels(
                     combineChannels: _combineChannels,
                     onChanged: _onChanged,
+                    graphType: widget.controller.graphType,
                   ),
                   if (widget.controller.graphType == DataGraphType.emg &&
                       widget.controller._data.delsysEmg.isFromLiveData)
@@ -213,6 +214,7 @@ class _DataGraphState extends State<DataGraph> {
                             ? _onComputeRmsSelected
                             : null,
                     computeRms: _computeRms,
+                    graphType: widget.controller.graphType,
                   )),
             ),
           ],
@@ -314,20 +316,26 @@ FlTitlesData _titlesData(BoxConstraints constraints,
 
 class _RadioCombineChannels extends StatelessWidget {
   const _RadioCombineChannels(
-      {required this.combineChannels, required this.onChanged});
+      {required this.combineChannels,
+      required this.onChanged,
+      required this.graphType});
 
   final bool combineChannels;
   final Function(bool) onChanged;
+  final DataGraphType graphType;
 
   @override
   Widget build(BuildContext context) {
+    final channelsName =
+        graphType == DataGraphType.predictions ? 'predictions' : 'channels';
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
           width: 200,
           child: RadioListTile<bool>(
-            title: const Text('Combine channels'),
+            title: Text('Combine $channelsName'),
             value: true,
             groupValue: combineChannels,
             onChanged: (value) => onChanged(value!),
@@ -336,7 +344,7 @@ class _RadioCombineChannels extends StatelessWidget {
         SizedBox(
           width: 200,
           child: RadioListTile<bool>(
-            title: const Text('Separate channels'),
+            title: Text('Separate $channelsName'),
             value: false,
             groupValue: combineChannels,
             onChanged: (value) => onChanged(value!),
@@ -353,6 +361,7 @@ class _ChannelOptionsPopup extends StatefulWidget {
     required this.showChannels,
     required this.onComputeRmsSelected,
     required this.computeRms,
+    required this.graphType,
   });
 
   final Function(int index, bool value) onChannelSelected;
@@ -360,6 +369,8 @@ class _ChannelOptionsPopup extends StatefulWidget {
 
   final Function(int index, bool value)? onComputeRmsSelected;
   final List<bool>? computeRms;
+
+  final DataGraphType graphType;
 
   @override
   State<_ChannelOptionsPopup> createState() => _ChannelOptionsPopupState();
@@ -401,7 +412,9 @@ class _ChannelOptionsPopupState extends State<_ChannelOptionsPopup> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Channels'),
+                      Text(widget.graphType == DataGraphType.predictions
+                          ? 'Prédictions'
+                          : 'Channels'),
                       const SizedBox(width: 12),
                       Icon(_isExpanded
                           ? Icons.arrow_drop_up

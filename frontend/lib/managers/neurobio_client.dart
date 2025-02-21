@@ -22,11 +22,12 @@ class NeurobioClient {
   Future? get onDataArrived => _responseCompleter?.future;
 
   int? _expectedResponseLength;
-  final _responseGetLastTrial = <int>[];
+  final _responseData = <int>[];
 
   int? _expectedLiveDataLength;
   DateTime? _lastLiveDataTimestamp;
-  final _responseLiveData = <int>[];
+  final _rawLiveAnalogsList = <int>[];
+  final _responseLiveAnalyses = <int>[];
   var _liveDataCompleter = Completer();
 
   Function()? _onNewLiveData;
@@ -144,10 +145,11 @@ class NeurobioClient {
     _commandAckCompleter = null;
     _responseCompleter = null;
     _expectedResponseLength = null;
-    _responseGetLastTrial.clear();
+    _responseData.clear();
     _lastLiveDataTimestamp = null;
     _expectedLiveDataLength = null;
-    _responseLiveData.clear();
+    _rawLiveAnalogsList.clear();
+    _responseLiveAnalyses.clear();
     _liveDataCompleter = Completer();
     _onNewLiveData = null;
     _onNewLiveAnalyses = null;
@@ -180,7 +182,7 @@ class NeurobioClient {
         ipAddress: serverIp,
         port: liveDataPort,
         nbOfRetries: nbOfRetries,
-        hasDataCallback: _receiveLiveData,
+        hasDataCallback: _receiveLiveAnalogsData,
         onConnexionLost: onConnexionLost);
     _isConnectedToLiveData = true;
     _socketLiveAnalyses = await _connectToSocket(
@@ -211,7 +213,7 @@ class NeurobioClient {
   /// can be passed as a list of strings.
   /// Returns true if the server returned OK and if the connexion to
   /// the server is still alive, false otherwise.
-  Future<bool> send(Command command, {List<String>? parameters}) async {
+  Future<bool> send(Command command, {Map<String, dynamic>? parameters}) async {
     if (!command.isImplemented) {
       _log.severe('Command $command is not implemented');
       return false;
@@ -226,7 +228,7 @@ class NeurobioClient {
     return _send(command, parameters);
   }
 
-  Future<bool> _send(Command command, List<String>? parameters) async {
+  Future<bool> _send(Command command, Map<String, dynamic>? parameters) async {
     if (!isInitialized) {
       _log.severe('Communication not initialized');
       return false;
@@ -235,6 +237,13 @@ class NeurobioClient {
     // Format the command and send the messsage to the server
     if (await _performSend(command) == Ack.ok) {
       _log.info('Sent command: $command');
+
+      if (parameters != null) {
+        // Reset the current command so we can receive the Ack again
+        _currentCommand = command;
+        await _performSendParameters(parameters);
+      }
+
       return true;
     } else {
       _log.severe('Command $command failed');
@@ -253,6 +262,22 @@ class NeurobioClient {
       _commandAckCompleter = Completer<Ack>();
       _socketCommand!.add(command.toPacket());
       await _socketCommand!.flush();
+      return await _commandAckCompleter!.future;
+    } on SocketException {
+      _log.info('Connexion was closed by the server');
+      disconnect();
+      return Ack.nok;
+    }
+  }
+
+  Future<Ack> _performSendParameters(Map<String, dynamic> parameters) async {
+    // Construct and send the parameters
+    try {
+      _commandAckCompleter = Completer<Ack>();
+      final packets = utf8.encode(json.encode(parameters));
+      _socketResponse!.add(Command.constructPacket(command: packets.length));
+      _socketResponse!.add(packets);
+      await _socketResponse!.flush();
       return await _commandAckCompleter!.future;
     } on SocketException {
       _log.info('Connexion was closed by the server');
@@ -315,6 +340,10 @@ class NeurobioClient {
         _isRecording = command == Command.startRecording;
         break;
 
+      case Command.addAnalyzer:
+      case Command.removeAnalyzer:
+        break;
+
       case Command.handshake:
       case Command.connectMagstim:
       case Command.disconnectMagstim:
@@ -325,9 +354,13 @@ class NeurobioClient {
 
   void _prepareLastTrialResponse() {
     lastTrialData.clear();
+    _prepareResponseCompleter();
+  }
+
+  void _prepareResponseCompleter() {
     _responseCompleter = Completer();
     _expectedResponseLength = null;
-    _responseGetLastTrial.clear();
+    _responseData.clear();
   }
 
   void resetLiveAnalyses() => liveAnalyses.predictions.clear();
@@ -337,9 +370,13 @@ class NeurobioClient {
   void _receiveResponse(List<int> response) {
     if (!isInitialized) return;
 
-    if (_currentCommand == Command.getLastTrial &&
-        _expectedResponseLength == null) {
-      lastTrialData.clear(initialTime: _parseTimestampFromPacket(response));
+    if (_expectedResponseLength == null) {
+      if (_currentCommand == Command.getLastTrial) {
+        lastTrialData.clear(initialTime: _parseTimestampFromPacket(response));
+      } else {
+        _log.severe('Received data for an unknown command');
+        throw StateError('Received data for an unknown command');
+      }
       _expectedResponseLength = _parseDataLengthFromPacket(response);
       if (response.length > _serverHeaderLength) {
         // If more data came at once, recursively call the function with the rest
@@ -349,87 +386,142 @@ class NeurobioClient {
       return;
     }
 
-    _responseGetLastTrial.addAll(response);
-    if (_responseGetLastTrial.length < _expectedResponseLength!) {
-      _log.info('Received ${_responseGetLastTrial.length} bytes, waiting for '
+    _responseData.addAll(response);
+    if (_responseData.length < _expectedResponseLength!) {
+      _log.info('Received ${_responseData.length} bytes, waiting for '
           '$_expectedResponseLength');
       return;
-    } else if (_responseGetLastTrial.length > _expectedResponseLength!) {
+    } else if (_responseData.length > _expectedResponseLength!) {
       _log.severe('Received more data than expected, dropping everything');
-      _responseGetLastTrial.clear();
+      _responseData.clear();
       _expectedResponseLength = null;
       return;
     }
 
     // Convert the data to a string (from json)
     _expectedResponseLength = null;
-    final jsonRaw = json.decode(utf8.decode(_responseGetLastTrial));
+    final jsonRaw = json.decode(utf8.decode(_responseData));
     if (jsonRaw != null) {
-      lastTrialData.appendDataFromJson(jsonRaw as List);
+      if (_currentCommand == Command.getLastTrial) {
+        lastTrialData.appendDataFromJson(jsonRaw as List);
+      } else {
+        _log.severe('Received data for an unknown command');
+        throw StateError('Received data for an unknown command');
+      }
     }
     _responseCompleter!.complete();
   }
 
-  Future<void> _receiveLiveAnalyses(List<int> response) async {
+  Future<void> _receiveLiveAnalyses(List<int> raw) async {
     // TODO Complete this
     liveAnalyses
         .dropBefore(_lastLiveDataTimestamp!.subtract(liveAnalysesTimeWindow));
     if (_onNewLiveAnalyses != null) _onNewLiveAnalyses!();
   }
 
-  Future<void> _receiveLiveData(List<int> response) async {
-    if (response.isEmpty || !isInitialized) return;
+  Future<void> _receiveLiveAnalogsData(List<int> raw) async {
+    await _receiveLiveData(
+      raw,
+      _rawLiveAnalogsList,
+      ([duration]) {
+        if (duration != null) _lastLiveDataTimestamp = duration;
+        return _lastLiveDataTimestamp!;
+      },
+      ([value]) {
+        if (value != null) {
+          if (value < 0) {
+            _expectedLiveDataLength = null;
+          } else {
+            _expectedLiveDataLength = value;
+          }
+        }
+        return _expectedLiveDataLength;
+      },
+      (bool isNew) {
+        if (isNew) _liveDataCompleter = Completer();
+        return _liveDataCompleter;
+      },
+      liveDataTimeWindow,
+      _onNewLiveData,
+    );
+  }
 
-    if (_expectedLiveDataLength == null) {
-      _liveDataCompleter = Completer();
+  Future<void> _receiveLiveData(
+    List<int> raw,
+    List<int> rawList,
+    DateTime? Function([DateTime? value]) getLastTimeStamp,
+    int? Function([int? value]) getExpectedDataLength,
+    Completer Function(bool isNew) getCompleter,
+    Duration liveDataTimeWindow,
+    Function()? onNewData,
+  ) async {
+    if (raw.isEmpty || !isInitialized) return;
+
+    int? expectedDataLength = getExpectedDataLength();
+    if (expectedDataLength == null) {
+      getCompleter(true);
       try {
-        _lastLiveDataTimestamp = _parseTimestampFromPacket(response);
-        _expectedLiveDataLength = _parseDataLengthFromPacket(response);
+        getLastTimeStamp(_parseTimestampFromPacket(raw));
+        expectedDataLength =
+            getExpectedDataLength(_parseDataLengthFromPacket(raw));
       } catch (e) {
         _log.severe('Error while parsing live data: $e, resetting');
         resetLiveData();
       }
-      if (response.length > _serverHeaderLength) {
+      if (raw.length > _serverHeaderLength) {
         // If more data came at once, recursively call the function with the rest
         // of the data.
-        _receiveLiveData(response.sublist(_serverHeaderLength));
+        _receiveLiveData(
+            raw.sublist(_serverHeaderLength),
+            rawList,
+            getLastTimeStamp,
+            getExpectedDataLength,
+            getCompleter,
+            liveDataTimeWindow,
+            onNewData);
       }
       return;
     }
 
-    _responseLiveData.addAll(response);
-    if (_responseLiveData.length < _expectedLiveDataLength!) {
+    final completer = getCompleter(false);
+    final lastTimeStamp = getLastTimeStamp();
+    rawList.addAll(raw);
+    if (rawList.length < expectedDataLength) {
       // Waiting for the rest of the live data
       return;
-    } else if (_responseLiveData.length > _expectedLiveDataLength!) {
+    } else if (rawList.length > expectedDataLength) {
       // We received the data for the next time frame, parse the current, then
       // call the function again with the rest of the data.
-      final responseRemaining =
-          _responseLiveData.sublist(_expectedLiveDataLength!);
-      _responseLiveData.removeRange(
-          _expectedLiveDataLength!, _responseLiveData.length);
-      _liveDataCompleter.future
-          .then((_) => _receiveLiveData(responseRemaining));
+      final rawRemaining = rawList.sublist(expectedDataLength);
+      rawList.removeRange(expectedDataLength, rawList.length);
+      completer.future.then((_) => _receiveLiveData(
+          rawRemaining,
+          rawList,
+          getLastTimeStamp,
+          getExpectedDataLength,
+          getCompleter,
+          liveDataTimeWindow,
+          onNewData));
     }
 
     // Convert the data to a string (from json)
     try {
-      final dataList = json.decode(utf8.decode(_responseLiveData)) as List;
+      final dataList = json.decode(utf8.decode(rawList)) as List;
       if (liveData.hasData) {
         // If the live data were reset, we need to clear again with the current time stamp
-        liveData.clear(initialTime: _lastLiveDataTimestamp);
+        liveData.clear(initialTime: lastTimeStamp);
       }
       liveData.appendDataFromJson(dataList);
-      liveData.dropBefore(_lastLiveDataTimestamp!.subtract(liveDataTimeWindow));
+      liveData.dropBefore(lastTimeStamp!.subtract(liveDataTimeWindow));
     } catch (e) {
       _log.severe('Error while parsing live data: $e, resetting');
       resetLiveData();
     }
-    _responseLiveData.clear();
-    _expectedLiveDataLength = null;
-    _liveDataCompleter.complete();
+    rawList.clear();
+    completer.complete();
+    getExpectedDataLength(-1);
 
-    if (_onNewLiveData != null) _onNewLiveData!();
+    if (onNewData != null) onNewData();
   }
 
   int _parseVersionFromPacket(List<int> data) {
@@ -552,15 +644,15 @@ class NeurobioClientMock extends NeurobioClient {
     }
   }
 
-  bool _hasRecoredMock = false;
+  bool _hasRecordedMock = false;
   @override
-  bool get hasRecorded => !isRecording && _hasRecoredMock;
+  bool get hasRecorded => !isRecording && _hasRecordedMock;
 
   @override
   void _setFlagsFromCommand(Command command) {
     switch (command) {
       case Command.startRecording:
-        _hasRecoredMock = true;
+        _hasRecordedMock = true;
         break;
       case Command.connectDelsysAnalog:
       case Command.disconnectDelsysAnalog:
@@ -573,6 +665,8 @@ class NeurobioClientMock extends NeurobioClient {
       case Command.connectMagstim:
       case Command.disconnectMagstim:
       case Command.getLastTrial:
+      case Command.addAnalyzer:
+      case Command.removeAnalyzer:
         break;
     }
 
