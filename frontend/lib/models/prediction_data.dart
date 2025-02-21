@@ -12,7 +12,7 @@ class PredictionData extends TimeSeriesData {
     labels.add(label);
     _channelCount++;
 
-    _data.add(List.filled(time.length, 0.0));
+    _data.add(List.filled(time.length, 0.0, growable: true));
   }
 
   void removePrediction(String label) {
@@ -23,5 +23,23 @@ class PredictionData extends TimeSeriesData {
     _channelCount--;
 
     _data.removeAt(index);
+  }
+
+  @override
+  int appendFromJson(Map<String, dynamic> json) {
+    final entries = (json['data'] as Map<String, dynamic>).entries;
+    for (int i = 0; i < entries.length; i++) {
+      final data = entries.elementAt(i);
+
+      // TODO : Find why we only get values of 1.0
+
+      // If this is the first time stamps, we need to set the time offset
+      _timeOffset ??= (data.value[0] as int) / 1000.0;
+      time.add((data.value[0] as int) / 1000.0 - _timeOffset!);
+      _data[i].addAll(
+          (data.value[1] as List<dynamic>).map((e) => e as double).toList());
+    }
+
+    return time.length;
   }
 }

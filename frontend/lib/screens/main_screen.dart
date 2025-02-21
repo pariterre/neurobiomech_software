@@ -28,16 +28,16 @@ class _MainScreenState extends State<MainScreen> {
   final _trialEmgDataKey = GlobalKey();
 
   final _liveGraphControllerAnalog = DataGraphController(
-      data: _connexion.liveData, graphType: DataGraphType.analog);
+      data: _connexion.liveAnalogsData, graphType: DataGraphType.analog);
   final _liveGraphControllerEmg = DataGraphController(
-      data: _connexion.liveData, graphType: DataGraphType.emg);
+      data: _connexion.liveAnalogsData, graphType: DataGraphType.emg);
   final _liveAnalysesGraphController = DataGraphController(
       data: _connexion.liveAnalyses, graphType: DataGraphType.predictions);
 
   final _trialGraphControllerAnalog = DataGraphController(
-      data: _connexion.lastTrialData, graphType: DataGraphType.analog);
+      data: _connexion.lastTrialAnalogsData, graphType: DataGraphType.analog);
   final _trialGraphControllerEmg = DataGraphController(
-      data: _connexion.lastTrialData, graphType: DataGraphType.emg);
+      data: _connexion.lastTrialAnalogsData, graphType: DataGraphType.emg);
 
   bool _isBusy = false;
   bool get isServerConnected => _connexion.isInitialized;
@@ -57,7 +57,7 @@ class _MainScreenState extends State<MainScreen> {
     });
     await _connexion.initialize(
       onConnexionLost: () => setState(() {}),
-      onNewLiveData: _onNewLiveData,
+      onNewLiveAnalogsData: _onNewLiveAnalogsData,
       onNewLiveAnalyses: _onNewLiveAnalyses,
     );
     setState(() => _isBusy = false);
@@ -135,7 +135,7 @@ class _MainScreenState extends State<MainScreen> {
     await _connexion.onDataArrived;
     setState(() {
       _isBusy = false;
-      _showLastTrial = _connexion.lastTrialData.notHasData;
+      _showLastTrial = _connexion.lastTrialAnalogsData.isEmpty;
     });
   }
 
@@ -148,7 +148,7 @@ class _MainScreenState extends State<MainScreen> {
         context: context, builder: (context) => const SaveTrialDialog());
     if (!hasSaved) return;
 
-    _connexion.lastTrialData.toFile(DatabaseManager.instance.savePath);
+    _connexion.lastTrialAnalogsData.toFile(DatabaseManager.instance.savePath);
   }
 
   Widget _buildLastTrialGraph() {
@@ -220,6 +220,8 @@ class _MainScreenState extends State<MainScreen> {
                               parameters: prediction.serialize());
                           if (response) {
                             setState(() {
+                              _connexion.liveAnalyses.predictions
+                                  .addPrediction(prediction.name);
                               _activePredictions.add(prediction);
                             });
                           }
@@ -229,6 +231,8 @@ class _MainScreenState extends State<MainScreen> {
                               parameters: {'analyzer': prediction.name});
                           if (response) {
                             setState(() {
+                              _connexion.liveAnalyses.predictions
+                                  .removePrediction(prediction.name);
                               _activePredictions.remove(prediction);
                             });
                           }
@@ -255,7 +259,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Future<void> _showLiveDataGraph() async {
-    _connexion.resetLiveData();
+    _connexion.resetLiveAnalogsData();
     setState(() => _showLiveData = true);
   }
 
@@ -344,11 +348,13 @@ class _MainScreenState extends State<MainScreen> {
               labelText: 'Live data duration',
               hintText: 'Enter the duration in seconds',
             ),
-            initialValue: _connexion.liveDataTimeWindow.inSeconds.toString(),
+            initialValue:
+                _connexion.liveAnalogsDataTimeWindow.inSeconds.toString(),
             onChanged: (value) {
               final valueAsInt = int.tryParse(value);
               if (valueAsInt == null) return;
-              _connexion.liveDataTimeWindow = Duration(seconds: valueAsInt);
+              _connexion.liveAnalogsDataTimeWindow =
+                  Duration(seconds: valueAsInt);
             },
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           ),
@@ -362,10 +368,10 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  void _onNewLiveData() {
+  void _onNewLiveAnalogsData() {
     if (_showLiveData) {
-      _liveGraphControllerAnalog.data = _connexion.liveData;
-      _liveGraphControllerEmg.data = _connexion.liveData;
+      _liveGraphControllerAnalog.data = _connexion.liveAnalogsData;
+      _liveGraphControllerEmg.data = _connexion.liveAnalogsData;
     }
   }
 
@@ -463,7 +469,8 @@ class _MainScreenState extends State<MainScreen> {
               _buildLiveDataGraph(),
               const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: _showLiveData ? _connexion.liveData.clear : null,
+                onPressed:
+                    _showLiveData ? _connexion.liveAnalogsData.clear : null,
                 child: const Text('Reset live data'),
               ),
               const SizedBox(height: 12),

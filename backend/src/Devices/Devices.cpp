@@ -332,26 +332,24 @@ std::map<std::string, data::TimeSeries> Devices::getLiveData() const {
 
 nlohmann::json Devices::getLiveDataSerialized() const {
   nlohmann::json json;
-  size_t deviceIndex = 0;
   std::lock_guard<std::mutex> lock(
       const_cast<std::mutex &>(m_MutexDataCollectors));
   for (const auto &[deviceId, dataCollector] : m_DataCollectors) {
-    json[deviceIndex] = {{"name", dataCollector->dataCollectorName()},
-                         {"data", dataCollector->getSerializedLiveData()}};
-    deviceIndex++;
+    json[std::to_string(deviceId)] = {
+        {"name", dataCollector->dataCollectorName()},
+        {"data", dataCollector->getSerializedLiveData()}};
   }
   return json;
 }
 
 nlohmann::json Devices::getLastTrialDataSerialized() const {
   nlohmann::json json;
-  size_t deviceIndex = 0;
   std::lock_guard<std::mutex> lock(
       const_cast<std::mutex &>(m_MutexDataCollectors));
   for (const auto &[deviceId, dataCollector] : m_DataCollectors) {
-    json[deviceIndex] = {{"name", dataCollector->dataCollectorName()},
-                         {"data", dataCollector->getTrialData().serialize()}};
-    deviceIndex++;
+    json[std::to_string(deviceId)] = {
+        {"name", dataCollector->dataCollectorName()},
+        {"data", dataCollector->getTrialData().serialize()}};
   }
   return json;
 }

@@ -12,6 +12,7 @@ import 'package:frontend/models/time_series_data.dart';
 void main() {
   test('Data', () {
     final data = Data(
+        dataGenericType: DataGenericTypes.analogs,
         initialTime: DateTime(1),
         analogChannelCount: 2,
         emgChannelCount: 2,

@@ -15,12 +15,14 @@ void main() {
     assert(connexion.isInitialized == false);
 
     connexion.initialize(
-        onConnexionLost: () {}, onNewLiveData: () {}, onNewLiveAnalyses: () {});
+        onConnexionLost: () {},
+        onNewLiveAnalogsData: () {},
+        onNewLiveAnalyses: () {});
     assert(connexion.isInitialized);
     assert(connexion.isConnectedToDelsysAnalog == false);
     assert(connexion.isConnectedToDelsysEmg == false);
     assert(connexion.isRecording == false);
-    assert(connexion.isConnectedToLiveData == false);
+    assert(connexion.isConnectedToLiveAnalogsData == false);
 
     await connexion.disconnect();
     assert(connexion.isInitialized == false);
@@ -34,7 +36,9 @@ void main() {
     assert(connexion.isConnectedToDelsysAnalog == false);
 
     await connexion.initialize(
-        onConnexionLost: () {}, onNewLiveData: () {}, onNewLiveAnalyses: () {});
+        onConnexionLost: () {},
+        onNewLiveAnalogsData: () {},
+        onNewLiveAnalyses: () {});
     assert(connexion.isConnectedToDelsysAnalog == false);
 
     assert(await connexion.send(Command.connectDelsysAnalog));
@@ -48,7 +52,9 @@ void main() {
     final connexion = NeurobioClientMock.instance;
 
     await connexion.initialize(
-        onConnexionLost: () {}, onNewLiveData: () {}, onNewLiveAnalyses: () {});
+        onConnexionLost: () {},
+        onNewLiveAnalogsData: () {},
+        onNewLiveAnalyses: () {});
     assert(await connexion.send(Command.handshake) == false);
 
     connexion.disconnect();
@@ -57,7 +63,9 @@ void main() {
   test('Manage recording commands', () async {
     final connexion = NeurobioClientMock.instance;
     connexion.initialize(
-        onConnexionLost: () {}, onNewLiveData: () {}, onNewLiveAnalyses: () {});
+        onConnexionLost: () {},
+        onNewLiveAnalogsData: () {},
+        onNewLiveAnalyses: () {});
     assert(connexion.isRecording == false);
     assert(connexion.hasRecorded == false);
 

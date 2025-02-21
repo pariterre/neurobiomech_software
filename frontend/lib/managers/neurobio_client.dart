@@ -13,7 +13,7 @@ const _serverHeaderLength = 16;
 class NeurobioClient {
   Socket? _socketCommand;
   Socket? _socketResponse;
-  Socket? _socketLiveData;
+  Socket? _socketLiveAnalogsData;
   Socket? _socketLiveAnalyses;
 
   Command? _currentCommand;
@@ -24,31 +24,37 @@ class NeurobioClient {
   int? _expectedResponseLength;
   final _responseData = <int>[];
 
-  int? _expectedLiveDataLength;
-  DateTime? _lastLiveDataTimestamp;
+  int? _expectedLiveAnalogsDataLength;
+  DateTime? _lastLiveAnalogsDataTimestamp;
   final _rawLiveAnalogsList = <int>[];
-  final _responseLiveAnalyses = <int>[];
-  var _liveDataCompleter = Completer();
+  var _liveAnalogsDataCompleter = Completer();
+  Function()? _onNewLiveAnalogsData;
 
-  Function()? _onNewLiveData;
+  int? _expectedLiveAnalysesLength;
+  DateTime? _lastLiveAnalysesTimestamp;
+  final _rawLiveAnalysesList = <int>[];
+  var _liveAnalysesDataCompleter = Completer();
   Function()? _onNewLiveAnalyses;
 
   bool _isConnectedToDelsysAnalog = false;
   bool _isConnectedToDelsysEmg = false;
-  bool _isConnectedToLiveData = false;
+  bool _isConnectedToLiveAnalogsData = false;
   bool _isConnectedToLiveAnalyses = false;
-  Data liveData = Data(
+  Data liveAnalogsData = Data(
+      dataGenericType: DataGenericTypes.analogs,
       initialTime: DateTime.now(),
       analogChannelCount: 9 * 16,
       emgChannelCount: 16,
       isFromLiveData: true);
-  Data lastTrialData = Data(
+  Data lastTrialAnalogsData = Data(
+      dataGenericType: DataGenericTypes.analogs,
       initialTime: DateTime.now(),
       analogChannelCount: 9 * 16,
       emgChannelCount: 16,
       isFromLiveData: false);
-  Duration liveDataTimeWindow = const Duration(seconds: 3);
+  Duration liveAnalogsDataTimeWindow = const Duration(seconds: 3);
   Data liveAnalyses = Data(
+      dataGenericType: DataGenericTypes.predictions,
       initialTime: DateTime.now(),
       analogChannelCount: 0,
       emgChannelCount: 0,
@@ -70,15 +76,15 @@ class NeurobioClient {
   bool get isInitialized =>
       _socketCommand != null &&
       _socketResponse != null &&
-      _socketLiveData != null &&
+      _socketLiveAnalogsData != null &&
       _socketLiveAnalyses != null;
   bool get isConnectedToDelsysAnalog => _isConnectedToDelsysAnalog;
   bool get isConnectedToDelsysEmg => _isConnectedToDelsysEmg;
-  bool get isConnectedToLiveData => _isConnectedToLiveData;
+  bool get isConnectedToLiveAnalogsData => _isConnectedToLiveAnalogsData;
   bool get isConnectedToLiveAnalyses => _isConnectedToLiveAnalyses;
 
   bool get isRecording => _isRecording;
-  bool get hasRecorded => !isRecording && lastTrialData.notHasData;
+  bool get hasRecorded => !isRecording && lastTrialAnalogsData.isNotEmpty;
 
   ///
   /// Initialize the communication with the server. If the connection fails,
@@ -88,11 +94,11 @@ class NeurobioClient {
     String serverIp = 'localhost',
     int commandPort = 5000,
     int responsePort = 5001,
-    int liveDataPort = 5002,
+    int liveAnalogsDataPort = 5002,
     int liveAnalysesPort = 5003,
     int? nbOfRetries,
     required Function() onConnexionLost,
-    required Function() onNewLiveData,
+    required Function() onNewLiveAnalogsData,
     required Function() onNewLiveAnalyses,
   }) async {
     if (isInitialized) return;
@@ -102,7 +108,7 @@ class NeurobioClient {
         serverIp: serverIp,
         commandPort: commandPort,
         responsePort: responsePort,
-        liveDataPort: liveDataPort,
+        liveAnalogsDataPort: liveAnalogsDataPort,
         liveAnalysesPort: liveAnalysesPort,
         nbOfRetries: nbOfRetries,
         onConnexionLost: onConnexionLost);
@@ -113,9 +119,9 @@ class NeurobioClient {
       return;
     }
 
-    _lastLiveDataTimestamp = null;
-    _expectedLiveDataLength = null;
-    _onNewLiveData = onNewLiveData;
+    _lastLiveAnalogsDataTimestamp = null;
+    _expectedLiveAnalogsDataLength = null;
+    _onNewLiveAnalogsData = onNewLiveAnalogsData;
     _onNewLiveAnalyses = onNewLiveAnalyses;
 
     _log.info('Communication initialized');
@@ -135,23 +141,28 @@ class NeurobioClient {
 
     _isConnectedToDelsysAnalog = false;
     _isConnectedToDelsysEmg = false;
-    _isConnectedToLiveData = false;
+    _isConnectedToLiveAnalogsData = false;
     _isConnectedToLiveAnalyses = false;
     _isRecording = false;
-    liveData.clear(initialTime: DateTime.now());
+    liveAnalogsData.clear(initialTime: DateTime.now());
     liveAnalyses.clear(initialTime: DateTime.now());
-    lastTrialData.clear(initialTime: DateTime.now());
+    lastTrialAnalogsData.clear(initialTime: DateTime.now());
 
     _commandAckCompleter = null;
     _responseCompleter = null;
     _expectedResponseLength = null;
     _responseData.clear();
-    _lastLiveDataTimestamp = null;
-    _expectedLiveDataLength = null;
+
+    _lastLiveAnalogsDataTimestamp = null;
     _rawLiveAnalogsList.clear();
-    _responseLiveAnalyses.clear();
-    _liveDataCompleter = Completer();
-    _onNewLiveData = null;
+    _expectedLiveAnalogsDataLength = null;
+    _liveAnalogsDataCompleter = Completer();
+    _onNewLiveAnalogsData = null;
+
+    _lastLiveAnalysesTimestamp = null;
+    _rawLiveAnalysesList.clear();
+    _expectedLiveAnalysesLength = null;
+    _liveAnalysesDataCompleter = Completer();
     _onNewLiveAnalyses = null;
 
     _log.info('Connection closed');
@@ -161,7 +172,7 @@ class NeurobioClient {
     required String serverIp,
     required int commandPort,
     required int responsePort,
-    required int liveDataPort,
+    required int liveAnalogsDataPort,
     required int liveAnalysesPort,
     required int? nbOfRetries,
     required Function()? onConnexionLost,
@@ -178,13 +189,13 @@ class NeurobioClient {
         nbOfRetries: nbOfRetries,
         hasDataCallback: _receiveResponse,
         onConnexionLost: onConnexionLost);
-    _socketLiveData = await _connectToSocket(
+    _socketLiveAnalogsData = await _connectToSocket(
         ipAddress: serverIp,
-        port: liveDataPort,
+        port: liveAnalogsDataPort,
         nbOfRetries: nbOfRetries,
         hasDataCallback: _receiveLiveAnalogsData,
         onConnexionLost: onConnexionLost);
-    _isConnectedToLiveData = true;
+    _isConnectedToLiveAnalogsData = true;
     _socketLiveAnalyses = await _connectToSocket(
         ipAddress: serverIp,
         port: liveAnalysesPort,
@@ -201,8 +212,8 @@ class NeurobioClient {
     await _socketResponse?.close();
     _socketResponse = null;
 
-    await _socketLiveData?.close();
-    _socketLiveData = null;
+    await _socketLiveAnalogsData?.close();
+    _socketLiveAnalogsData = null;
 
     await _socketLiveAnalyses?.close();
     _socketLiveAnalyses = null;
@@ -321,14 +332,14 @@ class NeurobioClient {
       case Command.disconnectDelsysAnalog:
         _isConnectedToDelsysAnalog = command == Command.connectDelsysAnalog;
         _isRecording = false;
-        resetLiveData();
+        resetLiveAnalogsData();
         break;
 
       case Command.disconnectDelsysEmg:
       case Command.connectDelsysEmg:
         _isConnectedToDelsysEmg = command == Command.connectDelsysEmg;
         _isRecording = false;
-        resetLiveData();
+        resetLiveAnalogsData();
         break;
 
       case Command.zeroDelsysAnalog:
@@ -342,6 +353,7 @@ class NeurobioClient {
 
       case Command.addAnalyzer:
       case Command.removeAnalyzer:
+        resetLiveAnalyses();
         break;
 
       case Command.handshake:
@@ -353,7 +365,7 @@ class NeurobioClient {
   }
 
   void _prepareLastTrialResponse() {
-    lastTrialData.clear();
+    lastTrialAnalogsData.clear();
     _prepareResponseCompleter();
   }
 
@@ -363,16 +375,18 @@ class NeurobioClient {
     _responseData.clear();
   }
 
-  void resetLiveAnalyses() => liveAnalyses.predictions.clear();
+  void resetLiveAnalyses() => liveAnalyses.clear(initialTime: DateTime.now());
 
-  void resetLiveData() => liveData.clear(initialTime: DateTime.now());
+  void resetLiveAnalogsData() =>
+      liveAnalogsData.clear(initialTime: DateTime.now());
 
   void _receiveResponse(List<int> response) {
     if (!isInitialized) return;
 
     if (_expectedResponseLength == null) {
       if (_currentCommand == Command.getLastTrial) {
-        lastTrialData.clear(initialTime: _parseTimestampFromPacket(response));
+        lastTrialAnalogsData.clear(
+            initialTime: _parseTimestampFromPacket(response));
       } else {
         _log.severe('Received data for an unknown command');
         throw StateError('Received data for an unknown command');
@@ -403,7 +417,7 @@ class NeurobioClient {
     final jsonRaw = json.decode(utf8.decode(_responseData));
     if (jsonRaw != null) {
       if (_currentCommand == Command.getLastTrial) {
-        lastTrialData.appendDataFromJson(jsonRaw as List);
+        lastTrialAnalogsData.appendFromJson(jsonRaw as Map<String, dynamic>);
       } else {
         _log.severe('Received data for an unknown command');
         throw StateError('Received data for an unknown command');
@@ -413,48 +427,69 @@ class NeurobioClient {
   }
 
   Future<void> _receiveLiveAnalyses(List<int> raw) async {
-    // TODO Complete this
-    liveAnalyses
-        .dropBefore(_lastLiveDataTimestamp!.subtract(liveAnalysesTimeWindow));
-    if (_onNewLiveAnalyses != null) _onNewLiveAnalyses!();
+    await _receiveLiveData(
+      raw: raw,
+      rawList: _rawLiveAnalysesList,
+      getLastTimeStamp: ([DateTime? duration]) {
+        if (duration != null) _lastLiveAnalysesTimestamp = duration;
+        return _lastLiveAnalysesTimestamp;
+      },
+      getExpectedDataLength: ([int? value]) {
+        if (value != null) {
+          _expectedLiveAnalysesLength = value < 0 ? null : value;
+        }
+        return _expectedLiveAnalysesLength;
+      },
+      getLiveData: (bool isNew) {
+        //if (isNew) resetLiveAnalyses();
+        return liveAnalyses;
+      },
+      getCompleter: (bool isNew) {
+        if (isNew) _liveAnalysesDataCompleter = Completer();
+        return _liveAnalysesDataCompleter;
+      },
+      liveDataTimeWindow: liveAnalysesTimeWindow,
+      onNewData: _onNewLiveAnalyses,
+    );
   }
 
   Future<void> _receiveLiveAnalogsData(List<int> raw) async {
     await _receiveLiveData(
-      raw,
-      _rawLiveAnalogsList,
-      ([duration]) {
-        if (duration != null) _lastLiveDataTimestamp = duration;
-        return _lastLiveDataTimestamp!;
+      raw: raw,
+      rawList: _rawLiveAnalogsList,
+      getLastTimeStamp: ([DateTime? duration]) {
+        if (duration != null) _lastLiveAnalogsDataTimestamp = duration;
+        return _lastLiveAnalogsDataTimestamp!;
       },
-      ([value]) {
+      getExpectedDataLength: ([int? value]) {
         if (value != null) {
-          if (value < 0) {
-            _expectedLiveDataLength = null;
-          } else {
-            _expectedLiveDataLength = value;
-          }
+          _expectedLiveAnalogsDataLength = value < 0 ? null : value;
         }
-        return _expectedLiveDataLength;
+        return _expectedLiveAnalogsDataLength;
       },
-      (bool isNew) {
-        if (isNew) _liveDataCompleter = Completer();
-        return _liveDataCompleter;
+      getLiveData: (bool isNew) {
+        if (isNew) resetLiveAnalogsData();
+        return liveAnalogsData;
       },
-      liveDataTimeWindow,
-      _onNewLiveData,
+      getCompleter: (bool isNew) {
+        if (isNew) _liveAnalogsDataCompleter = Completer();
+        return _liveAnalogsDataCompleter;
+      },
+      liveDataTimeWindow: liveAnalogsDataTimeWindow,
+      onNewData: _onNewLiveAnalogsData,
     );
   }
 
-  Future<void> _receiveLiveData(
-    List<int> raw,
-    List<int> rawList,
-    DateTime? Function([DateTime? value]) getLastTimeStamp,
-    int? Function([int? value]) getExpectedDataLength,
-    Completer Function(bool isNew) getCompleter,
-    Duration liveDataTimeWindow,
-    Function()? onNewData,
-  ) async {
+  Future<void> _receiveLiveData({
+    required List<int> raw,
+    required List<int> rawList,
+    required DateTime? Function([DateTime? value]) getLastTimeStamp,
+    required int? Function([int? value]) getExpectedDataLength,
+    required Data Function(bool isNew) getLiveData,
+    required Completer Function(bool isNew) getCompleter,
+    required Duration liveDataTimeWindow,
+    required Function()? onNewData,
+  }) async {
     if (raw.isEmpty || !isInitialized) return;
 
     int? expectedDataLength = getExpectedDataLength();
@@ -466,19 +501,20 @@ class NeurobioClient {
             getExpectedDataLength(_parseDataLengthFromPacket(raw));
       } catch (e) {
         _log.severe('Error while parsing live data: $e, resetting');
-        resetLiveData();
+        resetLiveAnalogsData();
       }
       if (raw.length > _serverHeaderLength) {
         // If more data came at once, recursively call the function with the rest
         // of the data.
         _receiveLiveData(
-            raw.sublist(_serverHeaderLength),
-            rawList,
-            getLastTimeStamp,
-            getExpectedDataLength,
-            getCompleter,
-            liveDataTimeWindow,
-            onNewData);
+            raw: raw.sublist(_serverHeaderLength),
+            rawList: rawList,
+            getLastTimeStamp: getLastTimeStamp,
+            getExpectedDataLength: getExpectedDataLength,
+            getLiveData: getLiveData,
+            getCompleter: getCompleter,
+            liveDataTimeWindow: liveDataTimeWindow,
+            onNewData: onNewData);
       }
       return;
     }
@@ -495,27 +531,32 @@ class NeurobioClient {
       final rawRemaining = rawList.sublist(expectedDataLength);
       rawList.removeRange(expectedDataLength, rawList.length);
       completer.future.then((_) => _receiveLiveData(
-          rawRemaining,
-          rawList,
-          getLastTimeStamp,
-          getExpectedDataLength,
-          getCompleter,
-          liveDataTimeWindow,
-          onNewData));
+          raw: rawRemaining,
+          rawList: rawList,
+          getLastTimeStamp: getLastTimeStamp,
+          getExpectedDataLength: getExpectedDataLength,
+          getLiveData: getLiveData,
+          getCompleter: getCompleter,
+          liveDataTimeWindow: liveDataTimeWindow,
+          onNewData: onNewData));
     }
 
     // Convert the data to a string (from json)
     try {
-      final dataList = json.decode(utf8.decode(rawList)) as List;
-      if (liveData.hasData) {
+      final dataList =
+          json.decode(utf8.decode(rawList)) as Map<String, dynamic>;
+
+      final liveData = getLiveData(false);
+      if (liveData.isEmpty) {
         // If the live data were reset, we need to clear again with the current time stamp
         liveData.clear(initialTime: lastTimeStamp);
       }
-      liveData.appendDataFromJson(dataList);
+
+      liveData.appendFromJson(dataList);
       liveData.dropBefore(lastTimeStamp!.subtract(liveDataTimeWindow));
     } catch (e) {
       _log.severe('Error while parsing live data: $e, resetting');
-      resetLiveData();
+      getLiveData(true);
     }
     rawList.clear();
     completer.complete();
@@ -595,17 +636,18 @@ class NeurobioClientMock extends NeurobioClient {
     String serverIp = 'localhost',
     int commandPort = 5000,
     int responsePort = 5001,
-    int liveDataPort = 5002,
+    int liveAnalogsDataPort = 5002,
     int liveAnalysesPort = 5003,
     int? nbOfRetries,
     required Function() onConnexionLost,
-    required Function() onNewLiveData,
+    required Function() onNewLiveAnalogsData,
     required Function() onNewLiveAnalyses,
   }) async {
     if (isInitialized) return;
     _isMockInitialized = true;
 
-    _onNewLiveData = onNewLiveData;
+    _onNewLiveAnalogsData = onNewLiveAnalogsData;
+    _onNewLiveAnalyses = onNewLiveAnalyses;
   }
 
   @override
@@ -613,7 +655,7 @@ class NeurobioClientMock extends NeurobioClient {
     required String serverIp,
     required int commandPort,
     required int responsePort,
-    required int liveDataPort,
+    required int liveAnalogsDataPort,
     required int liveAnalysesPort,
     required int? nbOfRetries,
     required Function()? onConnexionLost,
