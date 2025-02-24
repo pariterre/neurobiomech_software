@@ -11,7 +11,7 @@ option(BUILD_DOC
 option(BUILD_TESTS 
     "Build all tests." OFF)
 option(BUILD_BINARIES
-    "Build all binary examples." OFF)
+    "Build all binary examples." ON)
 
 # Set a default build type to 'Release' if none was specified
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
