@@ -8,6 +8,15 @@ class PredictionData extends TimeSeriesData {
 
   final List<String> labels = [];
 
+  @override
+  void clear({bool resetInternal = false}) {
+    super.clear();
+    if (resetInternal) {
+      labels.clear();
+      _data.clear();
+    }
+  }
+
   void addPrediction(String label) {
     labels.add(label);
     _channelCount++;
@@ -30,8 +39,6 @@ class PredictionData extends TimeSeriesData {
     final entries = (json['data'] as Map<String, dynamic>).entries;
     for (int i = 0; i < entries.length; i++) {
       final data = entries.elementAt(i);
-
-      // TODO : Find why we only get values of 1.0
 
       // If this is the first time stamps, we need to set the time offset
       _timeOffset ??= (data.value[0] as int) / 1000.0;

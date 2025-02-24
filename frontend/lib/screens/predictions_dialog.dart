@@ -32,6 +32,8 @@ class _PredictionsDialogState extends State<PredictionsDialog> {
   late final List<PredictionModel> predictions =
       PredictionsManager.instance.predictions.toList();
 
+  final Map<dynamic, bool> _shouldBeExpanded = {};
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -64,6 +66,7 @@ class _PredictionsDialogState extends State<PredictionsDialog> {
                   }),
                   onDeleted: () =>
                       setState(() => predictions.removeAt(modelIndex)),
+                  shouldBeExpanded: _shouldBeExpanded,
                 ),
               ),
           _AddNewTile(
@@ -71,11 +74,13 @@ class _PredictionsDialogState extends State<PredictionsDialog> {
               isLocked: false,
               labelStyle: Theme.of(context).textTheme.titleMedium,
               onTap: () {
-                setState(() => predictions.add(PredictionModel.empty(
+                predictions.add(PredictionModel.empty(
                     name: Iterable<int>.generate(predictions.length + 2)
                         .map((i) => 'New analysis ${i + 1}')
                         .firstWhere((name) =>
-                            !predictions.any((e) => e.name == name)))));
+                            !predictions.any((e) => e.name == name))));
+                _shouldBeExpanded[predictions.last] = true;
+                setState(() {});
               }),
         ]),
       ),
@@ -103,6 +108,7 @@ class _PredictionModelTile extends StatelessWidget {
     required this.modelIndex,
     required this.onChanged,
     required this.onDeleted,
+    required this.shouldBeExpanded,
   });
 
   final PredictionModel model;
@@ -110,12 +116,15 @@ class _PredictionModelTile extends StatelessWidget {
   final int modelIndex;
   final Function(PredictionModel) onChanged;
   final Function() onDeleted;
+  final Map<dynamic, bool> shouldBeExpanded;
 
   @override
   Widget build(BuildContext context) {
     return AnimatedExpandingCard(
       header: Text('Analyses ${modelIndex + 1} (${model.name})',
           style: Theme.of(context).textTheme.titleMedium),
+      initialExpandedState: shouldBeExpanded[model] ?? false,
+      onTapHeader: (_) => shouldBeExpanded[model] = false,
       child: Padding(
         padding: const EdgeInsets.only(left: 12.0),
         child: Column(
@@ -182,78 +191,75 @@ class _PredictionModelTile extends StatelessWidget {
                 .map((eventIndex) => Padding(
                       padding: const EdgeInsets.only(bottom: 8.0),
                       child: _buildEventTile(
-                        event: model.events[eventIndex],
-                        eventIndex: eventIndex,
-                        onChanged: (event) {
-                          final events = model.events.toList();
+                          event: model.events[eventIndex],
+                          eventIndex: eventIndex,
+                          onChanged: (event) {
+                            final events = model.events.toList();
 
-                          // Make sure the new event does not share the same name with any other event
-                          for (int i = 0; i < events.length; i++) {
-                            if (i == eventIndex) continue;
-                            if (events[i].name == event.name) {
-                              // Show snackbar
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                      'The name "${event.name}" is already in use by another event.'),
-                                ),
-                              );
+                            // Make sure the new event does not share the same name with any other event
+                            for (int i = 0; i < events.length; i++) {
+                              if (i == eventIndex) continue;
+                              if (events[i].name == event.name) {
+                                // Show snackbar
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        'The name "${event.name}" is already in use by another event.'),
+                                  ),
+                                );
 
-                              // Force the rebuild of the dialog
-                              onChanged(model);
-                              return;
+                                // Force the rebuild of the dialog
+                                onChanged(model);
+                                return;
+                              }
                             }
-                          }
 
-                          final oldName = events[eventIndex].name;
-                          events[eventIndex] = event;
+                            final oldName = events[eventIndex].name;
+                            events[eventIndex] = event;
 
-                          // Change the name of the "previous event"
-                          for (int i = 0; i < events.length; i++) {
-                            if (events[i].previousEventName == oldName) {
-                              events[i] = events[i]
-                                  .copyWith(previousEventName: event.name);
+                            // Change the name of the "previous event"
+                            for (int i = 0; i < events.length; i++) {
+                              if (events[i].previousEventName == oldName) {
+                                events[i] = events[i]
+                                    .copyWith(previousEventName: event.name);
+                              }
                             }
-                          }
 
-                          // Copy the new event to the list and send it
-                          onChanged(model.copyWith(events: events));
-                        },
-                        onDeleted: () {
-                          final events = model.events.toList();
-                          final oldName = events[eventIndex].name;
+                            // Copy the new event to the list and send it
+                            onChanged(model.copyWith(events: events));
+                          },
+                          onDeleted: () {
+                            final events = model.events.toList();
+                            final oldName = events[eventIndex].name;
 
-                          // Change the name of the "previous event"
-                          final newOldNameIndex =
-                              (eventIndex - 1) % events.length;
-                          for (int i = 0; i < events.length; i++) {
-                            if (events[i].previousEventName == oldName) {
-                              events[i] = events[i].copyWith(
-                                  previousEventName:
-                                      events[newOldNameIndex].name);
+                            // Change the name of the "previous event"
+                            final newOldNameIndex =
+                                (eventIndex - 1) % events.length;
+                            for (int i = 0; i < events.length; i++) {
+                              if (events[i].previousEventName == oldName) {
+                                events[i] = events[i].copyWith(
+                                    previousEventName:
+                                        events[newOldNameIndex].name);
+                              }
                             }
-                          }
 
-                          events.removeAt(eventIndex);
-                          onChanged(model.copyWith(events: events));
-                        },
-                      ),
+                            events.removeAt(eventIndex);
+                            onChanged(model.copyWith(events: events));
+                          },
+                          shouldBeExpanded: shouldBeExpanded),
                     ))
                 .toList(),
             _AddNewTile(
               label: 'Add new event',
               isLocked: isLocked,
               onTap: () {
-                onChanged(model.copyWith(
-                  events: [
-                    ...model.events,
-                    PredictionEvent.empty(
-                        name: Iterable<int>.generate(model.events.length + 2)
-                            .map((i) => 'New event ${i + 1}')
-                            .firstWhere((name) =>
-                                !model.events.any((e) => e.name == name))),
-                  ],
-                ));
+                final newEvent = PredictionEvent.empty(
+                    name: Iterable<int>.generate(model.events.length + 2)
+                        .map((i) => 'New event ${i + 1}')
+                        .firstWhere((name) =>
+                            !model.events.any((e) => e.name == name)));
+                onChanged(model.copyWith(events: [...model.events, newEvent]));
+                shouldBeExpanded[newEvent] = true;
               },
             ),
           ],
@@ -267,9 +273,12 @@ class _PredictionModelTile extends StatelessWidget {
     required int eventIndex,
     required Function(PredictionEvent) onChanged,
     required Function() onDeleted,
+    required Map<dynamic, bool> shouldBeExpanded,
   }) {
     return AnimatedExpandingCard(
       header: Text('Event ${eventIndex + 1} (${event.name})'),
+      initialExpandedState: shouldBeExpanded[event] ?? false,
+      onTapHeader: (_) => shouldBeExpanded[event] = false,
       child: Padding(
         padding: const EdgeInsets.only(left: 12.0),
         child: Column(
@@ -339,18 +348,17 @@ class _PredictionModelTile extends StatelessWidget {
                         startWhens.removeAt(startWhenIndex);
                         onChanged(event.copyWith(startWhen: startWhens));
                       },
+                      shouldBeExpanded: shouldBeExpanded,
                     ))
                 .toList(),
             _AddNewTile(
               label: 'Add new start condition',
               isLocked: isLocked,
               onTap: () {
-                onChanged(event.copyWith(
-                  startWhen: [
-                    ...event.startWhen,
-                    PredictionStartWhenThreshold.empty()
-                  ],
-                ));
+                final newStartWhen = PredictionStartWhenThreshold.empty();
+                onChanged(event
+                    .copyWith(startWhen: [...event.startWhen, newStartWhen]));
+                shouldBeExpanded[newStartWhen] = true;
               },
             ),
           ],
@@ -364,11 +372,14 @@ class _PredictionModelTile extends StatelessWidget {
     required int startWhenIndex,
     required Function(PredictionStartWhen) onChanged,
     required Function() onDeleted,
+    required Map<dynamic, bool> shouldBeExpanded,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 2.0),
       child: AnimatedExpandingCard(
         header: Text('Start condition ${startWhenIndex + 1}'),
+        initialExpandedState: shouldBeExpanded[startWhen] ?? false,
+        onTapHeader: (_) => shouldBeExpanded[startWhen] = false,
         child: Padding(
           padding: const EdgeInsets.only(left: 12.0),
           child: Column(

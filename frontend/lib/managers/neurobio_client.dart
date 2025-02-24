@@ -145,7 +145,7 @@ class NeurobioClient {
     _isConnectedToLiveAnalyses = false;
     _isRecording = false;
     liveAnalogsData.clear(initialTime: DateTime.now());
-    liveAnalyses.clear(initialTime: DateTime.now());
+    liveAnalyses.clear(initialTime: DateTime.now(), fullReset: true);
     lastTrialAnalogsData.clear(initialTime: DateTime.now());
 
     _commandAckCompleter = null;
@@ -353,7 +353,6 @@ class NeurobioClient {
 
       case Command.addAnalyzer:
       case Command.removeAnalyzer:
-        resetLiveAnalyses();
         break;
 
       case Command.handshake:
@@ -428,6 +427,7 @@ class NeurobioClient {
 
   Future<void> _receiveLiveAnalyses(List<int> raw) async {
     await _receiveLiveData(
+      dataType: 'analyses',
       raw: raw,
       rawList: _rawLiveAnalysesList,
       getLastTimeStamp: ([DateTime? duration]) {
@@ -455,6 +455,7 @@ class NeurobioClient {
 
   Future<void> _receiveLiveAnalogsData(List<int> raw) async {
     await _receiveLiveData(
+      dataType: 'live data',
       raw: raw,
       rawList: _rawLiveAnalogsList,
       getLastTimeStamp: ([DateTime? duration]) {
@@ -481,6 +482,7 @@ class NeurobioClient {
   }
 
   Future<void> _receiveLiveData({
+    required String dataType,
     required List<int> raw,
     required List<int> rawList,
     required DateTime? Function([DateTime? value]) getLastTimeStamp,
@@ -500,13 +502,14 @@ class NeurobioClient {
         expectedDataLength =
             getExpectedDataLength(_parseDataLengthFromPacket(raw));
       } catch (e) {
-        _log.severe('Error while parsing live data: $e, resetting');
+        _log.severe('Error while parsing $dataType: $e, resetting');
         resetLiveAnalogsData();
       }
       if (raw.length > _serverHeaderLength) {
         // If more data came at once, recursively call the function with the rest
         // of the data.
         _receiveLiveData(
+            dataType: dataType,
             raw: raw.sublist(_serverHeaderLength),
             rawList: rawList,
             getLastTimeStamp: getLastTimeStamp,
@@ -531,6 +534,7 @@ class NeurobioClient {
       final rawRemaining = rawList.sublist(expectedDataLength);
       rawList.removeRange(expectedDataLength, rawList.length);
       completer.future.then((_) => _receiveLiveData(
+          dataType: dataType,
           raw: rawRemaining,
           rawList: rawList,
           getLastTimeStamp: getLastTimeStamp,
@@ -555,7 +559,7 @@ class NeurobioClient {
       liveData.appendFromJson(dataList);
       liveData.dropBefore(lastTimeStamp!.subtract(liveDataTimeWindow));
     } catch (e) {
-      _log.severe('Error while parsing live data: $e, resetting');
+      _log.severe('Error while parsing $dataType: $e, resetting');
       getLiveData(true);
     }
     rawList.clear();

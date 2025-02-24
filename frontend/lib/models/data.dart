@@ -10,7 +10,7 @@ class Data {
   final EmgTimeSeriesData delsysEmg;
   final PredictionData predictions;
 
-  void clear({DateTime? initialTime}) {
+  void clear({DateTime? initialTime, bool fullReset = false}) {
     _initialTime = initialTime ?? _initialTime;
 
     switch (dataGenericType) {
@@ -19,7 +19,7 @@ class Data {
         delsysEmg.clear();
         break;
       case DataGenericTypes.predictions:
-        predictions.clear();
+        predictions.clear(resetInternal: fullReset);
         break;
     }
   }

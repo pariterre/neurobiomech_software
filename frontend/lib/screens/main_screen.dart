@@ -56,7 +56,7 @@ class _MainScreenState extends State<MainScreen> {
       _isBusy = true;
     });
     await _connexion.initialize(
-      onConnexionLost: () => setState(() {}),
+      onConnexionLost: _disconnectServer,
       onNewLiveAnalogsData: _onNewLiveAnalogsData,
       onNewLiveAnalyses: _onNewLiveAnalyses,
     );
@@ -66,6 +66,7 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> _disconnectServer() async {
     setState(() => _isBusy = true);
     await _connexion.disconnect();
+    _activePredictions.clear();
     _resetInternalStates();
   }
 
@@ -75,14 +76,13 @@ class _MainScreenState extends State<MainScreen> {
       _showLastTrial = false;
       _showLiveData = false;
       _showLiveAnalyses = false;
-      _activePredictions.clear();
     });
   }
 
   Future<void> _connectDelsysAnalog() async {
     setState(() => _isBusy = true);
     await _connexion.send(Command.connectDelsysAnalog);
-    setState(() => _isBusy = false);
+    _resetInternalStates();
   }
 
   Future<void> _connectDelsysEmg() async {

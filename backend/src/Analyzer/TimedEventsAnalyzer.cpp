@@ -32,7 +32,11 @@ DataPoint TimedEventsAnalyzer::predict(
     m_FirstPass = false;
   }
   if (currentTime < m_LastAnalyzedTimeStamp) {
-    throw std::runtime_error("Time went backwards, skipping prediction");
+    throw std::runtime_error(
+        "Time went backwards (" +
+        std::to_string(currentTime.time_since_epoch().count()) + " < " +
+        std::to_string(m_LastAnalyzedTimeStamp.time_since_epoch().count()) +
+        "), skipping prediction");
   }
 
   // Update the current phase time

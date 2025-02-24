@@ -115,9 +115,8 @@ void TcpServer::startServerSync() {
         try {
           handleSendAnalyzedLiveData();
         } catch (const std::exception &e) {
-          auto &logger = utils::Logger::getInstance();
-          logger.fatal("Failed to send analyzed live data: " +
-                       std::string(e.what()));
+          utils::Logger::getInstance().fatal(
+              "Failed to send analyzed live data: " + std::string(e.what()));
         }
         auto next = analyzersIntervals -
                     (std::chrono::high_resolution_clock::now() - startingTime);
