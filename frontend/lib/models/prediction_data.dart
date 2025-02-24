@@ -40,9 +40,11 @@ class PredictionData extends TimeSeriesData {
     for (int i = 0; i < entries.length; i++) {
       final data = entries.elementAt(i);
 
-      // If this is the first time stamps, we need to set the time offset
-      _timeOffset ??= (data.value[0] as int) / 1000.0;
-      time.add((data.value[0] as int) / 1000.0 - _timeOffset!);
+      if (i == 0) {
+        // If this is the first time stamps, we need to set the time offset
+        _timeOffset ??= (data.value[0] as int) / 1000.0;
+        time.add((data.value[0] as int) / 1000.0 - _timeOffset!);
+      }
       _data[i].addAll(
           (data.value[1] as List<dynamic>).map((e) => e as double).toList());
     }

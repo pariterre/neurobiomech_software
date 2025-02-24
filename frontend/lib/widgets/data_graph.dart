@@ -59,23 +59,23 @@ class _DataGraphState extends State<DataGraph> {
     final TimeSeriesData timeSeries = _timeSeries;
 
     final time = timeSeries.time;
-    return timeSeries.getData().asMap().entries.map((e) => (channel != null &&
-                channel == e.key &&
-                _showChannels[e.key]) ||
-            (channel == null && _showChannels[e.key])
-        ? LineChartBarData(
-            color: Colors.black,
-            spots: e.value
-                .asMap()
-                .entries
-                .map((entry) => FlSpot(time[entry.key] / 1000.0, entry.value))
-                .toList(),
-            isCurved: false,
-            isStrokeCapRound: false,
-            barWidth: 1,
-            dotData: const FlDotData(show: false),
-          )
-        : null);
+    return timeSeries.getData().asMap().entries.map((e) =>
+        (channel != null && channel == e.key && _showChannels[e.key]) ||
+                (channel == null && _showChannels[e.key])
+            ? LineChartBarData(
+                color: Colors.black,
+                spots: e.value
+                    .asMap()
+                    .entries
+                    .map((entry) => FlSpot(time[entry.key] / 1000.0,
+                        entry.value * _multipliers[e.key]))
+                    .toList(),
+                isCurved: false,
+                isStrokeCapRound: false,
+                barWidth: 1,
+                dotData: const FlDotData(show: false),
+              )
+            : null);
   }
 
   TimeSeriesData get _timeSeries {
@@ -118,6 +118,17 @@ class _DataGraphState extends State<DataGraph> {
         .setApplySlidingRms(newValue, channel: channel);
     setState(() {
       _computeRms[channel] = newValue;
+    });
+  }
+
+  late final List<double> _multipliers = List.generate(
+      _channelCount,
+      (_) =>
+          widget.controller.graphType == DataGraphType.predictions ? 100 : 1);
+
+  void _onMultiplierChanged(int channel, double newValue) {
+    setState(() {
+      _multipliers[channel] = newValue;
     });
   }
 
@@ -214,6 +225,8 @@ class _DataGraphState extends State<DataGraph> {
                             ? _onComputeRmsSelected
                             : null,
                     computeRms: _computeRms,
+                    onMultiplierChanged: _onMultiplierChanged,
+                    multipliers: _multipliers,
                     graphType: widget.controller.graphType,
                   )),
             ),
@@ -315,10 +328,11 @@ FlTitlesData _titlesData(BoxConstraints constraints,
     );
 
 class _RadioCombineChannels extends StatelessWidget {
-  const _RadioCombineChannels(
-      {required this.combineChannels,
-      required this.onChanged,
-      required this.graphType});
+  const _RadioCombineChannels({
+    required this.combineChannels,
+    required this.onChanged,
+    required this.graphType,
+  });
 
   final bool combineChannels;
   final Function(bool) onChanged;
@@ -361,6 +375,8 @@ class _ChannelOptionsPopup extends StatefulWidget {
     required this.showChannels,
     required this.onComputeRmsSelected,
     required this.computeRms,
+    required this.onMultiplierChanged,
+    required this.multipliers,
     required this.graphType,
   });
 
@@ -369,6 +385,9 @@ class _ChannelOptionsPopup extends StatefulWidget {
 
   final Function(int index, bool value)? onComputeRmsSelected;
   final List<bool>? computeRms;
+
+  final Function(int index, double value)? onMultiplierChanged;
+  final List<double>? multipliers;
 
   final DataGraphType graphType;
 
@@ -380,6 +399,8 @@ class _ChannelOptionsPopupState extends State<_ChannelOptionsPopup> {
   bool _isExpanded = false;
   bool get _useRms =>
       widget.computeRms != null && widget.onComputeRmsSelected != null;
+
+  bool get _useMultiplier => widget.multipliers != null;
 
   bool get _canShowSelectAll => widget.showChannels.any((element) => !element);
   bool get _canComputeRmsAll =>
@@ -393,8 +414,19 @@ class _ChannelOptionsPopupState extends State<_ChannelOptionsPopup> {
 
   @override
   Widget build(BuildContext context) {
+    var width = widget.graphType == DataGraphType.predictions ? 40.0 : 10.0;
+    const indexWidth = 40.0;
+    const showWidth = 40.0;
+    const rmsWidth = 40.0;
+    const multiplierWidth = 60.0;
+
+    width += indexWidth;
+    width += showWidth;
+    if (_useRms) width += rmsWidth;
+    if (_useMultiplier) width += multiplierWidth;
+
     return SizedBox(
-      width: 175,
+      width: width,
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
@@ -432,89 +464,184 @@ class _ChannelOptionsPopupState extends State<_ChannelOptionsPopup> {
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const SizedBox(width: 50, child: Text('All')),
-                    Column(
-                      children: [
-                        const Text('Show'),
-                        Checkbox(
-                          onChanged: (_) {
-                            final value = _canShowSelectAll;
-                            for (var i = 0;
-                                i < widget.showChannels.length;
-                                i++) {
-                              widget.onChannelSelected(i, value);
-                            }
-                            setState(() {});
-                          },
-                          value: !_canShowSelectAll,
-                        ),
-                      ],
-                    ),
-                    if (_useRms)
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
+                    const SizedBox(
+                        width: indexWidth, child: Center(child: Text('All'))),
+                    SizedBox(
+                      width: showWidth,
+                      child: Column(
                         children: [
-                          const SizedBox(width: 12),
-                          Column(
-                            children: [
-                              const Text('RMS'),
-                              Checkbox(
-                                onChanged: (_) {
-                                  final value = _canComputeRmsAll;
-                                  for (var i = 0;
-                                      i < widget.computeRms!.length;
-                                      i++) {
-                                    widget.onComputeRmsSelected!(i, value);
-                                  }
-                                  setState(() {});
-                                },
-                                value: !_canComputeRmsAll,
-                              ),
-                            ],
+                          const Text('Show'),
+                          Checkbox(
+                            onChanged: (_) {
+                              final value = _canShowSelectAll;
+                              for (var i = 0;
+                                  i < widget.showChannels.length;
+                                  i++) {
+                                widget.onChannelSelected(i, value);
+                              }
+                              setState(() {});
+                            },
+                            value: !_canShowSelectAll,
                           ),
                         ],
-                      )
+                      ),
+                    ),
+                    if (_useRms)
+                      SizedBox(
+                        width: rmsWidth,
+                        child: Column(
+                          children: [
+                            const Text('RMS'),
+                            Checkbox(
+                              onChanged: (_) {
+                                final value = _canComputeRmsAll;
+                                for (var i = 0;
+                                    i < widget.computeRms!.length;
+                                    i++) {
+                                  widget.onComputeRmsSelected!(i, value);
+                                }
+                                setState(() {});
+                              },
+                              value: !_canComputeRmsAll,
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (_useMultiplier)
+                      const SizedBox(
+                        width: multiplierWidth,
+                        child: Center(
+                          child: Text('X mult'),
+                        ),
+                      ),
                   ],
                 ),
               ),
             if (_isExpanded)
               ...List.generate(
                 widget.showChannels.length,
-                (index) => Container(
-                  color: index % 2 == 0 ? Colors.grey[200] : Colors.grey[100],
-                  width: double.infinity,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(width: 50, child: Text((index + 1).toString())),
-                      Checkbox(
-                          onChanged: (_) {
-                            widget.onChannelSelected(
-                                index, !widget.showChannels[index]);
-                            setState(() {});
-                          },
-                          value: widget.showChannels[index]),
-                      if (_useRms)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const SizedBox(width: 12),
-                            Checkbox(
-                                onChanged: (_) {
-                                  widget.onComputeRmsSelected!(
-                                      index, !widget.computeRms![index]);
-                                  setState(() {});
-                                },
-                                value: widget.computeRms![index]),
-                          ],
-                        ),
-                    ],
-                  ),
+                (index) => _OptionsBuilder(
+                  index: index,
+                  indexWidth: indexWidth,
+                  showWidth: showWidth,
+                  showChannels: widget.showChannels,
+                  onChannelSelected: (_) {
+                    widget.onChannelSelected(
+                        index, !widget.showChannels[index]);
+                    setState(() {});
+                  },
+                  rmsWidth: rmsWidth,
+                  computeRms: widget.computeRms,
+                  onComputeRmsSelected: _useRms
+                      ? (_) {
+                          widget.onComputeRmsSelected!(
+                              index, !widget.computeRms![index]);
+                          setState(() {});
+                        }
+                      : null,
+                  multiplierWidth: multiplierWidth,
+                  multipliers: widget.multipliers,
+                  onMultiplierChanged: _useMultiplier
+                      ? (value) => setState(
+                          () => widget.onMultiplierChanged!(index, value))
+                      : null,
                 ),
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _OptionsBuilder extends StatefulWidget {
+  const _OptionsBuilder({
+    required this.index,
+    required this.indexWidth,
+    required this.showWidth,
+    required this.showChannels,
+    required this.onChannelSelected,
+    required this.rmsWidth,
+    required this.computeRms,
+    required this.onComputeRmsSelected,
+    required this.multiplierWidth,
+    required this.multipliers,
+    required this.onMultiplierChanged,
+  });
+
+  final int index;
+  final double indexWidth;
+
+  final double showWidth;
+  final List<bool> showChannels;
+  final Function(bool? value) onChannelSelected;
+
+  final double rmsWidth;
+  final List<bool>? computeRms;
+  final Function(bool? value)? onComputeRmsSelected;
+
+  final double multiplierWidth;
+  final List<double>? multipliers;
+  final Function(double value)? onMultiplierChanged;
+
+  @override
+  State<_OptionsBuilder> createState() => _OptionsBuilderState();
+}
+
+class _OptionsBuilderState extends State<_OptionsBuilder> {
+  late final _controller =
+      TextEditingController(text: widget.multipliers?[widget.index].toString());
+  final _focusNode = FocusNode();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: widget.index % 2 == 0 ? Colors.grey[200] : Colors.grey[100],
+      width: double.infinity,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+              width: widget.indexWidth,
+              child: Center(child: Text((widget.index + 1).toString()))),
+          SizedBox(
+            width: widget.showWidth,
+            child: Checkbox(
+                onChanged: widget.onChannelSelected,
+                value: widget.showChannels[widget.index]),
+          ),
+          if (widget.onComputeRmsSelected != null)
+            SizedBox(
+              width: widget.rmsWidth,
+              child: Center(
+                child: Checkbox(
+                    onChanged: widget.onComputeRmsSelected,
+                    value: widget.computeRms![widget.index]),
+              ),
+            ),
+          if (widget.onMultiplierChanged != null)
+            SizedBox(
+              width: widget.multiplierWidth,
+              child: TextField(
+                controller: _controller,
+                focusNode: _focusNode,
+                onChanged: (value) {
+                  final valueAsDouble = double.tryParse(value);
+                  if (valueAsDouble == null) return;
+                  widget.onMultiplierChanged!(valueAsDouble);
+                },
+                textAlign: TextAlign.center,
+              ),
+            ),
+        ],
       ),
     );
   }

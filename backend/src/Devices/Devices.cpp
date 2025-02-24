@@ -324,6 +324,9 @@ bool Devices::stopRecording() {
 
 std::map<std::string, data::TimeSeries> Devices::getLiveData() const {
   std::map<std::string, data::TimeSeries> data;
+
+  std::lock_guard<std::mutex> lock(
+      const_cast<std::mutex &>(m_MutexDataCollectors));
   for (const auto &[deviceId, dataCollector] : m_DataCollectors) {
     data[dataCollector->dataCollectorName()] = dataCollector->getLiveData();
   }

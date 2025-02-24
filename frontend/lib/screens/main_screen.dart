@@ -220,6 +220,7 @@ class _MainScreenState extends State<MainScreen> {
                               parameters: prediction.serialize());
                           if (response) {
                             setState(() {
+                              _showLiveAnalyses = false;
                               _connexion.liveAnalyses.predictions
                                   .addPrediction(prediction.name);
                               _activePredictions.add(prediction);
@@ -231,6 +232,7 @@ class _MainScreenState extends State<MainScreen> {
                               parameters: {'analyzer': prediction.name});
                           if (response) {
                             setState(() {
+                              _showLiveAnalyses = false;
                               _connexion.liveAnalyses.predictions
                                   .removePrediction(prediction.name);
                               _activePredictions.remove(prediction);
