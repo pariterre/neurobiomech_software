@@ -1,4 +1,6 @@
 #include "Analyzer/TimedEventsAnalyzer.h"
+
+#include "Analyzer/Exceptions.h"
 #include "Data/DataPoint.h"
 #include <numeric>
 
@@ -32,11 +34,7 @@ DataPoint TimedEventsAnalyzer::predict(
     m_FirstPass = false;
   }
   if (currentTime < m_LastAnalyzedTimeStamp) {
-    throw std::runtime_error(
-        "Time went backwards (" +
-        std::to_string(currentTime.time_since_epoch().count()) + " < " +
-        std::to_string(m_LastAnalyzedTimeStamp.time_since_epoch().count()) +
-        "), skipping prediction");
+    throw TimeWentBackwardException(currentTime, m_LastAnalyzedTimeStamp);
   }
 
   // Update the current phase time

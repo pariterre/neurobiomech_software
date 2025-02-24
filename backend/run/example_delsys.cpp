@@ -21,7 +21,7 @@ int main() {
     logger.info("The system is now connected, streaming and recording data");
 
     std::this_thread::sleep_for(std::chrono::seconds(10));
-    logger.info("The system has been recorded data for 1 seconds");
+    logger.info("The system has been recorded data for 10 seconds");
 
     delsys.stopRecording();
     delsys.stopDataStreaming();
@@ -76,7 +76,7 @@ int main() {
         "analyzer_type" : "cyclic_timed_events",
         "time_reference_device" : "DelsysAnalogDataCollector",
         "learning_rate" : 0.5,
-        "initial_phase_durations" : [100, 100],
+        "initial_phase_durations" : [400, 600],
         "events" : [
           {
             "name" : "heel_strike",

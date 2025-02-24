@@ -5,6 +5,7 @@
 #include <thread>
 
 #include "Analyzer/Analyzers.h"
+#include "Analyzer/Exceptions.h"
 #include "Devices/Concrete/DelsysAnalogDevice.h"
 #include "Devices/Concrete/DelsysEmgDevice.h"
 #include "Devices/Concrete/MagstimRapidDevice.h"
@@ -108,12 +109,15 @@ void TcpServer::startServerSync() {
     });
 
     auto analyzersWorker = std::thread([this]() {
-      auto analyzersIntervals = std::chrono::milliseconds(100);
+      auto analyzersIntervals = std::chrono::milliseconds(25);
       std::this_thread::sleep_for(analyzersIntervals);
       while (m_IsServerRunning && isClientConnected()) {
         auto startingTime = std::chrono::high_resolution_clock::now();
         try {
           handleSendAnalyzedLiveData();
+        } catch (const analyzer::TimeWentBackwardException &) {
+          // This can happen quite a lot if intervals is faster than the one
+          // from data collector, so we just ignore it
         } catch (const std::exception &e) {
           utils::Logger::getInstance().fatal(
               "Failed to send analyzed live data: " + std::string(e.what()));
