@@ -6,8 +6,6 @@
 #include "Server/TcpServer.h"
 #include "utils.h"
 
-// TODO - Fix the tests that are failing since adding analyses to the server
-
 static double requiredPrecision(1e-10);
 
 #ifndef SKIP_CI_FAILING_TESTS
@@ -92,7 +90,7 @@ TEST(Server, ClientConnexion) {
 
   // Server can be shut if nothing happened
   {
-    server::TcpServerMock server(5000, 5001, 5002, failingTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, 5003, failingTimeoutPeriod);
     server.startServer();
 
     logger.giveTimeToUpdate();
@@ -107,7 +105,7 @@ TEST(Server, ClientConnexion) {
 
   // Server will wait for as much as needed before someone tries to connect
   {
-    server::TcpServerMock server(5000, 5001, 5002, failingTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, 5003, failingTimeoutPeriod);
     server.startServer();
 
     std::this_thread::sleep_for(3 * failingTimeoutPeriod + failingBufferPeriod);
@@ -125,7 +123,7 @@ TEST(Server, ClientConnexion) {
   logger.clear();
 
   {
-    server::TcpServerMock server(5000, 5001, 5002, failingTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, 5003, failingTimeoutPeriod);
     server.startServer();
 
     asio::io_context context;
@@ -146,7 +144,7 @@ TEST(Server, ClientConnexion) {
 
   // Server can be shut if one connexion was made but dropped
   {
-    server::TcpServerMock server(5000, 5001, 5002, failingTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, 5003, failingTimeoutPeriod);
     server.startServer();
 
     asio::io_context context;
@@ -169,7 +167,8 @@ TEST(Server, ClientConnexion) {
   // Server can be shut if connexions to command and response ports were made,
   // but was droped before the connexion to live data
   {
-    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, 5003,
+                                 sufficientTimeoutPeriod);
     server.startServer();
 
     asio::io_context context;
@@ -177,6 +176,7 @@ TEST(Server, ClientConnexion) {
     auto commandSocket = std::make_unique<asio::ip::tcp::socket>(context);
     asio::connect(*commandSocket,
                   resolver.resolve("localhost", std::to_string(5000)));
+    std::this_thread::sleep_for(failingBufferPeriod);
     auto responseSocket = std::make_unique<asio::ip::tcp::socket>(context);
     asio::connect(*responseSocket,
                   resolver.resolve("localhost", std::to_string(5001)));
@@ -197,9 +197,46 @@ TEST(Server, ClientConnexion) {
   logger.clear();
 
   // Server can be shut if connexions to command, response and live ports were
-  // made, but waiting for the handshake
+  // made, but was droped before the the live analysis was made
   {
-    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, 5003,
+                                 sufficientTimeoutPeriod);
+    server.startServer();
+
+    asio::io_context context;
+    asio::ip::tcp::resolver resolver(context);
+    auto commandSocket = std::make_unique<asio::ip::tcp::socket>(context);
+    asio::connect(*commandSocket,
+                  resolver.resolve("localhost", std::to_string(5000)));
+    std::this_thread::sleep_for(failingBufferPeriod);
+    auto responseSocket = std::make_unique<asio::ip::tcp::socket>(context);
+    asio::connect(*responseSocket,
+                  resolver.resolve("localhost", std::to_string(5001)));
+    std::this_thread::sleep_for(failingBufferPeriod);
+    auto liveDataSocket = std::make_unique<asio::ip::tcp::socket>(context);
+    asio::connect(*liveDataSocket,
+                  resolver.resolve("localhost", std::to_string(5002)));
+    std::this_thread::sleep_for(failingBufferPeriod);
+
+    server.setTimeoutPeriod(failingTimeoutPeriod);
+
+    std::this_thread::sleep_for(failingTimeoutPeriod + failingBufferPeriod);
+    // Give some time to the message to arrive
+    logger.giveTimeToUpdate();
+    ASSERT_TRUE(logger.contains("Connexion to LiveAnalyses socket timed out (" +
+                                std::to_string(failingTimeoutPeriod.count()) +
+                                " ms), disconnecting client"));
+  }
+  ASSERT_TRUE(logger.contains(
+      "Stopping listening to ports as server is shutting down"));
+  ASSERT_TRUE(logger.contains("Server has shut down"));
+  logger.clear();
+
+  // Server can be shut if connexions to command, response, live and live
+  // analyses ports were made, but waiting for the handshake
+  {
+    server::TcpServerMock server(5000, 5001, 5002, 5003,
+                                 sufficientTimeoutPeriod);
     server.startServer();
 
     asio::io_context context;
@@ -208,14 +245,20 @@ TEST(Server, ClientConnexion) {
     auto commandSocket = std::make_unique<asio::ip::tcp::socket>(context);
     asio::connect(*commandSocket,
                   resolver.resolve("localhost", std::to_string(5000)));
+    std::this_thread::sleep_for(failingBufferPeriod);
+    std::this_thread::sleep_for(failingBufferPeriod);
     auto responseSocket = std::make_unique<asio::ip::tcp::socket>(context);
     asio::connect(*responseSocket,
                   resolver.resolve("localhost", std::to_string(5001)));
-    auto liveDataSocket = std::make_unique<asio::ip::tcp::socket>(context);
     std::this_thread::sleep_for(failingBufferPeriod);
-
+    std::this_thread::sleep_for(failingBufferPeriod);
+    auto liveDataSocket = std::make_unique<asio::ip::tcp::socket>(context);
     asio::connect(*liveDataSocket,
                   resolver.resolve("localhost", std::to_string(5002)));
+    std::this_thread::sleep_for(failingBufferPeriod);
+    auto liveAnalysesSocket = std::make_unique<asio::ip::tcp::socket>(context);
+    asio::connect(*liveAnalysesSocket,
+                  resolver.resolve("localhost", std::to_string(5003)));
     std::this_thread::sleep_for(failingBufferPeriod);
 
     // Give some time to the message to arrive
@@ -228,10 +271,11 @@ TEST(Server, ClientConnexion) {
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 
-  // Server can be shut if connexions to command, response and live ports were
-  // made, but waiting for the handshake timed out
+  // Server can be shut if connexions to command, response, live data and live
+  // analyses ports were made, but waiting for the handshake timed out
   {
-    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, 5003,
+                                 sufficientTimeoutPeriod);
     server.startServer();
 
     asio::io_context context;
@@ -239,12 +283,15 @@ TEST(Server, ClientConnexion) {
     auto commandSocket = std::make_unique<asio::ip::tcp::socket>(context);
     auto responseSocket = std::make_unique<asio::ip::tcp::socket>(context);
     auto liveDataSocket = std::make_unique<asio::ip::tcp::socket>(context);
+    auto liveAnalysesSocket = std::make_unique<asio::ip::tcp::socket>(context);
     asio::connect(*commandSocket,
                   resolver.resolve("localhost", std::to_string(5000)));
     asio::connect(*responseSocket,
                   resolver.resolve("localhost", std::to_string(5001)));
     asio::connect(*liveDataSocket,
                   resolver.resolve("localhost", std::to_string(5002)));
+    asio::connect(*liveAnalysesSocket,
+                  resolver.resolve("localhost", std::to_string(5003)));
 
     // Wait longer than the timeout
     ensureServerIsConnected(server);
@@ -262,10 +309,12 @@ TEST(Server, ClientConnexion) {
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 
-  // Server can be shut if connexions to command, response and live ports were
-  // made, but waiting for the handshake timed out, and a connexion was retried
+  // Server can be shut if connexions to command, response, live data and live
+  // analyses ports were made, but waiting for the handshake timed out, and a
+  // connexion was retried
   {
-    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, 5003,
+                                 sufficientTimeoutPeriod);
     server.startServer();
 
     asio::io_context context;
@@ -273,12 +322,15 @@ TEST(Server, ClientConnexion) {
     auto commandSocket = std::make_unique<asio::ip::tcp::socket>(context);
     auto responseSocket = std::make_unique<asio::ip::tcp::socket>(context);
     auto liveDataSocket = std::make_unique<asio::ip::tcp::socket>(context);
+    auto liveAnalysesSocket = std::make_unique<asio::ip::tcp::socket>(context);
     asio::connect(*commandSocket,
                   resolver.resolve("localhost", std::to_string(5000)));
     asio::connect(*responseSocket,
                   resolver.resolve("localhost", std::to_string(5001)));
     asio::connect(*liveDataSocket,
                   resolver.resolve("localhost", std::to_string(5002)));
+    asio::connect(*liveAnalysesSocket,
+                  resolver.resolve("localhost", std::to_string(5003)));
 
     // Wait longer than the timeout
     ensureServerIsConnected(server);
@@ -298,11 +350,12 @@ TEST(Server, ClientConnexion) {
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 
-  // Server can be shut if connexions to command, response and live ports were
-  // made, but waiting for the handshake timed out, and a connexion was retried
-  // but response socket connexion timed out
+  // Server can be shut if connexions to command, response, live data and live
+  // analyses ports were made, but waiting for the handshake timed out, and a
+  // connexion was retried but response socket connexion timed out
   {
-    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, 5003,
+                                 sufficientTimeoutPeriod);
     server.startServer();
 
     asio::io_context context;
@@ -310,12 +363,15 @@ TEST(Server, ClientConnexion) {
     auto commandSocket = std::make_unique<asio::ip::tcp::socket>(context);
     auto responseSocket = std::make_unique<asio::ip::tcp::socket>(context);
     auto liveDataSocket = std::make_unique<asio::ip::tcp::socket>(context);
+    auto liveAnalysesSocket = std::make_unique<asio::ip::tcp::socket>(context);
     asio::connect(*commandSocket,
                   resolver.resolve("localhost", std::to_string(5000)));
     asio::connect(*responseSocket,
                   resolver.resolve("localhost", std::to_string(5001)));
     asio::connect(*liveDataSocket,
                   resolver.resolve("localhost", std::to_string(5002)));
+    asio::connect(*liveAnalysesSocket,
+                  resolver.resolve("localhost", std::to_string(5003)));
 
     // Wait longer than the timeout
     ensureServerIsConnected(server);
@@ -335,11 +391,12 @@ TEST(Server, ClientConnexion) {
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 
-  // Server can be shut if connexions to command, response and live ports were
-  // made, but waiting for the handshake timed out, and a connexion was retried
-  // and response socket connexion was made
+  // Server can be shut if connexions to command, response, live data and live
+  // analyses ports were made, but waiting for the handshake timed out, and a
+  // connexion was retried and response socket connexion was made
   {
-    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, 5003,
+                                 sufficientTimeoutPeriod);
     server.startServer();
 
     asio::io_context context;
@@ -347,12 +404,15 @@ TEST(Server, ClientConnexion) {
     auto commandSocket = std::make_unique<asio::ip::tcp::socket>(context);
     auto responseSocket = std::make_unique<asio::ip::tcp::socket>(context);
     auto liveDataSocket = std::make_unique<asio::ip::tcp::socket>(context);
+    auto liveAnalysesSocket = std::make_unique<asio::ip::tcp::socket>(context);
     asio::connect(*commandSocket,
                   resolver.resolve("localhost", std::to_string(5000)));
     asio::connect(*responseSocket,
                   resolver.resolve("localhost", std::to_string(5001)));
     asio::connect(*liveDataSocket,
                   resolver.resolve("localhost", std::to_string(5002)));
+    asio::connect(*liveAnalysesSocket,
+                  resolver.resolve("localhost", std::to_string(5003)));
 
     // Wait longer than the timeout
     ensureServerIsConnected(server);
@@ -376,11 +436,12 @@ TEST(Server, ClientConnexion) {
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 
-  // Server can be shut if connexions to command, response and live ports were
-  // made, but waiting for the handshake timed out, and a connexion was retried
-  // and live data socket connexion was made
+  // Server can be shut if connexions to command, response, live data and live
+  // analyses ports were made, but waiting for the handshake timed out, and a
+  // connexion was retried and live data connexion timed out
   {
-    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, 5003,
+                                 sufficientTimeoutPeriod);
     server.startServer();
 
     asio::io_context context;
@@ -388,12 +449,15 @@ TEST(Server, ClientConnexion) {
     auto commandSocket = std::make_unique<asio::ip::tcp::socket>(context);
     auto responseSocket = std::make_unique<asio::ip::tcp::socket>(context);
     auto liveDataSocket = std::make_unique<asio::ip::tcp::socket>(context);
+    auto liveAnalysesSocket = std::make_unique<asio::ip::tcp::socket>(context);
     asio::connect(*commandSocket,
                   resolver.resolve("localhost", std::to_string(5000)));
     asio::connect(*responseSocket,
                   resolver.resolve("localhost", std::to_string(5001)));
     asio::connect(*liveDataSocket,
                   resolver.resolve("localhost", std::to_string(5002)));
+    asio::connect(*liveAnalysesSocket,
+                  resolver.resolve("localhost", std::to_string(5003)));
 
     // Wait longer than the timeout
     ensureServerIsConnected(server);
@@ -413,19 +477,22 @@ TEST(Server, ClientConnexion) {
     std::this_thread::sleep_for(failingBufferPeriod);
     ensureServerIsConnected(server);
 
+    std::this_thread::sleep_for(failingTimeoutPeriod + failingBufferPeriod);
     // Give some time to the message to arrive
     logger.giveTimeToUpdate();
-    ASSERT_EQ(
-        logger.count("All ports are connected, waiting for the handshake"), 2);
+    ASSERT_TRUE(logger.contains("Connexion to LiveAnalyses socket timed out (" +
+                                std::to_string(failingTimeoutPeriod.count()) +
+                                " ms), disconnecting client"));
   }
   ASSERT_TRUE(logger.contains("Server has shut down"));
   logger.clear();
 
-  // Server can be shut if connexions to command, response and live ports were
-  // made, but waiting for the handshake timed out, and a connexion was retried
-  // and response socket connexion was made, but handshaked timed out
+  // Server can be shut if connexions to command, response, live data and live
+  // analyses ports were made, but waiting for the handshake timed out, and a
+  // connexion was retried, but waiting for the handshake
   {
-    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, 5003,
+                                 sufficientTimeoutPeriod);
     server.startServer();
 
     asio::io_context context;
@@ -433,12 +500,70 @@ TEST(Server, ClientConnexion) {
     auto commandSocket = std::make_unique<asio::ip::tcp::socket>(context);
     auto responseSocket = std::make_unique<asio::ip::tcp::socket>(context);
     auto liveDataSocket = std::make_unique<asio::ip::tcp::socket>(context);
+    auto liveAnalysesSocket = std::make_unique<asio::ip::tcp::socket>(context);
     asio::connect(*commandSocket,
                   resolver.resolve("localhost", std::to_string(5000)));
     asio::connect(*responseSocket,
                   resolver.resolve("localhost", std::to_string(5001)));
     asio::connect(*liveDataSocket,
                   resolver.resolve("localhost", std::to_string(5002)));
+    asio::connect(*liveAnalysesSocket,
+                  resolver.resolve("localhost", std::to_string(5003)));
+
+    // Wait longer than the timeout
+    ensureServerIsConnected(server);
+    std::this_thread::sleep_for(failingBufferPeriod);
+
+    server.setTimeoutPeriod(failingTimeoutPeriod);
+    std::this_thread::sleep_for(failingTimeoutPeriod + failingBufferPeriod);
+    server.setTimeoutPeriod(sufficientTimeoutPeriod);
+    asio::connect(*commandSocket,
+                  resolver.resolve("localhost", std::to_string(5000)));
+    std::this_thread::sleep_for(failingBufferPeriod);
+    asio::connect(*responseSocket,
+                  resolver.resolve("localhost", std::to_string(5001)));
+    std::this_thread::sleep_for(failingBufferPeriod);
+    asio::connect(*liveDataSocket,
+                  resolver.resolve("localhost", std::to_string(5002)));
+    std::this_thread::sleep_for(failingBufferPeriod);
+    asio::connect(*liveAnalysesSocket,
+                  resolver.resolve("localhost", std::to_string(5003)));
+    ensureServerIsConnected(server);
+
+    std::this_thread::sleep_for(failingTimeoutPeriod + failingBufferPeriod);
+
+    // Give some time to the message to arrive
+    logger.giveTimeToUpdate();
+
+    ASSERT_TRUE(
+        logger.contains("All ports are connected, waiting for the handshake"));
+  }
+  ASSERT_TRUE(logger.contains("Server has shut down"));
+  logger.clear();
+
+  // Server can be shut if connexions to command, response, live data and live
+  // analyses ports were made, but waiting for the handshake timed out, and a
+  // connexion was retried and response socket connexion was made, but
+  // handshaked timed out
+  {
+    server::TcpServerMock server(5000, 5001, 5002, 5003,
+                                 sufficientTimeoutPeriod);
+    server.startServer();
+
+    asio::io_context context;
+    asio::ip::tcp::resolver resolver(context);
+    auto commandSocket = std::make_unique<asio::ip::tcp::socket>(context);
+    auto responseSocket = std::make_unique<asio::ip::tcp::socket>(context);
+    auto liveDataSocket = std::make_unique<asio::ip::tcp::socket>(context);
+    auto liveAnalysesSocket = std::make_unique<asio::ip::tcp::socket>(context);
+    asio::connect(*commandSocket,
+                  resolver.resolve("localhost", std::to_string(5000)));
+    asio::connect(*responseSocket,
+                  resolver.resolve("localhost", std::to_string(5001)));
+    asio::connect(*liveDataSocket,
+                  resolver.resolve("localhost", std::to_string(5002)));
+    asio::connect(*liveAnalysesSocket,
+                  resolver.resolve("localhost", std::to_string(5003)));
 
     // Wait longer than the timeout
     ensureServerIsConnected(server);
@@ -453,6 +578,8 @@ TEST(Server, ClientConnexion) {
                   resolver.resolve("localhost", std::to_string(5001)));
     asio::connect(*liveDataSocket,
                   resolver.resolve("localhost", std::to_string(5002)));
+    asio::connect(*liveAnalysesSocket,
+                  resolver.resolve("localhost", std::to_string(5003)));
 
     ensureServerIsConnected(server);
     std::this_thread::sleep_for(failingBufferPeriod);
@@ -470,7 +597,8 @@ TEST(Server, ClientConnexion) {
 
   // Server can be shut if connexions was successful
   {
-    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, 5003,
+                                 sufficientTimeoutPeriod);
     server.startServer();
 
     server::TcpClient client;
@@ -486,7 +614,8 @@ TEST(Server, ClientConnexion) {
 
   // Server can be shut if connexions was successful then dropped
   {
-    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, 5003,
+                                 sufficientTimeoutPeriod);
     server.startServer();
 
     server::TcpClient client;
@@ -505,7 +634,8 @@ TEST(Server, ClientConnexion) {
 
   // We can reconnect after disconnecting
   {
-    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, 5003,
+                                 sufficientTimeoutPeriod);
     server.startServer();
 
     server::TcpClient client;
@@ -533,30 +663,41 @@ TEST(Server, AddDevices) {
 
   // Happy path
   {
-    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, 5003,
+                                 sufficientTimeoutPeriod);
     server.startServer();
 
     server::TcpClient client;
     client.connect();
 
     // Add the devices
-    bool isDelsysAdded = client.addDelsysEmgDevice();
+    bool isDelsysEmgAdded = client.addDelsysEmgDevice();
+    bool isDelsysAnalogAdded = client.addDelsysAnalogDevice();
     bool isMagstimAdded = client.addMagstimDevice();
-    ASSERT_TRUE(isDelsysAdded);
+    ASSERT_TRUE(isDelsysEmgAdded);
+    ASSERT_TRUE(isDelsysAnalogAdded);
     ASSERT_TRUE(isMagstimAdded);
 
     // Give some time to the message to arrive
     ASSERT_TRUE(logger.contains("The device DelsysEmgDevice is now connected"));
     ASSERT_TRUE(
+        logger.contains("The device DelsysAnalogDevice is now connected"));
+    ASSERT_TRUE(
         logger.contains("The device MagstimRapidDevice is now connected"));
     ASSERT_TRUE(logger.contains(
         "The data collector DelsysEmgDataCollector is now streaming data"));
+    ASSERT_TRUE(logger.contains(
+        "The data collector DelsysAnalogDataCollector is now streaming data"));
     logger.clear();
   }
   ASSERT_TRUE(logger.contains(
       "The data collector DelsysEmgDataCollector has stopped streaming data"));
+  ASSERT_TRUE(logger.contains("The data collector DelsysAnalogDataCollector "
+                              "has stopped streaming data"));
   ASSERT_TRUE(
       logger.contains("The device DelsysEmgDevice is now disconnected"));
+  ASSERT_TRUE(
+      logger.contains("The device DelsysAnalogDevice is now disconnected"));
   ASSERT_TRUE(
       logger.contains("The device MagstimRapidDevice is now disconnected"));
   ASSERT_TRUE(logger.contains("Server has shut down"));
@@ -564,28 +705,35 @@ TEST(Server, AddDevices) {
 
   // Add the same devices twice
   {
-    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, 5003,
+                                 sufficientTimeoutPeriod);
     server.startServer();
 
     server::TcpClient client;
     client.connect();
 
     // Add the devices
-    bool isDelsysAdded = client.addDelsysEmgDevice();
+    bool isDelsysEmgAdded = client.addDelsysEmgDevice();
+    bool isDelssysAnalogAdded = client.addDelsysAnalogDevice();
     bool isMagstimAdded = client.addMagstimDevice();
-    ASSERT_TRUE(isDelsysAdded);
+    ASSERT_TRUE(isDelsysEmgAdded);
+    ASSERT_TRUE(isDelssysAnalogAdded);
     ASSERT_TRUE(isMagstimAdded);
 
     // Add the devices again
-    isDelsysAdded = client.addDelsysEmgDevice();
+    isDelsysEmgAdded = client.addDelsysEmgDevice();
+    isDelssysAnalogAdded = client.addDelsysAnalogDevice();
     isMagstimAdded = client.addMagstimDevice();
-    ASSERT_FALSE(isDelsysAdded);
+    ASSERT_FALSE(isDelsysEmgAdded);
+    ASSERT_FALSE(isDelssysAnalogAdded);
     ASSERT_FALSE(isMagstimAdded);
 
     // Give some time to the message to arrive
     logger.giveTimeToUpdate();
     ASSERT_TRUE(logger.contains(
         "Cannot add the DelsysEmgDevice devise as it is already connected"));
+    ASSERT_TRUE(logger.contains(
+        "Cannot add the DelsysAnalogDevice devise as it is already connected"));
     ASSERT_TRUE(logger.contains(
         "Cannot add the MagstimRapidDevice devise as it is already connected"));
   }
@@ -594,29 +742,35 @@ TEST(Server, AddDevices) {
 
   // Remove devices by hand
   {
-    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, 5003,
+                                 sufficientTimeoutPeriod);
     server.startServer();
 
     server::TcpClient client;
     client.connect();
 
     // Add the devices
-    bool isDelsysAdded = client.addDelsysEmgDevice();
+    bool isDelsysEmgAdded = client.addDelsysEmgDevice();
+    bool isDelssysAnalogAdded = client.addDelsysAnalogDevice();
     bool isMagstimAdded = client.addMagstimDevice();
-    ASSERT_TRUE(isDelsysAdded);
+    ASSERT_TRUE(isDelsysEmgAdded);
+    ASSERT_TRUE(isDelssysAnalogAdded);
     ASSERT_TRUE(isMagstimAdded);
     logger.clear();
 
     // Remove the devices
-    bool isDelsysRemoved = client.removeDelsysEmgDevice();
+    bool isDelsysEmgRemoved = client.removeDelsysEmgDevice();
+    bool isDelssysAnalogRemoved = client.removeDelsysAnalogDevice();
     bool isMagstimRemoved = client.removeMagstimDevice();
-    ASSERT_TRUE(isDelsysRemoved);
+    ASSERT_TRUE(isDelsysEmgRemoved);
     ASSERT_TRUE(isMagstimRemoved);
 
     // Give some time to the message to arrive
     logger.giveTimeToUpdate();
     ASSERT_TRUE(
         logger.contains("The device DelsysEmgDevice is now disconnected"));
+    ASSERT_TRUE(
+        logger.contains("The device DelsysAnalogDevice is now disconnected"));
     ASSERT_TRUE(
         logger.contains("The device MagstimRapidDevice is now disconnected"));
   }
@@ -629,7 +783,8 @@ TEST(Server, Recording) {
 
   // Happy path
   {
-    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, 5003,
+                                 sufficientTimeoutPeriod);
     server.startServer();
 
     server::TcpClient client;
@@ -656,7 +811,8 @@ TEST(Server, Recording) {
 
   // Start/Stop recording twice
   {
-    server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
+    server::TcpServerMock server(5000, 5001, 5002, 5003,
+                                 sufficientTimeoutPeriod);
     server.startServer();
 
     server::TcpClient client;
@@ -701,7 +857,7 @@ TEST(Server, Recording) {
 TEST(Server, LastTrialData) {
   auto logger = TestLogger();
 
-  server::TcpServerMock server(5000, 5001, 5002, sufficientTimeoutPeriod);
+  server::TcpServerMock server(5000, 5001, 5002, 5003, sufficientTimeoutPeriod);
   server.startServer();
 
   server::TcpClient client;

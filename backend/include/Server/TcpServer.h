@@ -251,12 +251,15 @@ public:
   /// @param responsePort The port to communicate the response (default is 5001)
   /// @param liveDataPort The port to communicate the live data (default is
   /// 5002)
+  /// @param liveAnalysesPort The port to communicate the live analyses (default
+  /// is 5003)
   /// @param timeoutPeriod The timeout period for the server (default is 5000
   /// ms)
   TcpServerMock(
       int commandPort = 5000, int responsePort = 5001, int liveDataPort = 5002,
+      int liveAnalysesPort = 5003,
       std::chrono::milliseconds timeoutPeriod = std::chrono::milliseconds(5000))
-      : TcpServer(commandPort, responsePort, liveDataPort) {
+      : TcpServer(commandPort, responsePort, liveDataPort, liveAnalysesPort) {
     m_TimeoutPeriod = timeoutPeriod;
   };
 

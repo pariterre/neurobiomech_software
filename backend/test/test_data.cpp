@@ -50,17 +50,18 @@ TEST(DataPoint, Access) {
 TEST(DataPoint, Serialize) {
   auto data = data::DataPoint(std::chrono::microseconds(10), {1.0, 2.0, 3.0});
   auto json = data.serialize();
-  ASSERT_EQ(json.size(), 2);
+  ASSERT_EQ(json.size(), 3);
   ASSERT_EQ(json[0], 10);
   ASSERT_EQ(json[1].size(), 3);
+  ASSERT_EQ(json[2], nullptr);
   ASSERT_NEAR(json[1][0], 1.0, requiredPrecision);
   ASSERT_NEAR(json[1][1], 2.0, requiredPrecision);
   ASSERT_NEAR(json[1][2], 3.0, requiredPrecision);
-  ASSERT_STREQ(json.dump().c_str(), "[10,[1.0,2.0,3.0]]");
+  ASSERT_STREQ(json.dump().c_str(), "[10,[1.0,2.0,3.0],null]");
 }
 
 TEST(DataPoint, Deserialize) {
-  nlohmann::json json = R"([10,[1.0,2.0,3.0]])"_json;
+  nlohmann::json json = R"([10,[1.0,2.0,3.0],null])"_json;
   auto data = data::DataPoint(json);
   ASSERT_EQ(data.getTimeStamp(), std::chrono::microseconds(10));
   ASSERT_EQ(data.size(), 3);
@@ -234,15 +235,16 @@ TEST(TimeSeries, Serialize) {
   ASSERT_NEAR(json["data"][0][1][0], 1.0, requiredPrecision);
   ASSERT_NEAR(json["data"][0][1][1], 2.0, requiredPrecision);
   ASSERT_NEAR(json["data"][0][1][2], 3.0, requiredPrecision);
-  ASSERT_STREQ(json.dump().c_str(),
-               "{\"data\":[[100000,[1.0,2.0,3.0]],[200000,[4.0,5.0,6.0]],["
-               "300000,[7.0,8.0,9.0]],[400000,[10.0,11.0,12.0]],[500000,[13.0,"
-               "14.0,15.0]]],\"startingTime\":100000000}");
+  ASSERT_STREQ(
+      json.dump().c_str(),
+      "{\"data\":[[100000,[1.0,2.0,3.0],null],[200000,[4.0,5.0,6.0],null],["
+      "300000,[7.0,8.0,9.0],null],[400000,[10.0,11.0,12.0],null],[500000,[13.0,"
+      "14.0,15.0],null]],\"starting_time\":100000000}");
 }
 
 TEST(TimeSeries, Deserialize) {
   nlohmann::json json =
-      R"({"data":[[100000,[1.0,2.0,3.0]],[200000,[4.0,5.0,6.0]],[300000,[7.0,8.0,9.0]],[400000,[10.0,11.0,12.0]],[500000,[13.0,14.0,15.0]]],"startingTime":100000000})"_json;
+      R"({"data":[[100000,[1.0,2.0,3.0],null],[200000,[4.0,5.0,6.0],null],[300000,[7.0,8.0,9.0],null],[400000,[10.0,11.0,12.0],null],[500000,[13.0,14.0,15.0],null]],"starting_time":100000000})"_json;
   auto data = data::TimeSeries(json);
   ASSERT_ALMOST_NOW(
       data.getStartingTime(),

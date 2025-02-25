@@ -236,7 +236,7 @@ TEST(Analyzers, Constructors) {
   const auto &analyzerRemaining =
       dynamic_cast<const analyzer::CyclicTimedEventsAnalyzer &>(
           analyzers.getAnalyzer(newIds[0]));
-  ASSERT_EQ(analyzerRemaining.getName(), "Right Foot Predictor");
+  ASSERT_EQ(analyzerRemaining.getName(), "Right Foot");
 
   // Clear the analyzers
   analyzers.clear();

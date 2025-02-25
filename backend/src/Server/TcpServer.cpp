@@ -215,7 +215,6 @@ bool TcpServer::waitForNewConnexion() {
   }
 
   // Wait for the live data socket to connect
-  m_Status = TcpServerStatus::CONNECTING;
   logger.info("Response socket connected to client, waiting for a connexion to "
               "the live data socket");
   if (!waitUntilSocketIsConnected("LiveData", m_LiveDataSocket,
@@ -233,6 +232,7 @@ bool TcpServer::waitForNewConnexion() {
   }
 
   // Wait for the handshake
+  m_Status = TcpServerStatus::CONNECTING;
   logger.info("All ports are connected, waiting for the handshake");
   auto startingTime = std::chrono::high_resolution_clock::now();
   while (m_Status == TcpServerStatus::CONNECTING) {
