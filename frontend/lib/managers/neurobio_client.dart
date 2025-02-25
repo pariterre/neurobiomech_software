@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:frontend/models/command.dart';
 import 'package:frontend/models/data.dart';
@@ -569,26 +570,40 @@ class NeurobioClient {
     if (onNewData != null) onNewData();
   }
 
+  int _parse32bitsIntFromPacket(List<int> data) {
+    if (data.length != 4) {
+      throw ArgumentError('Data length must be 4 bytes');
+    }
+    final byteData = ByteData.sublistView(Uint8List.fromList(data));
+
+    // Read as little-endian uint32
+    return byteData.getUint32(0, Endian.little);
+  }
+
+  int _parse64bitsIntFromPacket(List<int> data) {
+    if (data.length != 8) {
+      throw ArgumentError('Data length must be 8 bytes');
+    }
+    final byteData = ByteData.sublistView(Uint8List.fromList(data));
+
+    // Read as little-endian uint64
+    return byteData.getUint64(0, Endian.little);
+  }
+
   int _parseVersionFromPacket(List<int> data) {
-    // Bit shifting from little-ending to 32-bits integer, starting from the 1st byte
-    return data[0] + (data[1] << 8) + (data[2] << 16) + (data[3] << 24);
+    // Parse the version (4 bytes) from the packet data, starting from the 1st byte
+    return _parse32bitsIntFromPacket(data.sublist(0, 4));
   }
 
   DateTime _parseTimestampFromPacket(List<int> data) {
-    // Bit shifting from little-endian to 64-bits integer, starting from the 5th byte
-    return DateTime.fromMillisecondsSinceEpoch(data[4] +
-        (data[5] << 8) +
-        (data[6] << 16) +
-        (data[7] << 24) +
-        (data[8] << 32) +
-        (data[9] << 40) +
-        (data[10] << 48) +
-        (data[11] << 56));
+    // Parse the timestamp (8 bytes) from the packet data, starting from the 5th byte
+    int timestamp = _parse64bitsIntFromPacket(data.sublist(4, 12));
+    return DateTime.fromMillisecondsSinceEpoch(timestamp);
   }
 
   int _parseDataLengthFromPacket(List<int> data) {
-    // Bit shifting from little-ending to 32-bits integer, starting from the 13th byte
-    return data[12] + (data[13] << 8) + (data[14] << 16) + (data[15] << 24);
+    // Parse the data length (4 bytes) from the packet data, starting from the 13th byte
+    return _parse32bitsIntFromPacket(data.sublist(12, 16));
   }
 
   // Prepare the singleton
