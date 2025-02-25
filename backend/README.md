@@ -340,7 +340,7 @@ Notes:
 
 The live data socket will start streaming data as soon as the server connects at least one Data collector. The data will be sent as soon as it is available. The format of the data is the same as the `GET_LAST_TRIAL_DATA` command.
 
-Please note, internally the live data are stored in a rolling vector. When sent, the data are unrolled, meaning that the data are sent in chronological order. However, the data are not filtered. This means that previously sent data may (actually will) be sent again. It is up to the client to keep track of the data they have received and filter out the data they already have.
+Please note, internally the live data are not stored. Therefore, when sent, the data consist only of the last predicatable frame. This means thata lot of data that could be predicted are actually skipped. It is up to the client to merge the data with the previous ones.
 
 #### Live analyses
 

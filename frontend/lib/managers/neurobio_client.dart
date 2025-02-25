@@ -548,8 +548,7 @@ class NeurobioClient {
 
     // Convert the data to a string (from json)
     try {
-      final dataList =
-          json.decode(utf8.decode(rawList)) as Map<String, dynamic>;
+      final dataMap = json.decode(utf8.decode(rawList)) as Map<String, dynamic>;
 
       final liveData = getLiveData(false);
       if (liveData.isEmpty) {
@@ -557,12 +556,13 @@ class NeurobioClient {
         liveData.clear(initialTime: lastTimeStamp);
       }
 
-      liveData.appendFromJson(dataList);
+      liveData.appendFromJson(dataMap);
       liveData.dropBefore(lastTimeStamp!.subtract(liveDataTimeWindow));
     } catch (e) {
       _log.severe('Error while parsing $dataType: $e, resetting');
       getLiveData(true);
     }
+
     rawList.clear();
     completer.complete();
     getExpectedDataLength(-1);
