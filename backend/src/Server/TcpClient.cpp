@@ -5,10 +5,18 @@
 #if defined(_WIN32) // Windows-specific handling
 // Windows is little-endian by default
 #define le32toh(x) (x)
-#define le64toh(x) (x)
 #define htole32(x) (x)
-#elif defined(__APPLE__) || defined(__linux__) // macOS & Linux
-#include <endian.h> // Provides le32toh() and le64toh()
+
+#elif defined(__APPLE__) // macOS
+#include <libkern/OSByteOrder.h>
+#define htole32(x) OSSwapHostToLittleInt32(x)
+#define le32toh(x) OSSwapLittleToHostInt32(x)
+
+#elif defined(__linux__) // Linux
+#include <endian.h>      // Provides le32toh() and htole32()
+
+#else
+#error "Unsupported platform"
 #endif
 
 using asio::ip::tcp;

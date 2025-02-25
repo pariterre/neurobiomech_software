@@ -17,8 +17,18 @@
 #define htole32(x) (x)
 #define htole64(x) (x)
 #define le32toh(x) (x)
-#elif defined(__APPLE__) || defined(__linux__) // macOS & Linux
-#include <endian.h> // Provides htole32() and htole64()
+
+#elif defined(__APPLE__) // macOS
+#include <libkern/OSByteOrder.h>
+#define htole32(x) OSSwapHostToLittleInt32(x)
+#define le32toh(x) OSSwapLittleToHostInt32(x)
+#define htole64(x) OSSwapHostToLittleInt64(x)
+
+#elif defined(__linux__) // Linux
+#include <endian.h>      // Provides htole32(), htole64() and le32toh()
+
+#else
+#error "Unsupported platform"
 #endif
 
 using namespace NEUROBIO_NAMESPACE::server;
