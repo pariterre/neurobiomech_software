@@ -46,9 +46,9 @@ ThresholdedCondition::ThresholdedCondition(
       m_Comparator(comparator), m_Threshold(threshold) {}
 
 ThresholdedCondition::ThresholdedCondition(const nlohmann::json &json)
-    : m_DeviceName(json["device"]), m_ChannelIndex(json["channel"]),
-      m_Comparator(getThresholdComparator(json["comparator"])),
-      m_Threshold(json["value"]) {}
+    : m_DeviceName(json.at("device")), m_ChannelIndex(json.at("channel")),
+      m_Comparator(getThresholdComparator(json.at("comparator"))),
+      m_Threshold(json.at("value")) {}
 
 bool ThresholdedCondition::isActive(
     const std::map<std::string, data::TimeSeries> &data) const {
@@ -73,8 +73,8 @@ DirectionCondition::DirectionCondition(const std::string &deviceName,
                            getDirectionComparator(direction), 0.0) {}
 
 DirectionCondition::DirectionCondition(const nlohmann::json &json)
-    : ThresholdedCondition(json["device"], json["channel"],
-                           getDirectionComparator(json["direction"]), 0.0) {}
+    : ThresholdedCondition(json.at("device"), json.at("channel"),
+                           getDirectionComparator(json.at("direction")), 0.0) {}
 
 bool DirectionCondition::isActive(
     const std::map<std::string, data::TimeSeries> &data) const {
@@ -90,8 +90,8 @@ bool DirectionCondition::isActive(
 }
 
 EventConditions::EventConditions(const nlohmann::json &json)
-    : m_Name(json["name"]), m_PreviousName(json["previous"]),
-      m_Conditions(parseConditions(json["start_when"])) {}
+    : m_Name(json.at("name")), m_PreviousName(json.at("previous")),
+      m_Conditions(parseConditions(json.at("start_when"))) {}
 
 bool EventConditions::isActive(
     size_t currentPhaseIndex,

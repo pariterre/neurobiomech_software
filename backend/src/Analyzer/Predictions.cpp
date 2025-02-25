@@ -17,8 +17,8 @@ Predictions::Predictions() : m_StartingTime(std::chrono::system_clock::now()) {}
 
 Predictions::Predictions(const nlohmann::json &json)
     : m_StartingTime(
-          std::chrono::microseconds(json["starting_time"].get<int64_t>())),
-      m_Predictions(parseJson(json["data"])) {}
+          std::chrono::microseconds(json.at("starting_time").get<int64_t>())),
+      m_Predictions(parseJson(json.at("data"))) {}
 
 void Predictions::add(const std::string &name) {
   m_Predictions[name] = DataPoint();

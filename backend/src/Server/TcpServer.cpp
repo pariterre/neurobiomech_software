@@ -496,6 +496,10 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
       logger.fatal("Failed to get extra info: " + std::string(e.what()));
       response = TcpServerResponse::NOK;
       break;
+    } catch (...) {
+      logger.fatal("Failed to get extra info");
+      response = TcpServerResponse::NOK;
+      break;
     }
   } break;
 

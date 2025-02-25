@@ -24,17 +24,18 @@ parseEventConditions(const nlohmann::json &json) {
 }
 
 CyclicTimedEventsAnalyzer::CyclicTimedEventsAnalyzer(const nlohmann::json &json)
-    : m_EventConditions(parseEventConditions(json["events"])),
-      m_TimeDeviceReferenceName(json["time_reference_device"]),
+    : m_EventConditions(parseEventConditions(json.at("events"))),
+      m_TimeDeviceReferenceName(json.at("time_reference_device")),
       TimedEventsAnalyzer(
-          json["name"], intToMilliseconds(json["initial_phase_durations"]),
+          json.at("name"),
+          intToMilliseconds(json.at("initial_phase_durations")),
           [this](const std::map<std::string, data::TimeSeries> &data) {
             return shouldIncrementPhase(data);
           },
           [this](const std::map<std::string, data::TimeSeries> &data) {
             return getCurrentTime(data);
           },
-          json["learning_rate"]) {
+          json.at("learning_rate")) {
   EventConditions::collapseNameToIndices(m_EventConditions);
 }
 

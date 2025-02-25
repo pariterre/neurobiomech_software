@@ -875,4 +875,128 @@ TEST(Server, LastTrialData) {
   auto data = client.getLastTrialData();
   ASSERT_GE(data["DelsysEmgDataCollector"].size(), 900); // Should be ~1000
 }
+
+TEST(Server, addAnalyzer) {
+  auto logger = TestLogger();
+
+  server::TcpServerMock server(5000, 5001, 5002, 5003, sufficientTimeoutPeriod);
+  server.startServer();
+
+  server::TcpClient client;
+  client.connect();
+
+  // Add an analysis on using the DelsysEmgDataCollector
+  bool isAnalyzerAdded = client.addAnalyzer(nlohmann::json::parse(R"({
+    "name" : "Left Foot",
+    "analyzer_type" : "cyclic_timed_events",
+    "time_reference_device" : "DelsysAnalogDataCollector",
+    "learning_rate" : 0.5,
+    "initial_phase_durations" : [400, 600],
+    "events" : [
+      {
+        "name" : "heel_strike",
+        "previous" : "toe_off",
+        "start_when" : [
+          {
+            "type": "threshold",
+            "device" : "DelsysAnalogDataCollector",
+            "channel" : 0,
+            "comparator" : ">=",
+            "value" : 0.2
+          }
+        ]
+      },
+      {
+        "name" : "toe_off",
+        "previous" : "heel_strike",
+        "start_when" : [
+          {
+            "type": "threshold",
+            "device" : "DelsysAnalogDataCollector",
+            "channel" : 0,
+            "comparator" : "<=",
+            "value" : -0.2
+          }
+        ]
+      }
+    ]
+  })"));
+  ASSERT_TRUE(isAnalyzerAdded);
+
+  // Give some time to the message to arrive
+  logger.giveTimeToUpdate();
+  ASSERT_TRUE(logger.contains(
+      "Creating a cyclic timed events analyzer (Left Foot) from analogs"));
+
+  // There is no way to collect the predicted data in the current client
+  // implementation. So simply shut things out
+
+  size_t idAnalyzer = server.getAnalyzers().getAnalyzerId("Left Foot");
+  bool isAnalyzerRemoved = client.removeAnalyzer("Left Foot");
+  ASSERT_TRUE(isAnalyzerRemoved);
+  logger.giveTimeToUpdate();
+  ASSERT_TRUE(logger.contains("Removing analyzer with id " +
+                              std::to_string(idAnalyzer) + " (Left Foot)"));
+
+  // Add a badly formatted analysis
+  bool isBadAnalyzerAdded =
+      client.addAnalyzer(nlohmann::json::parse(R"({"name" : "Invalid"})"));
+  ASSERT_FALSE(isBadAnalyzerAdded);
+  isBadAnalyzerAdded = client.addAnalyzer(nlohmann::json::parse(
+      R"({"name" : "Invalid", "analyzer_type": "cyclic_timed_events"})"));
+  ASSERT_FALSE(isBadAnalyzerAdded);
+  isBadAnalyzerAdded = client.addAnalyzer(nlohmann::json::parse(
+      R"({
+        "name" : "Invalid", 
+        "analyzer_type": "cyclic_timed_events",
+        "time_reference_device" : "Nope",
+        "learning_rate" : 0.5,
+        "initial_phase_durations" : [400, 600]
+      })"));
+  ASSERT_FALSE(isBadAnalyzerAdded);
+  isBadAnalyzerAdded = client.addAnalyzer(nlohmann::json::parse(
+      R"({
+      "name" : "Invalid", 
+      "analyzer_type": "cyclic_timed_events",
+      "time_reference_device" : "Nope",
+      "learning_rate" : 0.5,
+      "initial_phase_durations" : [400, 600],
+      "events": [{
+        "name" : "heel_strike",
+        "previous" : "toe_off",
+        "start_when" : [
+          {
+            "type": "threshold",
+            "device" : "DelsysAnalogDataCollector",
+            "comparator" : ">=",
+            "value" : 0.2
+          }
+        ]
+      }]
+    })"));
+  ASSERT_FALSE(isBadAnalyzerAdded);
+
+  isBadAnalyzerAdded = client.addAnalyzer(nlohmann::json::parse(
+      R"({
+        "name" : "Invalid", 
+        "analyzer_type": "cyclic_timed_events",
+        "time_reference_device" : "Nope",
+        "learning_rate" : 0.5,
+        "initial_phase_durations" : [400, 600],
+        "events": [{
+          "name" : "heel_strike",
+          "previous" : "toe_off",
+          "start_when" : [
+            {
+              "type": "direction"
+            }
+          ]
+        }]
+      })"));
+  ASSERT_FALSE(isBadAnalyzerAdded);
+
+  // Remove an analysis that does not exist
+  bool isWrongAnalyzerRemoved = client.removeAnalyzer("Invalid");
+  ASSERT_FALSE(isWrongAnalyzerRemoved);
+}
 #endif // SKIP_CI_FAILING_TESTS

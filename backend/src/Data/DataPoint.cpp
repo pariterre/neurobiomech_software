@@ -40,9 +40,9 @@ DataPoint::DataPoint(const std::chrono::microseconds &timeStamp,
     : m_TimeStamp(timeStamp), m_Data(data), m_ExtraInfo(extraInfo) {}
 
 DataPoint::DataPoint(const nlohmann::json &json)
-    : m_TimeStamp(json[0].get<int64_t>()),
-      m_Data(json[1].get<std::vector<double>>()),
-      m_ExtraInfo(parseExtraInfo(json[2])) {}
+    : m_TimeStamp(json.at(0).get<int64_t>()),
+      m_Data(json.at(1).get<std::vector<double>>()),
+      m_ExtraInfo(parseExtraInfo(json.at(2))) {}
 
 size_t DataPoint::size() const { return m_Data.size(); }
 

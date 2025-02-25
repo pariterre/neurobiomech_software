@@ -39,14 +39,14 @@ size_t Analyzers::add(std::unique_ptr<Analyzer> analyzer) {
 size_t Analyzers::add(const nlohmann::json &json) {
   auto &logger = utils::Logger::getInstance();
 
-  // Get the type of the analyzer to create
-  std::string analyzerType = json["analyzer_type"];
-
   // Create the analyzer
   try {
+    // Get the type of the analyzer to create
+    std::string analyzerType = json.at("analyzer_type");
+
     if (analyzerType == "cyclic_timed_events") {
       logger.info("Creating a cyclic timed events analyzer (" +
-                  json["name"].get<std::string>() + ") from analogs");
+                  json.at("name").get<std::string>() + ") from analogs");
       return add(std::make_unique<CyclicTimedEventsAnalyzer>(json));
     } else {
       logger.fatal("Unknown analyzer type");
@@ -64,7 +64,8 @@ void Analyzers::remove(const std::string &analyzerName) {
 
 void Analyzers::remove(size_t analyzerId) {
   utils::Logger::getInstance().info("Removing analyzer with id " +
-                                    std::to_string(analyzerId));
+                                    std::to_string(analyzerId) + " (" +
+                                    m_Analyzers[analyzerId]->getName() + ")");
   m_LastPredictions.remove(m_Analyzers[analyzerId]->getName());
   m_Analyzers.erase(analyzerId);
 }

@@ -5,11 +5,11 @@ using namespace NEUROBIO_NAMESPACE::data;
 
 TimeSeries::TimeSeries(const nlohmann::json &json)
     : m_StartingTime(
-          std::chrono::microseconds(json["starting_time"].get<int64_t>())),
+          std::chrono::microseconds(json.at("starting_time").get<int64_t>())),
       m_StopWatch(std::chrono::high_resolution_clock::now()),
       m_Data(utils::RollingVector<DataPoint>(
-          static_cast<size_t>(json["data"].size()))) {
-  for (const auto &point : json["data"]) {
+          static_cast<size_t>(json.at("data").size()))) {
+  for (const auto &point : json.at("data")) {
     m_Data.push_back(std::move(
         DataPoint(std::chrono::microseconds(point[0].get<int>()), point[1])));
   }

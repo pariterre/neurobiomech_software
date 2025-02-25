@@ -9,9 +9,9 @@ class EventConditions;
 class CyclicTimedEventsAnalyzer : public TimedEventsAnalyzer {
 
 public:
-  /// @brief Constructor of the CyclicTimedEventsAnalyzer. This
-  /// constructor assumes a step is one second long and the phases are stance
-  /// phase for 400ms and swing phase for 600ms
+  /// @brief Constructor of the CyclicTimedEventsAnalyzer. This constructor
+  /// assumes a step is one second long and the phases are stance phase for
+  /// 400ms and swing phase for 600ms
   /// @param name The name of the analyzer
   /// @param changePhaseConditions The conditions to change the phase
   /// @param timeDeviceReference The name of the device to get the reference
