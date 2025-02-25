@@ -7,32 +7,38 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:frontend/models/command.dart';
-import 'package:frontend/models/neurobio_client.dart';
+import 'package:frontend/managers/neurobio_client.dart';
 
 void main() {
   test('Initialize server connexion', () async {
-    final connexion = NeurbioClientMock.instance;
+    final connexion = NeurobioClientMock.instance;
     assert(connexion.isInitialized == false);
 
-    connexion.initialize(onConnexionLost: () {}, onNewLiveData: () {});
+    connexion.initialize(
+        onConnexionLost: () {},
+        onNewLiveAnalogsData: () {},
+        onNewLiveAnalyses: () {});
     assert(connexion.isInitialized);
     assert(connexion.isConnectedToDelsysAnalog == false);
     assert(connexion.isConnectedToDelsysEmg == false);
     assert(connexion.isRecording == false);
-    assert(connexion.isConnectedToLiveData == false);
+    assert(connexion.isConnectedToLiveAnalogsData == false);
 
     await connexion.disconnect();
     assert(connexion.isInitialized == false);
   });
 
   test('Send command to server', () async {
-    final connexion = NeurbioClientMock.instance;
+    final connexion = NeurobioClientMock.instance;
 
     assert(connexion.isConnectedToDelsysAnalog == false);
     assert(await connexion.send(Command.connectDelsysAnalog) == false);
     assert(connexion.isConnectedToDelsysAnalog == false);
 
-    await connexion.initialize(onConnexionLost: () {}, onNewLiveData: () {});
+    await connexion.initialize(
+        onConnexionLost: () {},
+        onNewLiveAnalogsData: () {},
+        onNewLiveAnalyses: () {});
     assert(connexion.isConnectedToDelsysAnalog == false);
 
     assert(await connexion.send(Command.connectDelsysAnalog));
@@ -43,17 +49,23 @@ void main() {
   });
 
   test('Cannot call reserved', () async {
-    final connexion = NeurbioClientMock.instance;
+    final connexion = NeurobioClientMock.instance;
 
-    await connexion.initialize(onConnexionLost: () {}, onNewLiveData: () {});
+    await connexion.initialize(
+        onConnexionLost: () {},
+        onNewLiveAnalogsData: () {},
+        onNewLiveAnalyses: () {});
     assert(await connexion.send(Command.handshake) == false);
 
     connexion.disconnect();
   });
 
   test('Manage recording commands', () async {
-    final connexion = NeurbioClientMock.instance;
-    connexion.initialize(onConnexionLost: () {}, onNewLiveData: () {});
+    final connexion = NeurobioClientMock.instance;
+    connexion.initialize(
+        onConnexionLost: () {},
+        onNewLiveAnalogsData: () {},
+        onNewLiveAnalyses: () {});
     assert(connexion.isRecording == false);
     assert(connexion.hasRecorded == false);
 

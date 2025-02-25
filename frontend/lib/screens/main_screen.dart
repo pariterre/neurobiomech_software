@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:frontend/managers/database_manager.dart';
+import 'package:frontend/managers/neurobio_client.dart';
+import 'package:frontend/managers/predictions_manager.dart';
 import 'package:frontend/models/command.dart';
-import 'package:frontend/models/database_manager.dart';
-import 'package:frontend/models/neurobio_client.dart';
+import 'package:frontend/models/prediction_model.dart';
+import 'package:frontend/screens/predictions_dialog.dart';
 import 'package:frontend/widgets/data_graph.dart';
 import 'package:frontend/widgets/save_trial_dialog.dart';
 
@@ -20,17 +23,21 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   final _liveAnalogDataKey = GlobalKey();
   final _liveEmgDataKey = GlobalKey();
+  final _liveAnalysesKey = GlobalKey();
   final _trialAnalogDataKey = GlobalKey();
   final _trialEmgDataKey = GlobalKey();
 
   final _liveGraphControllerAnalog = DataGraphController(
-      data: _connexion.liveData, graphType: DataGraphType.analog);
+      data: _connexion.liveAnalogsData, graphType: DataGraphType.analog);
   final _liveGraphControllerEmg = DataGraphController(
-      data: _connexion.liveData, graphType: DataGraphType.emg);
+      data: _connexion.liveAnalogsData, graphType: DataGraphType.emg);
+  final _liveAnalysesGraphController = DataGraphController(
+      data: _connexion.liveAnalyses, graphType: DataGraphType.predictions);
+
   final _trialGraphControllerAnalog = DataGraphController(
-      data: _connexion.lastTrialData, graphType: DataGraphType.analog);
+      data: _connexion.lastTrialAnalogsData, graphType: DataGraphType.analog);
   final _trialGraphControllerEmg = DataGraphController(
-      data: _connexion.lastTrialData, graphType: DataGraphType.emg);
+      data: _connexion.lastTrialAnalogsData, graphType: DataGraphType.emg);
 
   bool _isBusy = false;
   bool get isServerConnected => _connexion.isInitialized;
@@ -38,16 +45,20 @@ class _MainScreenState extends State<MainScreen> {
 
   bool _showLastTrial = false;
   bool _showLiveData = false;
+  bool _showLiveAnalyses = false;
+  final List<PredictionModel> _activePredictions = [];
 
   Future<void> _connectServer() async {
     setState(() {
       _showLastTrial = false;
       _showLiveData = false;
+      _showLiveAnalyses = false;
       _isBusy = true;
     });
     await _connexion.initialize(
-      onConnexionLost: () => setState(() {}),
-      onNewLiveData: _onNewLiveData,
+      onConnexionLost: _disconnectServer,
+      onNewLiveAnalogsData: _onNewLiveAnalogsData,
+      onNewLiveAnalyses: _onNewLiveAnalyses,
     );
     setState(() => _isBusy = false);
   }
@@ -55,6 +66,7 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> _disconnectServer() async {
     setState(() => _isBusy = true);
     await _connexion.disconnect();
+    _activePredictions.clear();
     _resetInternalStates();
   }
 
@@ -63,13 +75,14 @@ class _MainScreenState extends State<MainScreen> {
       _isBusy = false;
       _showLastTrial = false;
       _showLiveData = false;
+      _showLiveAnalyses = false;
     });
   }
 
   Future<void> _connectDelsysAnalog() async {
     setState(() => _isBusy = true);
     await _connexion.send(Command.connectDelsysAnalog);
-    setState(() => _isBusy = false);
+    _resetInternalStates();
   }
 
   Future<void> _connectDelsysEmg() async {
@@ -122,7 +135,7 @@ class _MainScreenState extends State<MainScreen> {
     await _connexion.onDataArrived;
     setState(() {
       _isBusy = false;
-      _showLastTrial = _connexion.lastTrialData.isNotEmpty;
+      _showLastTrial = _connexion.lastTrialAnalogsData.isEmpty;
     });
   }
 
@@ -135,7 +148,7 @@ class _MainScreenState extends State<MainScreen> {
         context: context, builder: (context) => const SaveTrialDialog());
     if (!hasSaved) return;
 
-    _connexion.lastTrialData.toFile(DatabaseManager.instance.savePath);
+    _connexion.lastTrialAnalogsData.toFile(DatabaseManager.instance.savePath);
   }
 
   Widget _buildLastTrialGraph() {
@@ -180,8 +193,75 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  Future<void> _showLiveAnalysesGraph() async {
+    _connexion.resetLiveAnalyses();
+    setState(() => _showLiveAnalyses = true);
+  }
+
+  Future<void> _hideLiveAnalysesGraph() async {
+    setState(() => _showLiveAnalyses = false);
+  }
+
+  Widget _buildLiveAnalysesSelector() {
+    final predictions = PredictionsManager.instance.predictions;
+
+    return Column(
+      children: [
+        ...predictions.map((prediction) => SizedBox(
+              width: 400,
+              child: CheckboxListTile(
+                title: Text(prediction.name),
+                value: _activePredictions.contains(prediction),
+                onChanged: canSendCommand
+                    ? (value) async {
+                        if (value!) {
+                          final response = await _connexion.send(
+                              Command.addAnalyzer,
+                              parameters: prediction.serialize());
+                          if (response) {
+                            setState(() {
+                              _showLiveAnalyses = false;
+                              _connexion.liveAnalyses.predictions
+                                  .addPrediction(prediction.name);
+                              _activePredictions.add(prediction);
+                            });
+                          }
+                        } else {
+                          final response = await _connexion.send(
+                              Command.removeAnalyzer,
+                              parameters: {'analyzer': prediction.name});
+                          if (response) {
+                            setState(() {
+                              _showLiveAnalyses = false;
+                              _connexion.liveAnalyses.predictions
+                                  .removePrediction(prediction.name);
+                              _activePredictions.remove(prediction);
+                            });
+                          }
+                        }
+                      }
+                    : null,
+              ),
+            )),
+      ],
+    );
+  }
+
+  Future<void> _showLiveAnalysesManagerDialog() async {
+    final predictions = await showDialog(
+      barrierDismissible: false,
+      context: context,
+      builder: (context) =>
+          PredictionsDialog(lockedPredictions: _activePredictions),
+    );
+    if (predictions == null) return;
+
+    PredictionsManager.instance.save(predictions);
+    setState(() {});
+  }
+
   Future<void> _showLiveDataGraph() async {
-    _connexion.resetLiveData();
+    _connexion.resetLiveAnalogsData();
     setState(() => _showLiveData = true);
   }
 
@@ -224,6 +304,41 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  Widget _buildLiveAnalysesGraph() {
+    if (!_showLiveAnalyses) return const SizedBox();
+
+    return Column(
+      children: [
+        SizedBox(
+          width: 250,
+          child: TextFormField(
+            decoration: const InputDecoration(
+              labelText: 'Live data duration',
+              hintText: 'Enter the duration in seconds',
+            ),
+            initialValue:
+                _connexion.liveAnalysesTimeWindow.inSeconds.toString(),
+            onChanged: (value) {
+              final valueAsInt = int.tryParse(value);
+              if (valueAsInt == null) return;
+              _connexion.liveAnalysesTimeWindow = Duration(seconds: valueAsInt);
+            },
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          ),
+        ),
+        if (_connexion.isConnectedToLiveAnalyses)
+          DataGraph(
+              key: _liveAnalysesKey, controller: _liveAnalysesGraphController),
+      ],
+    );
+  }
+
+  void _onNewLiveAnalyses() {
+    if (_showLiveAnalyses) {
+      _liveAnalysesGraphController.data = _connexion.liveAnalyses;
+    }
+  }
+
   Widget _buildLiveDataGraph() {
     if (!_showLiveData) return const SizedBox();
     return Column(
@@ -235,11 +350,13 @@ class _MainScreenState extends State<MainScreen> {
               labelText: 'Live data duration',
               hintText: 'Enter the duration in seconds',
             ),
-            initialValue: _connexion.liveDataTimeWindow.inSeconds.toString(),
+            initialValue:
+                _connexion.liveAnalogsDataTimeWindow.inSeconds.toString(),
             onChanged: (value) {
               final valueAsInt = int.tryParse(value);
               if (valueAsInt == null) return;
-              _connexion.liveDataTimeWindow = Duration(seconds: valueAsInt);
+              _connexion.liveAnalogsDataTimeWindow =
+                  Duration(seconds: valueAsInt);
             },
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           ),
@@ -253,10 +370,10 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  void _onNewLiveData() {
+  void _onNewLiveAnalogsData() {
     if (_showLiveData) {
-      _liveGraphControllerAnalog.data = _connexion.liveData;
-      _liveGraphControllerEmg.data = _connexion.liveData;
+      _liveGraphControllerAnalog.data = _connexion.liveAnalogsData;
+      _liveGraphControllerEmg.data = _connexion.liveAnalogsData;
     }
   }
 
@@ -273,7 +390,7 @@ class _MainScreenState extends State<MainScreen> {
               Text('Neurobio controller',
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 20),
-              Text('Connection related commands',
+              Text('Connection commands',
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
               ElevatedButton(
@@ -299,7 +416,7 @@ class _MainScreenState extends State<MainScreen> {
                   onClickedDisconnect: _disconnectDelsysEmg,
                   onClickedZero: _zeroDelsysEmg),
               const SizedBox(height: 20),
-              Text('Devices related commands',
+              Text('Devices commands',
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
               ElevatedButton(
@@ -315,7 +432,30 @@ class _MainScreenState extends State<MainScreen> {
               const SizedBox(height: 12),
               _buildLastTrialGraph(),
               const SizedBox(height: 20),
-              Text('Data related commands',
+              Text('Live analyses commands',
+                  style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 12),
+              _buildLiveAnalysesSelector(),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: _showLiveAnalysesManagerDialog,
+                child: const Text('Manager'),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: canSendCommand
+                    ? _showLiveAnalyses
+                        ? _hideLiveAnalysesGraph
+                        : _showLiveAnalysesGraph
+                    : null,
+                child: Text(_showLiveAnalyses
+                    ? 'Hide live analyses graph'
+                    : 'Show live analyses graph'),
+              ),
+              const SizedBox(height: 12),
+              _buildLiveAnalysesGraph(),
+              const SizedBox(height: 20),
+              Text('Data commands',
                   style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
               ElevatedButton(
@@ -331,7 +471,8 @@ class _MainScreenState extends State<MainScreen> {
               _buildLiveDataGraph(),
               const SizedBox(height: 12),
               ElevatedButton(
-                onPressed: _showLiveData ? _connexion.liveData.clear : null,
+                onPressed:
+                    _showLiveData ? _connexion.liveAnalogsData.clear : null,
                 child: const Text('Reset live data'),
               ),
               const SizedBox(height: 12),

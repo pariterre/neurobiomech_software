@@ -58,6 +58,7 @@ add_subdirectory(
 enable_testing()
 
 set(TEST_SRC_FILES
+    ${CMAKE_SOURCE_DIR}/test/test_analyzer.cpp
     ${CMAKE_SOURCE_DIR}/test/test_data.cpp
     ${CMAKE_SOURCE_DIR}/test/test_delsys.cpp
     ${CMAKE_SOURCE_DIR}/test/test_devices.cpp
@@ -78,12 +79,14 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 # Standard linking to gtest stuff
 add_dependencies(${PROJECT_NAME} 
+    ${MODULE_ANALYZER}
     ${MODULE_UTILS}
     ${MODULE_DATA}
     ${MODULE_DEVICES}
     ${MODULE_SERVER}
 )
 target_link_libraries(${PROJECT_NAME} PRIVATE
+    ${MODULE_ANALYZER}
     ${MODULE_UTILS}
     ${MODULE_DATA}
     ${MODULE_DEVICES}

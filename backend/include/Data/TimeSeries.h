@@ -60,6 +60,11 @@ public:
   /// @return The data at the given index
   const DataPoint &operator[](size_t index) const;
 
+  /// @brief Get the slice of data from [from] to [to]
+  /// @param from The starting index
+  /// @param to The ending index
+  TimeSeries slice(size_t from, size_t to) const;
+
   /// @brief Get the last n data
   /// @param n The number of data to get from the end
   TimeSeries tail(size_t n) const;
@@ -97,8 +102,7 @@ protected:
   std::vector<double> zeroLevelData(const std::vector<double> &data) const;
 
 protected:
-  /// @brief The timestamp of the starting point. See [setStartingTime](@ref
-  /// setStartingTime) for more information on how to change the starting time
+  /// @brief The timestamp of the starting point.
   DECLARE_PROTECTED_MEMBER(std::chrono::system_clock::time_point, StartingTime);
 
   /// @brief This is set when [TimeSeries] is create or [reset] method is

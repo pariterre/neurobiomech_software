@@ -3,6 +3,7 @@
 
 #include "neurobioConfig.h"
 
+#include "Analyzer/all.h"
 #include "Data/all.h"
 #include "Devices/all.h"
 #include "Server/all.h"

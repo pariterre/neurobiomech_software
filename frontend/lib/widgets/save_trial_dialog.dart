@@ -1,6 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:frontend/models/database_manager.dart';
+import 'package:frontend/managers/database_manager.dart';
 
 class SaveTrialDialog extends StatefulWidget {
   const SaveTrialDialog({super.key});

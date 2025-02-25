@@ -682,24 +682,27 @@ TEST(Devices, SerializeTrialData) {
   // Serialize the data
   auto data = devices.getLastTrialDataSerialized();
   ASSERT_EQ(data.size(), 2);
-  ASSERT_EQ(data[0]["name"], "DelsysEmgDataCollector");
-  ASSERT_EQ(data[0]["data"]["startingTime"],
+  auto firstDevice = std::to_string(deviceIds[0]);
+  ASSERT_EQ(data[firstDevice]["name"], "DelsysEmgDataCollector");
+  ASSERT_EQ(data[firstDevice]["data"]["starting_time"],
             std::chrono::duration_cast<std::chrono::microseconds>(
                 devices.getDataCollector(deviceIds[0])
                     .getTrialData()
                     .getStartingTime()
                     .time_since_epoch())
                 .count());
-  ASSERT_EQ(data[0]["data"]["data"].size(),
+  ASSERT_EQ(data[firstDevice]["data"]["data"].size(),
             devices.getDataCollector(deviceIds[0]).getTrialData().size());
-  ASSERT_EQ(data[1]["name"], "DelsysEmgDataCollector");
-  ASSERT_EQ(data[1]["data"]["startingTime"],
+
+  auto thirdDevice = std::to_string(deviceIds[2]);
+  ASSERT_EQ(data[thirdDevice]["name"], "DelsysEmgDataCollector");
+  ASSERT_EQ(data[thirdDevice]["data"]["starting_time"],
             std::chrono::duration_cast<std::chrono::microseconds>(
                 devices.getDataCollector(deviceIds[2])
                     .getTrialData()
                     .getStartingTime()
                     .time_since_epoch())
                 .count());
-  ASSERT_EQ(data[1]["data"]["data"].size(),
+  ASSERT_EQ(data[thirdDevice]["data"]["data"].size(),
             devices.getDataCollector(deviceIds[2]).getTrialData().size());
 }

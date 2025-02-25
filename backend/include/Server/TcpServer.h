@@ -3,6 +3,7 @@
 
 #include "neurobioConfig.h"
 
+#include "Analyzer/Analyzers.h"
 #include "Devices/Devices.h"
 #include "Utils/CppMacros.h"
 #include <asio.hpp>
@@ -25,6 +26,8 @@ enum class TcpServerCommand : std::uint32_t {
   START_RECORDING = 30,
   STOP_RECORDING = 31,
   GET_LAST_TRIAL_DATA = 32,
+  ADD_ANALYZER = 50,
+  REMOVE_ANALYZER = 51,
   FAILED = 100,
 };
 
@@ -40,8 +43,10 @@ public:
   /// @param responsePort The port to communicate the response (default is 5001)
   /// @param liveDataPort The port to communicate the live data (default is
   /// 5002)
+  /// @param liveAnalysesPort The port to communicate the live analyses (default
+  /// is 5003)
   TcpServer(int commandPort = 5000, int responsePort = 5001,
-            int liveDataPort = 5002);
+            int liveDataPort = 5002, int liveAnalysesPort = 5003);
 
   /// @brief Destructor
   ~TcpServer();
@@ -101,6 +106,9 @@ protected:
   /// @brief Get the devices that are currently connected
   DECLARE_PROTECTED_MEMBER(devices::Devices, Devices);
 
+  /// @brief Get the data analyzers that are currently loaded
+  DECLARE_PROTECTED_MEMBER(analyzer::Analyzers, Analyzers);
+
 protected:
   /// @brief The id of the connected devices
   std::map<std::string, size_t> m_ConnectedDeviceIds;
@@ -118,6 +126,12 @@ protected:
   /// @param command The command to handle
   /// @return True if the command is successful, false otherwise
   bool handleCommand(TcpServerCommand command);
+
+  /// @brief Handle extra information from a command
+  /// @param error The error code to set if an error occurs
+  /// @return The response to send by the client (raises an exception if an
+  /// error occurs)
+  nlohmann::json handleExtraData(asio::error_code &error);
 
   /// @brief Construct the packet to send to the client from a response
   /// @param response The response to send
@@ -142,6 +156,9 @@ protected:
   /// @brief The port to listen to communicate the live data
   DECLARE_PROTECTED_MEMBER(int, LiveDataPort);
 
+  /// @brief The port to listen to communicate the live analyses
+  DECLARE_PROTECTED_MEMBER(int, LiveAnalysesPort);
+
   /// @brief The timeout period for the server
   DECLARE_PROTECTED_MEMBER(std::chrono::milliseconds, TimeoutPeriod);
 
@@ -157,6 +174,10 @@ protected:
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
                                  LiveDataSocket);
 
+  /// @brief The socket that is connected to the client for live analyses
+  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
+                                 LiveAnalysesSocket);
+
   /// @brief The acceptor that listens to the command port
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::acceptor>,
                                  CommandAcceptor);
@@ -168,6 +189,10 @@ protected:
   /// @brief The acceptor that listens to the live data streaming port
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::acceptor>,
                                  LiveDataAcceptor);
+
+  /// @brief The acceptor that listens to the live analyses port
+  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::acceptor>,
+                                 LiveAnalysesAcceptor);
 
   /// @brief The current status of the server
   DECLARE_PROTECTED_MEMBER(TcpServerStatus, Status);
@@ -201,6 +226,9 @@ protected:
   /// @brief Handle the sending of the live data to the client
   void handleSendLiveData();
 
+  /// @brief Handle the analysis of the live data
+  void handleSendAnalyzedLiveData();
+
 private:
   /// @brief The asio contexts used for async methods of the server
   DECLARE_PRIVATE_MEMBER_NOGET(asio::io_context, Context);
@@ -223,12 +251,15 @@ public:
   /// @param responsePort The port to communicate the response (default is 5001)
   /// @param liveDataPort The port to communicate the live data (default is
   /// 5002)
+  /// @param liveAnalysesPort The port to communicate the live analyses (default
+  /// is 5003)
   /// @param timeoutPeriod The timeout period for the server (default is 5000
   /// ms)
   TcpServerMock(
       int commandPort = 5000, int responsePort = 5001, int liveDataPort = 5002,
+      int liveAnalysesPort = 5003,
       std::chrono::milliseconds timeoutPeriod = std::chrono::milliseconds(5000))
-      : TcpServer(commandPort, responsePort, liveDataPort) {
+      : TcpServer(commandPort, responsePort, liveDataPort, liveAnalysesPort) {
     m_TimeoutPeriod = timeoutPeriod;
   };
 

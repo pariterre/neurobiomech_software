@@ -4,11 +4,32 @@
 #include <asio/steady_timer.hpp>
 #include <thread>
 
+#include "Analyzer/Analyzers.h"
+#include "Analyzer/Exceptions.h"
 #include "Devices/Concrete/DelsysAnalogDevice.h"
 #include "Devices/Concrete/DelsysEmgDevice.h"
 #include "Devices/Concrete/MagstimRapidDevice.h"
 #include "Devices/Generic/DelsysBaseDevice.h"
 #include "Devices/Generic/Device.h"
+
+#if defined(_WIN32) // Windows-specific byte swap functions
+// Windows is little-endian by default
+#define htole32(x) (x)
+#define htole64(x) (x)
+#define le32toh(x) (x)
+
+#elif defined(__APPLE__) // macOS
+#include <libkern/OSByteOrder.h>
+#define htole32(x) OSSwapHostToLittleInt32(x)
+#define le32toh(x) OSSwapLittleToHostInt32(x)
+#define htole64(x) OSSwapHostToLittleInt64(x)
+
+#elif defined(__linux__) // Linux
+#include <endian.h>      // Provides htole32(), htole64() and le32toh()
+
+#else
+#error "Unsupported platform"
+#endif
 
 using namespace NEUROBIO_NAMESPACE::server;
 
@@ -20,10 +41,11 @@ const std::string DEVICE_NAME_DELSYS_EMG = "DelsysEmgDevice";
 const std::string DEVICE_NAME_DELSYS_ANALOG = "DelsysAnalogDevice";
 const std::string DEVICE_NAME_MAGSTIM = "MagstimRapidDevice";
 
-TcpServer::TcpServer(int commandPort, int responsePort, int liveDataPort)
+TcpServer::TcpServer(int commandPort, int responsePort, int liveDataPort,
+                     int liveAnalysesPort)
     : m_IsClientConnecting(false), m_IsServerRunning(false),
       m_CommandPort(commandPort), m_ResponsePort(responsePort),
-      m_LiveDataPort(liveDataPort),
+      m_LiveDataPort(liveDataPort), m_LiveAnalysesPort(liveAnalysesPort),
       m_TimeoutPeriod(std::chrono::milliseconds(5000)), m_ProtocolVersion(1) {};
 
 TcpServer::~TcpServer() {
@@ -34,6 +56,7 @@ TcpServer::~TcpServer() {
   m_CommandAcceptor.reset();
   m_ResponseAcceptor.reset();
   m_LiveDataAcceptor.reset();
+  m_LiveAnalysesAcceptor.reset();
 }
 
 void TcpServer::startServer() {
@@ -58,6 +81,12 @@ void TcpServer::startServerSync() {
       m_Context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_LiveDataPort));
   logger.info("TCP Live Data server started on port " +
               std::to_string(m_LiveDataPort));
+
+  m_LiveAnalysesAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
+      m_Context,
+      asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_LiveAnalysesPort));
+  logger.info("TCP Live Analyses server started on port " +
+              std::to_string(m_LiveAnalysesPort));
 
   m_IsServerRunning = true;
   while (m_IsServerRunning) {
@@ -86,8 +115,33 @@ void TcpServer::startServerSync() {
       std::this_thread::sleep_for(liveDataIntervals);
       while (m_IsServerRunning && isClientConnected()) {
         auto startingTime = std::chrono::high_resolution_clock::now();
-        handleSendLiveData();
+        try {
+          handleSendLiveData();
+        } catch (const std::exception &e) {
+          auto &logger = utils::Logger::getInstance();
+          logger.fatal("Failed to send live data: " + std::string(e.what()));
+        }
         auto next = liveDataIntervals -
+                    (std::chrono::high_resolution_clock::now() - startingTime);
+        std::this_thread::sleep_for(next);
+      }
+    });
+
+    auto analyzersWorker = std::thread([this]() {
+      auto analyzersIntervals = std::chrono::milliseconds(25);
+      std::this_thread::sleep_for(analyzersIntervals);
+      while (m_IsServerRunning && isClientConnected()) {
+        auto startingTime = std::chrono::high_resolution_clock::now();
+        try {
+          handleSendAnalyzedLiveData();
+        } catch (const analyzer::TimeWentBackwardException &) {
+          // This can happen quite a lot if intervals is faster than the one
+          // from data collector, so we just ignore it
+        } catch (const std::exception &e) {
+          utils::Logger::getInstance().fatal(
+              "Failed to send analyzed live data: " + std::string(e.what()));
+        }
+        auto next = analyzersIntervals -
                     (std::chrono::high_resolution_clock::now() - startingTime);
         std::this_thread::sleep_for(next);
       }
@@ -97,6 +151,7 @@ void TcpServer::startServerSync() {
     commandWorker.join();
     responseWorker.join();
     liveDataWorker.join();
+    analyzersWorker.join();
   }
 }
 
@@ -134,6 +189,9 @@ void TcpServer::disconnectClient() {
     removeDevice(name, false);
   }
 
+  // Clear the analyzers
+  m_Analyzers.clear();
+
   // Reset the status to initializing
   closeSockets();
 }
@@ -142,7 +200,8 @@ bool TcpServer::isClientConnected() const {
   return m_Status != TcpServerStatus::INITIALIZING && m_CommandSocket &&
          m_CommandSocket->is_open() && m_ResponseSocket &&
          m_ResponseSocket->is_open() && m_LiveDataSocket &&
-         m_LiveDataSocket->is_open();
+         m_LiveDataSocket->is_open() && m_LiveAnalysesSocket &&
+         m_LiveAnalysesSocket->is_open();
 }
 
 bool TcpServer::waitForNewConnexion() {
@@ -166,7 +225,6 @@ bool TcpServer::waitForNewConnexion() {
   }
 
   // Wait for the live data socket to connect
-  m_Status = TcpServerStatus::CONNECTING;
   logger.info("Response socket connected to client, waiting for a connexion to "
               "the live data socket");
   if (!waitUntilSocketIsConnected("LiveData", m_LiveDataSocket,
@@ -174,7 +232,17 @@ bool TcpServer::waitForNewConnexion() {
     return false;
   }
 
+  // Wait for the live analyses socket to connect
+  logger.info(
+      "Live data socket connected to client, waiting for a connexion to "
+      "the live analyses socket");
+  if (!waitUntilSocketIsConnected("LiveAnalyses", m_LiveAnalysesSocket,
+                                  m_LiveAnalysesAcceptor, true)) {
+    return false;
+  }
+
   // Wait for the handshake
+  m_Status = TcpServerStatus::CONNECTING;
   logger.info("All ports are connected, waiting for the handshake");
   auto startingTime = std::chrono::high_resolution_clock::now();
   while (m_Status == TcpServerStatus::CONNECTING) {
@@ -252,6 +320,13 @@ void TcpServer::closeSockets() {
   }
   if (m_LiveDataAcceptor && m_LiveDataAcceptor->is_open()) {
     m_LiveDataAcceptor->cancel();
+  }
+
+  if (m_LiveAnalysesSocket && m_LiveAnalysesSocket->is_open()) {
+    m_LiveAnalysesSocket->close();
+  }
+  if (m_LiveAnalysesAcceptor && m_LiveAnalysesAcceptor->is_open()) {
+    m_LiveAnalysesAcceptor->cancel();
   }
 }
 
@@ -422,6 +497,34 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
     response = TcpServerResponse::OK;
   } break;
 
+  case TcpServerCommand::ADD_ANALYZER: {
+    try {
+      auto data = handleExtraData(error);
+      m_Analyzers.add(data);
+      response = TcpServerResponse::OK;
+    } catch (const std::exception &e) {
+      logger.fatal("Failed to get extra info: " + std::string(e.what()));
+      response = TcpServerResponse::NOK;
+      break;
+    } catch (...) {
+      logger.fatal("Failed to get extra info");
+      response = TcpServerResponse::NOK;
+      break;
+    }
+  } break;
+
+  case TcpServerCommand::REMOVE_ANALYZER: {
+    try {
+      std::string analyzerName = handleExtraData(error)["analyzer"];
+      m_Analyzers.remove(analyzerName);
+      response = TcpServerResponse::OK;
+    } catch (const std::exception &e) {
+      logger.fatal("Failed to get extra info: " + std::string(e.what()));
+      response = TcpServerResponse::NOK;
+      break;
+    }
+  } break;
+
   default:
     logger.fatal("Invalid command: " +
                  std::to_string(static_cast<std::uint32_t>(command)));
@@ -440,15 +543,47 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
   return true;
 }
 
+nlohmann::json TcpServer::handleExtraData(asio::error_code &error) {
+  auto &logger = utils::Logger::getInstance();
+
+  // Send an acknowledgment to the client we are ready to receive the data
+  size_t byteWritten = asio::write(
+      *m_CommandSocket,
+      asio::buffer(constructResponsePacket(TcpServerResponse::OK)), error);
+
+  // Receive the size of the data
+  auto buffer = std::array<char, BYTES_IN_CLIENT_PACKET_HEADER>();
+  size_t byteRead = asio::read(*m_ResponseSocket, asio::buffer(buffer), error);
+  if (byteRead != BYTES_IN_CLIENT_PACKET_HEADER || error) {
+    logger.fatal("TCP read error: " + error.message());
+    throw std::runtime_error("Failed to read the size of the data");
+  }
+
+  // Parse the size of the data
+  std::uint32_t dataSize =
+      static_cast<std::uint32_t>(parseCommandPacket(buffer));
+  auto dataBuffer = std::vector<char>(dataSize);
+  byteRead = asio::read(*m_ResponseSocket, asio::buffer(dataBuffer), error);
+  if (byteRead != dataSize || error) {
+    logger.fatal("TCP read error: " + error.message());
+    throw std::runtime_error("Failed to read the data");
+  }
+
+  return nlohmann::json::parse(dataBuffer.begin(), dataBuffer.end());
+}
+
 TcpServerCommand TcpServer::parseCommandPacket(
     const std::array<char, BYTES_IN_CLIENT_PACKET_HEADER> &buffer) {
-  // Packets are exactly 8 bytes long, big-endian
+  // Packets are exactly 8 bytes long, litte endian
   // - First 4 bytes are the version number
   // - Next 4 bytes are the command
 
   // Check the version
-  std::uint32_t version =
-      *reinterpret_cast<const std::uint32_t *>(buffer.data());
+  std::uint32_t version;
+  // Safely copy memory and convert from little-endian
+  std::memcpy(&version, buffer.data(), sizeof(version));
+  version = le32toh(version); // Convert to native endianness
+
   if (version != m_ProtocolVersion) {
     auto &logger = utils::Logger::getInstance();
     logger.fatal("Invalid version: " + std::to_string(version) +
@@ -459,13 +594,16 @@ TcpServerCommand TcpServer::parseCommandPacket(
   }
 
   // Get the command
-  return static_cast<TcpServerCommand>(
-      *reinterpret_cast<const std::uint32_t *>(buffer.data() + 4));
+  std::uint32_t command;
+  std::memcpy(&command, buffer.data() + sizeof(version), sizeof(command));
+  command = le32toh(command); // Convert to native endianness
+
+  return static_cast<TcpServerCommand>(command);
 }
 
 std::array<char, BYTES_IN_SERVER_PACKET_HEADER>
 TcpServer::constructResponsePacket(TcpServerResponse response) {
-  // Packets are exactly 16 bytes long, big-endian
+  // Packets are exactly 16 bytes long, litte endian
   // - First 4 bytes are the version number
   // - The next 8 bytes are the timestamp of the packet (milliseconds since
   // epoch)
@@ -474,20 +612,25 @@ TcpServer::constructResponsePacket(TcpServerResponse response) {
   auto packet = std::array<char, BYTES_IN_SERVER_PACKET_HEADER>();
   packet.fill('\0');
 
-  // Add the version number
-  std::memcpy(packet.data(), &m_ProtocolVersion, sizeof(std::uint32_t));
+  // Add the version number in uint32_t format (litte endian)
+  std::uint32_t versionLittleEndian = htole32(m_ProtocolVersion);
+  std::memcpy(packet.data(), &versionLittleEndian, sizeof(versionLittleEndian));
 
-  // Add the timestamps in uint64_t format
+  // Add the timestamps in uint64_t format (litte endian)
   std::uint64_t timestamp =
       std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::system_clock::now().time_since_epoch())
           .count();
-  std::memcpy(packet.data() + sizeof(std::uint32_t), &timestamp,
-              sizeof(std::uint64_t));
+  std::uint64_t timestampLittleEndian = htole64(timestamp);
+  std::memcpy(packet.data() + sizeof(versionLittleEndian),
+              &timestampLittleEndian, sizeof(timestampLittleEndian));
 
-  // Add the response
-  std::memcpy(packet.data() + sizeof(std::uint32_t) + sizeof(std::uint64_t),
-              &response, sizeof(TcpServerResponse));
+  // Add the response in uint32_t format (litte endian)
+  std::uint32_t responseLittleEndian =
+      htole32(static_cast<std::uint32_t>(response));
+  std::memcpy(packet.data() + sizeof(versionLittleEndian) +
+                  sizeof(timestampLittleEndian),
+              &responseLittleEndian, sizeof(responseLittleEndian));
 
   return packet;
 }
@@ -595,9 +738,9 @@ bool TcpServer::removeDevice(const std::string &deviceName,
 
 void TcpServer::handleSendLiveData() {
   // Send the live data callback in a separate thread
-  if (!isClientConnected()) {
+  if (!isClientConnected())
     return;
-  }
+
   auto &logger = utils::Logger::getInstance();
   logger.debug("Sending live data to client");
 
@@ -614,6 +757,38 @@ void TcpServer::handleSendLiveData() {
               error);
   auto written = asio::write(*m_LiveDataSocket, asio::buffer(dataDump), error);
   logger.debug("Live data size: " + std::to_string(written));
+}
+
+void TcpServer::handleSendAnalyzedLiveData() {
+  // Analyze the live data callback in a separate thread
+  if (!isClientConnected())
+    return;
+
+  if (m_Analyzers.size() == 0) {
+    return;
+  }
+
+  std::map<std::string, data::TimeSeries> data = m_Devices.getLiveData();
+  if (data.size() == 0) {
+    return;
+  }
+
+  auto &logger = utils::Logger::getInstance();
+  logger.debug("Analyzing live data");
+
+  // Analyze the data
+  auto predictions = m_Analyzers.predict(data);
+
+  // Transform the predictions into JSON
+  auto dataDump = predictions.serialize().dump();
+  asio::error_code error;
+  asio::write(*m_LiveAnalysesSocket,
+              asio::buffer(constructResponsePacket(
+                  static_cast<TcpServerResponse>(dataDump.size()))),
+              error);
+  auto written =
+      asio::write(*m_LiveAnalysesSocket, asio::buffer(dataDump), error);
+  logger.debug("Live analyses data size: " + std::to_string(written));
 }
 
 void TcpServerMock::makeAndAddDevice(const std::string &deviceName) {

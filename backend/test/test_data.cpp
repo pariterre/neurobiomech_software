@@ -41,24 +41,27 @@ TEST(DataPoint, Access) {
 
   // The [getData] method should return a (const) reference to the data, make
   // sure by changing it (using a const_cast)
-  { const_cast<double &>(data.getData()[0]) = 4.0; }
+  {
+    const_cast<double &>(data.getData()[0]) = 4.0;
+  }
   ASSERT_NEAR(data[0], 4.0, requiredPrecision);
 }
 
 TEST(DataPoint, Serialize) {
   auto data = data::DataPoint(std::chrono::microseconds(10), {1.0, 2.0, 3.0});
   auto json = data.serialize();
-  ASSERT_EQ(json.size(), 2);
+  ASSERT_EQ(json.size(), 3);
   ASSERT_EQ(json[0], 10);
   ASSERT_EQ(json[1].size(), 3);
+  ASSERT_EQ(json[2], nullptr);
   ASSERT_NEAR(json[1][0], 1.0, requiredPrecision);
   ASSERT_NEAR(json[1][1], 2.0, requiredPrecision);
   ASSERT_NEAR(json[1][2], 3.0, requiredPrecision);
-  ASSERT_STREQ(json.dump().c_str(), "[10,[1.0,2.0,3.0]]");
+  ASSERT_STREQ(json.dump().c_str(), "[10,[1.0,2.0,3.0],null]");
 }
 
 TEST(DataPoint, Deserialize) {
-  nlohmann::json json = R"([10,[1.0,2.0,3.0]])"_json;
+  nlohmann::json json = R"([10,[1.0,2.0,3.0],null])"_json;
   auto data = data::DataPoint(json);
   ASSERT_EQ(data.getTimeStamp(), std::chrono::microseconds(10));
   ASSERT_EQ(data.size(), 3);
@@ -142,14 +145,29 @@ TEST(TimeSeries, AccessData) {
     const_cast<std::chrono::microseconds &>(data[0].getTimeStamp()) =
         std::chrono::microseconds(1000);
   }
-  { const_cast<double &>(data[0].getData()[0]) = 100.0; }
+  {
+    const_cast<double &>(data[0].getData()[0]) = 100.0;
+  }
 
   ASSERT_EQ(data[0].getTimeStamp(), std::chrono::microseconds(1000));
   ASSERT_NEAR(data[0].getData()[0], 100.0, requiredPrecision);
 
   // Same for getData
-  { const_cast<double &>(data[0].getData()[1]) = 200.0; }
+  {
+    const_cast<double &>(data[0].getData()[1]) = 200.0;
+  }
   ASSERT_NEAR(data[0].getData()[1], 200.0, requiredPrecision);
+
+  // Getting a slice of the data should return the data between the two indices
+  auto slice = data.slice(1, 3);
+  ASSERT_EQ(slice.getStartingTime(), data.getStartingTime());
+  ASSERT_EQ(slice.size(), 2);
+  ASSERT_EQ(slice[0].getTimeStamp(), std::chrono::milliseconds(200));
+  ASSERT_EQ(slice[0].getData().size(), 3);
+  ASSERT_NEAR(slice[0].getData()[0], 4.0, requiredPrecision);
+  ASSERT_NEAR(slice[0].getData()[1], 5.0, requiredPrecision);
+  ASSERT_NEAR(slice[0].getData()[2], 6.0, requiredPrecision);
+  ASSERT_EQ(slice[1].getTimeStamp(), std::chrono::milliseconds(300));
 
   // Getting the last n data should return the last n data
   auto tail = data.tail(3);
@@ -210,22 +228,23 @@ TEST(TimeSeries, Serialize) {
 
   auto json = data.serialize();
   ASSERT_EQ(json.size(), 2);
-  ASSERT_EQ(json["startingTime"], 100 * 1000 * 1000);
+  ASSERT_EQ(json["starting_time"], 100 * 1000 * 1000);
   ASSERT_EQ(json["data"].size(), 5);
   ASSERT_EQ(json["data"][0][0], 100 * 1000);
   ASSERT_EQ(json["data"][0][1].size(), 3);
   ASSERT_NEAR(json["data"][0][1][0], 1.0, requiredPrecision);
   ASSERT_NEAR(json["data"][0][1][1], 2.0, requiredPrecision);
   ASSERT_NEAR(json["data"][0][1][2], 3.0, requiredPrecision);
-  ASSERT_STREQ(json.dump().c_str(),
-               "{\"data\":[[100000,[1.0,2.0,3.0]],[200000,[4.0,5.0,6.0]],["
-               "300000,[7.0,8.0,9.0]],[400000,[10.0,11.0,12.0]],[500000,[13.0,"
-               "14.0,15.0]]],\"startingTime\":100000000}");
+  ASSERT_STREQ(
+      json.dump().c_str(),
+      "{\"data\":[[100000,[1.0,2.0,3.0],null],[200000,[4.0,5.0,6.0],null],["
+      "300000,[7.0,8.0,9.0],null],[400000,[10.0,11.0,12.0],null],[500000,[13.0,"
+      "14.0,15.0],null]],\"starting_time\":100000000}");
 }
 
 TEST(TimeSeries, Deserialize) {
   nlohmann::json json =
-      R"({"data":[[100000,[1.0,2.0,3.0]],[200000,[4.0,5.0,6.0]],[300000,[7.0,8.0,9.0]],[400000,[10.0,11.0,12.0]],[500000,[13.0,14.0,15.0]]],"startingTime":100000000})"_json;
+      R"({"data":[[100000,[1.0,2.0,3.0],null],[200000,[4.0,5.0,6.0],null],[300000,[7.0,8.0,9.0],null],[400000,[10.0,11.0,12.0],null],[500000,[13.0,14.0,15.0],null]],"starting_time":100000000})"_json;
   auto data = data::TimeSeries(json);
   ASSERT_ALMOST_NOW(
       data.getStartingTime(),

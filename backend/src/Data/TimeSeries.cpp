@@ -5,11 +5,11 @@ using namespace NEUROBIO_NAMESPACE::data;
 
 TimeSeries::TimeSeries(const nlohmann::json &json)
     : m_StartingTime(
-          std::chrono::microseconds(json["startingTime"].get<int64_t>())),
+          std::chrono::microseconds(json.at("starting_time").get<int64_t>())),
       m_StopWatch(std::chrono::high_resolution_clock::now()),
       m_Data(utils::RollingVector<DataPoint>(
-          static_cast<size_t>(json["data"].size()))) {
-  for (const auto &point : json["data"]) {
+          static_cast<size_t>(json.at("data").size()))) {
+  for (const auto &point : json.at("data")) {
     m_Data.push_back(std::move(
         DataPoint(std::chrono::microseconds(point[0].get<int>()), point[1])));
   }
@@ -39,6 +39,14 @@ const DataPoint &TimeSeries::operator[](size_t index) const {
   return m_Data.at(index);
 }
 
+TimeSeries TimeSeries::slice(size_t start, size_t end) const {
+  TimeSeries data(m_StartingTime);
+  for (size_t i = start; i < end; i++) {
+    data.m_Data.push_back(std::move(m_Data[i]));
+  }
+  return data;
+}
+
 TimeSeries TimeSeries::tail(size_t n) const {
   TimeSeries data(m_StartingTime);
   for (size_t i = m_Data.size() - n; i < m_Data.size(); i++) {
@@ -64,9 +72,9 @@ TimeSeries::since(const std::chrono::system_clock::time_point &time) const {
 
 nlohmann::json TimeSeries::serialize() const {
   nlohmann::json json = nlohmann::json::object();
-  json["startingTime"] = std::chrono::duration_cast<std::chrono::microseconds>(
-                             m_StartingTime.time_since_epoch())
-                             .count();
+  json["starting_time"] = std::chrono::duration_cast<std::chrono::microseconds>(
+                              m_StartingTime.time_since_epoch())
+                              .count();
   json["data"] = nlohmann::json::array();
   auto &jsonData = json["data"];
   for (const auto &point : m_Data) {

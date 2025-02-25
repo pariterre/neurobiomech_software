@@ -1,3 +1,4 @@
+#include "Analyzer/all.h"
 #include "Devices/Concrete/DelsysEmgDevice.h"
 #include "Utils/Logger.h"
 #include <chrono>
@@ -19,8 +20,8 @@ int main() {
     delsys.startRecording();
     logger.info("The system is now connected, streaming and recording data");
 
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    logger.info("The system has been recorded data for 1 seconds");
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+    logger.info("The system has been recorded data for 10 seconds");
 
     delsys.stopRecording();
     delsys.stopDataStreaming();
@@ -32,6 +33,122 @@ int main() {
     logger.info("The data has been collected: " + std::to_string(data.size()) +
                 " data points");
 
+    auto analyzers = analyzer::Analyzers();
+    // Add one analyzer for the left side
+    analyzers.add(nlohmann::json::parse(R"({
+        "name" : "Left Foot",
+        "analyzer_type" : "cyclic_timed_events",
+        "time_reference_device" : "DelsysAnalogDataCollector",
+        "learning_rate" : 0.5,
+        "initial_phase_durations" : [400, 600],
+        "events" : [
+          {
+            "name" : "heel_strike",
+            "previous" : "toe_off",
+            "start_when" : [
+              {
+                "type": "threshold",
+                "device" : "DelsysAnalogDataCollector",
+                "channel" : 0,
+                "comparator" : ">=",
+                "value" : 0.2
+              }
+            ]
+          },
+          {
+            "name" : "toe_off",
+            "previous" : "heel_strike",
+            "start_when" : [
+              {
+                "type": "threshold",
+                "device" : "DelsysAnalogDataCollector",
+                "channel" : 0,
+                "comparator" : "<=",
+                "value" : -0.2
+              }
+            ]
+          }
+        ]
+      })"));
+    // Add one analyzer for the right side
+    analyzers.add(nlohmann::json::parse(R"({
+        "name" : "Right Foot",
+        "analyzer_type" : "cyclic_timed_events",
+        "time_reference_device" : "DelsysAnalogDataCollector",
+        "learning_rate" : 0.5,
+        "initial_phase_durations" : [400, 600],
+        "events" : [
+          {
+            "name" : "heel_strike",
+            "previous" : "toe_off",
+            "start_when" : [
+              {
+                "type": "threshold",
+                "device" : "DelsysAnalogDataCollector",
+                "channel" : 0,
+                "comparator" : "<=",
+                "value" : 0.2
+              },
+              {
+                "type": "direction",
+                "device" : "DelsysAnalogDataCollector",
+                "channel" : 0,
+                "direction" : "negative"
+              }
+            ]
+          },
+          {
+            "name" : "toe_off",
+            "previous" : "heel_strike",
+            "start_when" : [
+              {
+                "type": "threshold",
+                "device" : "DelsysAnalogDataCollector",
+                "channel" : 0,
+                "comparator" : ">=",
+                "value" : -0.2
+              },
+              {
+                "type": "direction",
+                "device" : "DelsysAnalogDataCollector",
+                "channel" : 0,
+                "direction" : "positive"
+              }
+            ]
+          }
+        ]
+      })"));
+
+    // Simulate the live predictions
+    int packetSize = 50;
+    for (size_t i = 0; i < data.size() / packetSize; ++i) {
+      auto predictions = analyzers.predict(
+          {{"DelsysAnalogDataCollector",
+            data.slice(i * packetSize, (i + 1) * packetSize)}});
+
+      // Since we know that it is, downcast the prediction to event prediction
+      const auto &predictionLeft = predictions["Left Foot"];
+      const auto &predictionRight = predictions["Right Foot"];
+
+      std::cout << "For " << std::setw(6) << std::setfill(' ')
+                << (i + 1) * packetSize << ": L-" << std::fixed
+                << std::setprecision(3) << predictionLeft.getData()[0] << ", R-"
+                << predictionRight.getData()[0]
+                << std::setprecision(std::cout.precision());
+
+      if (std::get<bool>(predictionLeft.getExtraInfo().at("has_changed_phase")))
+        std::cout << " (Left phase incremented)";
+      if (std::get<bool>(
+              predictionRight.getExtraInfo().at("has_changed_phase")))
+        std::cout << " (Right phase incremented)";
+      std::cout << std::endl;
+    }
+
+    // Print the final model
+    const auto &model =
+        dynamic_cast<const analyzer::TimedEventsAnalyzer &>(analyzers[0]);
+    std::cout << "Post-trained model: " << model.getTimeEventModel()[0].count()
+              << ", " << model.getTimeEventModel()[1].count() << std::endl;
   } catch (std::exception &e) {
     logger.fatal(e.what());
     return EXIT_FAILURE;

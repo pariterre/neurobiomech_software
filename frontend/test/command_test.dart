@@ -11,7 +11,7 @@ import 'package:frontend/models/command.dart';
 void main() {
   test('Command', () {
     const command = Command.values;
-    assert(command.length == 12);
+    assert(command.length == 14);
 
     assert(command[0] == Command.handshake);
     assert(command[1] == Command.connectDelsysAnalog);
@@ -25,6 +25,8 @@ void main() {
     assert(command[9] == Command.startRecording);
     assert(command[10] == Command.stopRecording);
     assert(command[11] == Command.getLastTrial);
+    assert(command[12] == Command.addAnalyzer);
+    assert(command[13] == Command.removeAnalyzer);
 
     assert(Command.handshake.toInt() == 0);
     assert(Command.connectDelsysAnalog.toInt() == 10);
@@ -38,6 +40,8 @@ void main() {
     assert(Command.startRecording.toInt() == 30);
     assert(Command.stopRecording.toInt() == 31);
     assert(Command.getLastTrial.toInt() == 32);
+    assert(Command.addAnalyzer.toInt() == 50);
+    assert(Command.removeAnalyzer.toInt() == 51);
 
     assert(Command.handshake.isReserved);
 
@@ -52,5 +56,7 @@ void main() {
     assert(!Command.startRecording.isReserved);
     assert(!Command.stopRecording.isReserved);
     assert(!Command.getLastTrial.isReserved);
+    assert(!Command.addAnalyzer.isReserved);
+    assert(!Command.removeAnalyzer.isReserved);
   });
 }

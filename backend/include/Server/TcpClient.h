@@ -18,8 +18,11 @@ public:
   /// @param responsePort The port to communicate the resonses (default is 5001)
   /// @param liveDataPort The port to communicate the live data (default is
   /// 5002)
+  /// @param liveAnalysesPort The port to communicate the live analyses (default
+  /// is 5003)
   TcpClient(std::string host = "localhost", int commandPort = 5000,
-            int responsePort = 5001, int liveDataPort = 5002);
+            int responsePort = 5001, int liveDataPort = 5002,
+            int liveAnalysesPort = 5003);
 
   /// @brief Destructor
   ~TcpClient();
@@ -69,6 +72,12 @@ public:
   /// @return True if the data is received, false otherwise
   std::map<std::string, data::TimeSeries> getLastTrialData();
 
+  /// @brief Add an analyzer to the collection
+  bool addAnalyzer(const nlohmann::json &analyzer);
+
+  /// @brief Remove an analyzer from the collection
+  bool removeAnalyzer(const std::string &analyzerName);
+
 protected:
   /// @brief The data received from the server
   DECLARE_PROTECTED_MEMBER(data::TimeSeries, Data);
@@ -86,6 +95,9 @@ protected:
   /// @brief The port to communicate the live data
   DECLARE_PROTECTED_MEMBER(int, LiveDataPort);
 
+  /// @brief The port to communicate the live analyses
+  DECLARE_PROTECTED_MEMBER(int, LiveAnalysesPort);
+
   /// @brief If the client is connected to the server
   DECLARE_PROTECTED_MEMBER(bool, IsConnected);
 
@@ -95,10 +107,23 @@ protected:
   /// @brief Receive and update the live data
   void updateLiveData();
 
+  /// @brief Main loop for the live analyses streaming
+  void startUpdatingLiveAnalyses();
+
+  /// @brief Receive and update the live analyses
+  void updateLiveAnalyses();
+
   /// @brief The Send a command to the server and wait for the confirmation
   /// @param command The command to send
   /// @return The acknowledgment from the server
   TcpServerResponse sendCommand(TcpServerCommand command);
+
+  /// @brief The Send a command to the server and wait for the confirmation
+  /// @param command The command to send
+  /// @param data The data to send with the command
+  /// @return The acknowledgment from the server
+  TcpServerResponse sendCommandWithData(TcpServerCommand command,
+                                        const nlohmann::json &data);
 
   /// @brief The Send a command to the server and wait for the confirmation
   /// @param command The command to send
@@ -152,6 +177,13 @@ private:
 
   /// @brief The worker thread for the live data streaming
   DECLARE_PRIVATE_MEMBER_NOGET(std::thread, LiveDataWorker);
+
+  /// @brief The socket that is connected to the server for live analyses
+  DECLARE_PRIVATE_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
+                               LiveAnalysesSocket);
+
+  /// @brief The worker thread for the live analyses streaming
+  DECLARE_PRIVATE_MEMBER_NOGET(std::thread, LiveAnalysesWorker);
 
   /// @brief The protocol version of the communication with the server
   DECLARE_PRIVATE_MEMBER_NOGET(std::uint32_t, ProtocolVersion)

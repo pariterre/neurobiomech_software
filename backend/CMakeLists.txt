@@ -11,7 +11,7 @@ option(BUILD_DOC
 option(BUILD_TESTS 
     "Build all tests." OFF)
 option(BUILD_BINARIES
-    "Build all binary examples." OFF)
+    "Build all binary examples." ON)
 
 # Set a default build type to 'Release' if none was specified
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -39,6 +39,7 @@ find_package(Asio REQUIRED)
 set(${NEUROBIO_NAME}_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 # Add linker
+add_subdirectory("src/Analyzer")
 add_subdirectory("src/Utils")
 add_subdirectory("src/Data")
 add_subdirectory("src/Devices")

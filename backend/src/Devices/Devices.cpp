@@ -322,28 +322,37 @@ bool Devices::stopRecording() {
   return true;
 }
 
-nlohmann::json Devices::getLiveDataSerialized() const {
-  nlohmann::json json;
-  size_t deviceIndex = 0;
+std::map<std::string, data::TimeSeries> Devices::getLiveData() const {
+  std::map<std::string, data::TimeSeries> data;
+
   std::lock_guard<std::mutex> lock(
       const_cast<std::mutex &>(m_MutexDataCollectors));
   for (const auto &[deviceId, dataCollector] : m_DataCollectors) {
-    json[deviceIndex] = {{"name", dataCollector->dataCollectorName()},
-                         {"data", dataCollector->getSerializedLiveData()}};
-    deviceIndex++;
+    data[dataCollector->dataCollectorName()] = dataCollector->getLiveData();
+  }
+  return data;
+}
+
+nlohmann::json Devices::getLiveDataSerialized() const {
+  nlohmann::json json;
+  std::lock_guard<std::mutex> lock(
+      const_cast<std::mutex &>(m_MutexDataCollectors));
+  for (const auto &[deviceId, dataCollector] : m_DataCollectors) {
+    json[std::to_string(deviceId)] = {
+        {"name", dataCollector->dataCollectorName()},
+        {"data", dataCollector->getSerializedLiveData()}};
   }
   return json;
 }
 
 nlohmann::json Devices::getLastTrialDataSerialized() const {
   nlohmann::json json;
-  size_t deviceIndex = 0;
   std::lock_guard<std::mutex> lock(
       const_cast<std::mutex &>(m_MutexDataCollectors));
   for (const auto &[deviceId, dataCollector] : m_DataCollectors) {
-    json[deviceIndex] = {{"name", dataCollector->dataCollectorName()},
-                         {"data", dataCollector->getTrialData().serialize()}};
-    deviceIndex++;
+    json[std::to_string(deviceId)] = {
+        {"name", dataCollector->dataCollectorName()},
+        {"data", dataCollector->getTrialData().serialize()}};
   }
   return json;
 }
@@ -352,7 +361,7 @@ std::map<std::string, data::TimeSeries>
 Devices::deserializeData(const nlohmann::json &json) {
   auto data = std::map<std::string, data::TimeSeries>();
   for (const auto &[deviceIndex, deviceData] : json.items()) {
-    auto name = deviceData["name"].get<std::string>();
+    std::string name = deviceData["name"];
     data[name] = data::TimeSeries(deviceData["data"]);
   }
   return data;

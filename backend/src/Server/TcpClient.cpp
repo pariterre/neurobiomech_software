@@ -2,6 +2,23 @@
 
 #include "Utils/Logger.h"
 
+#if defined(_WIN32) // Windows-specific handling
+// Windows is little-endian by default
+#define le32toh(x) (x)
+#define htole32(x) (x)
+
+#elif defined(__APPLE__) // macOS
+#include <libkern/OSByteOrder.h>
+#define htole32(x) OSSwapHostToLittleInt32(x)
+#define le32toh(x) OSSwapLittleToHostInt32(x)
+
+#elif defined(__linux__) // Linux
+#include <endian.h>      // Provides le32toh() and htole32()
+
+#else
+#error "Unsupported platform"
+#endif
+
 using asio::ip::tcp;
 using namespace NEUROBIO_NAMESPACE;
 using namespace NEUROBIO_NAMESPACE::server;
@@ -10,10 +27,10 @@ const size_t BYTES_IN_CLIENT_PACKET_HEADER = 8;
 const size_t BYTES_IN_SERVER_PACKET_HEADER = 16;
 
 TcpClient::TcpClient(std::string host, int commandPort, int responsePort,
-                     int liveDataPort)
+                     int liveDataPort, int liveAnalysesPort)
     : m_Host(host), m_CommandPort(commandPort), m_ResponsePort(responsePort),
-      m_LiveDataPort(liveDataPort), m_IsConnected(false),
-      m_ProtocolVersion(1) {};
+      m_LiveDataPort(liveDataPort), m_LiveAnalysesPort(liveAnalysesPort),
+      m_IsConnected(false), m_ProtocolVersion(1) {};
 
 TcpClient::~TcpClient() {
   if (m_IsConnected) {
@@ -21,6 +38,9 @@ TcpClient::~TcpClient() {
   }
   if (m_LiveDataWorker.joinable()) {
     m_LiveDataWorker.join();
+  }
+  if (m_LiveAnalysesWorker.joinable()) {
+    m_LiveAnalysesWorker.join();
   }
 }
 
@@ -44,6 +64,11 @@ bool TcpClient::connect() {
                 resolver.resolve(m_Host, std::to_string(m_LiveDataPort)));
   startUpdatingLiveData();
 
+  m_LiveAnalysesSocket = std::make_unique<tcp::socket>(m_Context);
+  asio::connect(*m_LiveAnalysesSocket,
+                resolver.resolve(m_Host, std::to_string(m_LiveAnalysesPort)));
+  startUpdatingLiveAnalyses();
+
   m_IsConnected = true;
 
   // Send the handshake
@@ -62,6 +87,9 @@ bool TcpClient::disconnect() {
   closeSockets();
   if (m_LiveDataWorker.joinable()) {
     m_LiveDataWorker.join();
+  }
+  if (m_LiveAnalysesWorker.joinable()) {
+    m_LiveAnalysesWorker.join();
   }
   return true;
 }
@@ -189,6 +217,33 @@ std::map<std::string, data::TimeSeries> TcpClient::getLastTrialData() {
   return data;
 }
 
+bool TcpClient::addAnalyzer(const nlohmann::json &analyzer) {
+  auto &logger = utils::Logger::getInstance();
+
+  if (sendCommandWithData(TcpServerCommand::ADD_ANALYZER, analyzer) ==
+      TcpServerResponse::NOK) {
+    logger.fatal("CLIENT: Failed to add the analyzer");
+    return false;
+  }
+
+  logger.info("CLIENT: Analyzer added");
+  return true;
+}
+
+bool TcpClient::removeAnalyzer(const std::string &analyzerName) {
+  auto &logger = utils::Logger::getInstance();
+
+  if (sendCommandWithData(TcpServerCommand::REMOVE_ANALYZER,
+                          {{"analyzer", analyzerName}}) ==
+      TcpServerResponse::NOK) {
+    logger.fatal("CLIENT: Failed to remove the analyzer");
+    return false;
+  }
+
+  logger.info("CLIENT: Analyzer " + analyzerName + " removed");
+  return true;
+}
+
 void TcpClient::startUpdatingLiveData() {
   m_LiveDataWorker = std::thread([this]() {
     while (m_IsConnected) {
@@ -210,6 +265,30 @@ void TcpClient::updateLiveData() {
   }
 
   logger.debug("CLIENT: Live data received");
+}
+
+void TcpClient::startUpdatingLiveAnalyses() {
+  m_LiveAnalysesWorker = std::thread([this]() {
+    while (m_IsConnected) {
+      updateLiveAnalyses();
+    }
+  });
+}
+
+void TcpClient::updateLiveAnalyses() {
+  auto &logger = utils::Logger::getInstance();
+
+  try {
+    auto serialized =
+        nlohmann::json::parse(waitForResponse(*m_LiveAnalysesSocket));
+
+    auto data = analyzer::Predictions(serialized);
+  } catch (...) {
+    logger.fatal("CLIENT: Failed to parse the last trial data");
+    return;
+  }
+
+  logger.debug("CLIENT: Live analyze received");
 }
 
 TcpServerResponse TcpClient::sendCommand(TcpServerCommand command) {
@@ -236,6 +315,42 @@ TcpServerResponse TcpClient::sendCommand(TcpServerCommand command) {
                    std::to_string(static_cast<std::uint32_t>(command)));
   }
   return response;
+}
+
+TcpServerResponse TcpClient::sendCommandWithData(TcpServerCommand command,
+                                                 const nlohmann::json &data) {
+  auto &logger = utils::Logger::getInstance();
+
+  // First send the command as usual
+  auto response = sendCommand(command);
+  if (response == TcpServerResponse::NOK) {
+    return TcpServerResponse::NOK;
+  }
+
+  // If the command was successful, send the length of the data
+  asio::error_code error;
+  size_t byteWritten =
+      asio::write(*m_ResponseSocket,
+                  asio::buffer(constructCommandPacket(
+                      static_cast<TcpServerCommand>(data.dump().size()))),
+                  error);
+
+  if (byteWritten != BYTES_IN_CLIENT_PACKET_HEADER || error) {
+    logger.fatal("CLIENT: TCP write error: " + error.message());
+    disconnect();
+    return TcpServerResponse::NOK;
+  }
+
+  // Send the data
+  byteWritten =
+      asio::write(*m_ResponseSocket, asio::buffer(data.dump()), error);
+  if (byteWritten != data.dump().size() || error) {
+    logger.fatal("CLIENT: TCP write error: " + error.message());
+    disconnect();
+    return TcpServerResponse::NOK;
+  }
+
+  return waitForCommandAcknowledgment();
 }
 
 std::vector<char> TcpClient::sendCommandWithResponse(TcpServerCommand command) {
@@ -311,6 +426,9 @@ void TcpClient::closeSockets() {
   if (m_LiveDataSocket && m_LiveDataSocket->is_open()) {
     m_LiveDataSocket->close();
   }
+  if (m_LiveAnalysesSocket && m_LiveAnalysesSocket->is_open()) {
+    m_LiveAnalysesSocket->close();
+  }
 }
 
 std::array<char, BYTES_IN_CLIENT_PACKET_HEADER>
@@ -323,11 +441,14 @@ TcpClient::constructCommandPacket(TcpServerCommand command) {
   packet.fill('\0');
 
   // Add the version number
-  std::memcpy(packet.data(), &m_ProtocolVersion, sizeof(std::uint32_t));
+  std::uint32_t versionLittleEndian = htole32(m_ProtocolVersion);
+  std::memcpy(packet.data(), &versionLittleEndian, sizeof(versionLittleEndian));
 
   // Add the command
-  std::memcpy(packet.data() + sizeof(std::uint32_t), &command,
-              sizeof(TcpServerCommand));
+  std::uint32_t commandLittleEndian =
+      htole32(static_cast<std::uint32_t>(command));
+  std::memcpy(packet.data() + sizeof(versionLittleEndian), &commandLittleEndian,
+              sizeof(commandLittleEndian));
 
   return packet;
 }
@@ -341,8 +462,10 @@ TcpServerResponse TcpClient::parseAcknowledgmentFromPacket(
   // - Next 4 bytes are the response
 
   // Check the version
-  std::uint32_t version =
-      *reinterpret_cast<const std::uint32_t *>(buffer.data());
+  std::uint32_t version;
+  std::memcpy(&version, buffer.data(), sizeof(version));
+  version = le32toh(version);
+
   if (version != m_ProtocolVersion) {
     auto &logger = utils::Logger::getInstance();
     logger.fatal("CLIENT: Invalid version: " + std::to_string(version) +
@@ -352,8 +475,16 @@ TcpServerResponse TcpClient::parseAcknowledgmentFromPacket(
     return TcpServerResponse::NOK;
   }
 
+  // Skip the timestamp (8 bytes)
+  std::uint64_t timestamp;
+
   // Get the response
-  return *reinterpret_cast<const TcpServerResponse *>(buffer.data() + 4 + 8);
+  std::uint32_t response;
+  std::memcpy(&response, buffer.data() + sizeof(version) + sizeof(timestamp),
+              sizeof(response));
+  response = le32toh(response);
+
+  return static_cast<TcpServerResponse>(response);
 }
 
 std::chrono::system_clock::time_point TcpClient::parseTimeStampFromPacket(

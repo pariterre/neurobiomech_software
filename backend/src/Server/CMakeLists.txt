@@ -22,6 +22,7 @@ target_include_directories(${MODULE_SERVER} PRIVATE
 
 # Link the library
 target_link_libraries(${MODULE_SERVER} PRIVATE
+    ${MODULE_ANALYZER}
     ${MODULE_DATA}
     ${MODULE_UTILS}
     ${MODULE_DEVICES}
