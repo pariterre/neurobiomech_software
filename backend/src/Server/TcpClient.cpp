@@ -2,6 +2,15 @@
 
 #include "Utils/Logger.h"
 
+#if defined(_WIN32) // Windows-specific handling
+// Windows is little-endian by default
+#define le32toh(x) (x)
+#define le64toh(x) (x)
+#define htole32(x) (x)
+#elif defined(__APPLE__) || defined(__linux__) // macOS & Linux
+#include <endian.h> // Provides le32toh() and le64toh()
+#endif
+
 using asio::ip::tcp;
 using namespace NEUROBIO_NAMESPACE;
 using namespace NEUROBIO_NAMESPACE::server;
@@ -424,11 +433,14 @@ TcpClient::constructCommandPacket(TcpServerCommand command) {
   packet.fill('\0');
 
   // Add the version number
-  std::memcpy(packet.data(), &m_ProtocolVersion, sizeof(std::uint32_t));
+  std::uint32_t versionLittleEndian = htole32(m_ProtocolVersion);
+  std::memcpy(packet.data(), &versionLittleEndian, sizeof(versionLittleEndian));
 
   // Add the command
-  std::memcpy(packet.data() + sizeof(std::uint32_t), &command,
-              sizeof(TcpServerCommand));
+  std::uint32_t commandLittleEndian =
+      htole32(static_cast<std::uint32_t>(command));
+  std::memcpy(packet.data() + sizeof(versionLittleEndian), &commandLittleEndian,
+              sizeof(commandLittleEndian));
 
   return packet;
 }
@@ -442,8 +454,10 @@ TcpServerResponse TcpClient::parseAcknowledgmentFromPacket(
   // - Next 4 bytes are the response
 
   // Check the version
-  std::uint32_t version =
-      *reinterpret_cast<const std::uint32_t *>(buffer.data());
+  std::uint32_t version;
+  std::memcpy(&version, buffer.data(), sizeof(version));
+  version = le32toh(version);
+
   if (version != m_ProtocolVersion) {
     auto &logger = utils::Logger::getInstance();
     logger.fatal("CLIENT: Invalid version: " + std::to_string(version) +
@@ -453,8 +467,16 @@ TcpServerResponse TcpClient::parseAcknowledgmentFromPacket(
     return TcpServerResponse::NOK;
   }
 
+  // Skip the timestamp (8 bytes)
+  std::uint64_t timestamp;
+
   // Get the response
-  return *reinterpret_cast<const TcpServerResponse *>(buffer.data() + 4 + 8);
+  std::uint32_t response;
+  std::memcpy(&response, buffer.data() + sizeof(version) + sizeof(timestamp),
+              sizeof(response));
+  response = le32toh(response);
+
+  return static_cast<TcpServerResponse>(response);
 }
 
 std::chrono::system_clock::time_point TcpClient::parseTimeStampFromPacket(

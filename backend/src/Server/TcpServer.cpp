@@ -12,10 +12,11 @@
 #include "Devices/Generic/DelsysBaseDevice.h"
 #include "Devices/Generic/Device.h"
 
-#if defined(_WIN32)    // Windows-specific byte swap functions
-#define htole32(x) (x) // Windows is little-endian by default
-#define htole64(x) (x) // No conversion needed
-#define le32toh(x) (x) // Windows is little-endian by default
+#if defined(_WIN32) // Windows-specific byte swap functions
+// Windows is little-endian by default
+#define htole32(x) (x)
+#define htole64(x) (x)
+#define le32toh(x) (x)
 #elif defined(__APPLE__) || defined(__linux__) // macOS & Linux
 #include <endian.h> // Provides htole32() and htole64()
 #endif
