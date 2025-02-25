@@ -12,6 +12,14 @@
 #include "Devices/Generic/DelsysBaseDevice.h"
 #include "Devices/Generic/Device.h"
 
+#if defined(_WIN32)    // Windows-specific byte swap functions
+#define htole32(x) (x) // Windows is little-endian by default
+#define htole64(x) (x) // No conversion needed
+#define le32toh(x) (x) // Windows is little-endian by default
+#elif defined(__APPLE__) || defined(__linux__) // macOS & Linux
+#include <endian.h> // Provides htole32() and htole64()
+#endif
+
 using namespace NEUROBIO_NAMESPACE::server;
 
 const size_t BYTES_IN_CLIENT_PACKET_HEADER = 8;
@@ -551,13 +559,16 @@ nlohmann::json TcpServer::handleExtraData(asio::error_code &error) {
 
 TcpServerCommand TcpServer::parseCommandPacket(
     const std::array<char, BYTES_IN_CLIENT_PACKET_HEADER> &buffer) {
-  // Packets are exactly 8 bytes long, big-endian
+  // Packets are exactly 8 bytes long, litte endian
   // - First 4 bytes are the version number
   // - Next 4 bytes are the command
 
   // Check the version
-  std::uint32_t version =
-      *reinterpret_cast<const std::uint32_t *>(buffer.data());
+  std::uint32_t version;
+  // Safely copy memory and convert from little-endian
+  std::memcpy(&version, buffer.data(), sizeof(version));
+  version = le32toh(version); // Convert to native endianness
+
   if (version != m_ProtocolVersion) {
     auto &logger = utils::Logger::getInstance();
     logger.fatal("Invalid version: " + std::to_string(version) +
@@ -568,13 +579,16 @@ TcpServerCommand TcpServer::parseCommandPacket(
   }
 
   // Get the command
-  return static_cast<TcpServerCommand>(
-      *reinterpret_cast<const std::uint32_t *>(buffer.data() + 4));
+  std::uint32_t command;
+  std::memcpy(&command, buffer.data() + sizeof(version), sizeof(command));
+  command = le32toh(command); // Convert to native endianness
+
+  return static_cast<TcpServerCommand>(command);
 }
 
 std::array<char, BYTES_IN_SERVER_PACKET_HEADER>
 TcpServer::constructResponsePacket(TcpServerResponse response) {
-  // Packets are exactly 16 bytes long, big-endian
+  // Packets are exactly 16 bytes long, litte endian
   // - First 4 bytes are the version number
   // - The next 8 bytes are the timestamp of the packet (milliseconds since
   // epoch)
@@ -583,20 +597,25 @@ TcpServer::constructResponsePacket(TcpServerResponse response) {
   auto packet = std::array<char, BYTES_IN_SERVER_PACKET_HEADER>();
   packet.fill('\0');
 
-  // Add the version number
-  std::memcpy(packet.data(), &m_ProtocolVersion, sizeof(std::uint32_t));
+  // Add the version number in uint32_t format (litte endian)
+  std::uint32_t versionLittleEndian = htole32(m_ProtocolVersion);
+  std::memcpy(packet.data(), &versionLittleEndian, sizeof(versionLittleEndian));
 
-  // Add the timestamps in uint64_t format
+  // Add the timestamps in uint64_t format (litte endian)
   std::uint64_t timestamp =
       std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::system_clock::now().time_since_epoch())
           .count();
-  std::memcpy(packet.data() + sizeof(std::uint32_t), &timestamp,
-              sizeof(std::uint64_t));
+  std::uint64_t timestampLittleEndian = htole64(timestamp);
+  std::memcpy(packet.data() + sizeof(versionLittleEndian),
+              &timestampLittleEndian, sizeof(timestampLittleEndian));
 
-  // Add the response
-  std::memcpy(packet.data() + sizeof(std::uint32_t) + sizeof(std::uint64_t),
-              &response, sizeof(TcpServerResponse));
+  // Add the response in uint32_t format (litte endian)
+  std::uint32_t responseLittleEndian =
+      htole32(static_cast<std::uint32_t>(response));
+  std::memcpy(packet.data() + sizeof(versionLittleEndian) +
+                  sizeof(timestampLittleEndian),
+              &responseLittleEndian, sizeof(responseLittleEndian));
 
   return packet;
 }
