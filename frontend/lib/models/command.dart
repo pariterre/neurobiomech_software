@@ -10,9 +10,9 @@ enum Command {
   disconnectMagstim,
   startRecording,
   stopRecording,
+  getLastTrial,
   addAnalyzer,
-  removeAnalyzer,
-  getLastTrial;
+  removeAnalyzer;
 
   ///
   /// Value that corresponds to the command on the server

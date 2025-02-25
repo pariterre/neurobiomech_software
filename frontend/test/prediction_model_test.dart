@@ -64,7 +64,7 @@ void main() {
     expect(PredictionAnalyzers.values.length, 1);
 
     expect(PredictionAnalyzers.cyclicTimedEvents.toString(),
-        'cyclic_timed_events');
+        'Cyclic timed events');
   });
 
   test('PredictionDevices enum Constructor', () {
