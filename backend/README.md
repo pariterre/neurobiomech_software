@@ -314,7 +314,7 @@ The GET_LAST_TRIAL_DATA command expects the server to respond with the last tria
 {
   "INT_DEVICE_INDEX" : {
     "data" : {
-      [
+      "data": [
         [INT_TIMESTAMP, 
         [FLOAT_DATA_CHANNEL1, FLOAT_DATA_CHANNEL2, ...], 
         null],
