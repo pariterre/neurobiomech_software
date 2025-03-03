@@ -62,8 +62,8 @@ TEST(Delsys, ConnectFailedAsync) {
   delsys.connectAsync();
   ASSERT_FALSE(delsys.getIsConnected());
 
-  // Wait for the connection to be established
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  // Wait for the async connection to failed established
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
   ASSERT_FALSE(delsys.getIsConnected());
   ASSERT_TRUE(delsys.getHasFailedToConnect());
   ASSERT_TRUE(
