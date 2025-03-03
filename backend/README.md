@@ -22,6 +22,7 @@
     - [CMake](#cmake)
 - [How to use](#how-to-use)
   - [Server side](#server-side)
+    - [Ports](#ports)
   - [Client side](#client-side)
     - [Connexion](#connexion)
     - [Client command packets](#client-command-packets)
@@ -108,6 +109,8 @@ conda activate neurobio
 
 Once compiled, you only need to run the `main_server` binary. 
 
+
+### Ports
 The default ports are :
 - command = 5000
 - response = 5001
@@ -117,6 +120,17 @@ The default ports are :
 Please note that you may have to open the ports on your firewall to allow the communication.
 
 You can change the ports by recompiling the project and passing the TcpServer in `main_server.cpp`. 
+
+Another way of changing the port is to pass arguments to `main_server` when running it. The arguments are as follows:
+- `--portCommand=XXXX` to change the command port to XXXX
+- `--portReponse=XXXX` to change the response port to XXXX
+- `--portLiveData=XXXX` to change the live data port to XXXX
+- `--portLiveAnalyses=XXXX` to change the live analyses port to XXXX
+
+For example, if you want to run the server with the command port at 5000, the response port at 5001, the live data port at 5002 and the live analyses port at 5003, you would run the following command:
+```bash
+./main_server.exe --portCommand=5000 --portReponse=5001 --portLiveData=5002 --portLiveAnalyses=5003
+```
 
 ## Client side
 
