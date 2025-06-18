@@ -1,2 +1,4 @@
 # Remove MAC OS X system files
 .DS_Store
+
+.vscode/settings.json

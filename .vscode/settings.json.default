@@ -1,0 +1,16 @@
+{
+    "cmake.sourceDirectory": "${workspaceFolder}/backend",
+    "cmake.configureOnOpen": false,
+    "cmake.buildDirectory": "${workspaceFolder}/backend/build",
+    "cmake.configureArgs": [
+        "-DBUILD_TESTS=ON",
+        "-DBUILD_DOC=OFF",
+        "-DBUILD_BINARIES=ON",
+        "-DSKIP_LONG_TESTS=OFF",
+        "-DCMAKE_INSTALL_PREFIX={PATH_TO_INSTALL}"
+    ],
+    "editor.rulers": [80],
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "ms-vscode.cpptools",
+    "C_Cpp.clang_format_fallbackStyle": "LLVM",
+}
