@@ -1,6 +1,9 @@
 import 'dart:io';
 
+import 'package:logging/logging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+final _log = Logger('DatabaseManager');
 
 class DatabaseManager {
   ///
@@ -49,7 +52,10 @@ class DatabaseManager {
     if (!folder.existsSync()) {
       return ['Project1', 'Project2', 'Project3'];
     }
-    return folder.listSync().whereType<Directory>().map((e) => e.path);
+    // Return the project names by removing the database folder path
+    return folder.listSync().whereType<Directory>().map((e) => e.path.substring(
+          folder.path.length + 1, // +1 to remove the trailing slash
+        ));
   }
 
   ///
@@ -66,11 +72,23 @@ class DatabaseManager {
   ///
   /// The subjects in the current project
   Iterable<String> get subjects {
-    final folder = Directory('$databaseFolder/$project');
-    if (!folder.existsSync()) {
+    try {
+      final folder = Directory('$databaseFolder/$project');
+      if (!folder.existsSync()) {
+        _log.warning(
+            'Project folder does not exist, returning default subjects');
+        throw Exception('Project folder does not exist');
+      }
+      // Return the subject names by removing the project folder path
+      return folder
+          .listSync()
+          .whereType<Directory>()
+          .map((e) => e.path.substring(
+                folder.path.length + 1, // +1 to remove the trailing slash
+              ));
+    } catch (e) {
       return ['Subject1', 'Subject2', 'Subject3'];
     }
-    return folder.listSync().whereType<Directory>().map((e) => e.path);
   }
 
   ///
@@ -97,7 +115,12 @@ class DatabaseManager {
   ///
   /// Check if a trial exists
   bool trialExists(String trial) {
-    return Directory(savePath).existsSync();
+    try {
+      return Directory(savePath).existsSync();
+    } catch (e) {
+      _log.warning('Error checking if trial exists: $e. Returning false.');
+      return false;
+    }
   }
 
   ///
