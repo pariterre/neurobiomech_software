@@ -401,9 +401,10 @@ class NeurobioClient {
     }
 
     _responseData.addAll(response);
+    _log.info(
+        'Received ${_responseData.length} / $_expectedResponseLength bytes');
     if (_responseData.length < _expectedResponseLength!) {
-      _log.info('Received ${_responseData.length} bytes, waiting for '
-          '$_expectedResponseLength');
+      // Waiting for the rest of the response
       return;
     } else if (_responseData.length > _expectedResponseLength!) {
       _log.severe('Received more data than expected, dropping everything');
@@ -416,12 +417,7 @@ class NeurobioClient {
     _expectedResponseLength = null;
     final jsonRaw = json.decode(utf8.decode(_responseData));
     if (jsonRaw != null) {
-      if (_currentCommand == Command.getLastTrial) {
-        lastTrialAnalogsData.appendFromJson(jsonRaw as Map<String, dynamic>);
-      } else {
-        _log.severe('Received data for an unknown command');
-        throw StateError('Received data for an unknown command');
-      }
+      lastTrialAnalogsData.appendFromJson(jsonRaw as Map<String, dynamic>);
     }
     _responseCompleter!.complete();
   }

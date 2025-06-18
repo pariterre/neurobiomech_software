@@ -68,18 +68,21 @@ class TimeSeriesData {
   Future<void> toFile(String path, {bool raw = false}) async {
     final file = File(path);
     final sink = file.openWrite();
-    sink.writeln(
+    final buffer = StringBuffer();
+
+    buffer.writeln(
         'time (s),${List.generate(channelCount, (index) => 'channel$index').join(',')}');
 
     final data = getData(raw: raw);
     for (int i = 0; i < time.length; i++) {
-      sink.write((time[i] / 1000).toStringAsFixed(4));
+      buffer.write((time[i] / 1000).toStringAsFixed(4));
       for (int j = 0; j < channelCount; j++) {
-        sink.write(',');
-        sink.write(data[j][i].toStringAsFixed(6));
+        buffer.write(',');
+        buffer.write(data[j][i].toStringAsFixed(6));
       }
-      sink.writeln();
+      buffer.writeln();
     }
+    sink.write(buffer.toString());
     await sink.flush();
     await sink.close();
   }

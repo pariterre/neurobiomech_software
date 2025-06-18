@@ -146,9 +146,16 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> _saveTrial() async {
     final hasSaved = await showDialog(
         context: context, builder: (context) => const SaveTrialDialog());
-    if (!hasSaved) return;
+    if (hasSaved == null || !hasSaved) return;
 
-    _connexion.lastTrialAnalogsData.toFile(DatabaseManager.instance.savePath);
+    await _connexion.lastTrialAnalogsData
+        .toFile(DatabaseManager.instance.savePath);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Trial saved to ${DatabaseManager.instance.savePath}'),
+      duration: const Duration(seconds: 2),
+    ));
   }
 
   Widget _buildLastTrialGraph() {
