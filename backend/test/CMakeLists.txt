@@ -75,6 +75,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>
+    ${Asio_INCLUDE_DIR}
 )
 
 # Standard linking to gtest stuff

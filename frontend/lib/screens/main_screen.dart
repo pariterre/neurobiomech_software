@@ -135,7 +135,7 @@ class _MainScreenState extends State<MainScreen> {
     await _connexion.onDataArrived;
     setState(() {
       _isBusy = false;
-      _showLastTrial = _connexion.lastTrialAnalogsData.isEmpty;
+      _showLastTrial = _connexion.lastTrialAnalogsData.isNotEmpty;
     });
   }
 
