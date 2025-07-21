@@ -13,6 +13,9 @@ namespace NEUROBIO_NAMESPACE::server {
 
 enum TcpServerStatus { INITIALIZING, CONNECTING, CONNECTED };
 
+static const size_t BYTES_IN_CLIENT_PACKET_HEADER = 8;
+static const size_t BYTES_IN_SERVER_PACKET_HEADER = 16;
+
 enum class TcpServerCommand : std::uint32_t {
   HANDSHAKE = 0,
   CONNECT_DELSYS_ANALOG = 10,
@@ -37,6 +40,23 @@ enum class TcpServerResponse : std::uint32_t {
 };
 
 class TcpServer {
+  struct ClientSession {
+  public:
+    std::chrono::steady_clock::time_point createdAt;
+    std::string sessionId;
+
+    std::shared_ptr<asio::ip::tcp::socket> commandSocket;
+    std::shared_ptr<asio::ip::tcp::socket> responseSocket;
+    std::shared_ptr<asio::ip::tcp::socket> liveDataSocket;
+    std::shared_ptr<asio::ip::tcp::socket> liveAnalysesSocket;
+
+    bool isConnected() const {
+      return commandSocket && commandSocket;
+      // && responseSocket && liveDataSocket &&
+      //        liveAnalysesSocket;
+    }
+  };
+
 public:
   /// @brief Constructor
   /// @param commandPort The port to communicate the commands (default is 5000)
@@ -64,8 +84,24 @@ public:
   /// the current thread
   void startServerSync();
 
-  /// @brief Stop the server. This sends a message to the server that it should
-  /// stop. After this command, [startServer] will return
+protected:
+  std::mutex m_SessionMutex;
+  std::unordered_map<std::string, std::shared_ptr<ClientSession>> m_Sessions;
+  void startAcceptingConnexions();
+  void acceptSocketConnexion(
+      std::unique_ptr<asio::ip::tcp::acceptor> &acceptor,
+      void (TcpServer::*handler)(std::shared_ptr<asio::ip::tcp::socket>));
+  void
+  handleCommandSocketConnexion(std::shared_ptr<asio::ip::tcp::socket> socket);
+  std::shared_ptr<TcpServer::ClientSession>
+  getOrCreateSession(const std::string &id);
+  std::string readSessionId(std::shared_ptr<asio::ip::tcp::socket> socket);
+  void tryStartSession(const std::string &id);
+  void handleClientDisconnect(const std::string &sessionId);
+
+public:
+  /// @brief Stop the server. This sends a message to the server that it
+  /// should stop. After this command, [startServer] will return
   void stopServer();
 
   /// @brief Disconnect the current client
@@ -77,9 +113,9 @@ public:
 protected:
   DECLARE_PROTECTED_MEMBER_NOGET(bool, IsClientConnecting);
 
-  /// @brief Wait for a new connexion
-  /// @return True if everything is okay, False if connexion failed
-  bool waitForNewConnexion();
+  // /// @brief Wait for a new connexion
+  // /// @return True if everything is okay, False if connexion failed
+  // bool waitForNewConnexion();
 
   /// @brief Wait until the socket is connected
   /// @param socketName The name of the socket to wait for to be connected
@@ -98,7 +134,7 @@ protected:
 
   /// @brief Wait for a new command
   /// @return True if everything is okay, False if the server is shutting down
-  void waitAndHandleNewCommand();
+  void waitAndHandleNewCommand(std::shared_ptr<ClientSession> session);
 
   /// @brief If the server is started
   DECLARE_PROTECTED_MEMBER(bool, IsServerRunning);
@@ -120,7 +156,8 @@ protected:
   /// @brief Handle the handshake command
   /// @param command The command to handle (this should be HANDSHAKE)
   /// @return True if the handshake is successful, false otherwise
-  bool handleHandshake(TcpServerCommand command);
+  bool handleHandshake(std::shared_ptr<ClientSession> session,
+                       TcpServerCommand command);
 
   /// @brief Handle a command
   /// @param command The command to handle
@@ -136,12 +173,14 @@ protected:
   /// @brief Construct the packet to send to the client from a response
   /// @param response The response to send
   /// @return The packet to send
-  std::array<char, 16> constructResponsePacket(TcpServerResponse response);
+  std::array<char, BYTES_IN_SERVER_PACKET_HEADER>
+  constructResponsePacket(TcpServerResponse response);
 
   /// @brief Parse a packet from the client to get the command
   /// @param buffer The buffer to parse
   /// @return The command sent by the client
-  TcpServerCommand parseCommandPacket(const std::array<char, 8> &buffer);
+  TcpServerCommand parseCommandPacket(
+      const std::array<char, BYTES_IN_CLIENT_PACKET_HEADER> &buffer);
 
   // -------------------------- //
   // --- TCP SERVER METHODS --- //

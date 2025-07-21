@@ -23,9 +23,6 @@ using asio::ip::tcp;
 using namespace NEUROBIO_NAMESPACE;
 using namespace NEUROBIO_NAMESPACE::server;
 
-const size_t BYTES_IN_CLIENT_PACKET_HEADER = 8;
-const size_t BYTES_IN_SERVER_PACKET_HEADER = 16;
-
 TcpClient::TcpClient(std::string host, int commandPort, int responsePort,
                      int liveDataPort, int liveAnalysesPort)
     : m_Host(host), m_CommandPort(commandPort), m_ResponsePort(responsePort),

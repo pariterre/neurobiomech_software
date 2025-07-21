@@ -145,19 +145,20 @@ protected:
   /// @brief Construct a command packet to send to the server
   /// @param command The command to send
   /// @return The corresponding packet
-  std::array<char, 8> constructCommandPacket(TcpServerCommand command);
+  std::array<char, BYTES_IN_CLIENT_PACKET_HEADER>
+  constructCommandPacket(TcpServerCommand command);
 
   /// @brief Parse a response packet from the server
   /// @param buffer The buffer to parse
   /// @return The response from the server
-  TcpServerResponse
-  parseAcknowledgmentFromPacket(const std::array<char, 16> &buffer);
+  TcpServerResponse parseAcknowledgmentFromPacket(
+      const std::array<char, BYTES_IN_SERVER_PACKET_HEADER> &buffer);
 
   /// @brief Parse a response packet from the server
   /// @param buffer The buffer to parse
   /// @return The response from the server
-  std::chrono::system_clock::time_point
-  parseTimeStampFromPacket(const std::array<char, 16> &buffer);
+  std::chrono::system_clock::time_point parseTimeStampFromPacket(
+      const std::array<char, BYTES_IN_SERVER_PACKET_HEADER> &buffer);
 
 private:
   /// @brief The asio context used for async methods of the client
