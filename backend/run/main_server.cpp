@@ -23,12 +23,12 @@ int main(int argc, char *argv[]) {
   logger.setLogFile("neurobio.log");
   logger.setLogLevel(utils::Logger::INFO);
   logger.info("------------------------------");
-  logger.info("Starting the neurobio server");
 
   int commandPort = 5000;
   int responsePort = 5001;
   int liveDataPort = 5002;
   int liveAnalysesPort = 5003;
+  bool useMock = false;
 
   // If argv contains the ports (--portCommand=xxxx, --portResponse=xxxxx,
   // etc.), use them
@@ -42,14 +42,31 @@ int main(int argc, char *argv[]) {
       liveDataPort = std::stoi(arg.second);
     } else if (arg.first == "portLiveAnalyses") {
       liveAnalysesPort = std::stoi(arg.second);
+    } else if (arg.first == "useMock") {
+      useMock = (arg.second == "true");
+    } else if (arg.first == "help") {
+      logger.info("Usage: neurobio [--portCommand=xxxx] [--portResponse=xxxxx] "
+                  "[--portLiveData=xxxxx] [--portLiveAnalyses=xxxxx] "
+                  "[--useMock=<true|false>]");
+      return EXIT_SUCCESS;
     }
   }
 
   try {
+    if (useMock) {
+      logger.warning("Starting the neurobio server using the MOCK server");
+    } else {
+      logger.info("Starting the neurobio server");
+    }
+
     // Create a TCP server asynchroniously
-    server::TcpServer server(commandPort, responsePort, liveDataPort,
-                             liveAnalysesPort);
-    server.startServerSync();
+    auto mainServer =
+        useMock ? std::make_unique<server::TcpServerMock>(
+                      commandPort, responsePort, liveDataPort, liveAnalysesPort)
+                : std::make_unique<server::TcpServer>(commandPort, responsePort,
+                                                      liveDataPort,
+                                                      liveAnalysesPort);
+    mainServer->startServerSync();
 
   } catch (std::exception &e) {
     logger.fatal(e.what());

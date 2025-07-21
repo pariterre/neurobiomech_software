@@ -9,6 +9,7 @@
         "-DSKIP_LONG_TESTS=OFF",
         "-DCMAKE_INSTALL_PREFIX={PATH_TO_INSTALL}"
     ],
+    "cmake.debugConfig": {"args": ["--useMock=false"]},
     "editor.rulers": [80],
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "ms-vscode.cpptools",
