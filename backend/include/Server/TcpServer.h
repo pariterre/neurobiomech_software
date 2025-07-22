@@ -11,8 +11,9 @@
 
 namespace NEUROBIO_NAMESPACE::server {
 
-enum TcpServerStatus { INITIALIZING, CONNECTING, CONNECTED };
+enum TcpServerStatus { CONNECTING, CONNECTED };
 
+static const std::uint32_t COMMUNICATION_PROTOCOL_VERSION = 2;
 static const size_t BYTES_IN_CLIENT_PACKET_HEADER = 8;
 static const size_t BYTES_IN_SERVER_PACKET_HEADER = 16;
 
@@ -39,24 +40,83 @@ enum class TcpServerResponse : std::uint32_t {
   OK = 1,
 };
 
+class ClientSession {
+public:
+  ClientSession(
+      std::shared_ptr<asio::io_context> context, std::string id,
+      std::function<bool(TcpServerCommand command, const ClientSession &client)>
+          handleHandshake,
+      std::function<bool(TcpServerCommand command, const ClientSession &client)>
+          handleCommand,
+      std::function<void(const ClientSession &client)> onDisconnect);
+
+  ~ClientSession();
+
+  void connectCommandSocket(std::shared_ptr<asio::ip::tcp::socket> socket);
+
+  /// @brief Returns if the session is connected
+  /// @return True if the session is connected, false otherwise
+  bool isConnected() const;
+
+  /// @brief Disconnects the session
+  void disconnect();
+
+protected:
+  /// @brief The asio contexts used for async methods of the server
+  DECLARE_PROTECTED_MEMBER_NOGET(std::shared_ptr<asio::io_context>, Context);
+
+  /// @brief The sessions id of the client
+  DECLARE_PROTECTED_MEMBER(std::string, Id);
+
+  /// @brief Whether the handshake has been completed
+  DECLARE_PROTECTED_MEMBER(bool, IsHandshakeDone);
+
+  /// @brief This is an internal variable to prevent from disconnecting more
+  /// than once
+  DECLARE_PRIVATE_MEMBER_NOGET(bool, HasDisconnected);
+
+  /// @brief The command socket used to communicate with the client
+  DECLARE_PROTECTED_MEMBER(std::shared_ptr<asio::ip::tcp::socket>,
+                           CommandSocket);
+  /// @brief The response socket used to communicate with the client
+  DECLARE_PROTECTED_MEMBER_NOGET(std::shared_ptr<asio::ip::tcp::socket>,
+                                 ResponseSocket);
+  /// @brief The live data socket used to communicate with the client
+  DECLARE_PROTECTED_MEMBER_NOGET(std::shared_ptr<asio::ip::tcp::socket>,
+                                 LiveDataSocket);
+  /// @brief The live analyses socket used to communicate with the client
+  DECLARE_PROTECTED_MEMBER_NOGET(std::shared_ptr<asio::ip::tcp::socket>,
+                                 LiveAnalysesSocket);
+
+  /// @brief The function to call when a handshake is received
+  /// @param command The command received
+  /// @param id The session ID
+  DECLARE_PROTECTED_MEMBER_NOGET(
+      std::function<bool(TcpServerCommand command,
+                         const ClientSession &client)>,
+      HandleHandshake);
+
+  /// @brief The function to call when a command is received
+  /// @param command The command received
+  /// @param id The session ID
+  DECLARE_PROTECTED_MEMBER_NOGET(
+      std::function<bool(TcpServerCommand command,
+                         const ClientSession &client)>,
+      HandleCommand);
+
+  /// @brief The callback to call when the client disconnects
+  DECLARE_PROTECTED_MEMBER_NOGET(
+      std::function<void(const ClientSession &client)>, OnDisconnect);
+
+  /// @brief Try to start the listening session. It only succeed if all the
+  /// sockets are connected
+  void tryStartSessionLoop();
+
+  /// @brief The session loop that handles the command socket
+  void commandSocketLoop();
+};
+
 class TcpServer {
-  struct ClientSession {
-  public:
-    std::chrono::steady_clock::time_point createdAt;
-    std::string sessionId;
-
-    std::shared_ptr<asio::ip::tcp::socket> commandSocket;
-    std::shared_ptr<asio::ip::tcp::socket> responseSocket;
-    std::shared_ptr<asio::ip::tcp::socket> liveDataSocket;
-    std::shared_ptr<asio::ip::tcp::socket> liveAnalysesSocket;
-
-    bool isConnected() const {
-      return commandSocket && commandSocket;
-      // && responseSocket && liveDataSocket &&
-      //        liveAnalysesSocket;
-    }
-  };
-
 public:
   /// @brief Constructor
   /// @param commandPort The port to communicate the commands (default is 5000)
@@ -86,51 +146,57 @@ public:
 
 protected:
   std::mutex m_SessionMutex;
-  std::unordered_map<std::string, std::shared_ptr<ClientSession>> m_Sessions;
   void startAcceptingConnexions();
   void acceptSocketConnexion(
       std::unique_ptr<asio::ip::tcp::acceptor> &acceptor,
       void (TcpServer::*handler)(std::shared_ptr<asio::ip::tcp::socket>));
   void
   handleCommandSocketConnexion(std::shared_ptr<asio::ip::tcp::socket> socket);
-  std::shared_ptr<TcpServer::ClientSession>
-  getOrCreateSession(const std::string &id);
   std::string readSessionId(std::shared_ptr<asio::ip::tcp::socket> socket);
-  void tryStartSession(const std::string &id);
-  void handleClientDisconnect(const std::string &sessionId);
 
 public:
   /// @brief Stop the server. This sends a message to the server that it
   /// should stop. After this command, [startServer] will return
   void stopServer();
 
-  /// @brief Disconnect the current client
-  void disconnectClient();
+protected:
+  /// @brief The sessions that are currently connected to the server
+  std::unordered_map<std::string, std::shared_ptr<ClientSession>> m_Sessions;
 
-  /// @brief If a client is connected
-  bool isClientConnected() const;
+public:
+  bool isClientConnected(const std::string &id) const;
 
 protected:
-  DECLARE_PROTECTED_MEMBER_NOGET(bool, IsClientConnecting);
+  /// @brief Disconnect all the clients
+  void disconnectClients();
 
   // /// @brief Wait for a new connexion
   // /// @return True if everything is okay, False if connexion failed
   // bool waitForNewConnexion();
 
-  /// @brief Wait until the socket is connected
-  /// @param socketName The name of the socket to wait for to be connected
-  /// @param socket The socket to wait for to be connected
-  /// @param acceptor The acceptor to listen to
-  /// @param canTimeout If the waiting can timeout
-  /// @return True if the socket is connected, false otherwise
-  bool
-  waitUntilSocketIsConnected(const std::string &socketName,
-                             std::unique_ptr<asio::ip::tcp::socket> &socket,
-                             std::unique_ptr<asio::ip::tcp::acceptor> &acceptor,
-                             bool canTimeout);
+  // /// @brief Wait until the socket is connected
+  // /// @param socketName The name of the socket to wait for to be connected
+  // /// @param socket The socket to wait for to be connected
+  // /// @param acceptor The acceptor to listen to
+  // /// @param canTimeout If the waiting can timeout
+  // /// @return True if the socket is connected, false otherwise
+  // bool
+  // waitUntilSocketIsConnected(const std::string &socketName,
+  //                            std::unique_ptr<asio::ip::tcp::socket> &socket,
+  //                            std::unique_ptr<asio::ip::tcp::acceptor>
+  //                            &acceptor, bool canTimeout);
 
-  /// @brief Cancel the new connexion
-  void closeSockets();
+  /// @brief Stop accepting connexions
+  void cancelAcceptors();
+
+  /// @brief Get or create a session for the given id
+  /// @param id The id of the session to get or create
+  /// @return The session for the given id
+  std::shared_ptr<ClientSession> getOrCreateSession(const std::string &id);
+
+  /// @brief Handle a client that has disconnected
+  /// @param session The client session that has disconnected
+  void handleClientHasDisconnected(const ClientSession &session);
 
   /// @brief Wait for a new command
   /// @return True if everything is okay, False if the server is shutting down
@@ -155,32 +221,23 @@ protected:
 protected:
   /// @brief Handle the handshake command
   /// @param command The command to handle (this should be HANDSHAKE)
+  /// @param session The client session that sent the command
   /// @return True if the handshake is successful, false otherwise
-  bool handleHandshake(std::shared_ptr<ClientSession> session,
-                       TcpServerCommand command);
+  bool handleHandshake(TcpServerCommand command, const ClientSession &session);
 
   /// @brief Handle a command
   /// @param command The command to handle
+  /// @param session The client session that sent the command
   /// @return True if the command is successful, false otherwise
-  bool handleCommand(TcpServerCommand command);
+  bool handleCommand(TcpServerCommand command, const ClientSession &session);
 
   /// @brief Handle extra information from a command
   /// @param error The error code to set if an error occurs
+  /// @param session The client session that sent the command
   /// @return The response to send by the client (raises an exception if an
   /// error occurs)
-  nlohmann::json handleExtraData(asio::error_code &error);
-
-  /// @brief Construct the packet to send to the client from a response
-  /// @param response The response to send
-  /// @return The packet to send
-  std::array<char, BYTES_IN_SERVER_PACKET_HEADER>
-  constructResponsePacket(TcpServerResponse response);
-
-  /// @brief Parse a packet from the client to get the command
-  /// @param buffer The buffer to parse
-  /// @return The command sent by the client
-  TcpServerCommand parseCommandPacket(
-      const std::array<char, BYTES_IN_CLIENT_PACKET_HEADER> &buffer);
+  nlohmann::json handleExtraData(asio::error_code &error,
+                                 const ClientSession &session);
 
   // -------------------------- //
   // --- TCP SERVER METHODS --- //
@@ -200,10 +257,6 @@ protected:
 
   /// @brief The timeout period for the server
   DECLARE_PROTECTED_MEMBER(std::chrono::milliseconds, TimeoutPeriod);
-
-  /// @brief The socket that is connected to the client for commands
-  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
-                                 CommandSocket);
 
   /// @brief The socket that is connected to the client for response
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
@@ -270,16 +323,13 @@ protected:
 
 private:
   /// @brief The asio contexts used for async methods of the server
-  DECLARE_PRIVATE_MEMBER_NOGET(asio::io_context, Context);
+  DECLARE_PRIVATE_MEMBER_NOGET(std::shared_ptr<asio::io_context>, Context);
 
   /// @brief The worker thread for the [startServerAsync] method
   DECLARE_PRIVATE_MEMBER_NOGET(std::thread, ServerWorker);
 
   /// @brief The mutex to lock certain operations
   DECLARE_PRIVATE_MEMBER_NOGET(std::mutex, Mutex);
-
-  /// @brief The current protocol version. This must match the client's version
-  DECLARE_PRIVATE_MEMBER_NOGET(std::uint32_t, ProtocolVersion)
 };
 
 class TcpServerMock : public TcpServer {

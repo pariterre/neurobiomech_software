@@ -1,3 +1,5 @@
+import 'package:frontend/managers/neurobio_client.dart';
+
 enum Command {
   handshake,
   connectDelsysAnalog,
@@ -116,14 +118,14 @@ enum Command {
 
   List<int> toPacket() => constructPacket(command: toInt());
 
-  static int get packetVersion => 1;
-
   static List<int> constructPacket({required int command}) {
     // Packets are exactly 8 bytes long, little-endian
     // - First 4 bytes are the version number
     // - Next 4 bytes are the command
 
-    final protocolVersion = packetVersion.toRadixString(16).padLeft(8, '0');
+    final protocolVersion = NeurobioClient.communicationProtocolVersion
+        .toRadixString(16)
+        .padLeft(8, '0');
     final commandRadix = command.toRadixString(16).padLeft(8, '0');
 
     // Split the strings by pairs of char

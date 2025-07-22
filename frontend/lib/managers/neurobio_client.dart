@@ -8,10 +8,11 @@ import 'package:frontend/models/data.dart';
 import 'package:frontend/models/ack.dart';
 import 'package:logging/logging.dart';
 
-const _protocolVersion = 1;
 const _serverHeaderLength = 16;
 
 class NeurobioClient {
+  static const communicationProtocolVersion = 2;
+
   Socket? _socketCommand;
   Socket? _socketResponse;
   Socket? _socketLiveAnalogsData;
@@ -312,9 +313,9 @@ class NeurobioClient {
     }
 
     final version = _parseVersionFromPacket(response);
-    if (version != _protocolVersion) {
+    if (version != communicationProtocolVersion) {
       _log.severe(
-          'Protocol version mismatch, expected $_protocolVersion, got $version. '
+          'Protocol version mismatch, expected $communicationProtocolVersion, got $version. '
           'Please update the client.');
       disconnect();
       return;
@@ -693,7 +694,21 @@ class NeurobioClientMock extends NeurobioClient {
       _currentCommand = command;
       _commandAckCompleter = Completer<Ack>();
       Future.delayed(const Duration(milliseconds: 500)).then((value) =>
-          _receiveCommandAck([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]));
+          _receiveCommandAck([
+            NeurobioClient.communicationProtocolVersion,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ]));
       return await _commandAckCompleter!.future;
     } on SocketException {
       _log.info('Connexion was closed by the server');

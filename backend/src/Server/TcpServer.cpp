@@ -33,17 +33,180 @@
 
 using namespace NEUROBIO_NAMESPACE::server;
 
+TcpServerCommand parseCommandPacket(
+    const std::array<char, BYTES_IN_CLIENT_PACKET_HEADER> &buffer) {
+  // Packets are exactly 8 bytes long, litte endian
+  // - First 4 bytes are the version number
+  // - Next 4 bytes are the command
+
+  // Check the version
+  std::uint32_t version;
+  // Safely copy memory and convert from little-endian
+  std::memcpy(&version, buffer.data(), sizeof(version));
+  version = le32toh(version); // Convert to native endianness
+
+  if (version != COMMUNICATION_PROTOCOL_VERSION) {
+    auto &logger = NEUROBIO_NAMESPACE::utils::Logger::getInstance();
+    logger.fatal("Invalid version: " + std::to_string(version) +
+                 ". Please "
+                 "update the client to version " +
+                 std::to_string(COMMUNICATION_PROTOCOL_VERSION));
+    return TcpServerCommand::FAILED;
+  }
+
+  // Get the command
+  std::uint32_t command;
+  std::memcpy(&command, buffer.data() + sizeof(version), sizeof(command));
+  command = le32toh(command); // Convert to native endianness
+
+  return static_cast<TcpServerCommand>(command);
+}
+
+std::array<char, BYTES_IN_SERVER_PACKET_HEADER>
+constructResponsePacket(TcpServerResponse response) {
+  // Packets are exactly 16 bytes long, litte endian
+  // - First 4 bytes are the version number
+  // - The next 8 bytes are the timestamp of the packet (milliseconds since
+  // epoch)
+  // - Next 4 bytes are the actual response
+
+  auto packet = std::array<char, BYTES_IN_SERVER_PACKET_HEADER>();
+  packet.fill('\0');
+
+  // Add the version number in uint32_t format (litte endian)
+  std::uint32_t versionLittleEndian = htole32(COMMUNICATION_PROTOCOL_VERSION);
+  std::memcpy(packet.data(), &versionLittleEndian, sizeof(versionLittleEndian));
+
+  // Add the timestamps in uint64_t format (litte endian)
+  std::uint64_t timestamp =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count();
+  std::uint64_t timestampLittleEndian = htole64(timestamp);
+  std::memcpy(packet.data() + sizeof(versionLittleEndian),
+              &timestampLittleEndian, sizeof(timestampLittleEndian));
+
+  // Add the response in uint32_t format (litte endian)
+  std::uint32_t responseLittleEndian =
+      htole32(static_cast<std::uint32_t>(response));
+  std::memcpy(packet.data() + sizeof(versionLittleEndian) +
+                  sizeof(timestampLittleEndian),
+              &responseLittleEndian, sizeof(responseLittleEndian));
+
+  return packet;
+}
+
 // Here are the names of the devices that can be connected (for internal use)
 const std::string DEVICE_NAME_DELSYS_EMG = "DelsysEmgDevice";
 const std::string DEVICE_NAME_DELSYS_ANALOG = "DelsysAnalogDevice";
 const std::string DEVICE_NAME_MAGSTIM = "MagstimRapidDevice";
 
+ClientSession::ClientSession(
+    std::shared_ptr<asio::io_context> context, std::string id,
+    std::function<bool(TcpServerCommand command, const ClientSession &client)>
+        handleHandshake,
+    std::function<bool(TcpServerCommand command, const ClientSession &client)>
+        handleCommand,
+    std::function<void(const ClientSession &client)> onDisconnect)
+    : m_Context(context), m_Id(id), m_IsHandshakeDone(false),
+      m_HasDisconnected(false), m_HandleHandshake(handleHandshake),
+      m_HandleCommand(handleCommand), m_OnDisconnect(onDisconnect) {}
+
+ClientSession::~ClientSession() { disconnect(); }
+
+void ClientSession::connectCommandSocket(
+    std::shared_ptr<asio::ip::tcp::socket> socket) {
+  // Once the client has disconnected, we cannot connect anymore, they must
+  // reconnect
+  if (m_HasDisconnected)
+    return;
+
+  m_CommandSocket = socket;
+  tryStartSessionLoop();
+}
+
+bool ClientSession::isConnected() const {
+  return !m_HasDisconnected && m_CommandSocket && m_CommandSocket->is_open();
+  //  && m_ResponseSocket &&
+  //        m_ResponseSocket->is_open() && m_LiveDataSocket &&
+  //        m_LiveDataSocket->is_open() && m_LiveAnalysesSocket &&
+  //        m_LiveAnalysesSocket->is_open();
+}
+
+void ClientSession::disconnect() {
+  if (m_HasDisconnected) {
+    return; // Already disconnected
+  }
+  m_HasDisconnected = true;
+
+  auto closeSocket = [](std::shared_ptr<asio::ip::tcp::socket> &s) {
+    if (s && s->is_open()) {
+      asio::error_code ec;
+      s->shutdown(asio::ip::tcp::socket::shutdown_both, ec);
+      s->close(ec);
+    }
+  };
+
+  m_IsHandshakeDone = false;
+  closeSocket(m_CommandSocket);
+  closeSocket(m_ResponseSocket);
+  closeSocket(m_LiveDataSocket);
+  closeSocket(m_LiveAnalysesSocket);
+
+  m_OnDisconnect(*this);
+
+  utils::Logger::getInstance().info("Session " + m_Id +
+                                    " disconnected and cleaned up.");
+}
+
+void ClientSession::tryStartSessionLoop() {
+  if (!isConnected()) {
+    return;
+  }
+
+  // All sockets connected — spawn logic
+  auto &logger = utils::Logger::getInstance();
+  logger.info("Starting client session with ID: " + m_Id);
+
+  // Start reading from the sockets
+  commandSocketLoop();
+}
+
+void ClientSession::commandSocketLoop() {
+  auto buffer = std::array<char, BYTES_IN_CLIENT_PACKET_HEADER>();
+  m_CommandSocket->async_read_some(
+      asio::buffer(buffer),
+      [this, &buffer](const asio::error_code &ec, size_t byteRead) {
+        auto &logger = utils::Logger::getInstance();
+        if (ec) {
+          // If anything went wrong, disconnect the client
+          disconnect();
+          return;
+        }
+
+        // Parse the packet
+        TcpServerCommand command = parseCommandPacket(buffer);
+
+        // Handle the command based on the current status
+        if (!(m_IsHandshakeDone ? m_HandleCommand(command, *this)
+                                : m_HandleHandshake(command, *this))) {
+          // If anything went wrong, disconnect the client
+          disconnect();
+        }
+
+        // If we get here, the command was successful and we can continue
+        // listening for the next command
+        commandSocketLoop();
+      });
+}
+
 TcpServer::TcpServer(int commandPort, int responsePort, int liveDataPort,
                      int liveAnalysesPort)
-    : m_IsClientConnecting(false), m_IsServerRunning(false),
-      m_CommandPort(commandPort), m_ResponsePort(responsePort),
-      m_LiveDataPort(liveDataPort), m_LiveAnalysesPort(liveAnalysesPort),
-      m_TimeoutPeriod(std::chrono::milliseconds(5000)), m_ProtocolVersion(1) {};
+    : m_IsServerRunning(false), m_CommandPort(commandPort),
+      m_ResponsePort(responsePort), m_LiveDataPort(liveDataPort),
+      m_LiveAnalysesPort(liveAnalysesPort),
+      m_TimeoutPeriod(std::chrono::milliseconds(5000)),
+      m_Context(std::make_shared<asio::io_context>()) {}
 
 TcpServer::~TcpServer() {
   if (m_IsServerRunning) {
@@ -65,22 +228,22 @@ void TcpServer::startServerSync() {
 
   // Create the contexts and acceptors
   m_CommandAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
-      m_Context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_CommandPort));
+      *m_Context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_CommandPort));
   logger.info("TCP Command server started on port " +
               std::to_string(m_CommandPort));
 
   m_ResponseAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
-      m_Context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_ResponsePort));
+      *m_Context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_ResponsePort));
   logger.info("TCP Response server started on port " +
               std::to_string(m_ResponsePort));
 
   m_LiveDataAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
-      m_Context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_LiveDataPort));
+      *m_Context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_LiveDataPort));
   logger.info("TCP Live Data server started on port " +
               std::to_string(m_LiveDataPort));
 
   m_LiveAnalysesAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
-      m_Context,
+      *m_Context,
       asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_LiveAnalysesPort));
   logger.info("TCP Live Analyses server started on port " +
               std::to_string(m_LiveAnalysesPort));
@@ -88,7 +251,7 @@ void TcpServer::startServerSync() {
   m_IsServerRunning = true;
   m_Status = TcpServerStatus::CONNECTING;
   startAcceptingConnexions();
-  m_Context.run();
+  m_Context->run();
   logger.info("TCP Server is terminating");
 }
 
@@ -104,7 +267,7 @@ void TcpServer::acceptSocketConnexion(
     std::unique_ptr<asio::ip::tcp::acceptor> &acceptor,
     void (TcpServer::*handler)(std::shared_ptr<asio::ip::tcp::socket>)) {
 
-  auto socket = std::make_shared<asio::ip::tcp::socket>(m_Context);
+  auto socket = std::make_shared<asio::ip::tcp::socket>(*m_Context);
   acceptor->async_accept(
       *socket, [this, socket, handler, &acceptor](const asio::error_code &ec) {
         if (!ec) {
@@ -122,18 +285,25 @@ void TcpServer::handleCommandSocketConnexion(
   std::string sessionId = readSessionId(socket);
 
   auto session = getOrCreateSession(sessionId);
-  session->commandSocket = socket;
-  tryStartSession(sessionId);
+  session->connectCommandSocket(socket);
 }
 
-std::shared_ptr<TcpServer::ClientSession>
+std::shared_ptr<ClientSession>
 TcpServer::getOrCreateSession(const std::string &id) {
   std::lock_guard<std::mutex> lock(m_SessionMutex);
   auto &session = m_Sessions[id];
   if (!session) {
-    session = std::make_shared<ClientSession>();
-    session->sessionId = id;
-    session->createdAt = std::chrono::steady_clock::now();
+    session = std::make_shared<ClientSession>(
+        m_Context, id,
+        [this](TcpServerCommand command, const ClientSession &client) {
+          return handleHandshake(command, client);
+        },
+        [this](TcpServerCommand command, const ClientSession &client) {
+          return handleCommand(command, client);
+        },
+        [this](const ClientSession &client) {
+          handleClientHasDisconnected(client);
+        });
   }
   return session;
 }
@@ -141,23 +311,6 @@ TcpServer::getOrCreateSession(const std::string &id) {
 std::string
 TcpServer::readSessionId(std::shared_ptr<asio::ip::tcp::socket> socket) {
   return "coucou";
-}
-
-void TcpServer::tryStartSession(const std::string &id) {
-  std::lock_guard<std::mutex> lock(m_SessionMutex);
-  auto it = m_Sessions.find(id);
-  if (it == m_Sessions.end())
-    return;
-
-  auto &session = it->second;
-  if (session->isConnected()) {
-    // All sockets connected — spawn logic
-    auto &logger = utils::Logger::getInstance();
-    logger.info("Starting client session with ID: " + session->sessionId);
-
-    // Start reading from the command socket
-    waitAndHandleNewCommand(session);
-  }
 }
 
 // void TcpServer::startReadCommands(std::shared_ptr<asio::ip::tcp::socket>
@@ -190,32 +343,14 @@ void TcpServer::tryStartSession(const std::string &id) {
 //       });
 // }
 
-void TcpServer::handleClientDisconnect(const std::string &sessionId) {
+void TcpServer::handleClientHasDisconnected(const ClientSession &session) {
   std::lock_guard<std::mutex> lock(m_SessionMutex);
-
-  auto it = m_Sessions.find(sessionId);
+  auto it = m_Sessions.find(session.getId());
   if (it == m_Sessions.end())
     return;
-
-  auto session = it->second;
-
-  auto closeSocket = [](std::shared_ptr<asio::ip::tcp::socket> &s) {
-    if (s && s->is_open()) {
-      asio::error_code ec;
-      s->shutdown(asio::ip::tcp::socket::shutdown_both, ec);
-      s->close(ec);
-    }
-  };
-
-  closeSocket(session->commandSocket);
-  closeSocket(session->responseSocket);
-  closeSocket(session->liveDataSocket);
-  closeSocket(session->liveAnalysesSocket);
-
   m_Sessions.erase(it);
-
-  utils::Logger::getInstance().info("Session " + sessionId +
-                                    " disconnected and cleaned up.");
+  utils::Logger::getInstance().info("Client " + session.getId() +
+                                    " has disconnected.");
 }
 
 void TcpServer::stopServer() {
@@ -227,10 +362,10 @@ void TcpServer::stopServer() {
 
     // When closing the server too soon, client may still be connected, so we
     // need to disconnect it
-    disconnectClient();
+    disconnectClients();
 
     // Stop any running context
-    m_Context.stop();
+    m_Context->stop();
   }
 
   // Wait for the server to stop
@@ -240,15 +375,20 @@ void TcpServer::stopServer() {
   logger.info("Server has shut down");
 }
 
+bool TcpServer::isClientConnected(const std::string &id) const {
+  return m_Sessions.find(id) != m_Sessions.end();
+}
+
 // TODO: Only do this if the last client is disconnected
-void TcpServer::disconnectClient() {
+void TcpServer::disconnectClients() {
   std::lock_guard<std::mutex> lock(m_Mutex);
   auto &logger = utils::Logger::getInstance();
 
-  logger.info("Disconnecting client");
-  m_Status = TcpServerStatus::INITIALIZING;
+  // TODO Add the client id
+  logger.info("Disconnecting clients");
 
-  // Make sure all the devices are properly disconnected
+  // Make sure all the devices are properly disconnected (if all clients are
+  // disconnected)
   for (auto &name : m_Devices.getDeviceNames()) {
     removeDevice(name, false);
   }
@@ -256,22 +396,13 @@ void TcpServer::disconnectClient() {
   // Clear the analyzers
   m_Analyzers.clear();
 
-  // Reset the status to initializing
-  closeSockets();
-}
-
-bool TcpServer::isClientConnected() const {
-  return m_Status != TcpServerStatus::INITIALIZING && m_CommandSocket &&
-         m_CommandSocket->is_open() && m_ResponseSocket &&
-         m_ResponseSocket->is_open() && m_LiveDataSocket &&
-         m_LiveDataSocket->is_open() && m_LiveAnalysesSocket &&
-         m_LiveAnalysesSocket->is_open();
+  // Stop accepting new connexions
+  cancelAcceptors();
 }
 
 // bool TcpServer::waitForNewConnexion() {
 //   auto &logger = utils::Logger::getInstance();
 //   logger.info("Waiting for a new connexion");
-//   m_Status = TcpServerStatus::INITIALIZING;
 
 //   // Wait for the command socket to connect
 //   if (!waitUntilSocketIsConnected("Command", m_CommandSocket,
@@ -330,125 +461,63 @@ bool TcpServer::isClientConnected() const {
 //   return m_Status == TcpServerStatus::CONNECTED;
 // }
 
-bool TcpServer::waitUntilSocketIsConnected(
-    const std::string &socketName,
-    std::unique_ptr<asio::ip::tcp::socket> &socket,
-    std::unique_ptr<asio::ip::tcp::acceptor> &acceptor, bool canTimeout) {
-  auto &logger = utils::Logger::getInstance();
-  logger.info("Waiting for " + socketName + " socket to connect");
+// bool TcpServer::waitUntilSocketIsConnected(
+//     const std::string &socketName,
+//     std::unique_ptr<asio::ip::tcp::socket> &socket,
+//     std::unique_ptr<asio::ip::tcp::acceptor> &acceptor, bool canTimeout) {
+//   auto &logger = utils::Logger::getInstance();
+//   logger.info("Waiting for " + socketName + " socket to connect");
 
-  socket = std::make_unique<asio::ip::tcp::socket>(m_Context);
-  acceptor->async_accept(*socket, [](const asio::error_code &) {});
+//   socket = std::make_unique<asio::ip::tcp::socket>(m_Context);
+//   acceptor->async_accept(*socket, [](const asio::error_code &) {});
 
-  auto startingTime = std::chrono::high_resolution_clock::now();
-  auto timoutTimer =
-      asio::steady_timer(m_Context, std::chrono::milliseconds(50));
-  while (!socket->is_open()) {
-    timoutTimer.async_wait(
-        [this](const asio::error_code &) { m_Context.stop(); });
-    m_Context.run();
-    m_Context.restart();
+//   auto startingTime = std::chrono::high_resolution_clock::now();
+//   auto timoutTimer =
+//       asio::steady_timer(*m_Context, std::chrono::milliseconds(50));
+//   while (!socket->is_open()) {
+//     timoutTimer.async_wait(
+//         [this](const asio::error_code &) { m_Context->stop(); });
+//     m_Context->run();
+//     m_Context->restart();
 
-    // Check for failing conditions
-    if (!m_IsServerRunning) {
-      logger.info("Stopping listening to ports as server is shutting down");
-      return false;
-    } else if (canTimeout &&
-               std::chrono::high_resolution_clock::now() - startingTime >
-                   m_TimeoutPeriod) {
-      logger.fatal("Connexion to " + socketName + " socket timed out (" +
-                   std::to_string(m_TimeoutPeriod.count()) +
-                   " ms), disconnecting client");
-      disconnectClient();
-      return false;
-    }
-  }
+//     // Check for failing conditions
+//     if (!m_IsServerRunning) {
+//       logger.info("Stopping listening to ports as server is shutting down");
+//       return false;
+//     } else if (canTimeout &&
+//                std::chrono::high_resolution_clock::now() - startingTime >
+//                    m_TimeoutPeriod) {
+//       logger.fatal("Connexion to " + socketName + " socket timed out (" +
+//                    std::to_string(m_TimeoutPeriod.count()) +
+//                    " ms), disconnecting client");
+//       disconnectClient();
+//       return false;
+//     }
+//   }
 
-  return true;
-}
+//   return true;
+// }
 
-void TcpServer::closeSockets() {
-  if (m_CommandSocket && m_CommandSocket->is_open()) {
-    m_CommandSocket->close();
-  }
+void TcpServer::cancelAcceptors() {
   if (m_CommandAcceptor && m_CommandAcceptor->is_open()) {
     m_CommandAcceptor->cancel();
   }
 
-  if (m_ResponseSocket && m_ResponseSocket->is_open()) {
-    m_ResponseSocket->close();
-  }
   if (m_ResponseAcceptor && m_ResponseAcceptor->is_open()) {
     m_ResponseAcceptor->cancel();
   }
 
-  if (m_LiveDataSocket && m_LiveDataSocket->is_open()) {
-    m_LiveDataSocket->close();
-  }
   if (m_LiveDataAcceptor && m_LiveDataAcceptor->is_open()) {
     m_LiveDataAcceptor->cancel();
   }
 
-  if (m_LiveAnalysesSocket && m_LiveAnalysesSocket->is_open()) {
-    m_LiveAnalysesSocket->close();
-  }
   if (m_LiveAnalysesAcceptor && m_LiveAnalysesAcceptor->is_open()) {
     m_LiveAnalysesAcceptor->cancel();
   }
 }
 
-void TcpServer::waitAndHandleNewCommand(
-    std::shared_ptr<ClientSession> session) {
-  auto buffer = std::array<char, BYTES_IN_CLIENT_PACKET_HEADER>();
-
-  session->commandSocket->async_read_some(
-      asio::buffer(buffer),
-      [this, session, buffer](const asio::error_code &ec, size_t byteRead) {
-        auto &logger = utils::Logger::getInstance();
-
-        if (ec) {
-          if (ec == asio::error::eof || ec == asio::error::connection_reset) {
-            logger.info("Client " + session->sessionId + " disconnected.");
-            handleClientDisconnect(session->sessionId);
-          } else {
-            logger.fatal("Error on Command socket: " + ec.message());
-          }
-          return;
-        }
-
-        // Parse the packet
-        // TODO Find why we don't get the full header
-        TcpServerCommand command = parseCommandPacket(buffer);
-
-        // Handle the command based on the current status
-        bool isSuccessful = false;
-        switch (m_Status) {
-        case (TcpServerStatus::CONNECTING):
-          isSuccessful = handleHandshake(session, command);
-          break;
-        case (TcpServerStatus::CONNECTED):
-          isSuccessful = handleCommand(command);
-          break;
-        default:
-          logger.fatal("Invalid server status: " +
-                       std::to_string(static_cast<std::uint32_t>(m_Status)));
-          isSuccessful = false;
-          break;
-        }
-
-        // If anything went wrong, disconnect the client
-        if (!isSuccessful) {
-          disconnectClient();
-        }
-
-        // If we get here, the command was successful and we can continue
-        // Continue reading commands
-        waitAndHandleNewCommand(session);
-      });
-}
-
-bool TcpServer::handleHandshake(std::shared_ptr<ClientSession> session,
-                                TcpServerCommand command) {
+bool TcpServer::handleHandshake(TcpServerCommand command,
+                                const ClientSession &session) {
   auto &logger = utils::Logger::getInstance();
   asio::error_code error;
 
@@ -457,7 +526,7 @@ bool TcpServer::handleHandshake(std::shared_ptr<ClientSession> session,
     logger.fatal("Invalid command during initialization: " +
                  std::to_string(static_cast<std::uint32_t>(command)));
 
-    asio::write(*(session->commandSocket),
+    asio::write(*session.getCommandSocket(),
                 asio::buffer(constructResponsePacket(TcpServerResponse::NOK)),
                 error);
     return false;
@@ -465,7 +534,7 @@ bool TcpServer::handleHandshake(std::shared_ptr<ClientSession> session,
 
   // Respond OK to the handshake
   size_t byteWritten = asio::write(
-      *m_CommandSocket,
+      *session.getCommandSocket(),
       asio::buffer(constructResponsePacket(TcpServerResponse::OK)), error);
   if (byteWritten != BYTES_IN_SERVER_PACKET_HEADER || error) {
     logger.fatal("TCP write error: " + error.message());
@@ -479,7 +548,8 @@ bool TcpServer::handleHandshake(std::shared_ptr<ClientSession> session,
   return true;
 }
 
-bool TcpServer::handleCommand(TcpServerCommand command) {
+bool TcpServer::handleCommand(TcpServerCommand command,
+                              const ClientSession &session) {
   auto &logger = utils::Logger::getInstance();
   asio::error_code error;
 
@@ -553,7 +623,7 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
 
   case TcpServerCommand::ADD_ANALYZER: {
     try {
-      auto data = handleExtraData(error);
+      auto data = handleExtraData(error, session);
       m_Analyzers.add(data);
       response = TcpServerResponse::OK;
     } catch (const std::exception &e) {
@@ -569,7 +639,7 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
 
   case TcpServerCommand::REMOVE_ANALYZER: {
     try {
-      std::string analyzerName = handleExtraData(error)["analyzer"];
+      std::string analyzerName = handleExtraData(error, session)["analyzer"];
       m_Analyzers.remove(analyzerName);
       response = TcpServerResponse::OK;
     } catch (const std::exception &e) {
@@ -587,8 +657,11 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
   }
 
   // Respond OK to the command
-  size_t byteWritten = asio::write(
-      *m_CommandSocket, asio::buffer(constructResponsePacket(response)), error);
+  size_t byteWritten =
+      asio::write(*session.getCommandSocket(),
+                  asio::buffer(constructResponsePacket(response)), error);
+
+  // TODO Add events to notify all the clients the something has happened
   if (byteWritten != BYTES_IN_SERVER_PACKET_HEADER || error) {
     logger.fatal("TCP write error: " + error.message());
     return false;
@@ -597,12 +670,13 @@ bool TcpServer::handleCommand(TcpServerCommand command) {
   return true;
 }
 
-nlohmann::json TcpServer::handleExtraData(asio::error_code &error) {
+nlohmann::json TcpServer::handleExtraData(asio::error_code &error,
+                                          const ClientSession &session) {
   auto &logger = utils::Logger::getInstance();
 
   // Send an acknowledgment to the client we are ready to receive the data
   size_t byteWritten = asio::write(
-      *m_CommandSocket,
+      *session.getCommandSocket(),
       asio::buffer(constructResponsePacket(TcpServerResponse::OK)), error);
 
   // Receive the size of the data
@@ -624,69 +698,6 @@ nlohmann::json TcpServer::handleExtraData(asio::error_code &error) {
   }
 
   return nlohmann::json::parse(dataBuffer.begin(), dataBuffer.end());
-}
-
-TcpServerCommand TcpServer::parseCommandPacket(
-    const std::array<char, BYTES_IN_CLIENT_PACKET_HEADER> &buffer) {
-  // Packets are exactly 8 bytes long, litte endian
-  // - First 4 bytes are the version number
-  // - Next 4 bytes are the command
-
-  // Check the version
-  std::uint32_t version;
-  // Safely copy memory and convert from little-endian
-  std::memcpy(&version, buffer.data(), sizeof(version));
-  version = le32toh(version); // Convert to native endianness
-
-  if (version != m_ProtocolVersion) {
-    auto &logger = utils::Logger::getInstance();
-    logger.fatal("Invalid version: " + std::to_string(version) +
-                 ". Please "
-                 "update the client to version " +
-                 std::to_string(m_ProtocolVersion));
-    return TcpServerCommand::FAILED;
-  }
-
-  // Get the command
-  std::uint32_t command;
-  std::memcpy(&command, buffer.data() + sizeof(version), sizeof(command));
-  command = le32toh(command); // Convert to native endianness
-
-  return static_cast<TcpServerCommand>(command);
-}
-
-std::array<char, BYTES_IN_SERVER_PACKET_HEADER>
-TcpServer::constructResponsePacket(TcpServerResponse response) {
-  // Packets are exactly 16 bytes long, litte endian
-  // - First 4 bytes are the version number
-  // - The next 8 bytes are the timestamp of the packet (milliseconds since
-  // epoch)
-  // - Next 4 bytes are the actual response
-
-  auto packet = std::array<char, BYTES_IN_SERVER_PACKET_HEADER>();
-  packet.fill('\0');
-
-  // Add the version number in uint32_t format (litte endian)
-  std::uint32_t versionLittleEndian = htole32(m_ProtocolVersion);
-  std::memcpy(packet.data(), &versionLittleEndian, sizeof(versionLittleEndian));
-
-  // Add the timestamps in uint64_t format (litte endian)
-  std::uint64_t timestamp =
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          std::chrono::system_clock::now().time_since_epoch())
-          .count();
-  std::uint64_t timestampLittleEndian = htole64(timestamp);
-  std::memcpy(packet.data() + sizeof(versionLittleEndian),
-              &timestampLittleEndian, sizeof(timestampLittleEndian));
-
-  // Add the response in uint32_t format (litte endian)
-  std::uint32_t responseLittleEndian =
-      htole32(static_cast<std::uint32_t>(response));
-  std::memcpy(packet.data() + sizeof(versionLittleEndian) +
-                  sizeof(timestampLittleEndian),
-              &responseLittleEndian, sizeof(responseLittleEndian));
-
-  return packet;
 }
 
 bool TcpServer::addDevice(const std::string &deviceName) {
@@ -791,9 +802,7 @@ bool TcpServer::removeDevice(const std::string &deviceName,
 }
 
 void TcpServer::handleSendLiveData() {
-  // Send the live data callback in a separate thread
-  if (!isClientConnected())
-    return;
+  // TODO Only send data to clients that registered for live data
 
   auto &logger = utils::Logger::getInstance();
   logger.debug("Sending live data to client");
@@ -814,9 +823,7 @@ void TcpServer::handleSendLiveData() {
 }
 
 void TcpServer::handleSendAnalyzedLiveData() {
-  // Analyze the live data callback in a separate thread
-  if (!isClientConnected())
-    return;
+  // TODO Only send data to clients that registered for live analyses
 
   if (m_Analyzers.size() == 0) {
     return;
