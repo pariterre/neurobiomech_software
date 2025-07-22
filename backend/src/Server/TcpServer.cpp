@@ -107,10 +107,12 @@ ClientSession::ClientSession(
         handleHandshake,
     std::function<bool(TcpServerCommand command, const ClientSession &client)>
         handleCommand,
-    std::function<void(const ClientSession &client)> onDisconnect)
-    : m_Context(context), m_Id(id), m_IsHandshakeDone(false),
-      m_HasDisconnected(false), m_HandleHandshake(handleHandshake),
-      m_HandleCommand(handleCommand), m_OnDisconnect(onDisconnect) {}
+    std::function<void(const ClientSession &client)> onDisconnect,
+    std::chrono::milliseconds timeoutPeriod)
+    : m_TimeoutPeriod(timeoutPeriod), m_Context(context), m_Id(id),
+      m_IsHandshakeDone(false), m_HasDisconnected(false),
+      m_HandleHandshake(handleHandshake), m_HandleCommand(handleCommand),
+      m_OnDisconnect(onDisconnect) {}
 
 ClientSession::~ClientSession() { disconnect(); }
 
@@ -179,8 +181,31 @@ void ClientSession::disconnect() {
                                     " disconnected and cleaned up.");
 }
 
+void ClientSession::startTimerForTimeout() {
+  m_ConnexionTimer = std::make_shared<asio::steady_timer>(*m_Context);
+  m_ConnexionTimer->expires_after(m_TimeoutPeriod);
+  m_ConnexionTimer->async_wait([this](const asio::error_code &ec) {
+    if (ec) {
+      // Timer was cancelled or failed (meaning the connexion was
+      // successful)
+      return;
+    }
+    // If we reach here, the timer expired, meaning the client did not
+    // connect all sockets in time, so we disconnect them
+    auto &logger = utils::Logger::getInstance();
+    logger.warning("Client session " + m_Id +
+                   " did not connect all sockets in time, disconnecting.");
+    disconnect();
+  });
+}
+
 void ClientSession::tryStartSessionLoop() {
   if (!isConnected()) {
+    // Once a client tried to connect once, they have a fixed amount of time to
+    // connect all sockets, otherwise we disconnect them
+    if (!m_ConnexionTimer) {
+      startTimerForTimeout();
+    }
     return;
   }
 
@@ -270,8 +295,6 @@ void TcpServer::startServerSync() {
 }
 
 void TcpServer::startAcceptingSocketConnexions() {
-  // TODO: Add a timeout to drop clients that are not connected after a certain
-  // time (m_TimeoutPeriod)
   acceptSocketConnexion(m_CommandAcceptor,
                         &TcpServer::handleCommandSocketConnexion);
   acceptSocketConnexion(m_ResponseAcceptor,
@@ -345,7 +368,8 @@ TcpServer::getOrCreateSession(const std::string &id) {
         },
         [this](const ClientSession &client) {
           handleClientHasDisconnected(client);
-        });
+        },
+        m_TimeoutPeriod);
   }
   return session;
 }

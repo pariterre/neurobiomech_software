@@ -48,10 +48,20 @@ public:
           handleHandshake,
       std::function<bool(TcpServerCommand command, const ClientSession &client)>
           handleCommand,
-      std::function<void(const ClientSession &client)> onDisconnect);
+      std::function<void(const ClientSession &client)> onDisconnect,
+      std::chrono::milliseconds timeoutPeriod);
 
   ~ClientSession();
 
+protected:
+  /// @brief The timer used to send the live data to the client
+  DECLARE_PROTECTED_MEMBER_NOGET(std::shared_ptr<asio::steady_timer>,
+                                 ConnexionTimer);
+
+  /// @brief The timeout period for the server
+  DECLARE_PROTECTED_MEMBER(std::chrono::milliseconds, TimeoutPeriod);
+
+public:
   /// @brief Connect the command socket to the given socket
   /// @param socket The socket to connect the command socket to
   void connectCommandSocket(std::shared_ptr<asio::ip::tcp::socket> socket);
@@ -121,6 +131,9 @@ protected:
   /// @brief The callback to call when the client disconnects
   DECLARE_PROTECTED_MEMBER_NOGET(
       std::function<void(const ClientSession &client)>, OnDisconnect);
+
+  /// @brief Start the timer for the timeout
+  void startTimerForTimeout();
 
   /// @brief Try to start the listening session. It only succeed if all the
   /// sockets are connected
