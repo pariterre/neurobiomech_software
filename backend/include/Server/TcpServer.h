@@ -52,7 +52,13 @@ public:
 
   ~ClientSession();
 
+  /// @brief Connect the command socket to the given socket
+  /// @param socket The socket to connect the command socket to
   void connectCommandSocket(std::shared_ptr<asio::ip::tcp::socket> socket);
+
+  /// @brief Connect the response socket to the given socket
+  /// @param socket The socket to connect the response socket to
+  void connectResponseSocket(std::shared_ptr<asio::ip::tcp::socket> socket);
 
   /// @brief Returns if the session is connected
   /// @return True if the session is connected, false otherwise
@@ -71,7 +77,7 @@ protected:
   /// @brief Whether the handshake has been completed
   DECLARE_PROTECTED_MEMBER(bool, IsHandshakeDone);
 
-  /// @brief This is an internal variable to prevent from disconnecting more
+  /// @brief The internal variable to prevent from disconnecting more
   /// than once
   DECLARE_PRIVATE_MEMBER_NOGET(bool, HasDisconnected);
 
@@ -79,8 +85,8 @@ protected:
   DECLARE_PROTECTED_MEMBER(std::shared_ptr<asio::ip::tcp::socket>,
                            CommandSocket);
   /// @brief The response socket used to communicate with the client
-  DECLARE_PROTECTED_MEMBER_NOGET(std::shared_ptr<asio::ip::tcp::socket>,
-                                 ResponseSocket);
+  DECLARE_PROTECTED_MEMBER(std::shared_ptr<asio::ip::tcp::socket>,
+                           ResponseSocket);
   /// @brief The live data socket used to communicate with the client
   DECLARE_PROTECTED_MEMBER_NOGET(std::shared_ptr<asio::ip::tcp::socket>,
                                  LiveDataSocket);
@@ -144,47 +150,18 @@ public:
   /// the current thread
   void startServerSync();
 
-protected:
-  std::mutex m_SessionMutex;
-  void startAcceptingConnexions();
-  void acceptSocketConnexion(
-      std::unique_ptr<asio::ip::tcp::acceptor> &acceptor,
-      void (TcpServer::*handler)(std::shared_ptr<asio::ip::tcp::socket>));
-  void
-  handleCommandSocketConnexion(std::shared_ptr<asio::ip::tcp::socket> socket);
-  std::string readSessionId(std::shared_ptr<asio::ip::tcp::socket> socket);
-
-public:
   /// @brief Stop the server. This sends a message to the server that it
   /// should stop. After this command, [startServer] will return
   void stopServer();
 
-protected:
-  /// @brief The sessions that are currently connected to the server
-  std::unordered_map<std::string, std::shared_ptr<ClientSession>> m_Sessions;
-
 public:
+  /// @brief Check if a session is connected
+  /// @param id The id of the session to check
   bool isClientConnected(const std::string &id) const;
 
 protected:
-  /// @brief Disconnect all the clients
-  void disconnectClients();
-
-  // /// @brief Wait for a new connexion
-  // /// @return True if everything is okay, False if connexion failed
-  // bool waitForNewConnexion();
-
-  // /// @brief Wait until the socket is connected
-  // /// @param socketName The name of the socket to wait for to be connected
-  // /// @param socket The socket to wait for to be connected
-  // /// @param acceptor The acceptor to listen to
-  // /// @param canTimeout If the waiting can timeout
-  // /// @return True if the socket is connected, false otherwise
-  // bool
-  // waitUntilSocketIsConnected(const std::string &socketName,
-  //                            std::unique_ptr<asio::ip::tcp::socket> &socket,
-  //                            std::unique_ptr<asio::ip::tcp::acceptor>
-  //                            &acceptor, bool canTimeout);
+  /// @brief Start accepting connexions on all the ports
+  void startAcceptors();
 
   /// @brief Stop accepting connexions
   void cancelAcceptors();
@@ -193,6 +170,38 @@ protected:
   /// @param id The id of the session to get or create
   /// @return The session for the given id
   std::shared_ptr<ClientSession> getOrCreateSession(const std::string &id);
+
+  /// @brief Read the session id from the socket
+  /// @param socket The socket to read the session id from
+  /// @return The session id read from the socket
+  std::string readSessionId(std::shared_ptr<asio::ip::tcp::socket> socket);
+
+  /// @brief Disconnect all the clients
+  void disconnectClients();
+
+  /// @brief The mutex used to protect the sessions
+  DECLARE_PROTECTED_MEMBER_NOGET(std::mutex, SessionMutex);
+
+  /// @brief The sessions that are currently connected to the server
+  std::unordered_map<std::string, std::shared_ptr<ClientSession>> m_Sessions;
+
+  /// @brief Start accepting connexions on all the ports
+  void startAcceptingSocketConnexions();
+
+  /// @brief Accept a new socket connexion (generic)
+  void acceptSocketConnexion(
+      std::unique_ptr<asio::ip::tcp::acceptor> &acceptor,
+      void (TcpServer::*handler)(std::shared_ptr<asio::ip::tcp::socket>));
+
+  /// @brief Handle a command socket connexion
+  /// @param socket The socket that has answered the connexion
+  void
+  handleCommandSocketConnexion(std::shared_ptr<asio::ip::tcp::socket> socket);
+
+  /// @brief Handle a response socket connexion
+  /// @param socket The socket that has answered the connexion
+  void
+  handleResponseSocketConnexion(std::shared_ptr<asio::ip::tcp::socket> socket);
 
   /// @brief Handle a client that has disconnected
   /// @param session The client session that has disconnected
@@ -257,10 +266,6 @@ protected:
 
   /// @brief The timeout period for the server
   DECLARE_PROTECTED_MEMBER(std::chrono::milliseconds, TimeoutPeriod);
-
-  /// @brief The socket that is connected to the client for response
-  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
-                                 ResponseSocket);
 
   /// @brief The socket that is connected to the client for live data streaming
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,

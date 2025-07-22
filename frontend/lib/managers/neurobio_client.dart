@@ -185,13 +185,13 @@ class NeurobioClient {
         nbOfRetries: nbOfRetries,
         hasDataCallback: _receiveCommandAck,
         onConnexionLost: onConnexionLost);
-    return;
     _socketResponse = await _connectToSocket(
         ipAddress: serverIp,
         port: responsePort,
         nbOfRetries: nbOfRetries,
         hasDataCallback: _receiveResponse,
         onConnexionLost: onConnexionLost);
+    return;
     _socketLiveAnalogsData = await _connectToSocket(
         ipAddress: serverIp,
         port: liveAnalogsDataPort,

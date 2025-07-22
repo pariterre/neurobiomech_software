@@ -116,21 +116,25 @@ ClientSession::~ClientSession() { disconnect(); }
 
 void ClientSession::connectCommandSocket(
     std::shared_ptr<asio::ip::tcp::socket> socket) {
-  // Once the client has disconnected, we cannot connect anymore, they must
-  // reconnect
   if (m_HasDisconnected)
     return;
-
   m_CommandSocket = socket;
   tryStartSessionLoop();
 }
 
+void ClientSession::connectResponseSocket(
+    std::shared_ptr<asio::ip::tcp::socket> socket) {
+  if (m_HasDisconnected)
+    return;
+  m_ResponseSocket = socket;
+  tryStartSessionLoop();
+}
+
 bool ClientSession::isConnected() const {
-  return !m_HasDisconnected && m_CommandSocket && m_CommandSocket->is_open();
-  //  && m_ResponseSocket &&
-  //        m_ResponseSocket->is_open() && m_LiveDataSocket &&
-  //        m_LiveDataSocket->is_open() && m_LiveAnalysesSocket &&
-  //        m_LiveAnalysesSocket->is_open();
+  return !m_HasDisconnected && m_CommandSocket && m_CommandSocket->is_open() &&
+         m_ResponseSocket && m_ResponseSocket->is_open();
+  // && m_LiveDataSocket && m_LiveDataSocket->is_open()
+  // && m_LiveAnalysesSocket && m_LiveAnalysesSocket->is_open();
 }
 
 void ClientSession::disconnect() {
@@ -173,10 +177,11 @@ void ClientSession::tryStartSessionLoop() {
 }
 
 void ClientSession::commandSocketLoop() {
-  auto buffer = std::array<char, BYTES_IN_CLIENT_PACKET_HEADER>();
+  auto buffer =
+      std::make_shared<std::array<char, BYTES_IN_CLIENT_PACKET_HEADER>>();
   m_CommandSocket->async_read_some(
-      asio::buffer(buffer),
-      [this, &buffer](const asio::error_code &ec, size_t byteRead) {
+      asio::buffer(*buffer),
+      [this, buffer](const asio::error_code &ec, size_t byteRead) {
         auto &logger = utils::Logger::getInstance();
         if (ec) {
           // If anything went wrong, disconnect the client
@@ -185,7 +190,7 @@ void ClientSession::commandSocketLoop() {
         }
 
         // Parse the packet
-        TcpServerCommand command = parseCommandPacket(buffer);
+        TcpServerCommand command = parseCommandPacket(*buffer);
 
         // Handle the command based on the current status
         if (!(m_IsHandshakeDone ? m_HandleCommand(command, *this)
@@ -193,6 +198,7 @@ void ClientSession::commandSocketLoop() {
           // If anything went wrong, disconnect the client
           disconnect();
         }
+        m_IsHandshakeDone = true;
 
         // If we get here, the command was successful and we can continue
         // listening for the next command
@@ -226,39 +232,20 @@ void TcpServer::startServer() {
 void TcpServer::startServerSync() {
   auto &logger = utils::Logger::getInstance();
 
-  // Create the contexts and acceptors
-  m_CommandAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
-      *m_Context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_CommandPort));
-  logger.info("TCP Command server started on port " +
-              std::to_string(m_CommandPort));
-
-  m_ResponseAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
-      *m_Context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_ResponsePort));
-  logger.info("TCP Response server started on port " +
-              std::to_string(m_ResponsePort));
-
-  m_LiveDataAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
-      *m_Context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_LiveDataPort));
-  logger.info("TCP Live Data server started on port " +
-              std::to_string(m_LiveDataPort));
-
-  m_LiveAnalysesAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
-      *m_Context,
-      asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_LiveAnalysesPort));
-  logger.info("TCP Live Analyses server started on port " +
-              std::to_string(m_LiveAnalysesPort));
+  startAcceptors();
 
   m_IsServerRunning = true;
   m_Status = TcpServerStatus::CONNECTING;
-  startAcceptingConnexions();
+  startAcceptingSocketConnexions();
   m_Context->run();
   logger.info("TCP Server is terminating");
 }
 
-void TcpServer::startAcceptingConnexions() {
+void TcpServer::startAcceptingSocketConnexions() {
   acceptSocketConnexion(m_CommandAcceptor,
                         &TcpServer::handleCommandSocketConnexion);
-  // acceptLoop(m_ResponseAcceptor, &TcpServer::handleResponseSocket);
+  acceptSocketConnexion(m_ResponseAcceptor,
+                        &TcpServer::handleResponseSocketConnexion);
   // acceptLoop(m_LiveDataAcceptor, &TcpServer::handleLiveDataSocket);
   // acceptLoop(m_LiveAnalysesAcceptor, &TcpServer::handleLiveAnalysesSocket);
 }
@@ -286,6 +273,14 @@ void TcpServer::handleCommandSocketConnexion(
 
   auto session = getOrCreateSession(sessionId);
   session->connectCommandSocket(socket);
+}
+
+void TcpServer::handleResponseSocketConnexion(
+    std::shared_ptr<asio::ip::tcp::socket> socket) {
+  std::string sessionId = readSessionId(socket);
+
+  auto session = getOrCreateSession(sessionId);
+  session->connectResponseSocket(socket);
 }
 
 std::shared_ptr<ClientSession>
@@ -498,6 +493,32 @@ void TcpServer::disconnectClients() {
 //   return true;
 // }
 
+void TcpServer::startAcceptors() {
+  auto &logger = utils::Logger::getInstance();
+
+  // Create the contexts and acceptors
+  m_CommandAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
+      *m_Context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_CommandPort));
+  logger.info("TCP Command server started on port " +
+              std::to_string(m_CommandPort));
+
+  m_ResponseAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
+      *m_Context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_ResponsePort));
+  logger.info("TCP Response server started on port " +
+              std::to_string(m_ResponsePort));
+
+  m_LiveDataAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
+      *m_Context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_LiveDataPort));
+  logger.info("TCP Live Data server started on port " +
+              std::to_string(m_LiveDataPort));
+
+  m_LiveAnalysesAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
+      *m_Context,
+      asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_LiveAnalysesPort));
+  logger.info("TCP Live Analyses server started on port " +
+              std::to_string(m_LiveAnalysesPort));
+}
+
 void TcpServer::cancelAcceptors() {
   if (m_CommandAcceptor && m_CommandAcceptor->is_open()) {
     m_CommandAcceptor->cancel();
@@ -611,12 +632,12 @@ bool TcpServer::handleCommand(TcpServerCommand command,
   case TcpServerCommand::GET_LAST_TRIAL_DATA: {
     auto data = m_Devices.getLastTrialDataSerialized();
     auto dataDump = data.dump();
-    asio::write(*m_ResponseSocket,
+    asio::write(*session.getResponseSocket(),
                 asio::buffer(constructResponsePacket(
                     static_cast<TcpServerResponse>(dataDump.size()))),
                 error);
-    auto written =
-        asio::write(*m_ResponseSocket, asio::buffer(dataDump), error);
+    auto written = asio::write(*session.getResponseSocket(),
+                               asio::buffer(dataDump), error);
     logger.info("Data size: " + std::to_string(written));
     response = TcpServerResponse::OK;
   } break;
@@ -681,7 +702,8 @@ nlohmann::json TcpServer::handleExtraData(asio::error_code &error,
 
   // Receive the size of the data
   auto buffer = std::array<char, BYTES_IN_CLIENT_PACKET_HEADER>();
-  size_t byteRead = asio::read(*m_ResponseSocket, asio::buffer(buffer), error);
+  size_t byteRead =
+      asio::read(*session.getResponseSocket(), asio::buffer(buffer), error);
   if (byteRead != BYTES_IN_CLIENT_PACKET_HEADER || error) {
     logger.fatal("TCP read error: " + error.message());
     throw std::runtime_error("Failed to read the size of the data");
@@ -691,7 +713,8 @@ nlohmann::json TcpServer::handleExtraData(asio::error_code &error,
   std::uint32_t dataSize =
       static_cast<std::uint32_t>(parseCommandPacket(buffer));
   auto dataBuffer = std::vector<char>(dataSize);
-  byteRead = asio::read(*m_ResponseSocket, asio::buffer(dataBuffer), error);
+  byteRead =
+      asio::read(*session.getResponseSocket(), asio::buffer(dataBuffer), error);
   if (byteRead != dataSize || error) {
     logger.fatal("TCP read error: " + error.message());
     throw std::runtime_error("Failed to read the data");
