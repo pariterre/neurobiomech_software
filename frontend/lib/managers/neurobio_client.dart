@@ -78,8 +78,8 @@ class NeurobioClient {
   bool get isInitialized =>
       _socketCommand != null &&
       _socketResponse != null &&
-      _socketLiveAnalogsData != null;
-  // && _socketLiveAnalyses != null;
+      _socketLiveAnalogsData != null &&
+      _socketLiveAnalyses != null;
   bool get isConnectedToDelsysAnalog => _isConnectedToDelsysAnalog;
   bool get isConnectedToDelsysEmg => _isConnectedToDelsysEmg;
   bool get isConnectedToLiveAnalogsData => _isConnectedToLiveAnalogsData;
@@ -198,7 +198,6 @@ class NeurobioClient {
         hasDataCallback: _receiveLiveAnalogsData,
         onConnexionLost: onConnexionLost);
     _isConnectedToLiveAnalogsData = true;
-    return;
     _socketLiveAnalyses = await _connectToSocket(
         ipAddress: serverIp,
         port: liveAnalysesPort,

@@ -64,6 +64,10 @@ public:
   /// @param socket The socket to connect the live data socket to
   void connectLiveDataSocket(std::shared_ptr<asio::ip::tcp::socket> socket);
 
+  /// @brief Connect the live analyses socket to the given socket
+  /// @param socket The socket to connect the live analyses socket to
+  void connectLiveAnalysesSocket(std::shared_ptr<asio::ip::tcp::socket> socket);
+
   /// @brief Returns if the session is connected
   /// @return True if the session is connected, false otherwise
   bool isConnected() const;
@@ -95,8 +99,8 @@ protected:
   DECLARE_PROTECTED_MEMBER(std::shared_ptr<asio::ip::tcp::socket>,
                            LiveDataSocket);
   /// @brief The live analyses socket used to communicate with the client
-  DECLARE_PROTECTED_MEMBER_NOGET(std::shared_ptr<asio::ip::tcp::socket>,
-                                 LiveAnalysesSocket);
+  DECLARE_PROTECTED_MEMBER(std::shared_ptr<asio::ip::tcp::socket>,
+                           LiveAnalysesSocket);
 
   /// @brief The function to call when a handshake is received
   /// @param command The command received
@@ -211,6 +215,10 @@ protected:
   /// @param socket The socket that has answered the connexion
   void handleLiveDataSocket(std::shared_ptr<asio::ip::tcp::socket> socket);
 
+  /// @brief Handle a live analyses socket connexion
+  /// @param socket The socket that has answered the connexion
+  void handleLiveAnalysesSocket(std::shared_ptr<asio::ip::tcp::socket> socket);
+
   /// @brief Handle a client that has disconnected
   /// @param session The client session that has disconnected
   void handleClientHasDisconnected(const ClientSession &session);
@@ -275,10 +283,6 @@ protected:
   /// @brief The timeout period for the server
   DECLARE_PROTECTED_MEMBER(std::chrono::milliseconds, TimeoutPeriod);
 
-  /// @brief The socket that is connected to the client for live analyses
-  DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
-                                 LiveAnalysesSocket);
-
   /// @brief The acceptor that listens to the command port
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::acceptor>,
                                  CommandAcceptor);
@@ -324,18 +328,19 @@ protected:
   bool removeDevice(const std::string &deviceName,
                     bool restartStreaming = true);
 
+  /// @brief The timer used to send the live data to the client
+  DECLARE_PROTECTED_MEMBER_NOGET(std::shared_ptr<asio::steady_timer>,
+                                 LiveDataTimer);
+
   /// @brief The session loop that handles the live data socket
   void liveDataLoop();
 
   /// @brief The timer used to send the live data to the client
   DECLARE_PROTECTED_MEMBER_NOGET(std::shared_ptr<asio::steady_timer>,
-                                 LiveDataTimer);
-
-  /// @brief Handle the sending of the live data to the client
-  void handleSendLiveData();
+                                 LiveAnalysesTimer);
 
   /// @brief Handle the analysis of the live data
-  void handleSendAnalyzedLiveData();
+  void liveAnalysesLoop();
 
 private:
   /// @brief The asio contexts used for async methods of the server

@@ -138,11 +138,19 @@ void ClientSession::connectLiveDataSocket(
   tryStartSessionLoop();
 }
 
+void ClientSession::connectLiveAnalysesSocket(
+    std::shared_ptr<asio::ip::tcp::socket> socket) {
+  if (m_HasDisconnected)
+    return;
+  m_LiveAnalysesSocket = socket;
+  tryStartSessionLoop();
+}
+
 bool ClientSession::isConnected() const {
   return !m_HasDisconnected && m_CommandSocket && m_CommandSocket->is_open() &&
          m_ResponseSocket && m_ResponseSocket->is_open() && m_LiveDataSocket &&
-         m_LiveDataSocket->is_open();
-  // && m_LiveAnalysesSocket && m_LiveAnalysesSocket->is_open();
+         m_LiveDataSocket->is_open() && m_LiveAnalysesSocket &&
+         m_LiveAnalysesSocket->is_open();
 }
 
 void ClientSession::disconnect() {
@@ -228,7 +236,10 @@ TcpServer::TcpServer(int commandPort, int responsePort, int liveDataPort,
       m_Context(std::make_shared<asio::io_context>()) {
   m_LiveDataTimer = std::make_shared<asio::steady_timer>(
       *m_Context, std::chrono::milliseconds(100));
+  m_LiveAnalysesTimer = std::make_shared<asio::steady_timer>(
+      *m_Context, std::chrono::milliseconds(25));
   liveDataLoop();
+  liveAnalysesLoop();
 }
 
 TcpServer::~TcpServer() {
@@ -260,13 +271,14 @@ void TcpServer::startServerSync() {
 
 void TcpServer::startAcceptingSocketConnexions() {
   // TODO: Add a timeout to drop clients that are not connected after a certain
-  // time
+  // time (m_TimeoutPeriod)
   acceptSocketConnexion(m_CommandAcceptor,
                         &TcpServer::handleCommandSocketConnexion);
   acceptSocketConnexion(m_ResponseAcceptor,
                         &TcpServer::handleResponseSocketConnexion);
   acceptSocketConnexion(m_LiveDataAcceptor, &TcpServer::handleLiveDataSocket);
-  // acceptLoop(m_LiveAnalysesAcceptor, &TcpServer::handleLiveAnalysesSocket);
+  acceptSocketConnexion(m_LiveAnalysesAcceptor,
+                        &TcpServer::handleLiveAnalysesSocket);
 }
 
 void TcpServer::acceptSocketConnexion(
@@ -308,6 +320,14 @@ void TcpServer::handleLiveDataSocket(
 
   auto session = getOrCreateSession(sessionId);
   session->connectLiveDataSocket(socket);
+}
+
+void TcpServer::handleLiveAnalysesSocket(
+    std::shared_ptr<asio::ip::tcp::socket> socket) {
+  std::string sessionId = readSessionId(socket);
+
+  auto session = getOrCreateSession(sessionId);
+  session->connectLiveAnalysesSocket(socket);
 }
 
 std::shared_ptr<ClientSession>
@@ -729,6 +749,10 @@ void TcpServer::liveDataLoop() {
 
   m_LiveDataTimer->async_wait([this](const asio::error_code &ec) {
     auto &logger = utils::Logger::getInstance();
+    if (ec) {
+      logger.info("Live data loop stopped");
+      return;
+    }
     logger.debug("Sending live data to client");
 
     auto data = m_Devices.getLiveDataSerialized();
@@ -762,36 +786,68 @@ void TcpServer::liveDataLoop() {
   });
 }
 
-void TcpServer::handleSendLiveData() {}
+void TcpServer::liveAnalysesLoop() {
+  m_LiveAnalysesTimer->expires_at(std::chrono::steady_clock::now() +
+                                  std::chrono::milliseconds(25));
+  m_LiveAnalysesTimer->async_wait([this](const asio::error_code &ec) {
+    auto &logger = utils::Logger::getInstance();
+    if (ec) {
+      logger.info("Live analyses loop stopped");
+      return;
+    }
 
-void TcpServer::handleSendAnalyzedLiveData() {
-  // TODO Only send data to clients that registered for live analyses
+    if (m_Analyzers.size() == 0) {
+      // No analyzers to run, reschedule the next execution
+      liveAnalysesLoop();
+      return;
+    }
 
-  if (m_Analyzers.size() == 0) {
-    return;
-  }
+    std::map<std::string, data::TimeSeries> data = m_Devices.getLiveData();
+    if (data.size() == 0) {
+      // No data to analyze, reschedule the next execution
+      liveAnalysesLoop();
+      return;
+    }
 
-  std::map<std::string, data::TimeSeries> data = m_Devices.getLiveData();
-  if (data.size() == 0) {
-    return;
-  }
+    // If we get here, we have data to analyze, so we do analyze them
+    logger.debug("Analyzing live data");
+    analyzer::Predictions predictions;
+    try {
+      predictions = m_Analyzers.predict(data);
+    } catch (const analyzer::TimeWentBackwardException &) {
+      // This can happen quite a lot if intervals is faster than the one
+      // from data collector, so we just ignore it
+      liveAnalysesLoop();
+      return;
+    } catch (...) {
+      // Some other can get wrong when the user starts the analyzer before
+      // starting the data collector, so we log the error and reschedule the
+      // next execution
+      logger.fatal("Failed to analyze live data");
+      liveAnalysesLoop();
+      return;
+    }
 
-  auto &logger = utils::Logger::getInstance();
-  logger.debug("Analyzing live data");
+    // Serialize the predictions
+    auto dataDump = predictions.serialize().dump();
+    auto dataSize = asio::buffer(constructResponsePacket(
+        static_cast<TcpServerResponse>(dataDump.size())));
+    auto dataToSend = asio::buffer(dataDump);
 
-  // Analyze the data
-  auto predictions = m_Analyzers.predict(data);
-
-  // Transform the predictions into JSON
-  auto dataDump = predictions.serialize().dump();
-  asio::error_code error;
-  asio::write(*m_LiveAnalysesSocket,
-              asio::buffer(constructResponsePacket(
-                  static_cast<TcpServerResponse>(dataDump.size()))),
-              error);
-  auto written =
-      asio::write(*m_LiveAnalysesSocket, asio::buffer(dataDump), error);
-  logger.debug("Live analyses data size: " + std::to_string(written));
+    asio::error_code error;
+    for (auto &session : m_Sessions) {
+      try {
+        auto &socket = session.second->getLiveAnalysesSocket();
+        asio::write(*socket, dataSize, error);
+        asio::write(*socket, dataToSend, error);
+      } catch (const std::exception &e) {
+        // Do nothing and hope for the best
+      }
+    }
+    logger.debug("Live analyses data size: " + std::to_string(dataDump.size()) +
+                 " sent to " + std::to_string(m_Sessions.size()) + " clients");
+    liveAnalysesLoop();
+  });
 }
 
 void TcpServerMock::makeAndAddDevice(const std::string &deviceName) {
