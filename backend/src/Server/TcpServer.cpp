@@ -175,10 +175,9 @@ void ClientSession::disconnect() {
   closeSocket(m_LiveDataSocket);
   closeSocket(m_LiveAnalysesSocket);
 
-  m_OnDisconnect(*this);
-
   utils::Logger::getInstance().info("Session " + m_Id +
                                     " disconnected and cleaned up.");
+  m_OnDisconnect(*this);
 }
 
 void ClientSession::startTimerForTimeout() {
@@ -210,6 +209,7 @@ void ClientSession::tryStartSessionLoop() {
   }
 
   // All sockets connected — spawn logic
+  m_ConnexionTimer.reset();
   auto &logger = utils::Logger::getInstance();
   logger.info("Starting client session with ID: " + m_Id);
 
