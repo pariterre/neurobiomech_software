@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:frontend/models/command.dart';
@@ -9,6 +10,7 @@ import 'package:frontend/models/ack.dart';
 import 'package:logging/logging.dart';
 
 const _serverHeaderLength = 16;
+final _socketState = Random().nextInt(0xEFFFFFFE) + 0x10000000;
 
 class NeurobioClient {
   static const communicationProtocolVersion = 2;
@@ -623,6 +625,9 @@ class NeurobioClient {
           disconnect();
           onConnexionLost();
         });
+
+        socket.add(Command.constructPacket(command: _socketState));
+        await socket.flush();
 
         return socket;
       } on SocketException {

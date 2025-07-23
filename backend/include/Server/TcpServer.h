@@ -43,7 +43,7 @@ enum class TcpServerResponse : std::uint32_t {
 class ClientSession {
 public:
   ClientSession(
-      std::shared_ptr<asio::io_context> context, std::string id,
+      std::shared_ptr<asio::io_context> context, std::uint32_t id,
       std::function<bool(TcpServerCommand command, const ClientSession &client)>
           handleHandshake,
       std::function<bool(TcpServerCommand command, const ClientSession &client)>
@@ -90,7 +90,7 @@ protected:
   DECLARE_PROTECTED_MEMBER_NOGET(std::shared_ptr<asio::io_context>, Context);
 
   /// @brief The sessions id of the client
-  DECLARE_PROTECTED_MEMBER(std::string, Id);
+  DECLARE_PROTECTED_MEMBER(std::uint32_t, Id);
 
   /// @brief Whether the handshake has been completed
   DECLARE_PROTECTED_MEMBER(bool, IsHandshakeDone);
@@ -178,7 +178,7 @@ public:
 public:
   /// @brief Check if a session is connected
   /// @param id The id of the session to check
-  bool isClientConnected(const std::string &id) const;
+  bool isClientConnected(const std::uint32_t &id) const;
 
 protected:
   /// @brief Start accepting connexions on all the ports
@@ -190,18 +190,18 @@ protected:
   /// @brief Get or create a session for the given id
   /// @param id The id of the session to get or create
   /// @return The session for the given id
-  std::shared_ptr<ClientSession> getOrCreateSession(const std::string &id);
+  std::shared_ptr<ClientSession> getOrCreateSession(std::uint32_t id);
 
   /// @brief Read the session id from the socket
   /// @param socket The socket to read the session id from
   /// @return The session id read from the socket
-  std::string readSessionId(std::shared_ptr<asio::ip::tcp::socket> socket);
+  std::uint32_t readSessionId(std::shared_ptr<asio::ip::tcp::socket> socket);
 
   /// @brief The mutex used to protect the sessions
   DECLARE_PROTECTED_MEMBER_NOGET(std::mutex, SessionMutex);
 
   /// @brief The sessions that are currently connected to the server
-  std::unordered_map<std::string, std::shared_ptr<ClientSession>> m_Sessions;
+  std::unordered_map<std::uint32_t, std::shared_ptr<ClientSession>> m_Sessions;
 
   /// @brief Start accepting connexions on all the ports
   void startAcceptingSocketConnexions();

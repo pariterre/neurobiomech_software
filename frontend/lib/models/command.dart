@@ -122,6 +122,9 @@ enum Command {
     // Packets are exactly 8 bytes long, little-endian
     // - First 4 bytes are the version number
     // - Next 4 bytes are the command
+    if (command < 0 || command > 0xFFFFFFFF) {
+      throw ArgumentError('Command must be between 0 and 0xFFFFFFFF');
+    }
 
     final protocolVersion = NeurobioClient.communicationProtocolVersion
         .toRadixString(16)

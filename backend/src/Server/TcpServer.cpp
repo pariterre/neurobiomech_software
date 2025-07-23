@@ -102,7 +102,7 @@ const std::string DEVICE_NAME_DELSYS_ANALOG = "DelsysAnalogDevice";
 const std::string DEVICE_NAME_MAGSTIM = "MagstimRapidDevice";
 
 ClientSession::ClientSession(
-    std::shared_ptr<asio::io_context> context, std::string id,
+    std::shared_ptr<asio::io_context> context, std::uint32_t id,
     std::function<bool(TcpServerCommand command, const ClientSession &client)>
         handleHandshake,
     std::function<bool(TcpServerCommand command, const ClientSession &client)>
@@ -175,7 +175,7 @@ void ClientSession::disconnect() {
   closeSocket(m_LiveDataSocket);
   closeSocket(m_LiveAnalysesSocket);
 
-  utils::Logger::getInstance().info("Session " + m_Id +
+  utils::Logger::getInstance().info("Session " + std::to_string(m_Id) +
                                     " disconnected and cleaned up.");
   m_OnDisconnect(*this);
 }
@@ -192,7 +192,7 @@ void ClientSession::startTimerForTimeout() {
     // If we reach here, the timer expired, meaning the client did not
     // connect all sockets in time, so we disconnect them
     auto &logger = utils::Logger::getInstance();
-    logger.warning("Client session " + m_Id +
+    logger.warning("Client session " + std::to_string(m_Id) +
                    " did not connect all sockets in time, disconnecting.");
     disconnect();
   });
@@ -211,7 +211,7 @@ void ClientSession::tryStartSessionLoop() {
   // All sockets connected — spawn logic
   m_ConnexionTimer.reset();
   auto &logger = utils::Logger::getInstance();
-  logger.info("Starting client session with ID: " + m_Id);
+  logger.info("Starting client session with ID: " + std::to_string(m_Id));
 
   // Start reading from the sockets
   commandSocketLoop();
@@ -311,7 +311,10 @@ void TcpServer::acceptSocketConnexion(
 
 void TcpServer::handleCommandSocketConnexion(
     std::shared_ptr<asio::ip::tcp::socket> socket) {
-  std::string sessionId = readSessionId(socket);
+  auto sessionId = readSessionId(socket);
+  if (sessionId == 0xFFFFFFFF) {
+    return;
+  }
 
   auto session = getOrCreateSession(sessionId);
   session->connectCommandSocket(socket);
@@ -319,7 +322,10 @@ void TcpServer::handleCommandSocketConnexion(
 
 void TcpServer::handleResponseSocketConnexion(
     std::shared_ptr<asio::ip::tcp::socket> socket) {
-  std::string sessionId = readSessionId(socket);
+  auto sessionId = readSessionId(socket);
+  if (sessionId == 0xFFFFFFFF) {
+    return;
+  }
 
   auto session = getOrCreateSession(sessionId);
   session->connectResponseSocket(socket);
@@ -327,7 +333,10 @@ void TcpServer::handleResponseSocketConnexion(
 
 void TcpServer::handleLiveDataSocket(
     std::shared_ptr<asio::ip::tcp::socket> socket) {
-  std::string sessionId = readSessionId(socket);
+  auto sessionId = readSessionId(socket);
+  if (sessionId == 0xFFFFFFFF) {
+    return;
+  }
 
   auto session = getOrCreateSession(sessionId);
   session->connectLiveDataSocket(socket);
@@ -335,14 +344,16 @@ void TcpServer::handleLiveDataSocket(
 
 void TcpServer::handleLiveAnalysesSocket(
     std::shared_ptr<asio::ip::tcp::socket> socket) {
-  std::string sessionId = readSessionId(socket);
+  auto sessionId = readSessionId(socket);
+  if (sessionId == 0xFFFFFFFF) {
+    return;
+  }
 
   auto session = getOrCreateSession(sessionId);
   session->connectLiveAnalysesSocket(socket);
 }
 
-std::shared_ptr<ClientSession>
-TcpServer::getOrCreateSession(const std::string &id) {
+std::shared_ptr<ClientSession> TcpServer::getOrCreateSession(std::uint32_t id) {
   std::lock_guard<std::mutex> lock(m_SessionMutex);
   auto &session = m_Sessions[id];
   if (!session) {
@@ -362,9 +373,53 @@ TcpServer::getOrCreateSession(const std::string &id) {
   return session;
 }
 
-std::string
+std::uint32_t
 TcpServer::readSessionId(std::shared_ptr<asio::ip::tcp::socket> socket) {
-  return "coucou";
+  auto id = std::make_shared<std::uint32_t>(0xFFFFFFFF); // Default invalid ID
+  auto hasValue = std::make_shared<bool>(false);
+
+  // Start a timer so a user that would not send the session ID
+  // will be disconnected after a while
+  auto timer =
+      std::make_shared<asio::steady_timer>(*m_Context, m_TimeoutPeriod);
+  timer->async_wait([hasValue](const asio::error_code &ec) {
+    if (ec)
+      return;         // Timer was canceled
+    *hasValue = true; // Timeout occurred
+  });
+
+  auto buffer =
+      std::make_shared<std::array<char, BYTES_IN_CLIENT_PACKET_HEADER>>();
+  asio::async_read(
+      *socket, asio::buffer(*buffer),
+      [this, hasValue, id, timer, buffer](const asio::error_code &ec,
+                                          std::size_t byteRead) {
+        if (ec || byteRead != BYTES_IN_CLIENT_PACKET_HEADER || *hasValue) {
+          // If anything went wrong, we will return an error value
+          *hasValue = true;
+          return;
+        }
+        timer->cancel(); // Cancel the timer since we successfully read the ID
+
+        *id = static_cast<std::uint32_t>(parseCommandPacket(*buffer));
+        *hasValue = true;
+      });
+
+  // Wait for the timer or the async read to finish
+  while (!*hasValue) {
+    m_Context->run_one();
+  }
+
+  if (*id < 0x10000000) {
+    *id = 0xFFFFFFFF; // Invalid ID, return error value
+  }
+  if (*id == 0xFFFFFFFF) {
+    auto &logger = utils::Logger::getInstance();
+    logger.warning("Invalid session ID received, disconnecting client.");
+    socket->close(); // Close the socket if the ID is invalid
+  }
+
+  return *id;
 }
 
 void TcpServer::handleClientHasDisconnected(const ClientSession &session) {
@@ -418,7 +473,7 @@ void TcpServer::stopServer() {
   logger.info("Server has shut down");
 }
 
-bool TcpServer::isClientConnected(const std::string &id) const {
+bool TcpServer::isClientConnected(const std::uint32_t &id) const {
   return m_Sessions.find(id) != m_Sessions.end();
 }
 
@@ -493,7 +548,8 @@ bool TcpServer::handleHandshake(TcpServerCommand command,
 
   // Set the status to running
   m_Status = TcpServerStatus::CONNECTED;
-  logger.info("Handshake from client is valid");
+  logger.info("Handshake from client " + std::to_string(session.getId()) +
+              " successful, server is now connected.");
 
   return true;
 }

@@ -22,7 +22,7 @@ void ensureServerIsConnected(
     const NEUROBIO_NAMESPACE::server::TcpServerMock &server) {
   auto startingWaitingTime = std::chrono::high_resolution_clock::now();
   while (true) {
-    if (server.isClientConnected("my_id") ||
+    if (server.isClientConnected(0xEEEEEEEE) ||
         std::chrono::high_resolution_clock::now() >
             startingWaitingTime + sufficientTimeoutPeriod) {
       break;
@@ -35,7 +35,7 @@ void ensureServerIsDisconnected(
     const NEUROBIO_NAMESPACE::server::TcpServerMock &server) {
   auto startingWaitingTime = std::chrono::high_resolution_clock::now();
   while (true) {
-    if (!server.isClientConnected("my_id") ||
+    if (!server.isClientConnected(0xEEEEEEEE) ||
         std::chrono::high_resolution_clock::now() >
             startingWaitingTime + sufficientTimeoutPeriod) {
       break;
