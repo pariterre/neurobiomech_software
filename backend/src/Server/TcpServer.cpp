@@ -384,6 +384,10 @@ void TcpServer::stopServer() {
   auto &logger = utils::Logger::getInstance();
   logger.info("Stopping the server...");
 
+  // Terminating the timers
+  m_LiveDataTimer->cancel();
+  m_LiveAnalysesTimer->cancel();
+
   // Make sure all the devices are properly disconnected
   logger.info("Disconnecting all devices");
   for (auto &name : m_Devices.getDeviceNames()) {
