@@ -311,7 +311,7 @@ void TcpServer::acceptSocketConnexion(
 
 void TcpServer::handleCommandSocketConnexion(
     std::shared_ptr<asio::ip::tcp::socket> socket) {
-  auto sessionId = readSessionId(socket);
+  auto sessionId = readSessionIdFromSocket(socket);
   if (sessionId == 0xFFFFFFFF) {
     return;
   }
@@ -322,7 +322,7 @@ void TcpServer::handleCommandSocketConnexion(
 
 void TcpServer::handleResponseSocketConnexion(
     std::shared_ptr<asio::ip::tcp::socket> socket) {
-  auto sessionId = readSessionId(socket);
+  auto sessionId = readSessionIdFromSocket(socket);
   if (sessionId == 0xFFFFFFFF) {
     return;
   }
@@ -333,7 +333,7 @@ void TcpServer::handleResponseSocketConnexion(
 
 void TcpServer::handleLiveDataSocket(
     std::shared_ptr<asio::ip::tcp::socket> socket) {
-  auto sessionId = readSessionId(socket);
+  auto sessionId = readSessionIdFromSocket(socket);
   if (sessionId == 0xFFFFFFFF) {
     return;
   }
@@ -344,7 +344,7 @@ void TcpServer::handleLiveDataSocket(
 
 void TcpServer::handleLiveAnalysesSocket(
     std::shared_ptr<asio::ip::tcp::socket> socket) {
-  auto sessionId = readSessionId(socket);
+  auto sessionId = readSessionIdFromSocket(socket);
   if (sessionId == 0xFFFFFFFF) {
     return;
   }
@@ -373,8 +373,8 @@ std::shared_ptr<ClientSession> TcpServer::getOrCreateSession(std::uint32_t id) {
   return session;
 }
 
-std::uint32_t
-TcpServer::readSessionId(std::shared_ptr<asio::ip::tcp::socket> socket) {
+std::uint32_t TcpServer::readSessionIdFromSocket(
+    std::shared_ptr<asio::ip::tcp::socket> socket) {
   auto id = std::make_shared<std::uint32_t>(0xFFFFFFFF); // Default invalid ID
   auto hasValue = std::make_shared<bool>(false);
 
@@ -413,6 +413,16 @@ TcpServer::readSessionId(std::shared_ptr<asio::ip::tcp::socket> socket) {
   if (*id < 0x10000000) {
     *id = 0xFFFFFFFF; // Invalid ID, return error value
   }
+
+  auto &session = m_Sessions[*id];
+  if (session && session->isConnected()) {
+    // If the session is already connected so the state is invalid
+    auto &logger = utils::Logger::getInstance();
+    logger.warning("Client with ID " + std::to_string(*id) +
+                   " is already connected, please choose a different ID.");
+    *id = 0xFFFFFFFF; // Return error value
+  }
+
   if (*id == 0xFFFFFFFF) {
     auto &logger = utils::Logger::getInstance();
     logger.warning("Invalid session ID received, disconnecting client.");

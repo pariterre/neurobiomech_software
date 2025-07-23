@@ -195,7 +195,8 @@ protected:
   /// @brief Read the session id from the socket
   /// @param socket The socket to read the session id from
   /// @return The session id read from the socket
-  std::uint32_t readSessionId(std::shared_ptr<asio::ip::tcp::socket> socket);
+  std::uint32_t
+  readSessionIdFromSocket(std::shared_ptr<asio::ip::tcp::socket> socket);
 
   /// @brief The mutex used to protect the sessions
   DECLARE_PROTECTED_MEMBER_NOGET(std::mutex, SessionMutex);

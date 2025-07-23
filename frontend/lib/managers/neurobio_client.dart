@@ -10,7 +10,6 @@ import 'package:frontend/models/ack.dart';
 import 'package:logging/logging.dart';
 
 const _serverHeaderLength = 16;
-final _socketState = Random().nextInt(0xEFFFFFFE) + 0x10000000;
 
 class NeurobioClient {
   static const communicationProtocolVersion = 2;
@@ -181,19 +180,24 @@ class NeurobioClient {
     required int? nbOfRetries,
     required Function()? onConnexionLost,
   }) async {
+    final id = Random().nextInt(0xEFFFFFFE) + 0x10000000;
+
     _socketCommand = await _connectToSocket(
+        id: id,
         ipAddress: serverIp,
         port: commandPort,
         nbOfRetries: nbOfRetries,
         hasDataCallback: _receiveCommandAck,
         onConnexionLost: onConnexionLost);
     _socketResponse = await _connectToSocket(
+        id: id,
         ipAddress: serverIp,
         port: responsePort,
         nbOfRetries: nbOfRetries,
         hasDataCallback: _receiveResponse,
         onConnexionLost: onConnexionLost);
     _socketLiveAnalogsData = await _connectToSocket(
+        id: id,
         ipAddress: serverIp,
         port: liveAnalogsDataPort,
         nbOfRetries: nbOfRetries,
@@ -201,6 +205,7 @@ class NeurobioClient {
         onConnexionLost: onConnexionLost);
     _isConnectedToLiveAnalogsData = true;
     _socketLiveAnalyses = await _connectToSocket(
+        id: id,
         ipAddress: serverIp,
         port: liveAnalysesPort,
         nbOfRetries: nbOfRetries,
@@ -610,6 +615,7 @@ class NeurobioClient {
   NeurobioClient._();
 
   Future<Socket?> _connectToSocket({
+    required int id,
     required String ipAddress,
     required int port,
     required int? nbOfRetries,
@@ -626,7 +632,7 @@ class NeurobioClient {
           onConnexionLost();
         });
 
-        socket.add(Command.constructPacket(command: _socketState));
+        socket.add(Command.constructPacket(command: id));
         await socket.flush();
 
         return socket;
