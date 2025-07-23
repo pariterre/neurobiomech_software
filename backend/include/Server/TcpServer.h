@@ -197,9 +197,6 @@ protected:
   /// @return The session id read from the socket
   std::string readSessionId(std::shared_ptr<asio::ip::tcp::socket> socket);
 
-  /// @brief Disconnect all the clients
-  void disconnectClients();
-
   /// @brief The mutex used to protect the sessions
   DECLARE_PROTECTED_MEMBER_NOGET(std::mutex, SessionMutex);
 
@@ -235,13 +232,6 @@ protected:
   /// @brief Handle a client that has disconnected
   /// @param session The client session that has disconnected
   void handleClientHasDisconnected(const ClientSession &session);
-
-  /// @brief Wait for a new command
-  /// @return True if everything is okay, False if the server is shutting down
-  void waitAndHandleNewCommand(std::shared_ptr<ClientSession> session);
-
-  /// @brief If the server is started
-  DECLARE_PROTECTED_MEMBER(bool, IsServerRunning);
 
   /// @brief Get the devices that are currently connected
   DECLARE_PROTECTED_MEMBER(devices::Devices, Devices);
@@ -361,9 +351,6 @@ private:
 
   /// @brief The worker thread for the [startServerAsync] method
   DECLARE_PRIVATE_MEMBER_NOGET(std::thread, ServerWorker);
-
-  /// @brief The mutex to lock certain operations
-  DECLARE_PRIVATE_MEMBER_NOGET(std::mutex, Mutex);
 };
 
 class TcpServerMock : public TcpServer {

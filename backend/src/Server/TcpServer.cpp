@@ -254,9 +254,8 @@ void ClientSession::commandSocketLoop() {
 
 TcpServer::TcpServer(int commandPort, int responsePort, int liveDataPort,
                      int liveAnalysesPort)
-    : m_IsServerRunning(false), m_CommandPort(commandPort),
-      m_ResponsePort(responsePort), m_LiveDataPort(liveDataPort),
-      m_LiveAnalysesPort(liveAnalysesPort),
+    : m_CommandPort(commandPort), m_ResponsePort(responsePort),
+      m_LiveDataPort(liveDataPort), m_LiveAnalysesPort(liveAnalysesPort),
       m_TimeoutPeriod(std::chrono::milliseconds(5000)),
       m_Context(std::make_shared<asio::io_context>()) {
   m_LiveDataTimer = std::make_shared<asio::steady_timer>(
@@ -267,16 +266,7 @@ TcpServer::TcpServer(int commandPort, int responsePort, int liveDataPort,
   liveAnalysesLoop();
 }
 
-TcpServer::~TcpServer() {
-  if (m_IsServerRunning) {
-    stopServer();
-  }
-
-  m_CommandAcceptor.reset();
-  m_ResponseAcceptor.reset();
-  m_LiveDataAcceptor.reset();
-  m_LiveAnalysesAcceptor.reset();
-}
+TcpServer::~TcpServer() { stopServer(); }
 
 void TcpServer::startServer() {
   m_ServerWorker = std::thread([this]() { startServerSync(); });
@@ -287,7 +277,6 @@ void TcpServer::startServerSync() {
 
   startAcceptors();
 
-  m_IsServerRunning = true;
   m_Status = TcpServerStatus::CONNECTING;
   startAcceptingSocketConnexions();
   m_Context->run();
@@ -314,10 +303,9 @@ void TcpServer::acceptSocketConnexion(
         if (!ec) {
           (this->*handler)(socket);
         }
-        if (m_IsServerRunning) {
-          // Continue accepting
-          acceptSocketConnexion(acceptor, handler);
-        }
+
+        // Continue accepting
+        acceptSocketConnexion(acceptor, handler);
       });
 }
 
@@ -385,24 +373,39 @@ void TcpServer::handleClientHasDisconnected(const ClientSession &session) {
   if (it == m_Sessions.end())
     return;
   m_Sessions.erase(it);
-  utils::Logger::getInstance().info("Client " + session.getId() +
-                                    " has disconnected.");
 }
 
 void TcpServer::stopServer() {
-  auto &logger = utils::Logger::getInstance();
+  if (m_Context->stopped()) {
+    return;
+  }
 
   // Shutdown the server down
-  if (m_IsServerRunning) {
-    m_IsServerRunning = false;
+  auto &logger = utils::Logger::getInstance();
+  logger.info("Stopping the server...");
 
-    // When closing the server too soon, client may still be connected, so we
-    // need to disconnect it
-    disconnectClients();
-
-    // Stop any running context
-    m_Context->stop();
+  // Make sure all the devices are properly disconnected
+  logger.info("Disconnecting all devices");
+  for (auto &name : m_Devices.getDeviceNames()) {
+    removeDevice(name, false);
   }
+
+  // Clear the analyzers
+  logger.info("Clearing all the analyzers");
+  m_Analyzers.clear();
+
+  // Disconnect all the clients
+  logger.info("Disconnecting all the clients");
+  for (auto &sessionPair : m_Sessions) {
+    sessionPair.second->disconnect();
+  }
+
+  // Cancel all the acceptors
+  logger.info("Canceling all the acceptors");
+  cancelAcceptors();
+
+  // Stop any running context
+  m_Context->stop();
 
   // Wait for the server to stop
   if (m_ServerWorker.joinable()) {
@@ -413,27 +416,6 @@ void TcpServer::stopServer() {
 
 bool TcpServer::isClientConnected(const std::string &id) const {
   return m_Sessions.find(id) != m_Sessions.end();
-}
-
-// TODO: Only do this if the last client is disconnected
-void TcpServer::disconnectClients() {
-  std::lock_guard<std::mutex> lock(m_Mutex);
-  auto &logger = utils::Logger::getInstance();
-
-  // TODO Add the client id
-  logger.info("Disconnecting clients");
-
-  // Make sure all the devices are properly disconnected (if all clients are
-  // disconnected)
-  for (auto &name : m_Devices.getDeviceNames()) {
-    removeDevice(name, false);
-  }
-
-  // Clear the analyzers
-  m_Analyzers.clear();
-
-  // Stop accepting new connexions
-  cancelAcceptors();
 }
 
 void TcpServer::startAcceptors() {
@@ -798,7 +780,7 @@ void TcpServer::liveDataLoop() {
         auto &socket = session.second->getLiveDataSocket();
         asio::write(*socket, dataSize, error);
         asio::write(*socket, dataToSend, error);
-      } catch (const std::exception &e) {
+      } catch (const std::exception &) {
         // Do nothing and hope for the best
       }
     }
@@ -864,7 +846,7 @@ void TcpServer::liveAnalysesLoop() {
         auto &socket = session.second->getLiveAnalysesSocket();
         asio::write(*socket, dataSize, error);
         asio::write(*socket, dataToSend, error);
-      } catch (const std::exception &e) {
+      } catch (const std::exception &) {
         // Do nothing and hope for the best
       }
     }
