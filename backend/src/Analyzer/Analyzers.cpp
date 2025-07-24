@@ -44,7 +44,7 @@ size_t Analyzers::add(const nlohmann::json &json) {
     // Get the type of the analyzer to create
     std::string analyzerType = json.at("analyzer_type");
 
-    if (analyzerType == "cyclic_timed_events") {
+    if (analyzerType == CyclicTimedEventsAnalyzer::getSerializedName()) {
       logger.info("Creating a cyclic timed events analyzer (" +
                   json.at("name").get<std::string>() + ") from analogs");
       return add(std::make_unique<CyclicTimedEventsAnalyzer>(json));
@@ -105,4 +105,12 @@ Analyzer &Analyzers::getAnalyzer(size_t analyzerId) {
     utils::Logger::getInstance().fatal(message);
     throw std::out_of_range(message);
   }
+}
+
+nlohmann::json Analyzers::getSerializedConfigurations() const {
+  nlohmann::json config;
+  for (const auto &analyzer : m_Analyzers) {
+    config.push_back(analyzer.second->getSerializedConfiguration());
+  }
+  return config;
 }

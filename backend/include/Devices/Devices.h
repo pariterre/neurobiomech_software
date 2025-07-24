@@ -59,10 +59,20 @@ public:
   /// @return The requested device
   const Device &operator[](size_t deviceId) const;
 
+  /// @brief Get if requested device exists in the collection
+  /// @param deviceId The id of the device (the one returned by the add method)
+  /// @return True if the device exists, false otherwise
+  bool hasDevice(size_t deviceId) const;
+
   /// @brief Get the requested device
   /// @param deviceId The id of the device (the one returned by the add method)
   /// @return The requested device
   const Device &getDevice(size_t deviceId) const;
+
+  /// @brief Get if requested data collector exists in the collection
+  /// @param deviceId The id of the data collector
+  /// @return True if the data collector exists, false otherwise
+  bool hasDataCollector(size_t deviceId) const;
 
   /// @brief Get the requested data collector
   /// @param deviceId The id of the data collector

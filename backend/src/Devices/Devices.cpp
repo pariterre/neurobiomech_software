@@ -90,6 +90,10 @@ const Device &Devices::operator[](size_t deviceId) const {
   }
 }
 
+bool Devices::hasDevice(size_t deviceId) const {
+  return m_Devices.find(deviceId) != m_Devices.end();
+}
+
 const Device &Devices::getDevice(size_t deviceId) const {
   try {
     return *m_Devices.at(deviceId);
@@ -99,6 +103,12 @@ const Device &Devices::getDevice(size_t deviceId) const {
     utils::Logger::getInstance().fatal(message);
     throw DeviceNotFoundException(message);
   }
+}
+
+bool Devices::hasDataCollector(size_t deviceId) const {
+  std::lock_guard<std::mutex> lock(
+      const_cast<std::mutex &>(m_MutexDataCollectors));
+  return m_DataCollectors.find(deviceId) != m_DataCollectors.end();
 }
 
 const DataCollector &Devices::getDataCollector(size_t deviceId) const {

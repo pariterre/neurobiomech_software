@@ -21,9 +21,16 @@ public:
   /// @return True if the condition is active, false otherwise
   virtual bool
   isActive(const std::map<std::string, data::TimeSeries> &data) const = 0;
+
+  /// @brief Get the serialized configuration of the condition
+  /// @return The serialized configuration of the condition
+  virtual nlohmann::json getSerializedConfiguration() const = 0;
 };
 
 class ThresholdedCondition : public Condition {
+public:
+  static const std::string getSerializedName() { return "threshold"; }
+
 public:
   /// @brief Constructor of the ThresholdedCondition
   /// @param deviceName The name of the device to gather the data from
@@ -41,6 +48,10 @@ public:
   bool
   isActive(const std::map<std::string, data::TimeSeries> &data) const override;
 
+  /// @brief Get the serialized configuration of the condition
+  /// @return The serialized configuration of the condition
+  nlohmann::json getSerializedConfiguration() const override;
+
 protected:
   /// @brief The name of the device to gather the data from
   DECLARE_PROTECTED_MEMBER(std::string, DeviceName);
@@ -57,6 +68,9 @@ protected:
 
 class DirectionCondition : public ThresholdedCondition {
 public:
+  static const std::string getSerializedName() { return "direction"; }
+
+public:
   /// @brief Constructor of the DirectionCondition
   /// @param deviceName The name of the device to gather the data from
   /// @param channelIndex The channel index to gather the data from
@@ -70,6 +84,10 @@ public:
 public:
   bool
   isActive(const std::map<std::string, data::TimeSeries> &data) const override;
+
+  /// @brief Get the serialized configuration of the condition
+  /// @return The serialized configuration of the condition
+  nlohmann::json getSerializedConfiguration() const override;
 };
 
 class EventConditions {
@@ -96,6 +114,10 @@ public:
 
   bool isActive(size_t currentPhaseIndex,
                 const std::map<std::string, data::TimeSeries> &data) const;
+
+  /// @brief Get the serialized configuration
+  /// @return The serialized configuration
+  nlohmann::json getSerializedConfiguration() const;
 
 protected:
   /// @brief The name of the condition

@@ -39,6 +39,24 @@ CyclicTimedEventsAnalyzer::CyclicTimedEventsAnalyzer(const nlohmann::json &json)
   EventConditions::collapseNameToIndices(m_EventConditions);
 }
 
+nlohmann::json CyclicTimedEventsAnalyzer::getSerializedConfiguration() const {
+  nlohmann::json config;
+  config["name"] = m_Name;
+  config["analyzer_type"] = getSerializedName();
+  config["time_reference_device"] = m_TimeDeviceReferenceName;
+  config["learning_rate"] = m_LearningRate;
+  auto initialPhaseDurations = std::vector<int>();
+  for (const auto &duration : m_InitialTimeEventModel) {
+    initialPhaseDurations.push_back(static_cast<int>(duration.count()));
+  }
+  config["initial_phase_durations"] = initialPhaseDurations;
+  config["events"] = nlohmann::json::array();
+  for (const auto &event : m_EventConditions) {
+    config["events"].push_back(event->getSerializedConfiguration());
+  }
+  return config;
+}
+
 bool CyclicTimedEventsAnalyzer::shouldIncrementPhase(
     const std::map<std::string, data::TimeSeries> &data) {
   for (const auto &event : m_EventConditions) {

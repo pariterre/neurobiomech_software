@@ -75,6 +75,10 @@ public:
   /// @return The requested analyzer
   Analyzer &getAnalyzer(size_t analyzerId);
 
+  /// @brief Get the configuration in a json format
+  /// @return The configuration in a json format
+  nlohmann::json getSerializedConfigurations() const;
+
 protected:
   /// @brief The collection of analyzers
   std::map<size_t, std::shared_ptr<Analyzer>> m_Analyzers;

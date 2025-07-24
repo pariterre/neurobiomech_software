@@ -8,9 +8,9 @@ parseConditions(const nlohmann::json &json) {
   for (const auto &condition : json) {
     std::string conditionType = condition["type"];
 
-    if (conditionType == "threshold")
+    if (conditionType == ThresholdedCondition::getSerializedName())
       conditions.push_back(std::make_unique<ThresholdedCondition>(condition));
-    else if (conditionType == "direction")
+    else if (conditionType == DirectionCondition::getSerializedName())
       conditions.push_back(std::make_unique<DirectionCondition>(condition));
     else
       throw std::invalid_argument("Invalid condition type: " + conditionType);
@@ -39,6 +39,24 @@ getThresholdComparator(const std::string &comparator) {
     throw std::invalid_argument("Invalid comparator: " + comparator);
 }
 
+std::string
+getComparatorAsString(const std::function<bool(double, double)> &comparator) {
+  if (comparator.target<std::greater<double>>() != nullptr)
+    return ">";
+  else if (comparator.target<std::greater_equal<double>>() != nullptr)
+    return ">=";
+  else if (comparator.target<std::less<double>>() != nullptr)
+    return "<";
+  else if (comparator.target<std::less_equal<double>>() != nullptr)
+    return "<=";
+  else if (comparator.target<std::equal_to<double>>() != nullptr)
+    return "==";
+  else if (comparator.target<std::not_equal_to<double>>() != nullptr)
+    return "!=";
+  else
+    throw std::invalid_argument("Invalid comparator");
+}
+
 ThresholdedCondition::ThresholdedCondition(
     const std::string &deviceName, size_t channelIndex,
     std::function<bool(double, double)> comparator, double threshold)
@@ -56,6 +74,18 @@ bool ThresholdedCondition::isActive(
   return m_Comparator(channel, m_Threshold);
 }
 
+/// @brief Get the serialized configuration of the condition
+/// @return The serialized configuration of the condition
+nlohmann::json ThresholdedCondition::getSerializedConfiguration() const {
+  nlohmann::json config;
+  config["type"] = getSerializedName();
+  config["device"] = m_DeviceName;
+  config["channel"] = m_ChannelIndex;
+  config["comparator"] = getComparatorAsString(m_Comparator);
+  config["value"] = m_Threshold;
+  return config;
+}
+
 std::function<bool(double, double)>
 getDirectionComparator(const std::string &direction) {
   if (direction == "positive")
@@ -64,6 +94,16 @@ getDirectionComparator(const std::string &direction) {
     return getThresholdComparator(">=");
   else
     throw std::invalid_argument("Invalid direction: " + direction);
+}
+
+std::string
+getDirectionAsString(const std::function<bool(double, double)> &direction) {
+  if (direction.target<std::less_equal<double>>() != nullptr)
+    return "positive";
+  else if (direction.target<std::greater_equal<double>>() != nullptr)
+    return "negative";
+  else
+    throw std::invalid_argument("Invalid direction");
 }
 
 DirectionCondition::DirectionCondition(const std::string &deviceName,
@@ -89,6 +129,15 @@ bool DirectionCondition::isActive(
   return m_Comparator(penultimateData, lastData);
 }
 
+nlohmann::json DirectionCondition::getSerializedConfiguration() const {
+  nlohmann::json config;
+  config["type"] = getSerializedName();
+  config["device"] = m_DeviceName;
+  config["channel"] = m_ChannelIndex;
+  config["direction"] = getDirectionAsString(m_Comparator);
+  return config;
+}
+
 EventConditions::EventConditions(const nlohmann::json &json)
     : m_Name(json.at("name")), m_PreviousName(json.at("previous")),
       m_Conditions(parseConditions(json.at("start_when"))) {}
@@ -106,4 +155,15 @@ bool EventConditions::isActive(
     }
   }
   return true;
+}
+
+nlohmann::json EventConditions::getSerializedConfiguration() const {
+  nlohmann::json config;
+  config["name"] = m_Name;
+  config["previous"] = m_PreviousName;
+  config["start_when"] = nlohmann::json::array();
+  for (const auto &condition : m_Conditions) {
+    config["start_when"].push_back(condition->getSerializedConfiguration());
+  }
+  return config;
 }

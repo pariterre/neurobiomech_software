@@ -300,3 +300,33 @@ TEST(Analyzers, Prediction) {
   ASSERT_EQ(modelSecond.getTimeEventModel()[0], std::chrono::milliseconds(47));
   ASSERT_EQ(modelSecond.getTimeEventModel()[1], std::chrono::milliseconds(69));
 }
+
+TEST(Analyzers, serializeConfigurations) {
+  auto analyzers = generateAnalyzers();
+  auto serialized = analyzers.getSerializedConfigurations();
+
+  ASSERT_EQ(serialized.size(), 2);
+  ASSERT_EQ(serialized[0].at("name"), "Left Foot");
+  ASSERT_EQ(serialized[0].at("analyzer_type"), "cyclic_timed_events");
+  ASSERT_EQ(serialized[0].at("time_reference_device"),
+            "DelsysAnalogDataCollector");
+  ASSERT_EQ(serialized[0].at("learning_rate"), 0.5);
+  ASSERT_EQ(serialized[0].at("initial_phase_durations").size(), 2);
+  ASSERT_EQ(serialized[0].at("initial_phase_durations")[0], 400);
+  ASSERT_EQ(serialized[0].at("initial_phase_durations")[1], 600);
+  ASSERT_EQ(serialized[0].at("events").size(), 2);
+  ASSERT_EQ(serialized[0].at("events")[0].at("name"), "heel_strike");
+  ASSERT_EQ(serialized[0].at("events")[0].at("previous"), "toe_off");
+  ASSERT_EQ(serialized[0].at("events")[0].at("start_when").size(), 1);
+  ASSERT_EQ(serialized[0].at("events")[0].at("start_when")[0].at("type"),
+            "threshold");
+  ASSERT_EQ(serialized[0].at("events")[0].at("start_when")[0].at("device"),
+            "DelsysAnalogDataCollector");
+  ASSERT_EQ(serialized[0].at("events")[0].at("start_when")[0].at("channel"), 0);
+  ASSERT_EQ(serialized[0].at("events")[0].at("start_when")[0].at("comparator"),
+            ">=");
+  ASSERT_EQ(serialized[0].at("events")[0].at("start_when")[0].at("value"), 0.2);
+  ASSERT_EQ(serialized[0].at("events")[1].at("name"), "toe_off");
+
+  ASSERT_EQ(serialized[1].at("name"), "Right Foot");
+}

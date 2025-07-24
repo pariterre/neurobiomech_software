@@ -17,6 +17,7 @@ TimedEventsAnalyzer::TimedEventsAnalyzer(
     double learningRate)
     : m_ShouldIncrementPhase(shouldIncrementPhase),
       m_GetCurrentTime(getCurrentTime), m_CurrentPhaseIndex(0),
+      m_InitialTimeEventModel(initialTimeEventModel),
       m_TimeEventModel(initialTimeEventModel),
       m_NextTimeEventModel(initialTimeEventModel), m_LearningRate(learningRate),
       m_FirstPass(true), m_CurrentPhaseTime(std::chrono::milliseconds(0)),

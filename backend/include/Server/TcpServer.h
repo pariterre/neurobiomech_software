@@ -19,6 +19,7 @@ static const size_t BYTES_IN_SERVER_PACKET_HEADER = 16;
 
 enum class TcpServerCommand : std::uint32_t {
   HANDSHAKE = 0,
+  GET_STATES = 1,
   CONNECT_DELSYS_ANALOG = 10,
   CONNECT_DELSYS_EMG = 11,
   CONNECT_MAGSTIM = 12,
@@ -38,6 +39,7 @@ enum class TcpServerCommand : std::uint32_t {
 enum class TcpServerResponse : std::uint32_t {
   NOK = 0,
   OK = 1,
+  STATES = 10,
 };
 
 class ClientSession {

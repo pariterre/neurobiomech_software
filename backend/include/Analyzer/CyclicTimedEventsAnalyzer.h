@@ -7,6 +7,8 @@ namespace NEUROBIO_NAMESPACE::analyzer {
 class EventConditions;
 
 class CyclicTimedEventsAnalyzer : public TimedEventsAnalyzer {
+public:
+  static std::string getSerializedName() { return "cyclic_timed_events"; }
 
 public:
   /// @brief Constructor of the CyclicTimedEventsAnalyzer. This constructor
@@ -29,6 +31,11 @@ public:
 
   /// @brief Destructor of the CyclicTimedEventsAnalyzer
   ~CyclicTimedEventsAnalyzer() override = default;
+
+public:
+  /// @brief Get the configuration of the analyzer in a json format
+  /// @return The configuration of the analyzer in a json format
+  nlohmann::json getSerializedConfiguration() const override;
 
 protected:
   /// @brief The conditions to change the phase

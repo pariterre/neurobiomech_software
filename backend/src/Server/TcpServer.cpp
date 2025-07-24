@@ -4,6 +4,7 @@
 #include <asio/steady_timer.hpp>
 #include <thread>
 
+#include "Analyzer/Analyzer.h"
 #include "Analyzer/Analyzers.h"
 #include "Analyzer/Exceptions.h"
 #include "Devices/Concrete/DelsysAnalogDevice.h"
@@ -572,6 +573,41 @@ bool TcpServer::handleCommand(TcpServerCommand command,
   // Handle the command
   TcpServerResponse response;
   switch (command) {
+  case TcpServerCommand::GET_STATES: {
+    auto states = nlohmann::json();
+
+    // Connected devices status
+    auto connectedDevices = nlohmann::json();
+    for (auto &id : m_Devices.getDeviceIds()) {
+      const auto &device = m_Devices[id];
+      auto value = nlohmann::json();
+      value["is_connected"] = device.getIsConnected();
+      value["is_collecting"] = m_Devices.hasDataCollector(id);
+      connectedDevices[device.deviceName()] = value;
+    }
+    states["connected_devices"] = connectedDevices;
+
+    // Connected analyzers status
+    auto connectedAnalyzers = nlohmann::json();
+    for (const auto &id : m_Analyzers.getAnalyzerIds()) {
+      const auto &analyzer = m_Analyzers[id];
+      auto value = nlohmann::json();
+      value["configuration"] = analyzer.getSerializedConfiguration();
+      connectedAnalyzers[analyzer.getName()] = value;
+    }
+    states["connected_analyzers"] = connectedAnalyzers;
+
+    auto statesDump = states.dump();
+
+    asio::write(*session.getResponseSocket(),
+                asio::buffer(constructResponsePacket(
+                    static_cast<TcpServerResponse>(statesDump.size()))),
+                error);
+    auto written = asio::write(*session.getResponseSocket(),
+                               asio::buffer(statesDump), error);
+    logger.info("Data size: " + std::to_string(written));
+    response = TcpServerResponse::OK;
+  }
   case TcpServerCommand::CONNECT_DELSYS_ANALOG:
     response = addDevice(DEVICE_NAME_DELSYS_ANALOG) ? TcpServerResponse::OK
                                                     : TcpServerResponse::NOK;

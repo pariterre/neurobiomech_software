@@ -45,6 +45,10 @@ public:
   void setReferenceTime(const std::chrono::system_clock::time_point &time) {
     m_ReferenceTime = time;
   }
+
+  /// @brief Get the configuration of the analyzer in a json format
+  /// @return The configuration of the analyzer in a json format
+  virtual nlohmann::json getSerializedConfiguration() const = 0;
 };
 
 } // namespace NEUROBIO_NAMESPACE::analyzer

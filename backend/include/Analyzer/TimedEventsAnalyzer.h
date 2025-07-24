@@ -55,6 +55,11 @@ protected:
   /// @brief The time event model (one value representing the expected time
   /// events in a step)
   DECLARE_PROTECTED_MEMBER(std::vector<std::chrono::milliseconds>,
+                           InitialTimeEventModel);
+
+  /// @brief The time event model (one value representing the expected time
+  /// events in a step)
+  DECLARE_PROTECTED_MEMBER(std::vector<std::chrono::milliseconds>,
                            TimeEventModel);
 
   /// @brief The time event model (one value representing the expected time
