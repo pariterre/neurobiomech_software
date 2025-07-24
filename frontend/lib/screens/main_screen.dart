@@ -4,7 +4,6 @@ import 'package:frontend/managers/database_manager.dart';
 import 'package:frontend/managers/neurobio_client.dart';
 import 'package:frontend/managers/predictions_manager.dart';
 import 'package:frontend/models/command.dart';
-import 'package:frontend/models/prediction_model.dart';
 import 'package:frontend/screens/predictions_dialog.dart';
 import 'package:frontend/widgets/data_graph.dart';
 import 'package:frontend/widgets/save_trial_dialog.dart';
@@ -46,7 +45,6 @@ class _MainScreenState extends State<MainScreen> {
   bool _showLastTrial = false;
   bool _showLiveData = false;
   bool _showLiveAnalyses = false;
-  final List<PredictionModel> _activePredictions = [];
 
   Future<void> _connectServer() async {
     setState(() {
@@ -70,7 +68,7 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> _disconnectServer() async {
     setState(() => _isBusy = true);
     await _connexion.disconnect();
-    _activePredictions.clear();
+    PredictionsManager.instance.clearActive();
     _resetInternalStates();
   }
 
@@ -214,7 +212,8 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Widget _buildLiveAnalysesSelector() {
-    final predictions = PredictionsManager.instance.predictions;
+    final predictionsManager = PredictionsManager.instance;
+    final predictions = predictionsManager.predictions;
 
     return Column(
       children: [
@@ -222,7 +221,7 @@ class _MainScreenState extends State<MainScreen> {
               width: 400,
               child: CheckboxListTile(
                 title: Text(prediction.name),
-                value: _activePredictions.contains(prediction),
+                value: predictionsManager.isActive(prediction),
                 onChanged: canSendCommand
                     ? (value) async {
                         if (value!) {
@@ -234,7 +233,7 @@ class _MainScreenState extends State<MainScreen> {
                               _showLiveAnalyses = false;
                               _connexion.liveAnalyses.predictions
                                   .addPrediction(prediction.name);
-                              _activePredictions.add(prediction);
+                              predictionsManager.addActive(prediction);
                             });
                           }
                         } else {
@@ -246,7 +245,7 @@ class _MainScreenState extends State<MainScreen> {
                               _showLiveAnalyses = false;
                               _connexion.liveAnalyses.predictions
                                   .removePrediction(prediction.name);
-                              _activePredictions.remove(prediction);
+                              predictionsManager.removeActive(prediction);
                             });
                           }
                         }
@@ -262,8 +261,8 @@ class _MainScreenState extends State<MainScreen> {
     final predictions = await showDialog(
       barrierDismissible: false,
       context: context,
-      builder: (context) =>
-          PredictionsDialog(lockedPredictions: _activePredictions),
+      builder: (context) => PredictionsDialog(
+          lockedPredictions: PredictionsManager.instance.active),
     );
     if (predictions == null) return;
 

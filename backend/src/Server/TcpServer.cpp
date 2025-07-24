@@ -960,6 +960,12 @@ void TcpServer::liveAnalysesLoop() {
     for (auto &session : m_Sessions) {
       try {
         auto &socket = session.second->getLiveAnalysesSocket();
+        if (!socket || !socket->is_open()) {
+          // Skip if the socket is not connected. This should not happen, but
+          // because of a race condition, it did happen once, so we
+          // handle it anyway
+          continue;
+        }
         asio::write(*socket, dataSize, error);
         asio::write(*socket, dataToSend, error);
       } catch (const std::exception &) {

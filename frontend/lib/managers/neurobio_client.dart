@@ -4,9 +4,11 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:frontend/managers/predictions_manager.dart';
 import 'package:frontend/models/command.dart';
 import 'package:frontend/models/data.dart';
 import 'package:frontend/models/ack.dart';
+import 'package:frontend/models/prediction_model.dart';
 import 'package:logging/logging.dart';
 
 const _serverHeaderLength = 16;
@@ -502,6 +504,22 @@ class NeurobioClient {
           if (jsonRaw.containsKey('connected_devices') &&
               jsonRaw['connected_devices'] != null) {
             _setFlagsFromStates(jsonRaw['connected_devices']);
+            resetLiveAnalogsData();
+          }
+          if (jsonRaw.containsKey('connected_analyzers') &&
+              jsonRaw['connected_analyzers'] != null) {
+            _isConnectedToLiveAnalyses = true;
+            final manager = PredictionsManager.instance;
+            for (final value
+                in (jsonRaw['connected_analyzers'] as Map<String, dynamic>)
+                    .values) {
+              final prediction =
+                  PredictionModel.fromSerialized(value['configuration']);
+              manager.mergePrediction(prediction);
+              manager.addActive(prediction);
+              liveAnalyses.predictions.addPrediction(prediction.name);
+            }
+            resetLiveAnalyses();
           }
         }
         break;
@@ -533,7 +551,7 @@ class NeurobioClient {
         return _expectedLiveAnalysesLength;
       },
       getLiveData: (bool isNew) {
-        //if (isNew) resetLiveAnalyses();
+        if (isNew) resetLiveAnalyses();
         return liveAnalyses;
       },
       getCompleter: (bool isNew) {

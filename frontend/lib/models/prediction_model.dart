@@ -1,3 +1,5 @@
+import 'package:frontend/models/utils.dart';
+
 enum PredictionStartWhenTypes {
   threshold,
   direction;
@@ -351,5 +353,22 @@ class PredictionModel {
       learningRate: learningRate ?? this.learningRate,
       events: events ?? this.events,
     );
+  }
+
+  @override
+  bool operator ==(other) {
+    if (identical(this, other)) return true;
+    if (other is! PredictionModel) return false;
+
+    return areMapsEqual(serialize(), other.serialize());
+  }
+
+  @override
+  int get hashCode {
+    return name.hashCode ^
+        analyzer.hashCode ^
+        timeReferenceDevice.hashCode ^
+        learningRate.hashCode ^
+        events.hashCode;
   }
 }
