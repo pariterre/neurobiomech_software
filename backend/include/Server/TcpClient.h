@@ -29,8 +29,12 @@ public:
   TcpClient(const TcpClient &) = delete;
 
   /// @brief Connect to the server
+  /// @param stateId The state ID to connect. This can be a random number
+  /// between 0x10000000 and 0xFFFFFFFF, but it cannot be the same as another
+  /// client (the server will reject the connection if the state ID is already
+  /// in use)
   /// @return True if the connection is successful, false otherwise
-  bool connect();
+  bool connect(std::uint32_t stateId);
 
   /// @brief Disconnect from the server
   /// @return True if the disconnection is successful, false otherwise

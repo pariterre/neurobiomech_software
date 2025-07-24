@@ -52,7 +52,8 @@ int main() {
 
     // Connect to this server using a TCP client
     server::TcpClient client;
-    if (!client.connect()) {
+    std::uint32_t stateId = 0x10000001; // Random state ID
+    if (!client.connect(stateId)) {
       logger.fatal("Failed to connect to the server");
       throw std::runtime_error("Failed to connect to the server");
     }

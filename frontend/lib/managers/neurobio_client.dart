@@ -446,7 +446,6 @@ class NeurobioClient {
         case Command.stopRecording:
         case Command.addAnalyzer:
         case Command.removeAnalyzer:
-        case null:
           _log.severe('Received data for an unknown command');
           throw StateError('Received data for an unknown command');
         case Command.getStates:
@@ -455,8 +454,20 @@ class NeurobioClient {
           lastTrialAnalogsData.clear(
               initialTime: _parseTimestampFromPacket(response));
           return;
+        case null:
+          final ack = Ack.parse(response);
+          switch (ack) {
+            case Ack.ok:
+            case Ack.nok:
+              _log.severe('Response received without a command');
+              throw StateError('Response received without a command');
+            case Ack.statesChanged:
+              send(Command.getStates);
+              // TODO Add a listener for when the states are received
+              break;
+          }
       }
-      _expectedResponseLength = _parseDataLengthFromPacket(response);
+      _expectedResponseLength = _parseDataFromResponsePacket(response);
       if (response.length > _serverHeaderLength) {
         // If more data came at once, recursively call the function with the rest
         // of the data.
@@ -610,7 +621,7 @@ class NeurobioClient {
       try {
         getLastTimeStamp(_parseTimestampFromPacket(raw));
         expectedDataLength =
-            getExpectedDataLength(_parseDataLengthFromPacket(raw));
+            getExpectedDataLength(_parseDataFromResponsePacket(raw));
       } catch (e) {
         _log.severe('Error while parsing $dataType: $e, resetting');
         resetLiveAnalogsData();
@@ -710,7 +721,7 @@ class NeurobioClient {
     return DateTime.fromMillisecondsSinceEpoch(timestamp);
   }
 
-  int _parseDataLengthFromPacket(List<int> data) {
+  int _parseDataFromResponsePacket(List<int> data) {
     // Parse the data length (4 bytes) from the packet data, starting from the 13th byte
     return _parse32bitsIntFromPacket(data.sublist(12, 16));
   }

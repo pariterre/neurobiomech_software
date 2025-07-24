@@ -447,6 +447,8 @@ void TcpServer::stopServer() {
   if (m_Context->stopped()) {
     return;
   }
+  // Stop any running context
+  m_Context->stop();
 
   // Shutdown the server down
   auto &logger = utils::Logger::getInstance();
@@ -467,17 +469,18 @@ void TcpServer::stopServer() {
   m_Analyzers.clear();
 
   // Disconnect all the clients
-  logger.info("Disconnecting all the clients");
-  for (auto &sessionPair : m_Sessions) {
-    sessionPair.second->disconnect();
+  {
+    logger.info("Disconnecting all the clients");
+    std::lock_guard<std::mutex> lock(m_SessionMutex);
+    for (auto &sessionPair : m_Sessions) {
+      sessionPair.second->disconnect();
+    }
+    m_Sessions.clear();
   }
 
   // Cancel all the acceptors
   logger.info("Canceling all the acceptors");
   cancelAcceptors();
-
-  // Stop any running context
-  m_Context->stop();
 
   // Wait for the server to stop
   if (m_ServerWorker.joinable()) {
@@ -622,6 +625,8 @@ bool TcpServer::handleCommand(TcpServerCommand command,
   case TcpServerCommand::CONNECT_DELSYS_EMG:
     response = addDevice(DEVICE_NAME_DELSYS_EMG) ? TcpServerResponse::OK
                                                  : TcpServerResponse::NOK;
+    // Send the response packet from another thread to avoid blocking
+    asio::post(*m_Context, [this]() { notifyClientsOfStateChange(); });
     break;
 
   case TcpServerCommand::CONNECT_MAGSTIM:
@@ -726,6 +731,17 @@ bool TcpServer::handleCommand(TcpServerCommand command,
   }
 
   return true;
+}
+
+void TcpServer::notifyClientsOfStateChange() {
+  auto packet =
+      asio::buffer(constructResponsePacket(TcpServerResponse::STATES_CHANGED));
+
+  std::lock_guard<std::mutex> lock(m_SessionMutex);
+  for (const auto &sessionPair : m_Sessions) {
+    const auto &session = sessionPair.second;
+    asio::write(*session->getResponseSocket(), packet);
+  }
 }
 
 nlohmann::json TcpServer::handleExtraData(asio::error_code &error,

@@ -39,6 +39,7 @@ enum class TcpServerCommand : std::uint32_t {
 enum class TcpServerResponse : std::uint32_t {
   NOK = 0,
   OK = 1,
+  STATES_CHANGED = 10,
 };
 
 class ClientSession {
@@ -260,6 +261,9 @@ protected:
   /// @param session The client session that sent the command
   /// @return True if the command is successful, false otherwise
   bool handleCommand(TcpServerCommand command, const ClientSession &session);
+
+  /// @brief Send clients that the internal states has changed
+  void notifyClientsOfStateChange();
 
   /// @brief Handle extra information from a command
   /// @param error The error code to set if an error occurs

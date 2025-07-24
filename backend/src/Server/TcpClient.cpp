@@ -27,7 +27,8 @@ TcpClient::TcpClient(std::string host, int commandPort, int responsePort,
                      int liveDataPort, int liveAnalysesPort)
     : m_Host(host), m_CommandPort(commandPort), m_ResponsePort(responsePort),
       m_LiveDataPort(liveDataPort), m_LiveAnalysesPort(liveAnalysesPort),
-      m_IsConnected(false), m_ProtocolVersion(1) {};
+      m_IsConnected(false),
+      m_ProtocolVersion(COMMUNICATION_PROTOCOL_VERSION) {};
 
 TcpClient::~TcpClient() {
   if (m_IsConnected) {
@@ -41,7 +42,7 @@ TcpClient::~TcpClient() {
   }
 }
 
-bool TcpClient::connect() {
+bool TcpClient::connect(std::uint32_t stateId) {
   auto &logger = utils::Logger::getInstance();
 
   // Connect
@@ -49,23 +50,75 @@ bool TcpClient::connect() {
   tcp::resolver resolver(m_Context);
 
   m_CommandSocket = std::make_unique<tcp::socket>(m_Context);
-  asio::connect(*m_CommandSocket,
-                resolver.resolve(m_Host, std::to_string(m_CommandPort)));
+  auto commandHasReturned = std::make_shared<bool>(false);
+  asio::async_connect(
+      *m_CommandSocket, resolver.resolve(m_Host, std::to_string(m_CommandPort)),
+      [this, stateId, commandHasReturned](const asio::error_code &ec,
+                                          const tcp::endpoint &) {
+        *commandHasReturned = true;
+        if (ec) {
+          return;
+        }
+        asio::write(*m_CommandSocket,
+                    asio::buffer(constructCommandPacket(
+                        static_cast<TcpServerCommand>(stateId))));
+      });
 
   m_ResponseSocket = std::make_unique<tcp::socket>(m_Context);
-  asio::connect(*m_ResponseSocket,
-                resolver.resolve(m_Host, std::to_string(m_ResponsePort)));
+  auto responseHasReturned = std::make_shared<bool>(false);
+  asio::async_connect(
+      *m_ResponseSocket,
+      resolver.resolve(m_Host, std::to_string(m_ResponsePort)),
+      [this, stateId, responseHasReturned](const asio::error_code &ec,
+                                           const tcp::endpoint &) {
+        *responseHasReturned = true;
+        if (ec) {
+          return;
+        }
+        asio::write(*m_ResponseSocket,
+                    asio::buffer(constructCommandPacket(
+                        static_cast<TcpServerCommand>(stateId))));
+      });
 
   m_LiveDataSocket = std::make_unique<tcp::socket>(m_Context);
-  asio::connect(*m_LiveDataSocket,
-                resolver.resolve(m_Host, std::to_string(m_LiveDataPort)));
-  startUpdatingLiveData();
+  auto liveDataHasReturned = std::make_shared<bool>(false);
+  asio::async_connect(
+      *m_LiveDataSocket,
+      resolver.resolve(m_Host, std::to_string(m_LiveDataPort)),
+      [this, stateId, liveDataHasReturned](const asio::error_code &ec,
+                                           const tcp::endpoint &) {
+        *liveDataHasReturned = true;
+        if (ec) {
+          return;
+        }
+        asio::write(*m_LiveDataSocket,
+                    asio::buffer(constructCommandPacket(
+                        static_cast<TcpServerCommand>(stateId))));
+        startUpdatingLiveData();
+      });
 
   m_LiveAnalysesSocket = std::make_unique<tcp::socket>(m_Context);
-  asio::connect(*m_LiveAnalysesSocket,
-                resolver.resolve(m_Host, std::to_string(m_LiveAnalysesPort)));
-  startUpdatingLiveAnalyses();
+  auto liveAnalysesHasReturned = std::make_shared<bool>(false);
+  asio::async_connect(
+      *m_LiveAnalysesSocket,
+      resolver.resolve(m_Host, std::to_string(m_LiveAnalysesPort)),
+      [this, stateId, liveAnalysesHasReturned](const asio::error_code &ec,
+                                               const tcp::endpoint &) {
+        *liveAnalysesHasReturned = true;
+        if (ec) {
+          return;
+        }
+        asio::write(*m_LiveAnalysesSocket,
+                    asio::buffer(constructCommandPacket(
+                        static_cast<TcpServerCommand>(stateId))));
+        startUpdatingLiveAnalyses();
+      });
 
+  // Wait for the sockets to be connected
+  while (!*commandHasReturned || !*responseHasReturned ||
+         !*liveDataHasReturned || !*liveAnalysesHasReturned) {
+    m_Context.run_one();
+  }
   m_IsConnected = true;
 
   // Send the handshake

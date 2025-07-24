@@ -602,7 +602,7 @@ TEST(Server, ClientConnexion) {
     server.startServer();
 
     server::TcpClient client;
-    bool isConnected = client.connect();
+    bool isConnected = client.connect(0x10000001);
     ASSERT_TRUE(isConnected);
 
     // Give some time to the message to arrive
@@ -619,7 +619,7 @@ TEST(Server, ClientConnexion) {
     server.startServer();
 
     server::TcpClient client;
-    client.connect();
+    client.connect(0x10000001);
     ensureServerIsConnected(server);
     bool isDisconnected = client.disconnect();
     ASSERT_TRUE(isDisconnected);
@@ -639,14 +639,14 @@ TEST(Server, ClientConnexion) {
     server.startServer();
 
     server::TcpClient client;
-    client.connect();
+    client.connect(0x10000001);
     ensureServerIsConnected(server);
     client.disconnect();
     ensureServerIsDisconnected(server);
 
     // Give some time
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    bool isConnected = client.connect();
+    bool isConnected = client.connect(0x10000001);
     ASSERT_TRUE(isConnected);
     ensureServerIsConnected(server);
 
@@ -668,7 +668,7 @@ TEST(Server, AddDevices) {
     server.startServer();
 
     server::TcpClient client;
-    client.connect();
+    client.connect(0x10000001);
 
     // Add the devices
     bool isDelsysEmgAdded = client.addDelsysEmgDevice();
@@ -710,7 +710,7 @@ TEST(Server, AddDevices) {
     server.startServer();
 
     server::TcpClient client;
-    client.connect();
+    client.connect(0x10000001);
 
     // Add the devices
     bool isDelsysEmgAdded = client.addDelsysEmgDevice();
@@ -747,7 +747,7 @@ TEST(Server, AddDevices) {
     server.startServer();
 
     server::TcpClient client;
-    client.connect();
+    client.connect(0x10000001);
 
     // Add the devices
     bool isDelsysEmgAdded = client.addDelsysEmgDevice();
@@ -788,7 +788,7 @@ TEST(Server, Recording) {
     server.startServer();
 
     server::TcpClient client;
-    client.connect();
+    client.connect(0x10000001);
 
     // Add the devices
     client.addDelsysEmgDevice();
@@ -816,7 +816,7 @@ TEST(Server, Recording) {
     server.startServer();
 
     server::TcpClient client;
-    client.connect();
+    client.connect(0x10000001);
 
     // Add the devices
     bool isDelsysAdded = client.addDelsysEmgDevice();
@@ -861,7 +861,7 @@ TEST(Server, LastTrialData) {
   server.startServer();
 
   server::TcpClient client;
-  client.connect();
+  client.connect(0x10000001);
 
   // Add the devices
   client.addDelsysEmgDevice();
@@ -883,7 +883,7 @@ TEST(Server, addAnalyzer) {
   server.startServer();
 
   server::TcpClient client;
-  client.connect();
+  client.connect(0x10000001);
 
   // Add an analysis on using the DelsysEmgDataCollector
   bool isAnalyzerAdded = client.addAnalyzer(nlohmann::json::parse(R"({
