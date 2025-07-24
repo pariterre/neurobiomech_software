@@ -22,7 +22,7 @@ class NeurobioClient {
   Command? _currentCommand;
   Completer<Ack>? _commandAckCompleter;
   Completer? _responseCompleter;
-  Future? get onDataArrived => _responseCompleter?.future;
+  Future? get onResponseArrived => _responseCompleter?.future;
 
   int? _expectedResponseLength;
   final _responseData = <int>[];
@@ -272,8 +272,25 @@ class NeurobioClient {
   }
 
   Future<Ack> _performSend(Command command) async {
-    if (command == Command.getLastTrial) {
-      _prepareLastTrialResponse();
+    switch (command) {
+      case Command.handshake:
+      case Command.connectDelsysAnalog:
+      case Command.connectDelsysEmg:
+      case Command.connectMagstim:
+      case Command.zeroDelsysAnalog:
+      case Command.zeroDelsysEmg:
+      case Command.disconnectDelsysAnalog:
+      case Command.disconnectDelsysEmg:
+      case Command.disconnectMagstim:
+      case Command.startRecording:
+      case Command.stopRecording:
+      case Command.addAnalyzer:
+      case Command.removeAnalyzer:
+        break;
+      case Command.getStates:
+        _prepareResponseCompleter();
+      case Command.getLastTrial:
+        _prepareLastTrialResponse();
     }
 
     // Construct and send the command
@@ -331,7 +348,7 @@ class NeurobioClient {
     if (ack == Ack.ok) {
       _setFlagsFromCommand(_currentCommand!);
     }
-    _currentCommand = null;
+    if (!_currentCommand!.hasDataResponse) _currentCommand = null;
     _commandAckCompleter!.complete(ack);
   }
 
@@ -365,11 +382,32 @@ class NeurobioClient {
         break;
 
       case Command.handshake:
+      case Command.getStates:
       case Command.connectMagstim:
       case Command.disconnectMagstim:
       case Command.getLastTrial:
         break;
     }
+  }
+
+  void _setFlagsFromStates(Map<String, dynamic> states) {
+    _isConnectedToDelsysEmg = false;
+    _isConnectedToDelsysAnalog = false;
+    _isRecording = false;
+    if (states.containsKey('DelsysEmgDevice')) {
+      _isConnectedToDelsysEmg =
+          states['DelsysEmgDevice']['is_connected'] ?? false;
+      _isRecording =
+          _isRecording || (states['DelsysEmgDevice']['is_recording'] ?? false);
+    }
+    if (states.containsKey('DelsysAnalogDevice')) {
+      _isConnectedToDelsysAnalog =
+          states['DelsysAnalogDevice']['is_connected'] ?? false;
+      _isRecording = _isRecording ||
+          (states['DelsysAnalogDevice']['is_recording'] ?? false);
+    }
+
+    if (_isRecording) resetLiveAnalogsData();
   }
 
   void _prepareLastTrialResponse() {
@@ -392,12 +430,29 @@ class NeurobioClient {
     if (!isInitialized) return;
 
     if (_expectedResponseLength == null) {
-      if (_currentCommand == Command.getLastTrial) {
-        lastTrialAnalogsData.clear(
-            initialTime: _parseTimestampFromPacket(response));
-      } else {
-        _log.severe('Received data for an unknown command');
-        throw StateError('Received data for an unknown command');
+      switch (_currentCommand) {
+        case Command.handshake:
+        case Command.connectDelsysAnalog:
+        case Command.connectDelsysEmg:
+        case Command.connectMagstim:
+        case Command.zeroDelsysAnalog:
+        case Command.zeroDelsysEmg:
+        case Command.disconnectDelsysAnalog:
+        case Command.disconnectDelsysEmg:
+        case Command.disconnectMagstim:
+        case Command.startRecording:
+        case Command.stopRecording:
+        case Command.addAnalyzer:
+        case Command.removeAnalyzer:
+        case null:
+          _log.severe('Received data for an unknown command');
+          throw StateError('Received data for an unknown command');
+        case Command.getStates:
+          break;
+        case Command.getLastTrial:
+          lastTrialAnalogsData.clear(
+              initialTime: _parseTimestampFromPacket(response));
+          return;
       }
       _expectedResponseLength = _parseDataLengthFromPacket(response);
       if (response.length > _serverHeaderLength) {
@@ -423,10 +478,42 @@ class NeurobioClient {
 
     // Convert the data to a string (from json)
     _expectedResponseLength = null;
-    final jsonRaw = json.decode(utf8.decode(_responseData));
-    if (jsonRaw != null) {
-      lastTrialAnalogsData.appendFromJson(jsonRaw as Map<String, dynamic>);
+    switch (_currentCommand) {
+      case Command.handshake:
+      case Command.connectDelsysAnalog:
+      case Command.connectDelsysEmg:
+      case Command.connectMagstim:
+      case Command.zeroDelsysAnalog:
+      case Command.zeroDelsysEmg:
+      case Command.disconnectDelsysAnalog:
+      case Command.disconnectDelsysEmg:
+      case Command.disconnectMagstim:
+      case Command.startRecording:
+      case Command.stopRecording:
+      case Command.addAnalyzer:
+      case Command.removeAnalyzer:
+      case null:
+        break;
+      case Command.getStates:
+        // To string
+        final jsonRaw =
+            json.decode(utf8.decode(_responseData)) as Map<String, dynamic>?;
+        if (jsonRaw != null) {
+          if (jsonRaw.containsKey('connected_devices') &&
+              jsonRaw['connected_devices'] != null) {
+            _setFlagsFromStates(jsonRaw['connected_devices']);
+          }
+        }
+        break;
+      case Command.getLastTrial:
+        final jsonRaw = json.decode(utf8.decode(_responseData));
+        if (jsonRaw != null) {
+          lastTrialAnalogsData.appendFromJson(jsonRaw as Map<String, dynamic>);
+        }
+        break;
     }
+
+    if (_commandAckCompleter?.isCompleted ?? false) _currentCommand = null;
     _responseCompleter!.complete();
   }
 
@@ -695,8 +782,25 @@ class NeurobioClientMock extends NeurobioClient {
 
   @override
   Future<Ack> _performSend(Command command) async {
-    if (command == Command.getLastTrial) {
-      _prepareLastTrialResponse();
+    switch (command) {
+      case Command.handshake:
+      case Command.connectDelsysAnalog:
+      case Command.connectDelsysEmg:
+      case Command.connectMagstim:
+      case Command.zeroDelsysAnalog:
+      case Command.zeroDelsysEmg:
+      case Command.disconnectDelsysAnalog:
+      case Command.disconnectDelsysEmg:
+      case Command.disconnectMagstim:
+      case Command.startRecording:
+      case Command.stopRecording:
+      case Command.addAnalyzer:
+      case Command.removeAnalyzer:
+        break;
+      case Command.getStates:
+        _prepareResponseCompleter();
+      case Command.getLastTrial:
+        _prepareLastTrialResponse();
     }
 
     // Construct and send the command
@@ -737,6 +841,8 @@ class NeurobioClientMock extends NeurobioClient {
       case Command.startRecording:
         _hasRecordedMock = true;
         break;
+      case Command.handshake:
+      case Command.getStates:
       case Command.connectDelsysAnalog:
       case Command.disconnectDelsysAnalog:
       case Command.disconnectDelsysEmg:
@@ -744,7 +850,6 @@ class NeurobioClientMock extends NeurobioClient {
       case Command.zeroDelsysAnalog:
       case Command.zeroDelsysEmg:
       case Command.stopRecording:
-      case Command.handshake:
       case Command.connectMagstim:
       case Command.disconnectMagstim:
       case Command.getLastTrial:

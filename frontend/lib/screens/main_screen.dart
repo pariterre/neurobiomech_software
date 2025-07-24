@@ -60,6 +60,10 @@ class _MainScreenState extends State<MainScreen> {
       onNewLiveAnalogsData: _onNewLiveAnalogsData,
       onNewLiveAnalyses: _onNewLiveAnalyses,
     );
+
+    // Get the current states of the server
+    await _connexion.send(Command.getStates);
+    await _connexion.onResponseArrived;
     setState(() => _isBusy = false);
   }
 
@@ -132,7 +136,7 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> _showLastTrialGraph() async {
     setState(() => _isBusy = true);
     await _connexion.send(Command.getLastTrial);
-    await _connexion.onDataArrived;
+    await _connexion.onResponseArrived;
     setState(() {
       _isBusy = false;
       _showLastTrial = _connexion.lastTrialAnalogsData.isNotEmpty;

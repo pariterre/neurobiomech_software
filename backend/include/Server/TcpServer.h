@@ -39,7 +39,6 @@ enum class TcpServerCommand : std::uint32_t {
 enum class TcpServerResponse : std::uint32_t {
   NOK = 0,
   OK = 1,
-  STATES = 10,
 };
 
 class ClientSession {

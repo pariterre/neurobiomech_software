@@ -2,6 +2,7 @@ import 'package:frontend/managers/neurobio_client.dart';
 
 enum Command {
   handshake,
+  getStates,
   connectDelsysAnalog,
   connectDelsysEmg,
   connectMagstim,
@@ -22,6 +23,8 @@ enum Command {
     switch (this) {
       case Command.handshake:
         return 0;
+      case Command.getStates:
+        return 1;
       case Command.connectDelsysAnalog:
         return 10;
       case Command.connectDelsysEmg:
@@ -55,6 +58,7 @@ enum Command {
   /// Command that should not be called by the user (not part of the API)
   bool get isReserved {
     switch (this) {
+      case Command.getStates:
       case Command.connectDelsysAnalog:
       case Command.connectDelsysEmg:
       case Command.connectMagstim:
@@ -77,6 +81,7 @@ enum Command {
   bool get isImplemented {
     switch (this) {
       case Command.handshake:
+      case Command.getStates:
       case Command.connectDelsysAnalog:
       case Command.connectDelsysEmg:
       case Command.zeroDelsysAnalog:
@@ -111,6 +116,7 @@ enum Command {
       case Command.addAnalyzer:
       case Command.removeAnalyzer:
         return false;
+      case Command.getStates:
       case Command.getLastTrial:
         return true;
     }

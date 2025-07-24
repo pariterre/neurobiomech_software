@@ -415,6 +415,8 @@ std::uint32_t TcpServer::readSessionIdFromSocket(
     *id = 0xFFFFFFFF; // Invalid ID, return error value
   }
 
+  // Lock the m_Session mutex to ensure thread safety
+  std::lock_guard<std::mutex> lock(m_SessionMutex);
   auto &session = m_Sessions[*id];
   if (session && session->isConnected()) {
     // If the session is already connected so the state is invalid
@@ -583,6 +585,10 @@ bool TcpServer::handleCommand(TcpServerCommand command,
       auto value = nlohmann::json();
       value["is_connected"] = device.getIsConnected();
       value["is_collecting"] = m_Devices.hasDataCollector(id);
+      value["is_recording"] = false;
+      if (value["is_collecting"]) {
+        value["is_recording"] = m_Devices.getDataCollector(id).getIsRecording();
+      }
       connectedDevices[device.deviceName()] = value;
     }
     states["connected_devices"] = connectedDevices;
@@ -598,7 +604,6 @@ bool TcpServer::handleCommand(TcpServerCommand command,
     states["connected_analyzers"] = connectedAnalyzers;
 
     auto statesDump = states.dump();
-
     asio::write(*session.getResponseSocket(),
                 asio::buffer(constructResponsePacket(
                     static_cast<TcpServerResponse>(statesDump.size()))),
@@ -607,6 +612,7 @@ bool TcpServer::handleCommand(TcpServerCommand command,
                                asio::buffer(statesDump), error);
     logger.info("Data size: " + std::to_string(written));
     response = TcpServerResponse::OK;
+    break;
   }
   case TcpServerCommand::CONNECT_DELSYS_ANALOG:
     response = addDevice(DEVICE_NAME_DELSYS_ANALOG) ? TcpServerResponse::OK
@@ -881,6 +887,8 @@ void TcpServer::liveDataLoop() {
 
     // Send the data to all the clients
     asio::error_code error;
+    // Lock the m_Session mutex to ensure thread safety
+    std::lock_guard<std::mutex> lock(m_SessionMutex);
     for (auto &session : m_Sessions) {
       try {
         auto &socket = session.second->getLiveDataSocket();
@@ -947,6 +955,8 @@ void TcpServer::liveAnalysesLoop() {
     auto dataToSend = asio::buffer(dataDump);
 
     asio::error_code error;
+    // Lock the m_Session mutex to ensure thread safety
+    std::lock_guard<std::mutex> lock(m_SessionMutex);
     for (auto &session : m_Sessions) {
       try {
         auto &socket = session.second->getLiveAnalysesSocket();
