@@ -644,6 +644,7 @@ bool TcpServer::handleCommand(TcpServerCommand command,
   case TcpServerCommand::CONNECT_DELSYS_ANALOG:
     response = addDevice(DEVICE_NAME_DELSYS_ANALOG) ? TcpServerResponse::OK
                                                     : TcpServerResponse::NOK;
+    notifyClientsOfStateChange();
     break;
 
   case TcpServerCommand::CONNECT_DELSYS_EMG:
@@ -655,6 +656,7 @@ bool TcpServer::handleCommand(TcpServerCommand command,
   case TcpServerCommand::CONNECT_MAGSTIM:
     response = addDevice(DEVICE_NAME_MAGSTIM) ? TcpServerResponse::OK
                                               : TcpServerResponse::NOK;
+    notifyClientsOfStateChange();
     break;
 
   case TcpServerCommand::ZERO_DELSYS_ANALOG:
@@ -672,26 +674,31 @@ bool TcpServer::handleCommand(TcpServerCommand command,
   case TcpServerCommand::DISCONNECT_DELSYS_ANALOG:
     response = removeDevice(DEVICE_NAME_DELSYS_ANALOG) ? TcpServerResponse::OK
                                                        : TcpServerResponse::NOK;
+    notifyClientsOfStateChange();
     break;
 
   case TcpServerCommand::DISCONNECT_DELSYS_EMG:
     response = removeDevice(DEVICE_NAME_DELSYS_EMG) ? TcpServerResponse::OK
                                                     : TcpServerResponse::NOK;
+    notifyClientsOfStateChange();
     break;
 
   case TcpServerCommand::DISCONNECT_MAGSTIM:
     response = removeDevice(DEVICE_NAME_MAGSTIM) ? TcpServerResponse::OK
                                                  : TcpServerResponse::NOK;
+    notifyClientsOfStateChange();
     break;
 
   case TcpServerCommand::START_RECORDING:
     response = m_Devices.startRecording() ? TcpServerResponse::OK
                                           : TcpServerResponse::NOK;
+    notifyClientsOfStateChange();
     break;
 
   case TcpServerCommand::STOP_RECORDING:
     response = m_Devices.stopRecording() ? TcpServerResponse::OK
                                          : TcpServerResponse::NOK;
+    notifyClientsOfStateChange();
     break;
 
   case TcpServerCommand::GET_LAST_TRIAL_DATA: {
@@ -712,6 +719,7 @@ bool TcpServer::handleCommand(TcpServerCommand command,
       auto data = handleExtraData(error, session);
       m_Analyzers.add(data);
       response = TcpServerResponse::OK;
+      notifyClientsOfStateChange();
     } catch (const std::exception &e) {
       logger.fatal("Failed to get extra info: " + std::string(e.what()));
       response = TcpServerResponse::NOK;
@@ -728,6 +736,7 @@ bool TcpServer::handleCommand(TcpServerCommand command,
       std::string analyzerName = handleExtraData(error, session)["analyzer"];
       m_Analyzers.remove(analyzerName);
       response = TcpServerResponse::OK;
+      notifyClientsOfStateChange();
     } catch (const std::exception &e) {
       logger.fatal("Failed to get extra info: " + std::string(e.what()));
       response = TcpServerResponse::NOK;
@@ -741,6 +750,8 @@ bool TcpServer::handleCommand(TcpServerCommand command,
     response = TcpServerResponse::NOK;
     break;
   }
+  // TODO: Find why some notifyClientsOfStateChange() seems to block the
+  // TcpClient
 
   // Respond OK to the command
   size_t byteWritten =
