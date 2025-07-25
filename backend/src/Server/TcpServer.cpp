@@ -258,29 +258,50 @@ TcpServer::TcpServer(int commandPort, int responsePort, int liveDataPort,
     : m_CommandPort(commandPort), m_ResponsePort(responsePort),
       m_LiveDataPort(liveDataPort), m_LiveAnalysesPort(liveAnalysesPort),
       m_TimeoutPeriod(std::chrono::milliseconds(5000)),
-      m_Context(std::make_shared<asio::io_context>()) {
+      m_Status(TcpServerStatus::OFF),
+      m_Context(std::make_shared<asio::io_context>()),
+      m_LiveDataContext(std::make_shared<asio::io_context>()),
+      m_LiveAnalysesContext(std::make_shared<asio::io_context>()) {
   m_LiveDataTimer = std::make_shared<asio::steady_timer>(
-      *m_Context, std::chrono::milliseconds(100));
+      *m_LiveDataContext, std::chrono::milliseconds(100));
   m_LiveAnalysesTimer = std::make_shared<asio::steady_timer>(
-      *m_Context, std::chrono::milliseconds(25));
-  liveDataLoop();
-  liveAnalysesLoop();
+      *m_LiveAnalysesContext, std::chrono::milliseconds(25));
 }
 
 TcpServer::~TcpServer() { stopServer(); }
 
 void TcpServer::startServer() {
   m_ServerWorker = std::thread([this]() { startServerSync(); });
+  // Wait for the server to be ready
+  while (m_Status != TcpServerStatus::READY) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
+  return;
 }
 
 void TcpServer::startServerSync() {
   auto &logger = utils::Logger::getInstance();
 
-  startAcceptors();
+  // Start the loop timers
+  liveDataLoop();
+  liveAnalysesLoop();
+  std::thread liveDataWorkerThread([this]() {
+    m_LiveDataContext->run();
+    utils::Logger::getInstance().info("Live data has terminated");
+  });
+  std::thread liveAnalysesWorkerThread([this]() {
+    m_LiveAnalysesContext->run();
+    utils::Logger::getInstance().info("Live analyses has terminated");
+  });
 
-  m_Status = TcpServerStatus::CONNECTING;
+  m_Status = TcpServerStatus::PREPARING;
+  startAcceptors();
   startAcceptingSocketConnexions();
+
+  m_Status = TcpServerStatus::READY;
   m_Context->run();
+  liveAnalysesWorkerThread.join();
+  liveDataWorkerThread.join();
   logger.info("TCP Server is terminating");
 }
 
@@ -444,11 +465,15 @@ void TcpServer::handleClientHasDisconnected(const ClientSession &session) {
 }
 
 void TcpServer::stopServer() {
-  if (m_Context->stopped()) {
+  if (m_Status == TcpServerStatus::OFF) {
     return;
   }
-  // Stop any running context
+  m_Status = TcpServerStatus::OFF;
+
+  // Stop any running contexts
   m_Context->stop();
+  m_LiveDataContext->stop();
+  m_LiveAnalysesContext->stop();
 
   // Shutdown the server down
   auto &logger = utils::Logger::getInstance();
@@ -563,7 +588,6 @@ bool TcpServer::handleHandshake(TcpServerCommand command,
   }
 
   // Set the status to running
-  m_Status = TcpServerStatus::CONNECTED;
   logger.info("Handshake from client " + std::to_string(session.getId()) +
               " successful, server is now connected.");
 
@@ -625,8 +649,7 @@ bool TcpServer::handleCommand(TcpServerCommand command,
   case TcpServerCommand::CONNECT_DELSYS_EMG:
     response = addDevice(DEVICE_NAME_DELSYS_EMG) ? TcpServerResponse::OK
                                                  : TcpServerResponse::NOK;
-    // Send the response packet from another thread to avoid blocking
-    asio::post(*m_Context, [this]() { notifyClientsOfStateChange(); });
+    // std::thread([this]() { notifyClientsOfStateChange(); });
     break;
 
   case TcpServerCommand::CONNECT_MAGSTIM:

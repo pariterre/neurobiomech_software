@@ -11,7 +11,7 @@
 
 namespace NEUROBIO_NAMESPACE::server {
 
-enum TcpServerStatus { CONNECTING, CONNECTED };
+enum TcpServerStatus { OFF, PREPARING, READY };
 
 static const std::uint32_t COMMUNICATION_PROTOCOL_VERSION = 2;
 static const size_t BYTES_IN_CLIENT_PACKET_HEADER = 8;
@@ -354,6 +354,14 @@ protected:
 private:
   /// @brief The asio contexts used for async methods of the server
   DECLARE_PRIVATE_MEMBER_NOGET(std::shared_ptr<asio::io_context>, Context);
+
+  /// @brief The asio contexts used for live data streaming
+  DECLARE_PRIVATE_MEMBER_NOGET(std::shared_ptr<asio::io_context>,
+                               LiveDataContext);
+
+  /// @brief The asio contexts used for live analyses streaming
+  DECLARE_PRIVATE_MEMBER_NOGET(std::shared_ptr<asio::io_context>,
+                               LiveAnalysesContext);
 
   /// @brief The worker thread for the [startServerAsync] method
   DECLARE_PRIVATE_MEMBER_NOGET(std::thread, ServerWorker);

@@ -5,10 +5,11 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:frontend/managers/predictions_manager.dart';
+import 'package:frontend/models/ack.dart';
 import 'package:frontend/models/command.dart';
 import 'package:frontend/models/data.dart';
-import 'package:frontend/models/ack.dart';
 import 'package:frontend/models/prediction_model.dart';
+import 'package:frontend/utils/generic_listener.dart';
 import 'package:logging/logging.dart';
 
 const _serverHeaderLength = 16;
@@ -65,6 +66,8 @@ class NeurobioClient {
       emgChannelCount: 0,
       isFromLiveData: true);
   Duration liveAnalysesTimeWindow = const Duration(seconds: 3);
+
+  final onMessageFromBackend = GenericListener<Function(Ack)>();
 
   bool _isRecording = false;
 
@@ -463,7 +466,7 @@ class NeurobioClient {
               throw StateError('Response received without a command');
             case Ack.statesChanged:
               send(Command.getStates);
-              // TODO Add a listener for when the states are received
+              onMessageFromBackend.notifyListeners((callback) => callback(ack));
               break;
           }
       }
