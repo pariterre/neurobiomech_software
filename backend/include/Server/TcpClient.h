@@ -138,10 +138,23 @@ protected:
   /// @return The acknowledgment from the server
   TcpServerResponse waitForCommandAcknowledgment();
 
-  /// @brief Wait for a response from the server
+  /// @brief The last message received from the server
+  DECLARE_PROTECTED_MEMBER_NOGET(TcpServerResponse, PreviousAck);
+
+  /// @brief The last response received from the server
+  DECLARE_PROTECTED_MEMBER_NOGET(std::vector<char>, PreviousResponse);
+
+  /// @brief Wait for a message sent from the server
   /// @param socket The socket to wait for the response
   /// @return The response from the server
-  std::vector<char> waitForResponse(asio::ip::tcp::socket &socket);
+  TcpServerResponse waitForMessage(asio::ip::tcp::socket &socket);
+
+  /// @brief Wait for a response from the server
+  /// @param socket The socket to wait for the response
+  /// @param expectedSize The expected size of the response
+  /// @return The response from the server
+  std::vector<char> waitForResponse(asio::ip::tcp::socket &socket,
+                                    std::uint32_t expectedSize);
 
   /// @brief Close the sockets
   void closeSockets();
@@ -165,12 +178,16 @@ protected:
       const std::array<char, BYTES_IN_SERVER_PACKET_HEADER> &buffer);
 
 private:
+  DECLARE_PROTECTED_MEMBER_NOGET(std::thread, ContextWorker);
+
   /// @brief The asio context used for async methods of the client
   DECLARE_PRIVATE_MEMBER_NOGET(asio::io_context, Context);
 
   /// @brief The socket that is connected to the server for commands
   DECLARE_PRIVATE_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
                                CommandSocket);
+
+  DECLARE_PROTECTED_MEMBER_NOGET(std::thread, ResponseWorker);
 
   /// @brief The socket that is connected to the server for responses
   DECLARE_PRIVATE_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,

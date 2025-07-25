@@ -649,7 +649,7 @@ bool TcpServer::handleCommand(TcpServerCommand command,
   case TcpServerCommand::CONNECT_DELSYS_EMG:
     response = addDevice(DEVICE_NAME_DELSYS_EMG) ? TcpServerResponse::OK
                                                  : TcpServerResponse::NOK;
-    // std::thread([this]() { notifyClientsOfStateChange(); });
+    notifyClientsOfStateChange();
     break;
 
   case TcpServerCommand::CONNECT_MAGSTIM:
@@ -747,7 +747,6 @@ bool TcpServer::handleCommand(TcpServerCommand command,
       asio::write(*session.getCommandSocket(),
                   asio::buffer(constructResponsePacket(response)), error);
 
-  // TODO Add events to notify all the clients the something has happened
   if (byteWritten != BYTES_IN_SERVER_PACKET_HEADER || error) {
     logger.fatal("TCP write error: " + error.message());
     return false;

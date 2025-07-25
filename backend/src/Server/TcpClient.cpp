@@ -114,12 +114,35 @@ bool TcpClient::connect(std::uint32_t stateId) {
         startUpdatingLiveAnalyses();
       });
 
-  // Wait for the sockets to be connected
   while (!*commandHasReturned || !*responseHasReturned ||
          !*liveDataHasReturned || !*liveAnalysesHasReturned) {
     m_Context.run_one();
   }
   m_IsConnected = true;
+
+  // Wait for the sockets to be connected
+  m_ContextWorker = std::thread([this]() { m_Context.run(); });
+
+  // Response socket should always listen to the server
+  m_ResponseWorker = std::thread([this]() {
+    while (m_IsConnected) {
+      // For now, we do nothing with this, but it can be used to react from a
+      // change in states of the server
+      m_PreviousAck = waitForMessage(*m_ResponseSocket);
+      switch (m_PreviousAck) {
+      case TcpServerResponse::OK:
+      case TcpServerResponse::NOK:
+      case TcpServerResponse::STATES_CHANGED:
+        // Nothing more to do
+        break;
+      default:
+        // If it is anything but the normal response, it is the size of a larger
+        // message, so we wait for the next message
+        m_PreviousResponse = waitForResponse(
+            *m_ResponseSocket, static_cast<std::uint32_t>(m_PreviousAck));
+      }
+    }
+  });
 
   // Send the handshake
   if (sendCommand(TcpServerCommand::HANDSHAKE) == TcpServerResponse::NOK) {
@@ -134,6 +157,7 @@ bool TcpClient::connect(std::uint32_t stateId) {
 
 bool TcpClient::disconnect() {
   m_IsConnected = false;
+
   closeSockets();
   if (m_LiveDataWorker.joinable()) {
     m_LiveDataWorker.join();
@@ -141,6 +165,10 @@ bool TcpClient::disconnect() {
   if (m_LiveAnalysesWorker.joinable()) {
     m_LiveAnalysesWorker.join();
   }
+  m_ResponseWorker.join();
+
+  m_Context.stop();
+  m_ContextWorker.join();
   return true;
 }
 
@@ -167,6 +195,7 @@ bool TcpClient::addDelsysEmgDevice() {
   }
 
   logger.info("CLIENT: Delsys EMG device added");
+
   return true;
 }
 
@@ -305,7 +334,9 @@ void TcpClient::startUpdatingLiveData() {
 void TcpClient::updateLiveData() {
   auto &logger = utils::Logger::getInstance();
 
-  auto dataBuffer = waitForResponse(*m_LiveDataSocket);
+  auto ack = waitForMessage(*m_LiveDataSocket);
+  auto dataBuffer =
+      waitForResponse(*m_LiveDataSocket, static_cast<std::uint32_t>(ack));
   std::map<std::string, data::TimeSeries> data;
   try {
     data = devices::Devices::deserializeData(nlohmann::json::parse(dataBuffer));
@@ -329,8 +360,10 @@ void TcpClient::updateLiveAnalyses() {
   auto &logger = utils::Logger::getInstance();
 
   try {
-    auto serialized =
-        nlohmann::json::parse(waitForResponse(*m_LiveAnalysesSocket));
+    auto ack = waitForMessage(*m_LiveAnalysesSocket);
+    auto dataBuffer =
+        waitForResponse(*m_LiveAnalysesSocket, static_cast<std::uint32_t>(ack));
+    auto serialized = nlohmann::json::parse(dataBuffer);
 
     auto data = analyzer::Predictions(serialized);
   } catch (...) {
@@ -411,6 +444,8 @@ std::vector<char> TcpClient::sendCommandWithResponse(TcpServerCommand command) {
     return std::vector<char>();
   }
 
+  m_PreviousResponse.clear();
+
   asio::error_code error;
   size_t byteWritten = asio::write(
       *m_CommandSocket, asio::buffer(constructCommandPacket(command)), error);
@@ -421,14 +456,17 @@ std::vector<char> TcpClient::sendCommandWithResponse(TcpServerCommand command) {
     return std::vector<char>();
   }
 
-  auto data = waitForResponse(*m_ResponseSocket);
-  auto response = waitForCommandAcknowledgment();
-  if (response == TcpServerResponse::NOK) {
+  auto ack = waitForCommandAcknowledgment();
+  if (ack == TcpServerResponse::NOK) {
     logger.warning("CLIENT: Failed to get confirmation for command: " +
                    std::to_string(static_cast<std::uint32_t>(command)));
     return std::vector<char>();
   }
-  return data;
+
+  while (m_PreviousResponse.empty()) {
+    m_Context.run_one();
+  }
+  return m_PreviousResponse;
 }
 
 TcpServerResponse TcpClient::waitForCommandAcknowledgment() {
@@ -444,21 +482,25 @@ TcpServerResponse TcpClient::waitForCommandAcknowledgment() {
   return parseAcknowledgmentFromPacket(buffer);
 }
 
-std::vector<char> TcpClient::waitForResponse(asio::ip::tcp::socket &socket) {
+TcpServerResponse TcpClient::waitForMessage(asio::ip::tcp::socket &socket) {
   auto buffer = std::array<char, BYTES_IN_SERVER_PACKET_HEADER>();
   asio::error_code error;
   size_t byteRead = asio::read(socket, asio::buffer(buffer), error);
   if (byteRead != BYTES_IN_SERVER_PACKET_HEADER || error) {
     auto &logger = utils::Logger::getInstance();
     logger.fatal("CLIENT: TCP read error: " + error.message());
-    return std::vector<char>();
+    return TcpServerResponse::NOK;
   }
 
-  std::uint32_t totalByteCount =
-      static_cast<std::uint32_t>(parseAcknowledgmentFromPacket(buffer));
-  std::vector<char> dataBuffer(totalByteCount);
-  byteRead = asio::read(socket, asio::buffer(dataBuffer), error);
-  if (byteRead != totalByteCount || error) {
+  return parseAcknowledgmentFromPacket(buffer);
+}
+
+std::vector<char> TcpClient::waitForResponse(asio::ip::tcp::socket &socket,
+                                             std::uint32_t expectedSize) {
+  std::vector<char> dataBuffer(expectedSize);
+  asio::error_code error;
+  auto byteRead = asio::read(socket, asio::buffer(dataBuffer), error);
+  if (byteRead != expectedSize || error) {
     utils::Logger::getInstance().fatal(
         "CLIENT: Failed to fetch the last trial data");
     return std::vector<char>();
