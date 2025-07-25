@@ -750,8 +750,6 @@ bool TcpServer::handleCommand(TcpServerCommand command,
     response = TcpServerResponse::NOK;
     break;
   }
-  // TODO: Find why some notifyClientsOfStateChange() seems to block the
-  // TcpClient
 
   // Respond OK to the command
   size_t byteWritten =
@@ -770,7 +768,11 @@ void TcpServer::notifyClientsOfStateChange() {
   auto packet =
       asio::buffer(constructResponsePacket(TcpServerResponse::STATES_CHANGED));
 
-  std::lock_guard<std::mutex> lock(m_SessionMutex);
+  // TODO: The following mutex sometimes block. Find a way to have a read and a
+  // read/write mutex
+  // std::lock_guard<std::mutex> lock(m_SessionMutex);
+
+  // TODO Write doc
   for (const auto &sessionPair : m_Sessions) {
     const auto &session = sessionPair.second;
     asio::write(*session->getResponseSocket(), packet);
