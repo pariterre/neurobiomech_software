@@ -283,8 +283,6 @@ void TcpServer::startServerSync() {
   auto &logger = utils::Logger::getInstance();
 
   // Start the loop timers
-  liveDataLoop();
-  liveAnalysesLoop();
   std::thread liveDataWorkerThread([this]() {
     m_LiveDataContext->run();
     utils::Logger::getInstance().info("Live data has terminated");
@@ -299,6 +297,8 @@ void TcpServer::startServerSync() {
   startAcceptingSocketConnexions();
 
   m_Status = TcpServerStatus::READY;
+  liveDataLoop();
+  liveAnalysesLoop();
   m_Context->run();
   liveAnalysesWorkerThread.join();
   liveDataWorkerThread.join();
