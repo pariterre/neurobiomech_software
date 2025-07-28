@@ -11,6 +11,7 @@ using namespace NEUROBIO_NAMESPACE::analyzer;
 
 Predictions
 Analyzers::predict(const std::map<std::string, data::TimeSeries> &data) {
+  // TODO Add mutex?
   for (const auto &analyzer : m_Analyzers) {
     m_LastPredictions[analyzer.second->getName()] =
         analyzer.second->predict(data);

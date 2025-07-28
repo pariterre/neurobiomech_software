@@ -4,7 +4,7 @@
 #include "neurobioConfig.h"
 
 #include <fstream>
-#include <mutex>
+#include <shared_mutex>
 
 #include "Utils/NeurobioEvent.h"
 
@@ -51,7 +51,7 @@ protected:
   DECLARE_PROTECTED_MEMBER_WITH_SETTER(bool, ShouldPrintToConsole)
 
   /// @brief The mutex to lock the logger
-  DECLARE_PROTECTED_MEMBER_NOGET(std::mutex, Mutex)
+  DECLARE_PROTECTED_MEMBER_NOGET(std::shared_mutex, Mutex)
 
   /// @brief The file stream to write logs to a file
   DECLARE_PROTECTED_MEMBER_NOGET(std::ofstream, File)

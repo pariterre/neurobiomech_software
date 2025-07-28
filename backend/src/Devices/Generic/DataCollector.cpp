@@ -28,7 +28,7 @@ bool DataCollector::startDataStreaming() {
   m_IsStreamingData = handleStartDataStreaming();
   m_HasFailedToStartDataStreaming = !m_IsStreamingData;
   {
-    std::lock_guard<std::mutex> lock(m_LiveDataMutex);
+    std::unique_lock lock(m_LiveDataMutex);
     m_LiveTimeSeries->reset();
   }
 
@@ -109,7 +109,7 @@ void DataCollector::setZeroLevel(const std::chrono::milliseconds &duration) {
 }
 
 void DataCollector::resetLiveData() {
-  std::lock_guard<std::mutex> lock(m_LiveDataMutex);
+  std::unique_lock lock(m_LiveDataMutex);
   m_LiveTimeSeries->reset();
 }
 
@@ -118,7 +118,7 @@ const TimeSeries &DataCollector::getLiveData() const {
 }
 
 nlohmann::json DataCollector::getSerializedLiveData() const {
-  std::lock_guard<std::mutex> lock(const_cast<std::mutex &>(m_LiveDataMutex));
+  std::shared_lock lock(const_cast<std::shared_mutex &>(m_LiveDataMutex));
   return m_LiveTimeSeries->serialize();
 }
 
@@ -138,7 +138,7 @@ void DataCollector::addDataPoints(
     return;
   }
   {
-    std::lock_guard<std::mutex> lock(m_LiveDataMutex);
+    std::unique_lock lock(m_LiveDataMutex);
     for (auto d : data) {
       m_LiveTimeSeries->add(d);
       if (m_IsRecording) {

@@ -127,7 +127,7 @@ void AsyncDevice::keepDeviceWorkerAlive(std::chrono::microseconds timeout) {
       return;
 
     // Otherwise, send a PING command to the device
-    std::lock_guard<std::mutex> lock(m_AsyncDeviceMutex);
+    std::unique_lock lock(m_AsyncDeviceMutex);
     pingDeviceWorker();
 
     // Once its done, repeat the process
@@ -164,7 +164,7 @@ DeviceResponses AsyncDevice::parseSendCommand(const DeviceCommands &command,
   // Send a command to the worker to relay commands to the device
   m_AsyncDeviceContext.post(
       [this, &command, data = data, p = &promise, ignoreResponse]() mutable {
-        std::lock_guard<std::mutex> lock(m_AsyncDeviceMutex);
+        std::unique_lock lock(m_AsyncDeviceMutex);
 
         // Parse the command and get the response
         auto response = parseAsyncSendCommand(command, data);

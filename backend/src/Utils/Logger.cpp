@@ -23,13 +23,13 @@ void Logger::fatal(const std::string &message) { log(message, FATAL); }
 
 // Set the minimum log level. Messages below this level will not be logged.
 void Logger::setLogLevel(Level level) {
-  std::lock_guard<std::mutex> lock(m_Mutex);
+  std::unique_lock lock(m_Mutex);
   m_LogLevel = level;
 }
 
 // Set the log file to write logs to a file
 void Logger::setLogFile(const std::string &filename) {
-  std::lock_guard<std::mutex> lock(m_Mutex);
+  std::unique_lock lock(m_Mutex);
 
   std::filesystem::path filePath(filename);
   std::filesystem::path dirPath =
@@ -61,7 +61,7 @@ Logger::~Logger() {
 
 // Log a message if it meets the minimum log level
 void Logger::log(const std::string &message, Level level) {
-  std::lock_guard<std::mutex> lock(m_Mutex);
+  std::unique_lock lock(m_Mutex);
 
   // Check if the current message meets the log level threshold
   if (level < m_LogLevel) {

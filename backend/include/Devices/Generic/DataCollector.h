@@ -3,6 +3,7 @@
 
 #include "neurobioConfig.h"
 #include <functional>
+#include <shared_mutex>
 #include <vector>
 
 #include "Data/TimeSeries.h"
@@ -125,7 +126,7 @@ protected:
 
 private:
   /// @brief Mutex for adding/reading the data
-  DECLARE_PRIVATE_MEMBER_NOGET(std::mutex, LiveDataMutex);
+  DECLARE_PRIVATE_MEMBER_NOGET(std::shared_mutex, LiveDataMutex);
 };
 
 } // namespace NEUROBIO_NAMESPACE::devices

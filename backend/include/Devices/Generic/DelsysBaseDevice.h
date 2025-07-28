@@ -75,7 +75,7 @@ public:
 
   private:
     DECLARE_PROTECTED_MEMBER_NOGET(DelsysCommands, LastCommand);
-    DECLARE_PROTECTED_MEMBER_NOGET(std::mutex, LastCommandMutex);
+    DECLARE_PROTECTED_MEMBER_NOGET(std::shared_mutex, LastCommandMutex);
   };
 
   class DataTcpDevice : public TcpDevice {

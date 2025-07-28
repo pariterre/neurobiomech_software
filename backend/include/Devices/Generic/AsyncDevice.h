@@ -3,6 +3,7 @@
 
 #include "Devices/Generic/Device.h"
 #include <asio.hpp>
+#include <shared_mutex>
 
 namespace NEUROBIO_NAMESPACE::devices {
 
@@ -32,7 +33,7 @@ protected:
 
   /// @brief Get the mutex
   /// @return The mutex
-  DECLARE_PROTECTED_MEMBER_NOGET(std::mutex, AsyncDeviceMutex)
+  DECLARE_PROTECTED_MEMBER_NOGET(std::shared_mutex, AsyncDeviceMutex)
 
   /// @brief Worker thread to keep the device alive
   DECLARE_PRIVATE_MEMBER_NOGET(std::thread, AsyncDeviceWorker)

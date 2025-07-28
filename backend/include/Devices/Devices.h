@@ -4,8 +4,8 @@
 #include "neurobioConfig.h"
 
 #include "Utils/CppMacros.h"
-#include <mutex>
 #include <nlohmann/json.hpp>
+#include <shared_mutex>
 
 namespace NEUROBIO_NAMESPACE {
 namespace data {
@@ -157,7 +157,7 @@ public:
 
 private:
   /// @brief The mutex to lock certain operations
-  DECLARE_PRIVATE_MEMBER_NOGET(std::mutex, MutexDataCollectors)
+  DECLARE_PRIVATE_MEMBER_NOGET(std::shared_mutex, MutexDataCollectors)
 };
 
 } // namespace devices

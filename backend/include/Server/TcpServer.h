@@ -7,7 +7,7 @@
 #include "Devices/Devices.h"
 #include "Utils/CppMacros.h"
 #include <asio.hpp>
-#include <mutex>
+#include <shared_mutex>
 
 namespace NEUROBIO_NAMESPACE::server {
 
@@ -201,7 +201,7 @@ protected:
   readSessionIdFromSocket(std::shared_ptr<asio::ip::tcp::socket> socket);
 
   /// @brief The mutex used to protect the sessions
-  DECLARE_PROTECTED_MEMBER_NOGET(std::mutex, SessionMutex);
+  DECLARE_PROTECTED_MEMBER_NOGET(std::shared_mutex, SessionMutex);
 
   /// @brief The sessions that are currently connected to the server
   std::unordered_map<std::uint32_t, std::shared_ptr<ClientSession>> m_Sessions;

@@ -30,7 +30,7 @@ std::string DelsysBaseDevice::CommandTcpDevice::deviceName() const {
 DeviceResponses DelsysBaseDevice::CommandTcpDevice::parseAsyncSendCommand(
     const DeviceCommands &command, const std::any &data) {
   auto commandAsDelsys = DelsysCommands(command.getValue());
-  std::lock_guard<std::mutex> lock(m_LastCommandMutex);
+  std::unique_lock lock(m_LastCommandMutex);
   if (m_LastCommand == commandAsDelsys) {
     return DeviceResponses::OK;
   }

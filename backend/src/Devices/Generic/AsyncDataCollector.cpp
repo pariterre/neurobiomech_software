@@ -69,7 +69,7 @@ bool AsyncDataCollector::stopDataStreaming() {
 
   // Cancel the timer first to ensure that it does not keep the io_context alive
   {
-    std::lock_guard<std::mutex> lock(m_AsyncDataMutex);
+    std::unique_lock lock(m_AsyncDataMutex);
     m_IsStreamingData = false;
     m_HasFailedToStartDataStreaming = false;
   }
@@ -90,12 +90,12 @@ bool AsyncDataCollector::stopDataStreaming() {
 }
 
 bool AsyncDataCollector::startRecording() {
-  std::lock_guard<std::mutex> lock(m_AsyncDataMutex);
+  std::unique_lock lock(m_AsyncDataMutex);
   return DataCollector::startRecording();
 }
 
 bool AsyncDataCollector::stopRecording() {
-  std::lock_guard<std::mutex> lock(m_AsyncDataMutex);
+  std::unique_lock lock(m_AsyncDataMutex);
   return DataCollector::stopRecording();
 }
 

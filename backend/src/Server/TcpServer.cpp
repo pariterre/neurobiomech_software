@@ -376,7 +376,7 @@ void TcpServer::handleLiveAnalysesSocket(
 }
 
 std::shared_ptr<ClientSession> TcpServer::getOrCreateSession(std::uint32_t id) {
-  std::lock_guard<std::mutex> lock(m_SessionMutex);
+  std::unique_lock lock(m_SessionMutex); // Exclusive lock
   auto &session = m_Sessions[id];
   if (!session) {
     session = std::make_shared<ClientSession>(
@@ -388,7 +388,7 @@ std::shared_ptr<ClientSession> TcpServer::getOrCreateSession(std::uint32_t id) {
           return handleCommand(command, client);
         },
         [this](const ClientSession &client) {
-          handleClientHasDisconnected(client);
+          return handleClientHasDisconnected(client);
         },
         m_TimeoutPeriod);
   }
@@ -436,9 +436,8 @@ std::uint32_t TcpServer::readSessionIdFromSocket(
     *id = 0xFFFFFFFF; // Invalid ID, return error value
   }
 
-  // Lock the m_Session mutex to ensure thread safety
-  std::lock_guard<std::mutex> lock(m_SessionMutex);
-  auto &session = m_Sessions[*id];
+  std::unique_lock lock(m_SessionMutex);
+  auto &session = m_Sessions[*id]; // Get or create
   if (session && session->isConnected()) {
     // If the session is already connected so the state is invalid
     auto &logger = utils::Logger::getInstance();
@@ -457,7 +456,13 @@ std::uint32_t TcpServer::readSessionIdFromSocket(
 }
 
 void TcpServer::handleClientHasDisconnected(const ClientSession &session) {
-  std::lock_guard<std::mutex> lock(m_SessionMutex);
+  // If the server is already off, no need to handle disconnection
+  if (m_Status == TcpServerStatus::OFF) {
+    return;
+  }
+
+  // Exclusive lock
+  std::unique_lock lock(m_SessionMutex);
   auto it = m_Sessions.find(session.getId());
   if (it == m_Sessions.end())
     return;
@@ -496,7 +501,7 @@ void TcpServer::stopServer() {
   // Disconnect all the clients
   {
     logger.info("Disconnecting all the clients");
-    std::lock_guard<std::mutex> lock(m_SessionMutex);
+    std::unique_lock lock(m_SessionMutex);
     for (auto &sessionPair : m_Sessions) {
       sessionPair.second->disconnect();
     }
@@ -564,6 +569,11 @@ void TcpServer::cancelAcceptors() {
 
 bool TcpServer::handleHandshake(TcpServerCommand command,
                                 const ClientSession &session) {
+  if (m_Status == TcpServerStatus::OFF) {
+    // If the server is off, we cannot handle any commands
+    return false;
+  }
+
   auto &logger = utils::Logger::getInstance();
   asio::error_code error;
 
@@ -596,6 +606,11 @@ bool TcpServer::handleHandshake(TcpServerCommand command,
 
 bool TcpServer::handleCommand(TcpServerCommand command,
                               const ClientSession &session) {
+  if (m_Status == TcpServerStatus::OFF) {
+    // If the server is off, we cannot handle any commands
+    return false;
+  }
+
   auto &logger = utils::Logger::getInstance();
   asio::error_code error;
 
@@ -768,11 +783,9 @@ void TcpServer::notifyClientsOfStateChange() {
   auto packet =
       asio::buffer(constructResponsePacket(TcpServerResponse::STATES_CHANGED));
 
-  // TODO: The following mutex sometimes block. Find a way to have a read and a
-  // read/write mutex
-  // std::lock_guard<std::mutex> lock(m_SessionMutex);
-
   // TODO Write doc
+
+  std::shared_lock lock(m_SessionMutex);
   for (const auto &sessionPair : m_Sessions) {
     const auto &session = sessionPair.second;
     asio::write(*session->getResponseSocket(), packet);
@@ -938,8 +951,7 @@ void TcpServer::liveDataLoop() {
 
     // Send the data to all the clients
     asio::error_code error;
-    // Lock the m_Session mutex to ensure thread safety
-    std::lock_guard<std::mutex> lock(m_SessionMutex);
+    std::shared_lock lock(m_SessionMutex);
     for (auto &session : m_Sessions) {
       try {
         auto &socket = session.second->getLiveDataSocket();
@@ -1006,8 +1018,7 @@ void TcpServer::liveAnalysesLoop() {
     auto dataToSend = asio::buffer(dataDump);
 
     asio::error_code error;
-    // Lock the m_Session mutex to ensure thread safety
-    std::lock_guard<std::mutex> lock(m_SessionMutex);
+    std::shared_lock lock(m_SessionMutex);
     for (auto &session : m_Sessions) {
       try {
         auto &socket = session.second->getLiveAnalysesSocket();
