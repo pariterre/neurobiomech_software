@@ -343,23 +343,24 @@ void TcpServer::startServer() {
 void TcpServer::startServerSync() {
   auto &logger = utils::Logger::getInstance();
 
+  m_Status = TcpServerStatus::PREPARING;
+  startAcceptors();
+  startAcceptingSocketConnexions();
+  m_Status = TcpServerStatus::READY;
+
+  liveDataLoop();
   // Start the loop timers
   std::thread liveDataWorkerThread([this]() {
     m_LiveDataContext->run();
     utils::Logger::getInstance().info("Live data has terminated");
   });
+
+  liveAnalysesLoop();
   std::thread liveAnalysesWorkerThread([this]() {
     m_LiveAnalysesContext->run();
     utils::Logger::getInstance().info("Live analyses has terminated");
   });
 
-  m_Status = TcpServerStatus::PREPARING;
-  startAcceptors();
-  startAcceptingSocketConnexions();
-
-  m_Status = TcpServerStatus::READY;
-  liveDataLoop();
-  liveAnalysesLoop();
   m_Context->run();
   liveAnalysesWorkerThread.join();
   liveDataWorkerThread.join();
@@ -1006,9 +1007,9 @@ void TcpServer::liveDataLoop() {
     }
     auto dataDump = data.dump();
 
-    auto packet = asio::buffer(constructResponsePacket(
+    auto packet = constructResponsePacket(
         TcpServerCommand::NONE, TcpServerMessage::SENDING_DATA,
-        TcpServerDataType::LIVE_DATA, dataDump.size(), dataDump));
+        TcpServerDataType::LIVE_DATA, dataDump.size(), dataDump);
 
     // Send the data to all the clients
     asio::error_code error;
@@ -1016,7 +1017,7 @@ void TcpServer::liveDataLoop() {
     for (auto &session : m_Sessions) {
       try {
         auto &socket = session.second->getLiveDataSocket();
-        asio::write(*socket, packet, error);
+        asio::write(*socket, asio::buffer(packet), error);
       } catch (const std::exception &) {
         // Do nothing and hope for the best
       }
