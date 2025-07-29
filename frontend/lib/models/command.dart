@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:frontend/managers/neurobio_client.dart';
 
 enum Command {
@@ -15,7 +17,9 @@ enum Command {
   stopRecording,
   getLastTrial,
   addAnalyzer,
-  removeAnalyzer;
+  removeAnalyzer,
+  failed,
+  none;
 
   ///
   /// Value that corresponds to the command on the server
@@ -51,6 +55,10 @@ enum Command {
         return 50;
       case Command.removeAnalyzer:
         return 51;
+      case Command.failed:
+        return 100;
+      case Command.none:
+        return 0xFFFFFFFF;
     }
   }
 
@@ -74,6 +82,8 @@ enum Command {
       case Command.removeAnalyzer:
         return false;
       case Command.handshake:
+      case Command.failed:
+      case Command.none:
         return true;
     }
   }
@@ -93,6 +103,8 @@ enum Command {
       case Command.getLastTrial:
       case Command.addAnalyzer:
       case Command.removeAnalyzer:
+      case Command.failed:
+      case Command.none:
         return true;
       case Command.connectMagstim:
       case Command.disconnectMagstim:
@@ -115,6 +127,8 @@ enum Command {
       case Command.stopRecording:
       case Command.addAnalyzer:
       case Command.removeAnalyzer:
+      case Command.failed:
+      case Command.none:
         return false;
       case Command.getStates:
       case Command.getLastTrial:
@@ -148,5 +162,19 @@ enum Command {
           .add(int.parse(commandRadix.substring(i * 2, i * 2 + 2), radix: 16));
     }
     return packet;
+  }
+
+  static Command parse(List<int> packet) {
+    final byteData =
+        ByteData.sublistView(Uint8List.fromList(packet.sublist(4, 8)));
+
+    // Read as little-endian uint32
+    final valueAsInt = byteData.getUint32(0, Endian.little);
+    for (final command in Command.values) {
+      if (command.toInt() == valueAsInt) {
+        return command;
+      }
+    }
+    return Command.none;
   }
 }

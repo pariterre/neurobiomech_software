@@ -22,7 +22,6 @@ class NeurobioClient {
   Socket? _socketLiveAnalogsData;
   Socket? _socketLiveAnalyses;
 
-  Command? _currentCommand;
   Completer<Ack>? _commandAckCompleter;
   Completer? _responseCompleter;
   Future? get onResponseArrived => _responseCompleter?.future;
@@ -67,7 +66,7 @@ class NeurobioClient {
       isFromLiveData: true);
   Duration liveAnalysesTimeWindow = const Duration(seconds: 3);
 
-  final onMessageFromBackend = GenericListener<Function(Ack)>();
+  final onBackendUpdated = GenericListener<Function()>();
 
   bool _isRecording = false;
 
@@ -138,6 +137,8 @@ class NeurobioClient {
   ///
   /// Close the connection to the server.
   Future<void> disconnect() async {
+    if (!isInitialized) return;
+
     if (_commandAckCompleter != null && !_commandAckCompleter!.isCompleted) {
       _commandAckCompleter?.complete(Ack.nok);
     }
@@ -265,7 +266,6 @@ class NeurobioClient {
 
       if (parameters != null) {
         // Reset the current command so we can receive the Ack again
-        _currentCommand = command;
         await _performSendParameters(parameters);
       }
 
@@ -291,6 +291,8 @@ class NeurobioClient {
       case Command.stopRecording:
       case Command.addAnalyzer:
       case Command.removeAnalyzer:
+      case Command.failed:
+      case Command.none:
         break;
       case Command.getStates:
         _prepareResponseCompleter();
@@ -300,7 +302,6 @@ class NeurobioClient {
 
     // Construct and send the command
     try {
-      _currentCommand = command;
       _commandAckCompleter = Completer<Ack>();
       _socketCommand!.add(command.toPacket());
       await _socketCommand!.flush();
@@ -331,12 +332,9 @@ class NeurobioClient {
   ///
   /// Get a response from the server to a command
   void _receiveCommandAck(List<int> response) {
-    if (_commandAckCompleter == null || _currentCommand == null) {
-      _log.severe('Got a response without a command');
-      return;
-    }
-    if (_commandAckCompleter!.isCompleted) {
-      _log.severe('Got a response but the command was already responded');
+    if (_commandAckCompleter == null) {
+      _log.severe(
+          'Got a response but the command does not exist or is already responded to');
       return;
     }
 
@@ -349,11 +347,11 @@ class NeurobioClient {
       return;
     }
 
+    final command = Command.parse(response);
     final ack = Ack.parse(response);
     if (ack == Ack.ok) {
-      _setFlagsFromCommand(_currentCommand!);
+      _setFlagsFromCommand(command);
     }
-    if (!_currentCommand!.hasDataResponse) _currentCommand = null;
     _commandAckCompleter!.complete(ack);
   }
 
@@ -391,6 +389,8 @@ class NeurobioClient {
       case Command.connectMagstim:
       case Command.disconnectMagstim:
       case Command.getLastTrial:
+      case Command.failed:
+      case Command.none:
         break;
     }
   }
@@ -433,42 +433,43 @@ class NeurobioClient {
 
   void _receiveResponse(List<int> response) {
     if (!isInitialized) return;
+    final command = Command.parse(response);
+    final ack = Ack.parse(response);
 
     if (_expectedResponseLength == null) {
-      switch (_currentCommand) {
-        case Command.handshake:
-        case Command.connectDelsysAnalog:
-        case Command.connectDelsysEmg:
-        case Command.connectMagstim:
-        case Command.zeroDelsysAnalog:
-        case Command.zeroDelsysEmg:
-        case Command.disconnectDelsysAnalog:
-        case Command.disconnectDelsysEmg:
-        case Command.disconnectMagstim:
-        case Command.startRecording:
-        case Command.stopRecording:
-        case Command.addAnalyzer:
-        case Command.removeAnalyzer:
-          _log.severe('Received data for an unknown command');
-          throw StateError('Received data for an unknown command');
-        case Command.getStates:
-          break;
-        case Command.getLastTrial:
-          lastTrialAnalogsData.clear(
-              initialTime: _parseTimestampFromPacket(response));
-          return;
-        case null:
-          final ack = Ack.parse(response);
-          switch (ack) {
-            case Ack.ok:
-            case Ack.nok:
-              _log.severe('Response received without a command');
-              throw StateError('Response received without a command');
-            case Ack.statesChanged:
-              send(Command.getStates);
-              onMessageFromBackend.notifyListeners((callback) => callback(ack));
+      switch (ack) {
+        case Ack.ok:
+        case Ack.nok:
+          switch (command) {
+            case Command.handshake:
+            case Command.connectDelsysAnalog:
+            case Command.connectDelsysEmg:
+            case Command.connectMagstim:
+            case Command.zeroDelsysAnalog:
+            case Command.zeroDelsysEmg:
+            case Command.disconnectDelsysAnalog:
+            case Command.disconnectDelsysEmg:
+            case Command.disconnectMagstim:
+            case Command.startRecording:
+            case Command.stopRecording:
+            case Command.addAnalyzer:
+            case Command.removeAnalyzer:
+            case Command.failed:
+            case Command.none:
+              _log.severe('Received data for an unknown command');
+              throw StateError('Received data for an unknown command');
+            case Command.getStates:
+              // Nothing special
+              break;
+            case Command.getLastTrial:
+              lastTrialAnalogsData.clear(
+                  initialTime: _parseTimestampFromPacket(response));
               break;
           }
+          break;
+        case Ack.ready:
+        case Ack.sendingData:
+          break;
       }
       _expectedResponseLength = _parseDataFromResponsePacket(response);
       if (response.length > _serverHeaderLength) {
@@ -494,7 +495,7 @@ class NeurobioClient {
 
     // Convert the data to a string (from json)
     _expectedResponseLength = null;
-    switch (_currentCommand) {
+    switch (command) {
       case Command.handshake:
       case Command.connectDelsysAnalog:
       case Command.connectDelsysEmg:
@@ -508,7 +509,8 @@ class NeurobioClient {
       case Command.stopRecording:
       case Command.addAnalyzer:
       case Command.removeAnalyzer:
-      case null:
+      case Command.failed:
+      case Command.none:
         break;
       case Command.getStates:
         // To string
@@ -536,6 +538,7 @@ class NeurobioClient {
             resetLiveAnalyses();
           }
         }
+        onBackendUpdated.notifyListeners((callback) => callback());
         break;
       case Command.getLastTrial:
         final jsonRaw = json.decode(utf8.decode(_responseData));
@@ -545,7 +548,6 @@ class NeurobioClient {
         break;
     }
 
-    if (_commandAckCompleter?.isCompleted ?? false) _currentCommand = null;
     _responseCompleter!.complete();
   }
 
@@ -715,7 +717,7 @@ class NeurobioClient {
 
   int _parseVersionFromPacket(List<int> data) {
     // Parse the version (4 bytes) from the packet data, starting from the 1st byte
-    return _parse32bitsIntFromPacket(data.sublist(0, 4));
+    return _parse64bitsIntFromPacket(data.sublist(0, 8));
   }
 
   DateTime _parseTimestampFromPacket(List<int> data) {
@@ -725,8 +727,8 @@ class NeurobioClient {
   }
 
   int _parseDataFromResponsePacket(List<int> data) {
-    // Parse the data length (4 bytes) from the packet data, starting from the 13th byte
-    return _parse32bitsIntFromPacket(data.sublist(12, 16));
+    // Parse the data length (8 bytes) from the packet data, starting from the 13th byte
+    return _parse64bitsIntFromPacket(data.sublist(17, 25));
   }
 
   // Prepare the singleton
@@ -746,7 +748,6 @@ class NeurobioClient {
         final socket = await Socket.connect(ipAddress, port);
         socket.listen(hasDataCallback, onDone: () {
           if (onConnexionLost == null) return;
-          _log.info('Connection closed');
           disconnect();
           onConnexionLost();
         });
@@ -828,6 +829,8 @@ class NeurobioClientMock extends NeurobioClient {
       case Command.stopRecording:
       case Command.addAnalyzer:
       case Command.removeAnalyzer:
+      case Command.failed:
+      case Command.none:
         break;
       case Command.getStates:
         _prepareResponseCompleter();
@@ -837,7 +840,6 @@ class NeurobioClientMock extends NeurobioClient {
 
     // Construct and send the command
     try {
-      _currentCommand = command;
       _commandAckCompleter = Completer<Ack>();
       Future.delayed(const Duration(milliseconds: 500)).then((value) =>
           _receiveCommandAck([
@@ -887,6 +889,8 @@ class NeurobioClientMock extends NeurobioClient {
       case Command.getLastTrial:
       case Command.addAnalyzer:
       case Command.removeAnalyzer:
+      case Command.failed:
+      case Command.none:
         break;
     }
 

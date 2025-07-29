@@ -15,7 +15,7 @@ enum TcpServerStatus { OFF, PREPARING, READY };
 
 static const std::uint32_t COMMUNICATION_PROTOCOL_VERSION = 2;
 static const size_t BYTES_IN_CLIENT_PACKET_HEADER = 8;
-static const size_t BYTES_IN_SERVER_PACKET_HEADER = 16;
+static const size_t BYTES_IN_SERVER_PACKET_HEADER = 24;
 
 enum class TcpServerCommand : std::uint32_t {
   HANDSHAKE = 0,
@@ -34,12 +34,34 @@ enum class TcpServerCommand : std::uint32_t {
   ADD_ANALYZER = 50,
   REMOVE_ANALYZER = 51,
   FAILED = 100,
+  NONE = 0xFFFFFFFF,
 };
 
 enum class TcpServerResponse : std::uint32_t {
-  NOK = 0,
-  OK = 1,
-  STATES_CHANGED = 10,
+  OK = 0,
+  NOK = 1,
+  READY = 2,
+  SENDING_DATA = 3,
+};
+
+enum class TcpServerData : std::uint32_t {
+  STATES = 0,
+  LIVE_DATA = 1,
+  LIVE_ANALYSES = 2,
+  DELSYS_ANALOG_CONNECTED = 10,
+  DELSYS_EMG_CONNECTED = 11,
+  MAGSTIM_CONNECTED = 12,
+  DELSYS_ANALOG_ZEROED = 40,
+  DELSYS_EMG_ZEROED = 41,
+  DELSYS_ANALOG_DISCONNECTED = 20,
+  DELSYS_EMG_DISCONNECTED = 21,
+  MAGSTIM_DISCONNECTED = 22,
+  RECORDING_STARTED = 30,
+  RECORDING_STOPPED = 31,
+  LAST_TRIAL_DATA = 32,
+  ANALYZER_ADDED = 50,
+  ANALYZER_REMOVED = 51,
+  NONE = 0xFFFFFFFF,
 };
 
 class ClientSession {
@@ -263,14 +285,17 @@ protected:
   bool handleCommand(TcpServerCommand command, const ClientSession &session);
 
   /// @brief Send clients that the internal states has changed
-  void notifyClientsOfStateChange();
+  /// @param data The data to send to the clients
+  void notifyClientsOfStateChange(TcpServerData data);
 
   /// @brief Handle extra information from a command
+  /// @param command The command that sent the extra data
   /// @param error The error code to set if an error occurs
   /// @param session The client session that sent the command
   /// @return The response to send by the client (raises an exception if an
   /// error occurs)
-  nlohmann::json handleExtraData(asio::error_code &error,
+  nlohmann::json handleExtraData(TcpServerCommand command,
+                                 asio::error_code &error,
                                  const ClientSession &session);
 
   // -------------------------- //

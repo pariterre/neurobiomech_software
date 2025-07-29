@@ -132,7 +132,8 @@ bool TcpClient::connect(std::uint32_t stateId) {
       switch (m_PreviousAck) {
       case TcpServerResponse::OK:
       case TcpServerResponse::NOK:
-      case TcpServerResponse::STATES_CHANGED:
+      case TcpServerResponse::READY:
+      case TcpServerResponse::SENDING_DATA:
         // Nothing more to do
         break;
       default:

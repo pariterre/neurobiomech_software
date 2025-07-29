@@ -1,24 +1,27 @@
 import 'dart:typed_data';
 
 enum Ack {
-  nok,
   ok,
-  statesChanged;
+  nok,
+  ready,
+  sendingData;
 
   int toInt() {
     switch (this) {
-      case Ack.nok:
-        return 0;
       case Ack.ok:
+        return 0;
+      case Ack.nok:
         return 1;
-      case Ack.statesChanged:
-        return 10;
+      case Ack.ready:
+        return 2;
+      case Ack.sendingData:
+        return 3;
     }
   }
 
   static Ack parse(List<int> packet) {
     final byteData =
-        ByteData.sublistView(Uint8List.fromList(packet.sublist(12, 16)));
+        ByteData.sublistView(Uint8List.fromList(packet.sublist(8, 12)));
 
     // Read as little-endian uint32
     final valueAsInt = byteData.getUint32(0, Endian.little);

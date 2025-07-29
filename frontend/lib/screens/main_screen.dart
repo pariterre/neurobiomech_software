@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:frontend/managers/database_manager.dart';
 import 'package:frontend/managers/neurobio_client.dart';
 import 'package:frontend/managers/predictions_manager.dart';
-import 'package:frontend/models/ack.dart';
 import 'package:frontend/models/command.dart';
 import 'package:frontend/screens/predictions_dialog.dart';
 import 'package:frontend/widgets/data_graph.dart';
@@ -60,21 +59,14 @@ class _MainScreenState extends State<MainScreen> {
       onNewLiveAnalyses: _onNewLiveAnalyses,
     );
     // Register for future messages from the backend
-    _connexion.onMessageFromBackend.listen(_onMessageFromBackend);
+    _connexion.onBackendUpdated.listen(_onBackendUpdated);
 
     await _requestCurrentStates();
     setState(() => _isBusy = false);
   }
 
-  void _onMessageFromBackend(Ack callback) {
-    switch (callback) {
-      case Ack.ok:
-      case Ack.nok:
-        break;
-      case Ack.statesChanged:
-        _requestCurrentStates();
-        break;
-    }
+  void _onBackendUpdated() {
+    setState(() {});
   }
 
   Future<void> _requestCurrentStates() async {
