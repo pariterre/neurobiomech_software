@@ -120,14 +120,14 @@ protected:
   /// @brief The Send a command to the server and wait for the confirmation
   /// @param command The command to send
   /// @return The acknowledgment from the server
-  TcpServerResponse sendCommand(TcpServerCommand command);
+  TcpServerMessage sendCommand(TcpServerCommand command);
 
   /// @brief The Send a command to the server and wait for the confirmation
   /// @param command The command to send
   /// @param data The data to send with the command
   /// @return The acknowledgment from the server
-  TcpServerResponse sendCommandWithData(TcpServerCommand command,
-                                        const nlohmann::json &data);
+  TcpServerMessage sendCommandWithData(TcpServerCommand command,
+                                       const nlohmann::json &data);
 
   /// @brief The Send a command to the server and wait for the confirmation
   /// @param command The command to send
@@ -136,10 +136,10 @@ protected:
 
   /// @brief Wait for acknowledgment from the server (invoked by [sendCommand])
   /// @return The acknowledgment from the server
-  TcpServerResponse waitForCommandAcknowledgment();
+  TcpServerMessage waitForCommandAcknowledgment();
 
   /// @brief The last message received from the server
-  DECLARE_PROTECTED_MEMBER_NOGET(TcpServerResponse, PreviousAck);
+  DECLARE_PROTECTED_MEMBER_NOGET(TcpServerMessage, PreviousAck);
 
   /// @brief The last response received from the server
   DECLARE_PROTECTED_MEMBER_NOGET(std::vector<char>, PreviousResponse);
@@ -147,7 +147,7 @@ protected:
   /// @brief Wait for a message sent from the server
   /// @param socket The socket to wait for the response
   /// @return The response from the server
-  TcpServerResponse waitForMessage(asio::ip::tcp::socket &socket);
+  TcpServerMessage waitForMessage(asio::ip::tcp::socket &socket);
 
   /// @brief Wait for a response from the server
   /// @param socket The socket to wait for the response
@@ -168,7 +168,7 @@ protected:
   /// @brief Parse a response packet from the server
   /// @param buffer The buffer to parse
   /// @return The response from the server
-  TcpServerResponse parseAcknowledgmentFromPacket(
+  TcpServerMessage parseAcknowledgmentFromPacket(
       const std::array<char, BYTES_IN_SERVER_PACKET_HEADER> &buffer);
 
   /// @brief Parse a response packet from the server

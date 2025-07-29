@@ -15,7 +15,7 @@ enum TcpServerStatus { OFF, PREPARING, READY };
 
 static const std::uint32_t COMMUNICATION_PROTOCOL_VERSION = 2;
 static const size_t BYTES_IN_CLIENT_PACKET_HEADER = 8;
-static const size_t BYTES_IN_SERVER_PACKET_HEADER = 24;
+static const size_t BYTES_IN_SERVER_PACKET_HEADER = 16;
 
 enum class TcpServerCommand : std::uint32_t {
   HANDSHAKE = 0,
@@ -37,30 +37,19 @@ enum class TcpServerCommand : std::uint32_t {
   NONE = 0xFFFFFFFF,
 };
 
-enum class TcpServerResponse : std::uint32_t {
+enum class TcpServerMessage : std::uint32_t {
   OK = 0,
   NOK = 1,
-  READY = 2,
-  SENDING_DATA = 3,
+  LISTENING_EXTRA_DATA = 2,
+  SENDING_DATA = 10,
+  STATES_CHANGED = 20,
 };
 
-enum class TcpServerData : std::uint32_t {
+enum class TcpServerDataType : std::uint32_t {
   STATES = 0,
-  LIVE_DATA = 1,
-  LIVE_ANALYSES = 2,
-  DELSYS_ANALOG_CONNECTED = 10,
-  DELSYS_EMG_CONNECTED = 11,
-  MAGSTIM_CONNECTED = 12,
-  DELSYS_ANALOG_ZEROED = 40,
-  DELSYS_EMG_ZEROED = 41,
-  DELSYS_ANALOG_DISCONNECTED = 20,
-  DELSYS_EMG_DISCONNECTED = 21,
-  MAGSTIM_DISCONNECTED = 22,
-  RECORDING_STARTED = 30,
-  RECORDING_STOPPED = 31,
-  LAST_TRIAL_DATA = 32,
-  ANALYZER_ADDED = 50,
-  ANALYZER_REMOVED = 51,
+  FULL_TRIAL = 1,
+  LIVE_DATA = 10,
+  LIVE_ANALYSES = 11,
   NONE = 0xFFFFFFFF,
 };
 
@@ -285,8 +274,8 @@ protected:
   bool handleCommand(TcpServerCommand command, const ClientSession &session);
 
   /// @brief Send clients that the internal states has changed
-  /// @param data The data to send to the clients
-  void notifyClientsOfStateChange(TcpServerData data);
+  /// @param command The command that triggered the state change
+  void notifyClientsOfStateChange(TcpServerCommand command);
 
   /// @brief Handle extra information from a command
   /// @param command The command that sent the extra data

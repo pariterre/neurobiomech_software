@@ -5,14 +5,16 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:frontend/managers/predictions_manager.dart';
-import 'package:frontend/models/ack.dart';
-import 'package:frontend/models/command.dart';
+import 'package:frontend/models/server_command.dart';
 import 'package:frontend/models/data.dart';
 import 'package:frontend/models/prediction_model.dart';
+import 'package:frontend/models/server_data_type.dart';
+import 'package:frontend/models/server_message.dart';
 import 'package:frontend/utils/generic_listener.dart';
 import 'package:logging/logging.dart';
 
 const _serverHeaderLength = 16;
+const _serverHeaderWithDataLength = _serverHeaderLength + 8;
 
 class NeurobioClient {
   static const communicationProtocolVersion = 2;
@@ -22,10 +24,11 @@ class NeurobioClient {
   Socket? _socketLiveAnalogsData;
   Socket? _socketLiveAnalyses;
 
-  Completer<Ack>? _commandAckCompleter;
+  Completer<ServerMessage>? _commandCompleter;
   Completer? _responseCompleter;
   Future? get onResponseArrived => _responseCompleter?.future;
 
+  ServerCommand? _currentResponseCommand;
   int? _expectedResponseLength;
   final _responseData = <int>[];
 
@@ -120,7 +123,7 @@ class NeurobioClient {
         nbOfRetries: nbOfRetries,
         onConnexionLost: onConnexionLost);
 
-    if (!(await _send(Command.handshake, null))) {
+    if (!(await _send(ServerCommand.handshake, null))) {
       _log.severe('Handshake failed');
       await disconnect();
       return;
@@ -139,8 +142,8 @@ class NeurobioClient {
   Future<void> disconnect() async {
     if (!isInitialized) return;
 
-    if (_commandAckCompleter != null && !_commandAckCompleter!.isCompleted) {
-      _commandAckCompleter?.complete(Ack.nok);
+    if (_commandCompleter != null && !_commandCompleter!.isCompleted) {
+      _commandCompleter?.complete(ServerMessage.nok);
     }
     if (_responseCompleter != null && !_responseCompleter!.isCompleted) {
       _responseCompleter?.complete();
@@ -157,8 +160,9 @@ class NeurobioClient {
     liveAnalyses.clear(initialTime: DateTime.now(), fullReset: true);
     lastTrialAnalogsData.clear(initialTime: DateTime.now());
 
-    _commandAckCompleter = null;
+    _commandCompleter = null;
     _responseCompleter = null;
+    _currentResponseCommand = null;
     _expectedResponseLength = null;
     _responseData.clear();
 
@@ -193,7 +197,7 @@ class NeurobioClient {
         ipAddress: serverIp,
         port: commandPort,
         nbOfRetries: nbOfRetries,
-        hasDataCallback: _receiveCommandAck,
+        hasDataCallback: _receiveCommandResponse,
         onConnexionLost: onConnexionLost);
     _socketResponse = await _connectToSocket(
         id: id,
@@ -239,7 +243,8 @@ class NeurobioClient {
   /// can be passed as a list of strings.
   /// Returns true if the server returned OK and if the connexion to
   /// the server is still alive, false otherwise.
-  Future<bool> send(Command command, {Map<String, dynamic>? parameters}) async {
+  Future<bool> send(ServerCommand command,
+      {Map<String, dynamic>? parameters}) async {
     if (!command.isImplemented) {
       _log.severe('Command $command is not implemented');
       return false;
@@ -254,18 +259,19 @@ class NeurobioClient {
     return _send(command, parameters);
   }
 
-  Future<bool> _send(Command command, Map<String, dynamic>? parameters) async {
+  Future<bool> _send(
+      ServerCommand command, Map<String, dynamic>? parameters) async {
     if (!isInitialized) {
       _log.severe('Communication not initialized');
       return false;
     }
 
     // Format the command and send the messsage to the server
-    if (await _performSend(command) == Ack.ok) {
+    if (await _performSend(command) == ServerMessage.ok) {
       _log.info('Sent command: $command');
 
       if (parameters != null) {
-        // Reset the current command so we can receive the Ack again
+        // Reset the current command so we can receive the server message again
         await _performSendParameters(parameters);
       }
 
@@ -276,63 +282,65 @@ class NeurobioClient {
     }
   }
 
-  Future<Ack> _performSend(Command command) async {
+  Future<ServerMessage> _performSend(ServerCommand command) async {
     switch (command) {
-      case Command.handshake:
-      case Command.connectDelsysAnalog:
-      case Command.connectDelsysEmg:
-      case Command.connectMagstim:
-      case Command.zeroDelsysAnalog:
-      case Command.zeroDelsysEmg:
-      case Command.disconnectDelsysAnalog:
-      case Command.disconnectDelsysEmg:
-      case Command.disconnectMagstim:
-      case Command.startRecording:
-      case Command.stopRecording:
-      case Command.addAnalyzer:
-      case Command.removeAnalyzer:
-      case Command.failed:
-      case Command.none:
+      case ServerCommand.handshake:
+      case ServerCommand.connectDelsysAnalog:
+      case ServerCommand.connectDelsysEmg:
+      case ServerCommand.connectMagstim:
+      case ServerCommand.zeroDelsysAnalog:
+      case ServerCommand.zeroDelsysEmg:
+      case ServerCommand.disconnectDelsysAnalog:
+      case ServerCommand.disconnectDelsysEmg:
+      case ServerCommand.disconnectMagstim:
+      case ServerCommand.startRecording:
+      case ServerCommand.stopRecording:
+      case ServerCommand.addAnalyzer:
+      case ServerCommand.removeAnalyzer:
+      case ServerCommand.failed:
+      case ServerCommand.none:
         break;
-      case Command.getStates:
+      case ServerCommand.getStates:
         _prepareResponseCompleter();
-      case Command.getLastTrial:
+      case ServerCommand.getLastTrial:
         _prepareLastTrialResponse();
     }
 
     // Construct and send the command
     try {
-      _commandAckCompleter = Completer<Ack>();
+      _commandCompleter = Completer<ServerMessage>();
       _socketCommand!.add(command.toPacket());
       await _socketCommand!.flush();
-      return await _commandAckCompleter!.future;
+      return await _commandCompleter!.future;
     } on SocketException {
       _log.info('Connexion was closed by the server');
       disconnect();
-      return Ack.nok;
+      return ServerMessage.nok;
     }
   }
 
-  Future<Ack> _performSendParameters(Map<String, dynamic> parameters) async {
+  Future<ServerMessage> _performSendParameters(
+      Map<String, dynamic> parameters) async {
     // Construct and send the parameters
     try {
-      _commandAckCompleter = Completer<Ack>();
+      _commandCompleter = Completer<ServerMessage>();
       final packets = utf8.encode(json.encode(parameters));
-      _socketResponse!.add(Command.constructPacket(command: packets.length));
+      _socketResponse!
+          .add(ServerCommand.constructPacket(command: packets.length));
       _socketResponse!.add(packets);
       await _socketResponse!.flush();
-      return await _commandAckCompleter!.future;
+      return await _commandCompleter!.future;
     } on SocketException {
       _log.info('Connexion was closed by the server');
       disconnect();
-      return Ack.nok;
+      return ServerMessage.nok;
     }
   }
 
   ///
   /// Get a response from the server to a command
-  void _receiveCommandAck(List<int> response) {
-    if (_commandAckCompleter == null) {
+  void _receiveCommandResponse(List<int> response) {
+    if (_commandCompleter == null) {
       _log.severe(
           'Got a response but the command does not exist or is already responded to');
       return;
@@ -347,67 +355,68 @@ class NeurobioClient {
       return;
     }
 
-    final command = Command.parse(response);
-    final ack = Ack.parse(response);
-    if (ack == Ack.ok) {
+    final serverMessage = ServerMessage.parse(response);
+    if (serverMessage == ServerMessage.ok) {
+      final command = ServerCommand.parse(response);
       _setFlagsFromCommand(command);
     }
-    _commandAckCompleter!.complete(ack);
+    _commandCompleter!.complete(serverMessage);
   }
 
-  void _setFlagsFromCommand(Command command) {
+  void _setFlagsFromCommand(ServerCommand command) {
     switch (command) {
-      case Command.connectDelsysAnalog:
-      case Command.disconnectDelsysAnalog:
-        _isConnectedToDelsysAnalog = command == Command.connectDelsysAnalog;
+      case ServerCommand.connectDelsysAnalog:
+      case ServerCommand.disconnectDelsysAnalog:
+        _isConnectedToDelsysAnalog =
+            command == ServerCommand.connectDelsysAnalog;
         _isRecording = false;
         resetLiveAnalogsData();
         break;
 
-      case Command.disconnectDelsysEmg:
-      case Command.connectDelsysEmg:
-        _isConnectedToDelsysEmg = command == Command.connectDelsysEmg;
+      case ServerCommand.disconnectDelsysEmg:
+      case ServerCommand.connectDelsysEmg:
+        _isConnectedToDelsysEmg = command == ServerCommand.connectDelsysEmg;
         _isRecording = false;
         resetLiveAnalogsData();
         break;
 
-      case Command.zeroDelsysAnalog:
-      case Command.zeroDelsysEmg:
+      case ServerCommand.zeroDelsysAnalog:
+      case ServerCommand.zeroDelsysEmg:
         break;
 
-      case Command.startRecording:
-      case Command.stopRecording:
-        _isRecording = command == Command.startRecording;
+      case ServerCommand.startRecording:
+      case ServerCommand.stopRecording:
+        _isRecording = command == ServerCommand.startRecording;
         break;
 
-      case Command.addAnalyzer:
-      case Command.removeAnalyzer:
+      case ServerCommand.addAnalyzer:
+      case ServerCommand.removeAnalyzer:
         break;
 
-      case Command.handshake:
-      case Command.getStates:
-      case Command.connectMagstim:
-      case Command.disconnectMagstim:
-      case Command.getLastTrial:
-      case Command.failed:
-      case Command.none:
+      case ServerCommand.handshake:
+      case ServerCommand.getStates:
+      case ServerCommand.connectMagstim:
+      case ServerCommand.disconnectMagstim:
+      case ServerCommand.getLastTrial:
+      case ServerCommand.failed:
+      case ServerCommand.none:
         break;
     }
   }
 
-  void _setFlagsFromStates(Map<String, dynamic> states) {
+  void _setFlagsFromStates(Map<String, dynamic>? states) {
     _isConnectedToDelsysEmg = false;
     _isConnectedToDelsysAnalog = false;
     _isRecording = false;
-    if (states.containsKey('DelsysEmgDevice')) {
+    if (states?.containsKey('DelsysEmgDevice') ?? false) {
       _isConnectedToDelsysEmg =
-          states['DelsysEmgDevice']['is_connected'] ?? false;
+          states!['DelsysEmgDevice']['is_connected'] ?? false;
       _isRecording =
           _isRecording || (states['DelsysEmgDevice']['is_recording'] ?? false);
     }
-    if (states.containsKey('DelsysAnalogDevice')) {
+    if (states?.containsKey('DelsysAnalogDevice') ?? false) {
       _isConnectedToDelsysAnalog =
-          states['DelsysAnalogDevice']['is_connected'] ?? false;
+          states!['DelsysAnalogDevice']['is_connected'] ?? false;
       _isRecording = _isRecording ||
           (states['DelsysAnalogDevice']['is_recording'] ?? false);
     }
@@ -422,6 +431,7 @@ class NeurobioClient {
 
   void _prepareResponseCompleter() {
     _responseCompleter = Completer();
+    _currentResponseCommand = null;
     _expectedResponseLength = null;
     _responseData.clear();
   }
@@ -433,49 +443,47 @@ class NeurobioClient {
 
   void _receiveResponse(List<int> response) {
     if (!isInitialized) return;
-    final command = Command.parse(response);
-    final ack = Ack.parse(response);
 
-    if (_expectedResponseLength == null) {
-      switch (ack) {
-        case Ack.ok:
-        case Ack.nok:
-          switch (command) {
-            case Command.handshake:
-            case Command.connectDelsysAnalog:
-            case Command.connectDelsysEmg:
-            case Command.connectMagstim:
-            case Command.zeroDelsysAnalog:
-            case Command.zeroDelsysEmg:
-            case Command.disconnectDelsysAnalog:
-            case Command.disconnectDelsysEmg:
-            case Command.disconnectMagstim:
-            case Command.startRecording:
-            case Command.stopRecording:
-            case Command.addAnalyzer:
-            case Command.removeAnalyzer:
-            case Command.failed:
-            case Command.none:
-              _log.severe('Received data for an unknown command');
-              throw StateError('Received data for an unknown command');
-            case Command.getStates:
-              // Nothing special
-              break;
-            case Command.getLastTrial:
-              lastTrialAnalogsData.clear(
-                  initialTime: _parseTimestampFromPacket(response));
-              break;
-          }
+    if (_currentResponseCommand == null) {
+      _currentResponseCommand = ServerCommand.parse(response);
+      final serverMessage = ServerMessage.parse(response);
+
+      switch (serverMessage) {
+        case ServerMessage.ok:
+        case ServerMessage.nok:
+          _currentResponseCommand = null;
+          _log.severe('Unexpected server message: $serverMessage');
+          throw Exception('Unexpected server message: $serverMessage');
+        case ServerMessage.listeningExtraData:
+        case ServerMessage.sendingData:
+          // TODO
           break;
-        case Ack.ready:
-        case Ack.sendingData:
+        case ServerMessage.statesChanged:
+          _currentResponseCommand = null;
+          send(ServerCommand.getStates);
+          return;
+      }
+
+      final dataType = ServerDataType.parse(response);
+      switch (dataType) {
+        case ServerDataType.none:
+          _currentResponseCommand = null;
+          return;
+        case ServerDataType.states:
+        case ServerDataType.liveData:
+        case ServerDataType.liveAnalyses:
+          break;
+        case ServerDataType.fullTrial:
+          lastTrialAnalogsData.clear(
+              initialTime: _parseTimestampFromPacket(response));
           break;
       }
+
       _expectedResponseLength = _parseDataFromResponsePacket(response);
-      if (response.length > _serverHeaderLength) {
+      if (response.length > _serverHeaderWithDataLength) {
         // If more data came at once, recursively call the function with the rest
         // of the data.
-        _receiveResponse(response.sublist(_serverHeaderLength));
+        _receiveResponse(response.sublist(_serverHeaderWithDataLength));
       }
       return;
     }
@@ -495,40 +503,40 @@ class NeurobioClient {
 
     // Convert the data to a string (from json)
     _expectedResponseLength = null;
-    switch (command) {
-      case Command.handshake:
-      case Command.connectDelsysAnalog:
-      case Command.connectDelsysEmg:
-      case Command.connectMagstim:
-      case Command.zeroDelsysAnalog:
-      case Command.zeroDelsysEmg:
-      case Command.disconnectDelsysAnalog:
-      case Command.disconnectDelsysEmg:
-      case Command.disconnectMagstim:
-      case Command.startRecording:
-      case Command.stopRecording:
-      case Command.addAnalyzer:
-      case Command.removeAnalyzer:
-      case Command.failed:
-      case Command.none:
+    switch (_currentResponseCommand) {
+      case ServerCommand.handshake:
+      case ServerCommand.connectDelsysAnalog:
+      case ServerCommand.connectDelsysEmg:
+      case ServerCommand.connectMagstim:
+      case ServerCommand.zeroDelsysAnalog:
+      case ServerCommand.zeroDelsysEmg:
+      case ServerCommand.disconnectDelsysAnalog:
+      case ServerCommand.disconnectDelsysEmg:
+      case ServerCommand.disconnectMagstim:
+      case ServerCommand.startRecording:
+      case ServerCommand.stopRecording:
+      case ServerCommand.addAnalyzer:
+      case ServerCommand.removeAnalyzer:
+      case ServerCommand.failed:
+      case ServerCommand.none:
+      case null:
         break;
-      case Command.getStates:
+      case ServerCommand.getStates:
         // To string
         final jsonRaw =
             json.decode(utf8.decode(_responseData)) as Map<String, dynamic>?;
         if (jsonRaw != null) {
-          if (jsonRaw.containsKey('connected_devices') &&
-              jsonRaw['connected_devices'] != null) {
+          if (jsonRaw.containsKey('connected_devices')) {
             _setFlagsFromStates(jsonRaw['connected_devices']);
             resetLiveAnalogsData();
           }
-          if (jsonRaw.containsKey('connected_analyzers') &&
-              jsonRaw['connected_analyzers'] != null) {
+          if (jsonRaw.containsKey('connected_analyzers')) {
             _isConnectedToLiveAnalyses = true;
             final manager = PredictionsManager.instance;
             for (final value
-                in (jsonRaw['connected_analyzers'] as Map<String, dynamic>)
-                    .values) {
+                in (jsonRaw['connected_analyzers'] as Map<String, dynamic>?)
+                        ?.values ??
+                    []) {
               final prediction =
                   PredictionModel.fromSerialized(value['configuration']);
               manager.mergePrediction(prediction);
@@ -540,7 +548,7 @@ class NeurobioClient {
         }
         onBackendUpdated.notifyListeners((callback) => callback());
         break;
-      case Command.getLastTrial:
+      case ServerCommand.getLastTrial:
         final jsonRaw = json.decode(utf8.decode(_responseData));
         if (jsonRaw != null) {
           lastTrialAnalogsData.appendFromJson(jsonRaw as Map<String, dynamic>);
@@ -548,6 +556,7 @@ class NeurobioClient {
         break;
     }
 
+    _currentResponseCommand = null;
     _responseCompleter!.complete();
   }
 
@@ -631,12 +640,12 @@ class NeurobioClient {
         _log.severe('Error while parsing $dataType: $e, resetting');
         resetLiveAnalogsData();
       }
-      if (raw.length > _serverHeaderLength) {
+      if (raw.length > _serverHeaderWithDataLength) {
         // If more data came at once, recursively call the function with the rest
         // of the data.
         _receiveLiveData(
             dataType: dataType,
-            raw: raw.sublist(_serverHeaderLength),
+            raw: raw.sublist(_serverHeaderWithDataLength),
             rawList: rawList,
             getLastTimeStamp: getLastTimeStamp,
             getExpectedDataLength: getExpectedDataLength,
@@ -717,7 +726,7 @@ class NeurobioClient {
 
   int _parseVersionFromPacket(List<int> data) {
     // Parse the version (4 bytes) from the packet data, starting from the 1st byte
-    return _parse64bitsIntFromPacket(data.sublist(0, 8));
+    return _parse32bitsIntFromPacket(data.sublist(0, 4));
   }
 
   DateTime _parseTimestampFromPacket(List<int> data) {
@@ -728,7 +737,7 @@ class NeurobioClient {
 
   int _parseDataFromResponsePacket(List<int> data) {
     // Parse the data length (8 bytes) from the packet data, starting from the 13th byte
-    return _parse64bitsIntFromPacket(data.sublist(17, 25));
+    return _parse64bitsIntFromPacket(data.sublist(16, 24));
   }
 
   // Prepare the singleton
@@ -752,7 +761,7 @@ class NeurobioClient {
           onConnexionLost();
         });
 
-        socket.add(Command.constructPacket(command: id));
+        socket.add(ServerCommand.constructPacket(command: id));
         await socket.flush();
 
         return socket;
@@ -814,35 +823,35 @@ class NeurobioClientMock extends NeurobioClient {
   }
 
   @override
-  Future<Ack> _performSend(Command command) async {
+  Future<ServerMessage> _performSend(ServerCommand command) async {
     switch (command) {
-      case Command.handshake:
-      case Command.connectDelsysAnalog:
-      case Command.connectDelsysEmg:
-      case Command.connectMagstim:
-      case Command.zeroDelsysAnalog:
-      case Command.zeroDelsysEmg:
-      case Command.disconnectDelsysAnalog:
-      case Command.disconnectDelsysEmg:
-      case Command.disconnectMagstim:
-      case Command.startRecording:
-      case Command.stopRecording:
-      case Command.addAnalyzer:
-      case Command.removeAnalyzer:
-      case Command.failed:
-      case Command.none:
+      case ServerCommand.handshake:
+      case ServerCommand.connectDelsysAnalog:
+      case ServerCommand.connectDelsysEmg:
+      case ServerCommand.connectMagstim:
+      case ServerCommand.zeroDelsysAnalog:
+      case ServerCommand.zeroDelsysEmg:
+      case ServerCommand.disconnectDelsysAnalog:
+      case ServerCommand.disconnectDelsysEmg:
+      case ServerCommand.disconnectMagstim:
+      case ServerCommand.startRecording:
+      case ServerCommand.stopRecording:
+      case ServerCommand.addAnalyzer:
+      case ServerCommand.removeAnalyzer:
+      case ServerCommand.failed:
+      case ServerCommand.none:
         break;
-      case Command.getStates:
+      case ServerCommand.getStates:
         _prepareResponseCompleter();
-      case Command.getLastTrial:
+      case ServerCommand.getLastTrial:
         _prepareLastTrialResponse();
     }
 
     // Construct and send the command
     try {
-      _commandAckCompleter = Completer<Ack>();
+      _commandCompleter = Completer<ServerMessage>();
       Future.delayed(const Duration(milliseconds: 500)).then((value) =>
-          _receiveCommandAck([
+          _receiveCommandResponse([
             NeurobioClient.communicationProtocolVersion,
             0,
             0,
@@ -857,11 +866,11 @@ class NeurobioClientMock extends NeurobioClient {
             0,
             1
           ]));
-      return await _commandAckCompleter!.future;
+      return await _commandCompleter!.future;
     } on SocketException {
       _log.info('Connexion was closed by the server');
       disconnect();
-      return Ack.nok;
+      return ServerMessage.nok;
     }
   }
 
@@ -870,27 +879,27 @@ class NeurobioClientMock extends NeurobioClient {
   bool get hasRecorded => !isRecording && _hasRecordedMock;
 
   @override
-  void _setFlagsFromCommand(Command command) {
+  void _setFlagsFromCommand(ServerCommand command) {
     switch (command) {
-      case Command.startRecording:
+      case ServerCommand.startRecording:
         _hasRecordedMock = true;
         break;
-      case Command.handshake:
-      case Command.getStates:
-      case Command.connectDelsysAnalog:
-      case Command.disconnectDelsysAnalog:
-      case Command.disconnectDelsysEmg:
-      case Command.connectDelsysEmg:
-      case Command.zeroDelsysAnalog:
-      case Command.zeroDelsysEmg:
-      case Command.stopRecording:
-      case Command.connectMagstim:
-      case Command.disconnectMagstim:
-      case Command.getLastTrial:
-      case Command.addAnalyzer:
-      case Command.removeAnalyzer:
-      case Command.failed:
-      case Command.none:
+      case ServerCommand.handshake:
+      case ServerCommand.getStates:
+      case ServerCommand.connectDelsysAnalog:
+      case ServerCommand.disconnectDelsysAnalog:
+      case ServerCommand.disconnectDelsysEmg:
+      case ServerCommand.connectDelsysEmg:
+      case ServerCommand.zeroDelsysAnalog:
+      case ServerCommand.zeroDelsysEmg:
+      case ServerCommand.stopRecording:
+      case ServerCommand.connectMagstim:
+      case ServerCommand.disconnectMagstim:
+      case ServerCommand.getLastTrial:
+      case ServerCommand.addAnalyzer:
+      case ServerCommand.removeAnalyzer:
+      case ServerCommand.failed:
+      case ServerCommand.none:
         break;
     }
 

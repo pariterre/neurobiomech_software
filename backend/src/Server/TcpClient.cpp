@@ -130,10 +130,11 @@ bool TcpClient::connect(std::uint32_t stateId) {
       // change in states of the server
       m_PreviousAck = waitForMessage(*m_ResponseSocket);
       switch (m_PreviousAck) {
-      case TcpServerResponse::OK:
-      case TcpServerResponse::NOK:
-      case TcpServerResponse::READY:
-      case TcpServerResponse::SENDING_DATA:
+      case TcpServerMessage::OK:
+      case TcpServerMessage::NOK:
+      case TcpServerMessage::LISTENING_EXTRA_DATA:
+      case TcpServerMessage::SENDING_DATA:
+      case TcpServerMessage::STATES_CHANGED:
         // Nothing more to do
         break;
       default:
@@ -146,7 +147,7 @@ bool TcpClient::connect(std::uint32_t stateId) {
   });
 
   // Send the handshake
-  if (sendCommand(TcpServerCommand::HANDSHAKE) == TcpServerResponse::NOK) {
+  if (sendCommand(TcpServerCommand::HANDSHAKE) == TcpServerMessage::NOK) {
     logger.fatal("CLIENT: Handshake failed");
     disconnect();
     return false;
@@ -177,7 +178,7 @@ bool TcpClient::addDelsysAnalogDevice() {
   auto &logger = utils::Logger::getInstance();
 
   if (sendCommand(TcpServerCommand::CONNECT_DELSYS_ANALOG) ==
-      TcpServerResponse::NOK) {
+      TcpServerMessage::NOK) {
     logger.fatal("CLIENT: Failed to add Delsys Analog device");
     return false;
   }
@@ -190,7 +191,7 @@ bool TcpClient::addDelsysEmgDevice() {
   auto &logger = utils::Logger::getInstance();
 
   if (sendCommand(TcpServerCommand::CONNECT_DELSYS_EMG) ==
-      TcpServerResponse::NOK) {
+      TcpServerMessage::NOK) {
     logger.fatal("CLIENT: Failed to add Delsys EMG device");
     return false;
   }
@@ -203,8 +204,7 @@ bool TcpClient::addDelsysEmgDevice() {
 bool TcpClient::addMagstimDevice() {
   auto &logger = utils::Logger::getInstance();
 
-  if (sendCommand(TcpServerCommand::CONNECT_MAGSTIM) ==
-      TcpServerResponse::NOK) {
+  if (sendCommand(TcpServerCommand::CONNECT_MAGSTIM) == TcpServerMessage::NOK) {
     logger.fatal("CLIENT: Failed to add Magstim device");
     return false;
   }
@@ -217,7 +217,7 @@ bool TcpClient::removeDelsysAnalogDevice() {
   auto &logger = utils::Logger::getInstance();
 
   if (sendCommand(TcpServerCommand::DISCONNECT_DELSYS_ANALOG) ==
-      TcpServerResponse::NOK) {
+      TcpServerMessage::NOK) {
     logger.fatal("CLIENT: Failed to remove Delsys EMG device");
     return false;
   }
@@ -230,7 +230,7 @@ bool TcpClient::removeDelsysEmgDevice() {
   auto &logger = utils::Logger::getInstance();
 
   if (sendCommand(TcpServerCommand::DISCONNECT_DELSYS_EMG) ==
-      TcpServerResponse::NOK) {
+      TcpServerMessage::NOK) {
     logger.fatal("CLIENT: Failed to remove Delsys EMG device");
     return false;
   }
@@ -243,7 +243,7 @@ bool TcpClient::removeMagstimDevice() {
   auto &logger = utils::Logger::getInstance();
 
   if (sendCommand(TcpServerCommand::DISCONNECT_MAGSTIM) ==
-      TcpServerResponse::NOK) {
+      TcpServerMessage::NOK) {
     logger.fatal("CLIENT: Failed to remove Magstim device");
     return false;
   }
@@ -255,8 +255,7 @@ bool TcpClient::removeMagstimDevice() {
 bool TcpClient::startRecording() {
   auto &logger = utils::Logger::getInstance();
 
-  if (sendCommand(TcpServerCommand::START_RECORDING) ==
-      TcpServerResponse::NOK) {
+  if (sendCommand(TcpServerCommand::START_RECORDING) == TcpServerMessage::NOK) {
     logger.fatal("CLIENT: Failed to start recording");
     return false;
   }
@@ -268,7 +267,7 @@ bool TcpClient::startRecording() {
 bool TcpClient::stopRecording() {
   auto &logger = utils::Logger::getInstance();
 
-  if (sendCommand(TcpServerCommand::STOP_RECORDING) == TcpServerResponse::NOK) {
+  if (sendCommand(TcpServerCommand::STOP_RECORDING) == TcpServerMessage::NOK) {
     logger.fatal("CLIENT: Failed to stop recording");
     return false;
   }
@@ -301,7 +300,7 @@ bool TcpClient::addAnalyzer(const nlohmann::json &analyzer) {
   auto &logger = utils::Logger::getInstance();
 
   if (sendCommandWithData(TcpServerCommand::ADD_ANALYZER, analyzer) ==
-      TcpServerResponse::NOK) {
+      TcpServerMessage::NOK) {
     logger.fatal("CLIENT: Failed to add the analyzer");
     return false;
   }
@@ -315,7 +314,7 @@ bool TcpClient::removeAnalyzer(const std::string &analyzerName) {
 
   if (sendCommandWithData(TcpServerCommand::REMOVE_ANALYZER,
                           {{"analyzer", analyzerName}}) ==
-      TcpServerResponse::NOK) {
+      TcpServerMessage::NOK) {
     logger.fatal("CLIENT: Failed to remove the analyzer");
     return false;
   }
@@ -375,12 +374,12 @@ void TcpClient::updateLiveAnalyses() {
   logger.debug("CLIENT: Live analyze received");
 }
 
-TcpServerResponse TcpClient::sendCommand(TcpServerCommand command) {
+TcpServerMessage TcpClient::sendCommand(TcpServerCommand command) {
   auto &logger = utils::Logger::getInstance();
 
   if (!m_IsConnected) {
     logger.fatal("CLIENT: Client is not connected");
-    return TcpServerResponse::NOK;
+    return TcpServerMessage::NOK;
   }
 
   asio::error_code error;
@@ -390,25 +389,25 @@ TcpServerResponse TcpClient::sendCommand(TcpServerCommand command) {
   if (byteWritten != BYTES_IN_CLIENT_PACKET_HEADER || error) {
     logger.fatal("CLIENT: TCP write error: " + error.message());
     disconnect();
-    return TcpServerResponse::NOK;
+    return TcpServerMessage::NOK;
   }
 
   auto response = waitForCommandAcknowledgment();
-  if (response == TcpServerResponse::NOK) {
+  if (response == TcpServerMessage::NOK) {
     logger.warning("CLIENT: Failed to get confirmation for command: " +
                    std::to_string(static_cast<std::uint32_t>(command)));
   }
   return response;
 }
 
-TcpServerResponse TcpClient::sendCommandWithData(TcpServerCommand command,
-                                                 const nlohmann::json &data) {
+TcpServerMessage TcpClient::sendCommandWithData(TcpServerCommand command,
+                                                const nlohmann::json &data) {
   auto &logger = utils::Logger::getInstance();
 
   // First send the command as usual
   auto response = sendCommand(command);
-  if (response == TcpServerResponse::NOK) {
-    return TcpServerResponse::NOK;
+  if (response == TcpServerMessage::NOK) {
+    return TcpServerMessage::NOK;
   }
 
   // If the command was successful, send the length of the data
@@ -422,7 +421,7 @@ TcpServerResponse TcpClient::sendCommandWithData(TcpServerCommand command,
   if (byteWritten != BYTES_IN_CLIENT_PACKET_HEADER || error) {
     logger.fatal("CLIENT: TCP write error: " + error.message());
     disconnect();
-    return TcpServerResponse::NOK;
+    return TcpServerMessage::NOK;
   }
 
   // Send the data
@@ -431,7 +430,7 @@ TcpServerResponse TcpClient::sendCommandWithData(TcpServerCommand command,
   if (byteWritten != data.dump().size() || error) {
     logger.fatal("CLIENT: TCP write error: " + error.message());
     disconnect();
-    return TcpServerResponse::NOK;
+    return TcpServerMessage::NOK;
   }
 
   return waitForCommandAcknowledgment();
@@ -458,7 +457,7 @@ std::vector<char> TcpClient::sendCommandWithResponse(TcpServerCommand command) {
   }
 
   auto ack = waitForCommandAcknowledgment();
-  if (ack == TcpServerResponse::NOK) {
+  if (ack == TcpServerMessage::NOK) {
     logger.warning("CLIENT: Failed to get confirmation for command: " +
                    std::to_string(static_cast<std::uint32_t>(command)));
     return std::vector<char>();
@@ -470,27 +469,27 @@ std::vector<char> TcpClient::sendCommandWithResponse(TcpServerCommand command) {
   return m_PreviousResponse;
 }
 
-TcpServerResponse TcpClient::waitForCommandAcknowledgment() {
+TcpServerMessage TcpClient::waitForCommandAcknowledgment() {
   auto buffer = std::array<char, BYTES_IN_SERVER_PACKET_HEADER>();
   asio::error_code error;
   size_t byteRead = asio::read(*m_CommandSocket, asio::buffer(buffer), error);
   if (byteRead != BYTES_IN_SERVER_PACKET_HEADER || error) {
     auto &logger = utils::Logger::getInstance();
     logger.fatal("CLIENT: TCP read error: " + error.message());
-    return TcpServerResponse::NOK;
+    return TcpServerMessage::NOK;
   }
 
   return parseAcknowledgmentFromPacket(buffer);
 }
 
-TcpServerResponse TcpClient::waitForMessage(asio::ip::tcp::socket &socket) {
+TcpServerMessage TcpClient::waitForMessage(asio::ip::tcp::socket &socket) {
   auto buffer = std::array<char, BYTES_IN_SERVER_PACKET_HEADER>();
   asio::error_code error;
   size_t byteRead = asio::read(socket, asio::buffer(buffer), error);
   if (byteRead != BYTES_IN_SERVER_PACKET_HEADER || error) {
     auto &logger = utils::Logger::getInstance();
     logger.fatal("CLIENT: TCP read error: " + error.message());
-    return TcpServerResponse::NOK;
+    return TcpServerMessage::NOK;
   }
 
   return parseAcknowledgmentFromPacket(buffer);
@@ -546,7 +545,7 @@ TcpClient::constructCommandPacket(TcpServerCommand command) {
   return packet;
 }
 
-TcpServerResponse TcpClient::parseAcknowledgmentFromPacket(
+TcpServerMessage TcpClient::parseAcknowledgmentFromPacket(
     const std::array<char, BYTES_IN_SERVER_PACKET_HEADER> &buffer) {
   // Packets are exactly 16 bytes long, little-endian
   // - First 4 bytes are the version number
@@ -565,7 +564,7 @@ TcpServerResponse TcpClient::parseAcknowledgmentFromPacket(
                  ". Please "
                  "update the server to version " +
                  std::to_string(m_ProtocolVersion));
-    return TcpServerResponse::NOK;
+    return TcpServerMessage::NOK;
   }
 
   // Skip the timestamp (8 bytes)
@@ -577,7 +576,7 @@ TcpServerResponse TcpClient::parseAcknowledgmentFromPacket(
               sizeof(response));
   response = le32toh(response);
 
-  return static_cast<TcpServerResponse>(response);
+  return static_cast<TcpServerMessage>(response);
 }
 
 std::chrono::system_clock::time_point TcpClient::parseTimeStampFromPacket(

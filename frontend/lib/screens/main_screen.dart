@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:frontend/managers/database_manager.dart';
 import 'package:frontend/managers/neurobio_client.dart';
 import 'package:frontend/managers/predictions_manager.dart';
-import 'package:frontend/models/command.dart';
+import 'package:frontend/models/server_command.dart';
 import 'package:frontend/screens/predictions_dialog.dart';
 import 'package:frontend/widgets/data_graph.dart';
 import 'package:frontend/widgets/save_trial_dialog.dart';
@@ -71,7 +71,7 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _requestCurrentStates() async {
     setState(() => _isBusy = true);
-    await _connexion.send(Command.getStates);
+    await _connexion.send(ServerCommand.getStates);
     await _connexion.onResponseArrived;
     setState(() => _isBusy = false);
   }
@@ -94,57 +94,57 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _connectDelsysAnalog() async {
     setState(() => _isBusy = true);
-    await _connexion.send(Command.connectDelsysAnalog);
+    await _connexion.send(ServerCommand.connectDelsysAnalog);
     _resetInternalStates();
   }
 
   Future<void> _connectDelsysEmg() async {
     setState(() => _isBusy = true);
-    await _connexion.send(Command.connectDelsysEmg);
+    await _connexion.send(ServerCommand.connectDelsysEmg);
     _resetInternalStates();
   }
 
   Future<void> _zeroDelsysAnalog() async {
     setState(() => _isBusy = true);
-    await _connexion.send(Command.zeroDelsysAnalog);
+    await _connexion.send(ServerCommand.zeroDelsysAnalog);
     setState(() => _isBusy = false);
   }
 
   Future<void> _zeroDelsysEmg() async {
     setState(() => _isBusy = true);
-    await _connexion.send(Command.zeroDelsysEmg);
+    await _connexion.send(ServerCommand.zeroDelsysEmg);
     setState(() => _isBusy = false);
   }
 
   Future<void> _disconnectDelsysAnalog() async {
     setState(() => _isBusy = true);
-    await _connexion.send(Command.disconnectDelsysAnalog);
+    await _connexion.send(ServerCommand.disconnectDelsysAnalog);
     _resetInternalStates();
   }
 
   Future<void> _disconnectDelsysEmg() async {
     setState(() => _isBusy = true);
-    await _connexion.send(Command.disconnectDelsysEmg);
+    await _connexion.send(ServerCommand.disconnectDelsysEmg);
     _resetInternalStates();
   }
 
   Future<void> _startRecording() async {
     await _hideLastTrialGraph();
     setState(() => _isBusy = true);
-    await _connexion.send(Command.startRecording);
+    await _connexion.send(ServerCommand.startRecording);
     setState(() => _isBusy = false);
   }
 
   Future<void> _stopRecording() async {
     setState(() => _isBusy = true);
-    await _connexion.send(Command.stopRecording);
+    await _connexion.send(ServerCommand.stopRecording);
     setState(() => _isBusy = false);
     _showLastTrialGraph();
   }
 
   Future<void> _showLastTrialGraph() async {
     setState(() => _isBusy = true);
-    await _connexion.send(Command.getLastTrial);
+    await _connexion.send(ServerCommand.getLastTrial);
     await _connexion.onResponseArrived;
     setState(() {
       _isBusy = false;
@@ -237,7 +237,7 @@ class _MainScreenState extends State<MainScreen> {
                     ? (value) async {
                         if (value!) {
                           final response = await _connexion.send(
-                              Command.addAnalyzer,
+                              ServerCommand.addAnalyzer,
                               parameters: prediction.serialize());
                           if (response) {
                             setState(() {
@@ -249,7 +249,7 @@ class _MainScreenState extends State<MainScreen> {
                           }
                         } else {
                           final response = await _connexion.send(
-                              Command.removeAnalyzer,
+                              ServerCommand.removeAnalyzer,
                               parameters: {'analyzer': prediction.name});
                           if (response) {
                             setState(() {

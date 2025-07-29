@@ -6,8 +6,8 @@
 // tree, read text, and verify that the values of widget properties are correct.
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/models/command.dart';
 import 'package:frontend/managers/neurobio_client.dart';
+import 'package:frontend/models/server_command.dart';
 
 void main() {
   test('Initialize server connexion', () async {
@@ -32,7 +32,7 @@ void main() {
     final connexion = NeurobioClientMock.instance;
 
     assert(connexion.isConnectedToDelsysAnalog == false);
-    assert(await connexion.send(Command.connectDelsysAnalog) == false);
+    assert(await connexion.send(ServerCommand.connectDelsysAnalog) == false);
     assert(connexion.isConnectedToDelsysAnalog == false);
 
     await connexion.initialize(
@@ -41,7 +41,7 @@ void main() {
         onNewLiveAnalyses: () {});
     assert(connexion.isConnectedToDelsysAnalog == false);
 
-    assert(await connexion.send(Command.connectDelsysAnalog));
+    assert(await connexion.send(ServerCommand.connectDelsysAnalog));
     assert(connexion.isConnectedToDelsysAnalog);
 
     connexion.disconnect();
@@ -55,7 +55,7 @@ void main() {
         onConnexionLost: () {},
         onNewLiveAnalogsData: () {},
         onNewLiveAnalyses: () {});
-    assert(await connexion.send(Command.handshake) == false);
+    assert(await connexion.send(ServerCommand.handshake) == false);
 
     connexion.disconnect();
   });
@@ -69,11 +69,11 @@ void main() {
     assert(connexion.isRecording == false);
     assert(connexion.hasRecorded == false);
 
-    assert(await connexion.send(Command.startRecording));
+    assert(await connexion.send(ServerCommand.startRecording));
     assert(connexion.isRecording);
     assert(connexion.hasRecorded == false);
 
-    assert(await connexion.send(Command.stopRecording));
+    assert(await connexion.send(ServerCommand.stopRecording));
     assert(connexion.isRecording == false);
     assert(connexion.hasRecorded);
 
