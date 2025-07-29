@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 enum ServerDataType {
   states,
   fullTrial,
@@ -22,14 +20,9 @@ enum ServerDataType {
     }
   }
 
-  static ServerDataType parse(List<int> packet) {
-    final byteData =
-        ByteData.sublistView(Uint8List.fromList(packet.sublist(12, 16)));
-
-    // Read as little-endian uint32
-    final valueAsInt = byteData.getUint32(0, Endian.little);
+  static ServerDataType fromInt(int value) {
     for (final dataType in ServerDataType.values) {
-      if (dataType.toInt() == valueAsInt) {
+      if (dataType.toInt() == value) {
         return dataType;
       }
     }

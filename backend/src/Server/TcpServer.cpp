@@ -67,16 +67,18 @@ template <typename T>
 std::vector<char>
 constructResponsePacket(TcpServerCommand command, TcpServerMessage message,
                         TcpServerDataType dataType, uint64_t dataSize, T data) {
-  // Packets are exactly 16 bytes long, litte endian if dataType is NONE,
-  // otherwise a mandatory 8 bytes is added and the actual data
+  // Packets are exactly 24 bytes long, litte endian if dataType is NONE,
+  // otherwise a mandatory 8 bytes is added alongside the actual data
   // - First 4 bytes are the version number
   // - Next 4 bytes of the command it is responding to. If it does not respond
   // to any command, it is set to NONE (0xFFFFFFFF)
   // - Next 4 bytes are the message from the server
   // - Next 4 bytes are the data type (if any, otherwise 0xFFFFFFFF) that is
   // being sent to the client
-  // - Next 8 bytes are skiped if dataType is NONE, otherwise they the number of
-  // bytes of extra data that will be sent to the client.
+  // - The Next 8 bytes are the timestamp of the message
+  // - Next 8 bytes are skiped if dataType is NONE, otherwise they are the size
+  // of the extra data that will be sent to the client. bytes of extra data that
+  // will be sent to the client.
   // - The rest of the packet is the extra data, if any of exactly dataSize
   // bytes
 
@@ -115,11 +117,24 @@ constructResponsePacket(TcpServerCommand command, TcpServerMessage message,
                   sizeof(commandLittleEndian) + sizeof(responseLittleEndian),
               &dataTypeLittleEndian, sizeof(dataTypeLittleEndian));
 
+  // Add the timestamps in uint64_t format (litte endian)
+  std::uint64_t timestamp =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count();
+  std::uint64_t timestampLittleEndian = htole64(timestamp);
+  std::memcpy(packet.data() + sizeof(versionLittleEndian) +
+                  sizeof(commandLittleEndian) + sizeof(responseLittleEndian) +
+                  sizeof(dataTypeLittleEndian),
+              &timestampLittleEndian, sizeof(timestampLittleEndian));
+
   // Add the size of the extra data in uint64_t format (litte endian)
   if (dataType != TcpServerDataType::NONE) {
+
     std::uint64_t dataSizeLittleEndian = htole64(dataSize);
     std::memcpy(packet.data() + sizeof(versionLittleEndian) +
                     sizeof(commandLittleEndian) + sizeof(responseLittleEndian) +
+                    sizeof(timestampLittleEndian) +
                     sizeof(dataTypeLittleEndian),
                 &dataSizeLittleEndian, sizeof(dataSizeLittleEndian));
 
@@ -128,7 +143,8 @@ constructResponsePacket(TcpServerCommand command, TcpServerMessage message,
       std::memcpy(
           packet.data() + sizeof(versionLittleEndian) +
               sizeof(commandLittleEndian) + sizeof(responseLittleEndian) +
-              sizeof(dataTypeLittleEndian) + sizeof(dataSizeLittleEndian),
+              sizeof(timestampLittleEndian) + sizeof(dataTypeLittleEndian) +
+              sizeof(dataSizeLittleEndian),
           data.data(), dataSize);
     }
   }
@@ -988,15 +1004,8 @@ void TcpServer::liveDataLoop() {
       liveDataLoop();
       return;
     }
-
-    // Prepend the data with the timestamps (8 bytes in milliseconds)
-    std::uint64_t timestamp =
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::system_clock::now().time_since_epoch())
-            .count();
-    data.insert(data.begin(), {{"timestamp", timestamp}});
-
     auto dataDump = data.dump();
+
     auto packet = asio::buffer(constructResponsePacket(
         TcpServerCommand::NONE, TcpServerMessage::SENDING_DATA,
         TcpServerDataType::LIVE_DATA, dataDump.size(), dataDump));
@@ -1062,16 +1071,8 @@ void TcpServer::liveAnalysesLoop() {
       return;
     }
 
-    // Prepend the data with the timestamps (8 bytes in milliseconds)
-    auto predictionData = predictions.serialize();
-    std::uint64_t timestamp =
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::system_clock::now().time_since_epoch())
-            .count();
-    predictionData.insert(predictionData.begin(), {{"timestamp", timestamp}});
-
     // Serialize the predictions
-    auto dataDump = predictionData.dump();
+    auto dataDump = predictions.serialize().dump();
     auto packet = asio::buffer(constructResponsePacket(
         TcpServerCommand::NONE, TcpServerMessage::SENDING_DATA,
         TcpServerDataType::LIVE_ANALYSES, dataDump.size(), dataDump));

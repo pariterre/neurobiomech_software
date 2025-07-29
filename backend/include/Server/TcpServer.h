@@ -15,7 +15,7 @@ enum TcpServerStatus { OFF, PREPARING, READY };
 
 static const std::uint32_t COMMUNICATION_PROTOCOL_VERSION = 2;
 static const size_t BYTES_IN_CLIENT_PACKET_HEADER = 8;
-static const size_t BYTES_IN_SERVER_PACKET_HEADER = 16;
+static const size_t BYTES_IN_SERVER_PACKET_HEADER = 24;
 
 enum class TcpServerCommand : std::uint32_t {
   HANDSHAKE = 0,

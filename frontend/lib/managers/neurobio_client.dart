@@ -13,7 +13,7 @@ import 'package:frontend/models/server_message.dart';
 import 'package:frontend/utils/generic_listener.dart';
 import 'package:logging/logging.dart';
 
-const _serverHeaderLength = 16;
+const _serverHeaderLength = 24;
 const _serverHeaderWithDataLength = _serverHeaderLength + 8;
 
 class NeurobioClient {
@@ -26,7 +26,6 @@ class NeurobioClient {
 
   Completer<ServerMessage>? _commandCompleter;
   Completer? _responseCompleter;
-  Future? get onResponseArrived => _responseCompleter?.future;
 
   ServerCommand? _currentResponseCommand;
   int? _expectedResponseLength;
@@ -355,9 +354,9 @@ class NeurobioClient {
       return;
     }
 
-    final serverMessage = ServerMessage.parse(response);
+    final serverMessage = _parseServerMessageFromPacket(response);
     if (serverMessage == ServerMessage.ok) {
-      final command = ServerCommand.parse(response);
+      final command = _parseCommandFromPacket(response);
       _setFlagsFromCommand(command);
     }
     _commandCompleter!.complete(serverMessage);
@@ -445,8 +444,8 @@ class NeurobioClient {
     if (!isInitialized) return;
 
     if (_currentResponseCommand == null) {
-      _currentResponseCommand = ServerCommand.parse(response);
-      final serverMessage = ServerMessage.parse(response);
+      _currentResponseCommand = _parseCommandFromPacket(response);
+      final serverMessage = _parseServerMessageFromPacket(response);
 
       switch (serverMessage) {
         case ServerMessage.ok:
@@ -455,8 +454,9 @@ class NeurobioClient {
           _log.severe('Unexpected server message: $serverMessage');
           throw Exception('Unexpected server message: $serverMessage');
         case ServerMessage.listeningExtraData:
-        case ServerMessage.sendingData:
           // TODO
+          break;
+        case ServerMessage.sendingData:
           break;
         case ServerMessage.statesChanged:
           _currentResponseCommand = null;
@@ -464,7 +464,7 @@ class NeurobioClient {
           return;
       }
 
-      final dataType = ServerDataType.parse(response);
+      final dataType = _parseServerDataTypeFromPacket(response);
       switch (dataType) {
         case ServerDataType.none:
           _currentResponseCommand = null;
@@ -479,7 +479,7 @@ class NeurobioClient {
           break;
       }
 
-      _expectedResponseLength = _parseDataFromResponsePacket(response);
+      _expectedResponseLength = _parseDataCountFromResponsePacket(response);
       if (response.length > _serverHeaderWithDataLength) {
         // If more data came at once, recursively call the function with the rest
         // of the data.
@@ -635,7 +635,7 @@ class NeurobioClient {
       try {
         getLastTimeStamp(_parseTimestampFromPacket(raw));
         expectedDataLength =
-            getExpectedDataLength(_parseDataFromResponsePacket(raw));
+            getExpectedDataLength(_parseDataCountFromResponsePacket(raw));
       } catch (e) {
         _log.severe('Error while parsing $dataType: $e, resetting');
         resetLiveAnalogsData();
@@ -729,15 +729,36 @@ class NeurobioClient {
     return _parse32bitsIntFromPacket(data.sublist(0, 4));
   }
 
+  ServerCommand _parseCommandFromPacket(List<int> data) {
+    // Parse the command (4 bytes) from the packet data, starting from the 4th byte
+    return ServerCommand.fromInt(_parse32bitsIntFromPacket(data.sublist(4, 8)));
+  }
+
+  ServerMessage _parseServerMessageFromPacket(List<int> data) {
+    // Parse the server message (4 bytes) from the packet data, starting from the 8th byte
+    return ServerMessage.fromInt(
+        _parse32bitsIntFromPacket(data.sublist(8, 12)));
+  }
+
+  ServerDataType _parseServerDataTypeFromPacket(List<int> data) {
+    // Parse the data type (4 bytes) from the packet data, starting from the 12th byte
+    return ServerDataType.fromInt(
+        _parse32bitsIntFromPacket(data.sublist(12, 16)));
+  }
+
   DateTime _parseTimestampFromPacket(List<int> data) {
-    // Parse the timestamp (8 bytes) from the packet data, starting from the 5th byte
-    int timestamp = _parse64bitsIntFromPacket(data.sublist(4, 12));
+    // Parse the timestamp (8 bytes) from the packet data, starting from the 16th byte
+    int timestamp = _parse64bitsIntFromPacket(data.sublist(16, 24));
     return DateTime.fromMillisecondsSinceEpoch(timestamp);
   }
 
-  int _parseDataFromResponsePacket(List<int> data) {
-    // Parse the data length (8 bytes) from the packet data, starting from the 13th byte
-    return _parse64bitsIntFromPacket(data.sublist(16, 24));
+  int _parseDataCountFromResponsePacket(List<int> data) {
+    // Parse the data length (8 bytes) from the packet data, starting from the 24th byte, if data type is not none
+    final dataType = _parseServerDataTypeFromPacket(data);
+    if (dataType == ServerDataType.none) {
+      return 0;
+    }
+    return _parse64bitsIntFromPacket(data.sublist(24, 32));
   }
 
   // Prepare the singleton

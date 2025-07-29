@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:frontend/managers/neurobio_client.dart';
 
 enum ServerCommand {
@@ -164,14 +162,9 @@ enum ServerCommand {
     return packet;
   }
 
-  static ServerCommand parse(List<int> packet) {
-    final byteData =
-        ByteData.sublistView(Uint8List.fromList(packet.sublist(4, 8)));
-
-    // Read as little-endian uint32
-    final valueAsInt = byteData.getUint32(0, Endian.little);
+  static ServerCommand fromInt(int value) {
     for (final command in ServerCommand.values) {
-      if (command.toInt() == valueAsInt) {
+      if (command.toInt() == value) {
         return command;
       }
     }

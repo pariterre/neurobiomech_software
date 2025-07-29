@@ -62,18 +62,17 @@ class _MainScreenState extends State<MainScreen> {
     _connexion.onBackendUpdated.listen(_onBackendUpdated);
 
     await _requestCurrentStates();
-    setState(() => _isBusy = false);
   }
 
   void _onBackendUpdated() {
-    setState(() {});
+    setState(() {
+      _isBusy = false;
+    });
   }
 
   Future<void> _requestCurrentStates() async {
     setState(() => _isBusy = true);
     await _connexion.send(ServerCommand.getStates);
-    await _connexion.onResponseArrived;
-    setState(() => _isBusy = false);
   }
 
   Future<void> _disconnectServer() async {
@@ -81,11 +80,11 @@ class _MainScreenState extends State<MainScreen> {
     await _connexion.disconnect();
     PredictionsManager.instance.clearActive();
     _resetInternalStates();
+    _isBusy = false;
   }
 
   void _resetInternalStates() {
     setState(() {
-      _isBusy = false;
       _showLastTrial = false;
       _showLiveData = false;
       _showLiveAnalyses = false;
@@ -107,45 +106,43 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> _zeroDelsysAnalog() async {
     setState(() => _isBusy = true);
     await _connexion.send(ServerCommand.zeroDelsysAnalog);
-    setState(() => _isBusy = false);
   }
 
   Future<void> _zeroDelsysEmg() async {
     setState(() => _isBusy = true);
     await _connexion.send(ServerCommand.zeroDelsysEmg);
-    setState(() => _isBusy = false);
   }
 
   Future<void> _disconnectDelsysAnalog() async {
     setState(() => _isBusy = true);
     await _connexion.send(ServerCommand.disconnectDelsysAnalog);
-    _resetInternalStates();
   }
 
   Future<void> _disconnectDelsysEmg() async {
     setState(() => _isBusy = true);
     await _connexion.send(ServerCommand.disconnectDelsysEmg);
-    _resetInternalStates();
   }
 
   Future<void> _startRecording() async {
     await _hideLastTrialGraph();
     setState(() => _isBusy = true);
     await _connexion.send(ServerCommand.startRecording);
-    setState(() => _isBusy = false);
   }
 
   Future<void> _stopRecording() async {
     setState(() => _isBusy = true);
     await _connexion.send(ServerCommand.stopRecording);
-    setState(() => _isBusy = false);
+    while (_isBusy) {
+      // Wait for _onBackendUpdated to set _isBusy to false
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
     _showLastTrialGraph();
   }
 
   Future<void> _showLastTrialGraph() async {
+    // TODO Fix data size on the second client
     setState(() => _isBusy = true);
     await _connexion.send(ServerCommand.getLastTrial);
-    await _connexion.onResponseArrived;
     setState(() {
       _isBusy = false;
       _showLastTrial = _connexion.lastTrialAnalogsData.isNotEmpty;

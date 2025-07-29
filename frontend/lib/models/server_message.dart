@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 enum ServerMessage {
   ok,
   nok,
@@ -22,14 +20,9 @@ enum ServerMessage {
     }
   }
 
-  static ServerMessage parse(List<int> packet) {
-    final byteData =
-        ByteData.sublistView(Uint8List.fromList(packet.sublist(8, 12)));
-
-    // Read as little-endian uint32
-    final valueAsInt = byteData.getUint32(0, Endian.little);
+  static ServerMessage fromInt(int value) {
     for (final ack in ServerMessage.values) {
-      if (ack.toInt() == valueAsInt) {
+      if (ack.toInt() == value) {
         return ack;
       }
     }
