@@ -28,6 +28,7 @@ class NeurobioClient {
   Completer? _responseCompleter;
 
   ServerCommand? _currentResponseCommand;
+  ServerCommand? _changedStatesCommand;
   int? _expectedResponseLength;
   final _responseData = <int>[];
 
@@ -68,7 +69,7 @@ class NeurobioClient {
       isFromLiveData: true);
   Duration liveAnalysesTimeWindow = const Duration(seconds: 3);
 
-  final onBackendUpdated = GenericListener<Function()>();
+  final onBackendUpdated = GenericListener<Function(ServerCommand)>();
 
   bool _isRecording = false;
 
@@ -165,6 +166,7 @@ class NeurobioClient {
     _commandCompleter = null;
     _responseCompleter = null;
     _currentResponseCommand = null;
+    _changedStatesCommand = null;
     _expectedResponseLength = null;
     _responseData.clear();
 
@@ -308,6 +310,11 @@ class NeurobioClient {
         _prepareResponseCompleter();
       case ServerCommand.getLastTrial:
         _prepareLastTrialResponse();
+    }
+
+    while (_commandCompleter != null && !_commandCompleter!.isCompleted) {
+      // Wait for the previous command to be completed
+      await Future.delayed(const Duration(milliseconds: 100));
     }
 
     // Construct and send the command
@@ -463,6 +470,7 @@ class NeurobioClient {
         case ServerMessage.sendingData:
           break;
         case ServerMessage.statesChanged:
+          _changedStatesCommand = _currentResponseCommand;
           _currentResponseCommand = null;
           send(ServerCommand.getStates);
           return;
@@ -536,21 +544,33 @@ class NeurobioClient {
           }
           if (jsonRaw.containsKey('connected_analyzers')) {
             _isConnectedToLiveAnalyses = true;
+            final serverPredictions =
+                (jsonRaw['connected_analyzers'] as Map<String, dynamic>?) ?? {};
             final manager = PredictionsManager.instance;
-            for (final value
-                in (jsonRaw['connected_analyzers'] as Map<String, dynamic>?)
-                        ?.values ??
-                    []) {
+            for (final value in serverPredictions.values) {
               final prediction =
                   PredictionModel.fromSerialized(value['configuration']);
               manager.mergePrediction(prediction);
               manager.addActive(prediction);
               liveAnalyses.predictions.addPrediction(prediction.name);
             }
+
+            for (final prediction in manager.predictions) {
+              // Remove from active predictions that are not in the connected analyzers
+              if (!serverPredictions.containsKey(prediction.name)) {
+                manager.removeActive(prediction);
+              }
+            }
+
             resetLiveAnalyses();
           }
         }
-        onBackendUpdated.notifyListeners((callback) => callback());
+        onBackendUpdated
+            .notifyListeners((callback) =>
+                callback(_changedStatesCommand ?? ServerCommand.getStates))
+            .then(
+              (value) => {_changedStatesCommand = null},
+            );
         break;
       case ServerCommand.getLastTrial:
         final jsonRaw = json.decode(utf8.decode(_responseData));

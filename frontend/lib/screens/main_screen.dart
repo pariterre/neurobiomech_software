@@ -64,10 +64,14 @@ class _MainScreenState extends State<MainScreen> {
     await _requestCurrentStates();
   }
 
-  void _onBackendUpdated() {
-    setState(() {
-      _isBusy = false;
-    });
+  void _onBackendUpdated(ServerCommand command) {
+    if (command == ServerCommand.stopRecording) {
+      _showLastTrialGraph();
+    } else {
+      setState(() {
+        _isBusy = false;
+      });
+    }
   }
 
   Future<void> _requestCurrentStates() async {
@@ -132,15 +136,9 @@ class _MainScreenState extends State<MainScreen> {
   Future<void> _stopRecording() async {
     setState(() => _isBusy = true);
     await _connexion.send(ServerCommand.stopRecording);
-    while (_isBusy) {
-      // Wait for _onBackendUpdated to set _isBusy to false
-      await Future.delayed(const Duration(milliseconds: 100));
-    }
-    _showLastTrialGraph();
   }
 
   Future<void> _showLastTrialGraph() async {
-    // TODO Fix data size on the second client
     setState(() => _isBusy = true);
     await _connexion.send(ServerCommand.getLastTrial);
     setState(() {
