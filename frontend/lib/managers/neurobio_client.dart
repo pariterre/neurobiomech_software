@@ -37,7 +37,7 @@ class NeurobioClient {
   var _liveAnalogsDataCompleter = Completer();
   Function()? _onNewLiveAnalogsData;
 
-  int? _expectedLiveAnalysesLength;
+  int? _expectedLiveAnalysesDataLength;
   DateTime? _lastLiveAnalysesTimestamp;
   final _rawLiveAnalysesList = <int>[];
   var _liveAnalysesDataCompleter = Completer();
@@ -128,9 +128,12 @@ class NeurobioClient {
       return;
     }
 
-    _lastLiveAnalogsDataTimestamp = null;
     _expectedLiveAnalogsDataLength = null;
+    _expectedLiveAnalysesDataLength = null;
     _onNewLiveAnalogsData = onNewLiveAnalogsData;
+
+    _expectedLiveAnalysesDataLength = null;
+    _lastLiveAnalysesTimestamp = null;
     _onNewLiveAnalyses = onNewLiveAnalyses;
 
     _log.info('Communication initialized');
@@ -165,15 +168,15 @@ class NeurobioClient {
     _expectedResponseLength = null;
     _responseData.clear();
 
+    _expectedLiveAnalogsDataLength = null;
     _lastLiveAnalogsDataTimestamp = null;
     _rawLiveAnalogsList.clear();
-    _expectedLiveAnalogsDataLength = null;
     _liveAnalogsDataCompleter = Completer();
     _onNewLiveAnalogsData = null;
 
+    _expectedLiveAnalysesDataLength = null;
     _lastLiveAnalysesTimestamp = null;
     _rawLiveAnalysesList.clear();
-    _expectedLiveAnalysesLength = null;
     _liveAnalysesDataCompleter = Completer();
     _onNewLiveAnalyses = null;
 
@@ -266,10 +269,12 @@ class NeurobioClient {
     }
 
     // Format the command and send the messsage to the server
-    if (await _performSend(command) == ServerMessage.ok) {
+    final response = await _performSend(command);
+    if (response == ServerMessage.listeningExtraData ||
+        response == ServerMessage.ok) {
       _log.info('Sent command: $command');
 
-      if (parameters != null) {
+      if (parameters != null && response == ServerMessage.listeningExtraData) {
         // Reset the current command so we can receive the server message again
         await _performSendParameters(parameters);
       }
@@ -355,7 +360,8 @@ class NeurobioClient {
     }
 
     final serverMessage = _parseServerMessageFromPacket(response);
-    if (serverMessage == ServerMessage.ok) {
+    if (serverMessage == ServerMessage.ok ||
+        serverMessage == ServerMessage.listeningExtraData) {
       final command = _parseCommandFromPacket(response);
       _setFlagsFromCommand(command);
     }
@@ -454,8 +460,6 @@ class NeurobioClient {
           _log.severe('Unexpected server message: $serverMessage');
           throw Exception('Unexpected server message: $serverMessage');
         case ServerMessage.listeningExtraData:
-          // TODO
-          break;
         case ServerMessage.sendingData:
           break;
         case ServerMessage.statesChanged:
@@ -571,9 +575,9 @@ class NeurobioClient {
       },
       getExpectedDataLength: ([int? value]) {
         if (value != null) {
-          _expectedLiveAnalysesLength = value < 0 ? null : value;
+          _expectedLiveAnalysesDataLength = value < 0 ? null : value;
         }
-        return _expectedLiveAnalysesLength;
+        return _expectedLiveAnalysesDataLength;
       },
       getLiveData: (bool isNew) {
         if (isNew) resetLiveAnalyses();
@@ -585,6 +589,7 @@ class NeurobioClient {
       },
       liveDataTimeWindow: liveAnalysesTimeWindow,
       onNewData: _onNewLiveAnalyses,
+      resetData: resetLiveAnalyses,
     );
   }
 
@@ -613,6 +618,7 @@ class NeurobioClient {
       },
       liveDataTimeWindow: liveAnalogsDataTimeWindow,
       onNewData: _onNewLiveAnalogsData,
+      resetData: resetLiveAnalogsData,
     );
   }
 
@@ -626,6 +632,7 @@ class NeurobioClient {
     required Completer Function(bool isNew) getCompleter,
     required Duration liveDataTimeWindow,
     required Function()? onNewData,
+    required Function() resetData,
   }) async {
     if (raw.isEmpty || !isInitialized) return;
 
@@ -638,21 +645,23 @@ class NeurobioClient {
             getExpectedDataLength(_parseDataCountFromResponsePacket(raw));
       } catch (e) {
         _log.severe('Error while parsing $dataType: $e, resetting');
-        resetLiveAnalogsData();
+        resetData();
       }
       if (raw.length > _serverHeaderWithDataLength) {
         // If more data came at once, recursively call the function with the rest
         // of the data.
         _receiveLiveData(
-            dataType: dataType,
-            raw: raw.sublist(_serverHeaderWithDataLength),
-            rawList: rawList,
-            getLastTimeStamp: getLastTimeStamp,
-            getExpectedDataLength: getExpectedDataLength,
-            getLiveData: getLiveData,
-            getCompleter: getCompleter,
-            liveDataTimeWindow: liveDataTimeWindow,
-            onNewData: onNewData);
+          dataType: dataType,
+          raw: raw.sublist(_serverHeaderWithDataLength),
+          rawList: rawList,
+          getLastTimeStamp: getLastTimeStamp,
+          getExpectedDataLength: getExpectedDataLength,
+          getLiveData: getLiveData,
+          getCompleter: getCompleter,
+          liveDataTimeWindow: liveDataTimeWindow,
+          onNewData: onNewData,
+          resetData: resetData,
+        );
       }
       return;
     }
@@ -669,15 +678,17 @@ class NeurobioClient {
       final rawRemaining = rawList.sublist(expectedDataLength);
       rawList.removeRange(expectedDataLength, rawList.length);
       completer.future.then((_) => _receiveLiveData(
-          dataType: dataType,
-          raw: rawRemaining,
-          rawList: rawList,
-          getLastTimeStamp: getLastTimeStamp,
-          getExpectedDataLength: getExpectedDataLength,
-          getLiveData: getLiveData,
-          getCompleter: getCompleter,
-          liveDataTimeWindow: liveDataTimeWindow,
-          onNewData: onNewData));
+            dataType: dataType,
+            raw: rawRemaining,
+            rawList: rawList,
+            getLastTimeStamp: getLastTimeStamp,
+            getExpectedDataLength: getExpectedDataLength,
+            getLiveData: getLiveData,
+            getCompleter: getCompleter,
+            liveDataTimeWindow: liveDataTimeWindow,
+            onNewData: onNewData,
+            resetData: resetData,
+          ));
     }
 
     // Convert the data to a string (from json)

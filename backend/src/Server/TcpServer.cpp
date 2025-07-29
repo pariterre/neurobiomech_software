@@ -1074,9 +1074,9 @@ void TcpServer::liveAnalysesLoop() {
 
     // Serialize the predictions
     auto dataDump = predictions.serialize().dump();
-    auto packet = asio::buffer(constructResponsePacket(
+    auto packet = constructResponsePacket(
         TcpServerCommand::NONE, TcpServerMessage::SENDING_DATA,
-        TcpServerDataType::LIVE_ANALYSES, dataDump.size(), dataDump));
+        TcpServerDataType::LIVE_ANALYSES, dataDump.size(), dataDump);
 
     asio::error_code error;
     std::shared_lock lock(m_SessionMutex);
@@ -1089,7 +1089,7 @@ void TcpServer::liveAnalysesLoop() {
           // handle it anyway
           continue;
         }
-        asio::write(*socket, packet, error);
+        asio::write(*socket, asio::buffer(packet), error);
       } catch (const std::exception &) {
         // Do nothing and hope for the best
       }
