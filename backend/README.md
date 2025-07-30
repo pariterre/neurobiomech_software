@@ -27,8 +27,9 @@
     - [Connexion](#connexion)
     - [Client command packets](#client-command-packets)
     - [Passing extra data to the server](#passing-extra-data-to-the-server)
-    - [Server OK/NOK response packets](#server-oknok-response-packets)
+    - [Server message packets](#server-message-packets)
     - [Server data response packets](#server-data-response-packets)
+    - [Server events](#server-events)
     - [Serialize the extra data](#serialize-the-extra-data)
       - [ADD\_ANALYZER](#add_analyzer)
       - [REMOVE\_ANALYZER](#remove_analyzer)
@@ -113,7 +114,7 @@ Once compiled, you only need to run the `main_server` binary.
 ### Ports
 The default ports are :
 - command = 5000
-- response = 5001
+- message = 5001
 - live data = 5002
 - live analyses = 5003
 
@@ -123,13 +124,13 @@ You can change the ports by recompiling the project and passing the TcpServer in
 
 Another way of changing the port is to pass arguments to `main_server` when running it. The arguments are as follows:
 - `--portCommand=XXXX` to change the command port to XXXX
-- `--portReponse=XXXX` to change the response port to XXXX
+- `--portMessage=XXXX` to change the message port to XXXX
 - `--portLiveData=XXXX` to change the live data port to XXXX
 - `--portLiveAnalyses=XXXX` to change the live analyses port to XXXX
 
-For example, if you want to run the server with the command port at 5000, the response port at 5001, the live data port at 5002 and the live analyses port at 5003, you would run the following command:
+For example, if you want to run the server with the command port at 5000, the message port at 5001, the live data port at 5002 and the live analyses port at 5003, you would run the following command:
 ```bash
-./main_server.exe --portCommand=5000 --portReponse=5001 --portLiveData=5002 --portLiveAnalyses=5003
+./main_server.exe --portCommand=5000 --portMessage=5001 --portLiveData=5002 --portLiveAnalyses=5003
 ```
 
 ## Client side
@@ -138,9 +139,12 @@ The communication protocol is in two steps. First, all the connexion to the serv
 
 ### Connexion
 
-1. First all the sockets (command = [5000], response = [5001], live data = [5002], live analyses = [5003]) must be connected to their respective ports. Please note, each socket has 5 seconds to connect after the previous has connected. If the client fails to connect, the server will close the connexion (closes all the sockets) and the client will have to reconnect.
-2. Once all the sockets are connected, the client must send a HANDSHAKE command (see `Client command packets` below) to the server. The server will respond with an OK or a NOK on the command socket (see `Server OK/NOT response packets` section below). If the server responds with a NOK, the client must close all the sockets and reconnect.
-3. Once the connexion is established, the client can send commands to the server.
+1. First a state ID must be randomly choosen between 0x10000000 and 0xFFFFFFFE (excluding 0xFFFFFFFF).
+2. Then all the sockets (command = [5000], message = [5001], live data = [5002], live analyses = [5003]) must be connected to their respective ports and the state ID must be sent on all the ports. Please note you have a total of 5 seconds to connect all the ports and send the state ID before the server closes the connexion.
+3. Once all the sockets are connected, the client must send a HANDSHAKE command (see `Client command packets` below) to the server. The server will respond with response containing the message OK or a NOK on the command socket (see `Server OK/NOT message packets` section below). If the server responds with a NOK, the client must close all the sockets and reconnect.
+4. Once the connexion is established, the client can send commands to the server.
+5. At all time, the client must listen to the message socket as events, that may or may not be originated by the client, are sent to the clients on that socket. The formatting of the events message are the exact same as the response packets presented in the `Server message packets` section below. 
+
 
 ### Client command packets
 
@@ -179,14 +183,14 @@ Some of the commands expect a data response from the server. To see how the data
 
 ### Passing extra data to the server
 
-If some extra data must be sent to the server in conjonction with a command, the client must first send the command, then they must wait for the OK response on the command socket. Only then can they send the extra data on the response socket. 
+If some extra data must be sent to the server in conjunction with a command, the client must first send the command, then they must wait for the OK response on the command socket. Only then can they send the extra data on the message socket.
 
 The format of the extra data is made of three part consisting of an 8 bytes header followed by the serialized data:
-  - The first 4 bytes is the version of the protocol, in little-endian. The current version is 1. 
+  - The first 4 bytes is the version of the protocol, in little-endian. The current version is 2. 
   - The second 4 bytes is the size of the data in bytes, in little-endian.
   - The third part is the data itself, as a json string.
 
-Finally a second OK/NOK response will be sent on the command socket to indicate if the extra data was correctly received by the server.
+Finally a response will be sent on the response socket to indicate if the extra data was correctly received by the server.
 
 The commands that expect to send extra data are:
       ADD_ANALYZER =               50
@@ -194,35 +198,53 @@ The commands that expect to send extra data are:
 
 To see how to serialize the data, please refer to the `Serialize the extra data` section below.
 
-### Server OK/NOK response packets
+### Server message packets
 
-The server will always respond to a command on the command socket an OK or a NOK on that same port. If the server responds with a NOK, the client must assume the request has failed and must redo it if needed.
+The server will always respond to a command on the command socket with a message on that same port. If the server responds with a NOK, the client must assume the request has failed and must redo it if needed.
 
-The response packets is made of exactly three parts, one of 4 bytes, one of 8 bytes and one of 4 bytes. all in little-endian.
-  - The first part of 4 bytes is the version of the protocol. The current version is 1. 
-  - The second part of 8 bytes is the timestamp in millisecond since UNIX epoch (i.e. 1st of January 1970).
-  - The third part of 4 bytes is the response. The possible responses are:
+The message packets is made of exactly five (24 bytes) parts (little-endian) with two extra parts if extra data are present.
+  - The first part of 4 bytes is the version of the protocol. The current version is 2.
+  - The second part of 4 bytes is the command that was sent by the server responds to.
+  - The third part of 4 bytes is the message from the server (see the list below for the possible messages).
+  - The fourth part of 4 bytes is the data type. If this is set to NONE, then the extra parts are not present.
+  - The fifth part of 8 bytes is the timestamp in millisecond since UNIX epoch (i.e. 1st of January 1970).
+  - The (optional) sixth part of 8 bytes is the length of data. This is only present if the data type is not NONE and is little-endian.
+  - The (optional) seventh part of X bytes (where X is the number sent on the sixth part) is the data itself, as a json string.
 
-      NOK = 0
-      OK = 1
+      The possible messages (third part) are:
+            OK =                     0
+            NOK =                    1
+            LISTENING_EXTRA_DATA =   2
+            SENDING_DATA =          10
+            STATES_CHANGED =        20
 
-    For example, if you requested a command that failed (i.e. 3rd part being NOK = 1) at 3PM on the 24th of June 1995 (i.e. 2nd part being the time since epoch of that date time = 0xBB33909E00), the server will respond with the following 16 bytes: (I added / to make it easier to read, but they would obviously not be in the response)
+      The possible data types (fourth part) are
+            STATES =                 0
+            FULL_TRIAL =             1
+            LIVE_DATA =             10
+            LIVE_ANALYSES =         11
+            NONE =          0xFFFFFFFF
+
+    For example, if you requested a command (e.g. CONNECT_DELSYS_ANALOG which is 10 => 0x0000000A) that failed (i.e. 3rd part being NOK = 1) at 3PM on the 24th of June 1995 (i.e. 4th part being the time since epoch of that date time = 0xBB33909E00), and no extra data (0xFFFFFFFF), the server will respond with the following 24 bytes: (I added "/" to make it easier to read, but they would obviously not be in the response)
     ```
-    01 00 00 00   /   00 9E 90 33 BB 00 00 00   /   01 00 00 00
+    02 00 00 00   /   0A 00 00 00   /   01 00 00 00   /   FF FF FF FF   /   00 9E 90 33 BB 00 00 00
     ```
 
 ### Server data response packets
 
-If a command is expected to respond with data, the server will send the data over the response socket. The data is always sent over the response socket BEFORE the server sends its OK/NOK response on the command port. 
+If a command is expected to respond with data, the server will send the data over the message socket. The data is always sent over the message socket BEFORE the server sends its response on the command port. 
 
-The format of the data response is made of three part consisting of an 8 bytes header followed by the serialized data:
-  - The first 4 bytes is the version of the protocol, in little-endian. The current version is 1. 
-  - The second 4 bytes is the size of the data in bytes, in little-endian.
-  - The third part is the data itself, as a json string.
-
-Internally, the server will send the data over two calls (the header, then the data). The client must be able to handle this. 
+The format is exactly the same as the one presented in `Server message packets`.
 
 To see how to deserialize the response, please refer to the `Deserialize the data response` section below.
+
+
+### Server events
+
+If the server needs to inform the connected clients that its internal states have changed, it will do so by sending a message on the message socket. The format of the message is exactly the same as the one presented in `Server message packets`.
+
+That means that this port must be listened to at all time by the client. Failing to do so will result in dangling server packets and will desynchronize the client and the server. 
+
 
 ### Serialize the extra data
 
@@ -324,7 +346,7 @@ Notes:
 
 #### GET_LAST_TRIAL_DATA
 
-The GET_LAST_TRIAL_DATA command expects the server to respond with the last trial data. The format of the json string is as follows:
+The GET_LAST_TRIAL_DATA command expects the server to respond with the last recorded trial data. The data part (7th part of the message, see `Server message packets`) format of the json string is as follows:
 
 ```json
 {
@@ -356,7 +378,7 @@ Notes:
 
 The live data socket will start streaming data as soon as the server connects at least one Data collector. The data will be sent as soon as it is available. The format of the data is the same as the `GET_LAST_TRIAL_DATA` command.
 
-Please note, internally the live data are not stored. Therefore, when sent, the data consist only of the last predicatable frame. This means thata lot of data that could be predicted are actually skipped. It is up to the client to merge the data with the previous ones.
+Please note, internally the live data are not stored. Therefore, when sent, the data consist only of the last predicatable frame. This means that a lot of data that could be predicted are actually skipped. It is up to the client to merge the data with the previous ones.
 
 #### Live analyses
 
