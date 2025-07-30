@@ -13,11 +13,11 @@ namespace NEUROBIO_NAMESPACE::server {
 
 enum TcpServerStatus { OFF, PREPARING, READY };
 
-static const std::uint32_t COMMUNICATION_PROTOCOL_VERSION = 2;
+static const uint32_t COMMUNICATION_PROTOCOL_VERSION = 2;
 static const size_t BYTES_IN_CLIENT_PACKET_HEADER = 8;
 static const size_t BYTES_IN_SERVER_PACKET_HEADER = 24;
 
-enum class TcpServerCommand : std::uint32_t {
+enum class TcpServerCommand : uint32_t {
   HANDSHAKE = 0,
   GET_STATES = 1,
   CONNECT_DELSYS_ANALOG = 10,
@@ -37,7 +37,7 @@ enum class TcpServerCommand : std::uint32_t {
   NONE = 0xFFFFFFFF,
 };
 
-enum class TcpServerMessage : std::uint32_t {
+enum class TcpServerMessage : uint32_t {
   OK = 0,
   NOK = 1,
   LISTENING_EXTRA_DATA = 2,
@@ -45,7 +45,7 @@ enum class TcpServerMessage : std::uint32_t {
   STATES_CHANGED = 20,
 };
 
-enum class TcpServerDataType : std::uint32_t {
+enum class TcpServerDataType : uint32_t {
   STATES = 0,
   FULL_TRIAL = 1,
   LIVE_DATA = 10,
@@ -56,7 +56,7 @@ enum class TcpServerDataType : std::uint32_t {
 class ClientSession {
 public:
   ClientSession(
-      std::shared_ptr<asio::io_context> context, std::uint32_t id,
+      std::shared_ptr<asio::io_context> context, uint32_t id,
       std::function<bool(TcpServerCommand command, const ClientSession &client)>
           handleHandshake,
       std::function<bool(TcpServerCommand command, const ClientSession &client)>
@@ -103,7 +103,7 @@ protected:
   DECLARE_PROTECTED_MEMBER_NOGET(std::shared_ptr<asio::io_context>, Context);
 
   /// @brief The sessions id of the client
-  DECLARE_PROTECTED_MEMBER(std::uint32_t, Id);
+  DECLARE_PROTECTED_MEMBER(uint32_t, Id);
 
   /// @brief Whether the handshake has been completed
   DECLARE_PROTECTED_MEMBER(bool, IsHandshakeDone);
@@ -191,7 +191,7 @@ public:
 public:
   /// @brief Check if a session is connected
   /// @param id The id of the session to check
-  bool isClientConnected(const std::uint32_t &id) const;
+  bool isClientConnected(const uint32_t &id) const;
 
 protected:
   /// @brief Start accepting connexions on all the ports
@@ -203,19 +203,19 @@ protected:
   /// @brief Get or create a session for the given id
   /// @param id The id of the session to get or create
   /// @return The session for the given id
-  std::shared_ptr<ClientSession> getOrCreateSession(std::uint32_t id);
+  std::shared_ptr<ClientSession> getOrCreateSession(uint32_t id);
 
   /// @brief Read the session id from the socket
   /// @param socket The socket to read the session id from
   /// @return The session id read from the socket
-  std::uint32_t
+  uint32_t
   readSessionIdFromSocket(std::shared_ptr<asio::ip::tcp::socket> socket);
 
   /// @brief The mutex used to protect the sessions
   DECLARE_PROTECTED_MEMBER_NOGET(std::shared_mutex, SessionMutex);
 
   /// @brief The sessions that are currently connected to the server
-  std::unordered_map<std::uint32_t, std::shared_ptr<ClientSession>> m_Sessions;
+  std::unordered_map<uint32_t, std::shared_ptr<ClientSession>> m_Sessions;
 
   /// @brief Start accepting connexions on all the ports
   void startAcceptingSocketConnexions();

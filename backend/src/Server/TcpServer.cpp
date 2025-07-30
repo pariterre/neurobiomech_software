@@ -41,7 +41,7 @@ TcpServerCommand parseCommandPacket(
   // - Next 4 bytes are the command
 
   // Check the version
-  std::uint32_t version;
+  uint32_t version;
   // Safely copy memory and convert from little-endian
   std::memcpy(&version, buffer.data(), sizeof(version));
   version = le32toh(version); // Convert to native endianness
@@ -56,7 +56,7 @@ TcpServerCommand parseCommandPacket(
   }
 
   // Get the command
-  std::uint32_t command;
+  uint32_t command;
   std::memcpy(&command, buffer.data() + sizeof(version), sizeof(command));
   command = le32toh(command); // Convert to native endianness
 
@@ -94,35 +94,31 @@ constructResponsePacket(TcpServerCommand command, TcpServerMessage message,
                           BYTES_IN_SERVER_PACKET_HEADER + 8 + dataSize, '\0');
 
   // Add the version number in uint32_t format (litte endian)
-  std::uint32_t versionLittleEndian = htole32(COMMUNICATION_PROTOCOL_VERSION);
+  uint32_t versionLittleEndian = htole32(COMMUNICATION_PROTOCOL_VERSION);
   std::memcpy(packet.data(), &versionLittleEndian, sizeof(versionLittleEndian));
 
   // Add the command in uint32_t format (litte endian)
-  std::uint32_t commandLittleEndian =
-      htole32(static_cast<std::uint32_t>(command));
+  uint32_t commandLittleEndian = htole32(static_cast<uint32_t>(command));
   std::memcpy(packet.data() + sizeof(versionLittleEndian), &commandLittleEndian,
               sizeof(commandLittleEndian));
 
   // Add the response in uint32_t format (litte endian)
-  std::uint32_t responseLittleEndian =
-      htole32(static_cast<std::uint32_t>(message));
+  uint32_t responseLittleEndian = htole32(static_cast<uint32_t>(message));
   std::memcpy(packet.data() + sizeof(versionLittleEndian) +
                   sizeof(commandLittleEndian),
               &responseLittleEndian, sizeof(responseLittleEndian));
 
   // Add the data type in uint32_t format (litte endian)
-  std::uint32_t dataTypeLittleEndian =
-      htole32(static_cast<std::uint32_t>(dataType));
+  uint32_t dataTypeLittleEndian = htole32(static_cast<uint32_t>(dataType));
   std::memcpy(packet.data() + sizeof(versionLittleEndian) +
                   sizeof(commandLittleEndian) + sizeof(responseLittleEndian),
               &dataTypeLittleEndian, sizeof(dataTypeLittleEndian));
 
   // Add the timestamps in uint64_t format (litte endian)
-  std::uint64_t timestamp =
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          std::chrono::system_clock::now().time_since_epoch())
-          .count();
-  std::uint64_t timestampLittleEndian = htole64(timestamp);
+  uint64_t timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+                           std::chrono::system_clock::now().time_since_epoch())
+                           .count();
+  uint64_t timestampLittleEndian = htole64(timestamp);
   std::memcpy(packet.data() + sizeof(versionLittleEndian) +
                   sizeof(commandLittleEndian) + sizeof(responseLittleEndian) +
                   sizeof(dataTypeLittleEndian),
@@ -131,11 +127,11 @@ constructResponsePacket(TcpServerCommand command, TcpServerMessage message,
   // Add the size of the extra data in uint64_t format (litte endian)
   if (dataType != TcpServerDataType::NONE) {
 
-    std::uint64_t dataSizeLittleEndian = htole64(dataSize);
+    uint64_t dataSizeLittleEndian = htole64(dataSize);
     std::memcpy(packet.data() + sizeof(versionLittleEndian) +
                     sizeof(commandLittleEndian) + sizeof(responseLittleEndian) +
-                    sizeof(timestampLittleEndian) +
-                    sizeof(dataTypeLittleEndian),
+                    sizeof(dataTypeLittleEndian) +
+                    sizeof(timestampLittleEndian),
                 &dataSizeLittleEndian, sizeof(dataSizeLittleEndian));
 
     // If there is extra data, add it to the packet
@@ -143,7 +139,7 @@ constructResponsePacket(TcpServerCommand command, TcpServerMessage message,
       std::memcpy(
           packet.data() + sizeof(versionLittleEndian) +
               sizeof(commandLittleEndian) + sizeof(responseLittleEndian) +
-              sizeof(timestampLittleEndian) + sizeof(dataTypeLittleEndian) +
+              sizeof(dataTypeLittleEndian) + sizeof(timestampLittleEndian) +
               sizeof(dataSizeLittleEndian),
           data.data(), dataSize);
     }
@@ -164,7 +160,7 @@ const std::string DEVICE_NAME_DELSYS_ANALOG = "DelsysAnalogDevice";
 const std::string DEVICE_NAME_MAGSTIM = "MagstimRapidDevice";
 
 ClientSession::ClientSession(
-    std::shared_ptr<asio::io_context> context, std::uint32_t id,
+    std::shared_ptr<asio::io_context> context, uint32_t id,
     std::function<bool(TcpServerCommand command, const ClientSession &client)>
         handleHandshake,
     std::function<bool(TcpServerCommand command, const ClientSession &client)>
@@ -437,7 +433,7 @@ void TcpServer::handleLiveAnalysesSocket(
   session->connectLiveAnalysesSocket(socket);
 }
 
-std::shared_ptr<ClientSession> TcpServer::getOrCreateSession(std::uint32_t id) {
+std::shared_ptr<ClientSession> TcpServer::getOrCreateSession(uint32_t id) {
   std::unique_lock lock(m_SessionMutex); // Exclusive lock
   auto &session = m_Sessions[id];
   if (!session) {
@@ -457,7 +453,7 @@ std::shared_ptr<ClientSession> TcpServer::getOrCreateSession(std::uint32_t id) {
   return session;
 }
 
-std::uint32_t TcpServer::readSessionIdFromSocket(
+uint32_t TcpServer::readSessionIdFromSocket(
     std::shared_ptr<asio::ip::tcp::socket> socket) {
   uint32_t id(0xFFFFFFFF); // Default invalid ID
   bool hasValue(false);
@@ -483,7 +479,7 @@ std::uint32_t TcpServer::readSessionIdFromSocket(
         }
         timer.cancel(); // Cancel the timer since we successfully read the ID
 
-        id = static_cast<std::uint32_t>(parseCommandPacket(buffer));
+        id = static_cast<uint32_t>(parseCommandPacket(buffer));
         hasValue = true;
       });
 
@@ -575,14 +571,14 @@ void TcpServer::stopServer() {
   logger.info("Canceling all the acceptors");
   cancelAcceptors();
 
-  // Wait for the server to stop
+  // Wait for the worker to stop
   if (m_ServerWorker.joinable()) {
     m_ServerWorker.join();
   }
   logger.info("Server has shut down");
 }
 
-bool TcpServer::isClientConnected(const std::uint32_t &id) const {
+bool TcpServer::isClientConnected(const uint32_t &id) const {
   return m_Sessions.find(id) != m_Sessions.end();
 }
 
@@ -650,7 +646,7 @@ bool TcpServer::handleHandshake(TcpServerCommand command,
   if (!isAccepted || byteWritten != BYTES_IN_SERVER_PACKET_HEADER || error) {
     if (!isAccepted) {
       logger.fatal("Invalid command during initialization: " +
-                   std::to_string(static_cast<std::uint32_t>(command)));
+                   std::to_string(static_cast<uint32_t>(command)));
     } else {
       logger.fatal("TCP write error: " + error.message());
     }
@@ -819,7 +815,7 @@ bool TcpServer::handleCommand(TcpServerCommand command,
 
   default:
     logger.fatal("Invalid command: " +
-                 std::to_string(static_cast<std::uint32_t>(command)));
+                 std::to_string(static_cast<uint32_t>(command)));
     response = TcpServerMessage::NOK;
     break;
   }
@@ -844,7 +840,6 @@ void TcpServer::notifyClientsOfStateChange(TcpServerCommand command) {
       constructResponsePacket(command, TcpServerMessage::STATES_CHANGED);
 
   // TODO Write doc
-
   std::shared_lock lock(m_SessionMutex);
   for (const auto &sessionPair : m_Sessions) {
     const auto &session = sessionPair.second;
@@ -878,8 +873,7 @@ nlohmann::json TcpServer::handleExtraData(TcpServerCommand command,
   }
 
   // Parse the size of the data
-  std::uint32_t dataSize =
-      static_cast<std::uint32_t>(parseCommandPacket(buffer));
+  uint32_t dataSize = static_cast<uint32_t>(parseCommandPacket(buffer));
   auto dataBuffer = std::vector<char>(dataSize);
   byteRead =
       asio::read(*session.getResponseSocket(), asio::buffer(dataBuffer), error);
@@ -993,6 +987,10 @@ bool TcpServer::removeDevice(const std::string &deviceName,
 }
 
 void TcpServer::liveDataLoop() {
+  if (m_Status == TcpServerStatus::OFF) {
+    return;
+  }
+
   m_LiveDataTimer->expires_at(std::chrono::steady_clock::now() +
                               std::chrono::milliseconds(100));
 
@@ -1041,6 +1039,10 @@ void TcpServer::liveDataLoop() {
 }
 
 void TcpServer::liveAnalysesLoop() {
+  if (m_Status == TcpServerStatus::OFF) {
+    return;
+  }
+
   m_LiveAnalysesTimer->expires_at(std::chrono::steady_clock::now() +
                                   std::chrono::milliseconds(25));
   m_LiveAnalysesTimer->async_wait([this](const asio::error_code &ec) {

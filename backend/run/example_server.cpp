@@ -52,7 +52,7 @@ int main() {
 
     // Connect to this server using a TCP client
     server::TcpClient client;
-    std::uint32_t stateId = 0x10000001; // Random state ID
+    uint32_t stateId = 0x10000001; // Random state ID
     if (!client.connect(stateId)) {
       logger.fatal("Failed to connect to the server");
       throw std::runtime_error("Failed to connect to the server");
@@ -68,11 +68,13 @@ int main() {
       throw std::runtime_error("Failed to add the devices");
     }
 
+    // Give some time to the server to connect to the devices
+    // This is not mandatory, but it helps to reduce the number of error
+    // messages that will spam the logs
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
     // Add an analyzer to the server
     client.addAnalyzer(analyzerExample);
-
-    // Give some time to the server to connect to the devices
-    std::this_thread::sleep_for(std::chrono::seconds(1));
 
     // Start recording data
     client.startRecording();
@@ -80,7 +82,7 @@ int main() {
     std::this_thread::sleep_for(recordingTime);
     client.stopRecording();
     auto data = client.getLastTrialData();
-    logger.info("A second trial received containing: " +
+    logger.info("A first trial received containing: " +
                 std::to_string(data["DelsysEmgDataCollector"].size()) +
                 " EMG data series (expected about ~" +
                 std::to_string(recordingTime.count() * 2000) + "), and " +

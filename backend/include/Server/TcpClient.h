@@ -10,6 +10,59 @@
 
 namespace NEUROBIO_NAMESPACE::server {
 
+class ServerResponse {
+public:
+  ServerResponse();
+  ServerResponse(asio::ip::tcp::socket &socket, std::shared_mutex &mutex);
+  virtual ~ServerResponse() = default;
+
+protected:
+  DECLARE_PROTECTED_MEMBER(bool, HasReceivedData);
+  DECLARE_PROTECTED_MEMBER(TcpServerCommand, Command);
+  DECLARE_PROTECTED_MEMBER(TcpServerMessage, Message);
+  DECLARE_PROTECTED_MEMBER(TcpServerDataType, DataType);
+  DECLARE_PROTECTED_MEMBER(std::chrono::system_clock::time_point, Timestamp);
+  DECLARE_PROTECTED_MEMBER(std::vector<char>, Data);
+
+protected:
+  /// @brief Check the version from the packet
+  /// @param buffer The buffer to check
+  /// @return True if the version is correct, false otherwise
+  bool checkVersionFromPacket(const std::vector<char> &buffer);
+
+  /// @brief Parse the command the server is responding to from the packet
+  /// @param buffer The buffer to parse
+  /// @return The command the server is responding to
+  TcpServerCommand parseCommandFromPacket(const std::vector<char> &buffer);
+
+  /// @brief Parse a response packet from the server
+  /// @param buffer The buffer to parse
+  /// @return The response from the server
+  TcpServerMessage parseMessageFromPacket(const std::vector<char> &buffer);
+
+  /// @brief Parse the data type from the packet
+  /// @param buffer The buffer to parse
+  TcpServerDataType parseDataTypeFromPacket(const std::vector<char> &buffer);
+
+  /// @brief Parse a response packet from the server
+  /// @param buffer The buffer to parse
+  /// @return The response from the server
+  std::chrono::system_clock::time_point
+  parseTimeStampFromPacket(const std::vector<char> &buffer);
+
+  /// @brief Read the header from the socket
+  /// @param socket The socket to read from
+  /// @return The header read from the socket
+  std::vector<char> readHeaderFromSocket(asio::ip::tcp::socket &socket);
+
+  /// @brief Read and fill the data from the socket
+  /// @param socket The socket to read from
+  /// @param type The data type to read
+  /// @return The data read from the socket
+  std::vector<char> readDataFromSocket(asio::ip::tcp::socket &socket,
+                                       TcpServerDataType type);
+};
+
 class TcpClient {
 public:
   /// @brief Constructor
@@ -34,7 +87,7 @@ public:
   /// client (the server will reject the connection if the state ID is already
   /// in use)
   /// @return True if the connection is successful, false otherwise
-  bool connect(std::uint32_t stateId);
+  bool connect(uint32_t stateId);
 
   /// @brief Disconnect from the server
   /// @return True if the disconnection is successful, false otherwise
@@ -120,41 +173,29 @@ protected:
   /// @brief The Send a command to the server and wait for the confirmation
   /// @param command The command to send
   /// @return The acknowledgment from the server
-  TcpServerMessage sendCommand(TcpServerCommand command);
+  ServerResponse sendCommand(TcpServerCommand command);
 
   /// @brief The Send a command to the server and wait for the confirmation
   /// @param command The command to send
   /// @param data The data to send with the command
   /// @return The acknowledgment from the server
-  TcpServerMessage sendCommandWithData(TcpServerCommand command,
-                                       const nlohmann::json &data);
+  ServerResponse sendCommandWithData(TcpServerCommand command,
+                                     const nlohmann::json &data);
+  /// @brief The Send a command to the server and wait for the confirmation
+  /// @param command The command to send
+  /// @param data The data to send with the command
+  /// @return The acknowledgment from the server
+  ServerResponse readDataSizeFromSocket(TcpServerCommand command,
+                                        const nlohmann::json &data);
 
   /// @brief The Send a command to the server and wait for the confirmation
   /// @param command The command to send
   /// @return The response from the server
   std::vector<char> sendCommandWithResponse(TcpServerCommand command);
 
-  /// @brief Wait for acknowledgment from the server (invoked by [sendCommand])
-  /// @return The acknowledgment from the server
-  TcpServerMessage waitForCommandAcknowledgment();
-
   /// @brief The last message received from the server
-  DECLARE_PROTECTED_MEMBER_NOGET(TcpServerMessage, PreviousAck);
-
-  /// @brief The last response received from the server
-  DECLARE_PROTECTED_MEMBER_NOGET(std::vector<char>, PreviousResponse);
-
-  /// @brief Wait for a message sent from the server
-  /// @param socket The socket to wait for the response
-  /// @return The response from the server
-  TcpServerMessage waitForMessage(asio::ip::tcp::socket &socket);
-
-  /// @brief Wait for a response from the server
-  /// @param socket The socket to wait for the response
-  /// @param expectedSize The expected size of the response
-  /// @return The response from the server
-  std::vector<char> waitForResponse(asio::ip::tcp::socket &socket,
-                                    std::uint32_t expectedSize);
+  DECLARE_PROTECTED_MEMBER_NOGET(ServerResponse, PreviousResponse);
+  DECLARE_PROTECTED_MEMBER_NOGET(bool, HasPreviousResponse);
 
   /// @brief Close the sockets
   void closeSockets();
@@ -164,18 +205,6 @@ protected:
   /// @return The corresponding packet
   std::array<char, BYTES_IN_CLIENT_PACKET_HEADER>
   constructCommandPacket(TcpServerCommand command);
-
-  /// @brief Parse a response packet from the server
-  /// @param buffer The buffer to parse
-  /// @return The response from the server
-  TcpServerMessage parseAcknowledgmentFromPacket(
-      const std::array<char, BYTES_IN_SERVER_PACKET_HEADER> &buffer);
-
-  /// @brief Parse a response packet from the server
-  /// @param buffer The buffer to parse
-  /// @return The response from the server
-  std::chrono::system_clock::time_point parseTimeStampFromPacket(
-      const std::array<char, BYTES_IN_SERVER_PACKET_HEADER> &buffer);
 
 private:
   DECLARE_PROTECTED_MEMBER_NOGET(std::thread, ContextWorker);
@@ -207,8 +236,8 @@ private:
   /// @brief The worker thread for the live analyses streaming
   DECLARE_PRIVATE_MEMBER_NOGET(std::thread, LiveAnalysesWorker);
 
-  /// @brief The protocol version of the communication with the server
-  DECLARE_PRIVATE_MEMBER_NOGET(std::uint32_t, ProtocolVersion)
+private:
+  DECLARE_PRIVATE_MEMBER_NOGET(std::shared_mutex, PreviousResponseMutex);
 };
 
 } // namespace NEUROBIO_NAMESPACE::server

@@ -784,7 +784,8 @@ class NeurobioClient {
   }
 
   int _parseDataCountFromResponsePacket(List<int> data) {
-    // Parse the data length (8 bytes) from the packet data, starting from the 24th byte, if data type is not none
+    // Parse the data length (8 bytes) from the packet data, starting from the 24th byte,
+    // if data type is not none
     final dataType = _parseServerDataTypeFromPacket(data);
     if (dataType == ServerDataType.none) {
       return 0;
