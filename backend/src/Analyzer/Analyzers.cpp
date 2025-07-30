@@ -11,7 +11,7 @@ using namespace NEUROBIO_NAMESPACE::analyzer;
 
 Predictions
 Analyzers::predict(const std::map<std::string, data::TimeSeries> &data) {
-  // TODO Add mutex?
+  std::shared_lock lock(m_MutexAnalyzers);
   for (const auto &analyzer : m_Analyzers) {
     m_LastPredictions[analyzer.second->getName()] =
         analyzer.second->predict(data);
@@ -20,6 +20,7 @@ Analyzers::predict(const std::map<std::string, data::TimeSeries> &data) {
 }
 
 size_t Analyzers::getAnalyzerId(const std::string &analyzerName) const {
+  std::shared_lock lock(const_cast<std::shared_mutex &>(m_MutexAnalyzers));
   for (const auto &analyzer : m_Analyzers) {
     if (analyzer.second->getName() == analyzerName) {
       return analyzer.first;
@@ -30,6 +31,8 @@ size_t Analyzers::getAnalyzerId(const std::string &analyzerName) const {
 }
 
 size_t Analyzers::add(std::unique_ptr<Analyzer> analyzer) {
+  std::unique_lock lock(m_MutexAnalyzers);
+
   static size_t uniqueId = 1;
   m_Analyzers[uniqueId] = std::move(analyzer);
   m_Analyzers[uniqueId]->setReferenceTime(m_LastPredictions.getStartingTime());
@@ -64,6 +67,7 @@ void Analyzers::remove(const std::string &analyzerName) {
 }
 
 void Analyzers::remove(size_t analyzerId) {
+  std::unique_lock lock(m_MutexAnalyzers);
   utils::Logger::getInstance().info("Removing analyzer with id " +
                                     std::to_string(analyzerId) + " (" +
                                     m_Analyzers[analyzerId]->getName() + ")");
@@ -72,6 +76,7 @@ void Analyzers::remove(size_t analyzerId) {
 }
 
 std::vector<size_t> Analyzers::getAnalyzerIds() const {
+  std::shared_lock lock(const_cast<std::shared_mutex &>(m_MutexAnalyzers));
   std::vector<size_t> analyzerIds;
   for (const auto &analyzer : m_Analyzers) {
     analyzerIds.push_back(analyzer.first);
@@ -82,11 +87,13 @@ std::vector<size_t> Analyzers::getAnalyzerIds() const {
 size_t Analyzers::size() const { return m_Analyzers.size(); }
 
 void Analyzers::clear() {
+  std::unique_lock lock(m_MutexAnalyzers);
   m_Analyzers.clear();
   m_LastPredictions.reset();
 }
 
 const Analyzer &Analyzers::operator[](size_t analyzerId) const {
+  std::shared_lock lock(const_cast<std::shared_mutex &>(m_MutexAnalyzers));
   try {
     return *m_Analyzers.at(analyzerId);
   } catch (const std::out_of_range &) {
@@ -98,6 +105,7 @@ const Analyzer &Analyzers::operator[](size_t analyzerId) const {
 }
 
 Analyzer &Analyzers::getAnalyzer(size_t analyzerId) {
+  std::shared_lock lock(m_MutexAnalyzers);
   try {
     return *m_Analyzers.at(analyzerId);
   } catch (const std::out_of_range &) {
@@ -109,6 +117,7 @@ Analyzer &Analyzers::getAnalyzer(size_t analyzerId) {
 }
 
 nlohmann::json Analyzers::getSerializedConfigurations() const {
+  std::shared_lock lock(const_cast<std::shared_mutex &>(m_MutexAnalyzers));
   nlohmann::json config;
   for (const auto &analyzer : m_Analyzers) {
     config.push_back(analyzer.second->getSerializedConfiguration());

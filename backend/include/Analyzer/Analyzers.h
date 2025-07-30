@@ -4,6 +4,8 @@
 #include "neurobioConfig.h"
 
 #include "Analyzer/Predictions.h"
+#include <mutex>
+#include <shared_mutex>
 
 namespace NEUROBIO_NAMESPACE::data {
 class TimeSeries;
@@ -86,6 +88,10 @@ protected:
   /// @brief The predictions made by the analyzers
   Predictions m_LastPredictions;
   Predictions getLastPredictions() const { return m_LastPredictions; }
+
+private:
+  /// @brief The mutex to lock certain operations
+  DECLARE_PRIVATE_MEMBER_NOGET(std::shared_mutex, MutexAnalyzers);
 };
 
 } // namespace NEUROBIO_NAMESPACE::analyzer

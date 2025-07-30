@@ -26,9 +26,7 @@ void checkAnalyzerSize(size_t idxFirst, size_t idxSecond,
   ASSERT_EQ(ids[1], idxSecond);
 }
 
-analyzer::Analyzers generateAnalyzers() {
-
-  auto analyzers = analyzer::Analyzers();
+void generateAnalyzers(analyzer::Analyzers &analyzers) {
   // Add one analyzer for the left side
   size_t idxFirst = analyzers.add(nlohmann::json::parse(R"({
         "name" : "Left Foot",
@@ -102,12 +100,11 @@ analyzer::Analyzers generateAnalyzers() {
 
   // Check the ids
   checkAnalyzerSize(idxFirst, idxSecond, analyzers.getAnalyzerIds());
-
-  return analyzers;
 }
 
 TEST(Analyzers, Constructors) {
-  auto analyzers = generateAnalyzers();
+  analyzer::Analyzers analyzers;
+  generateAnalyzers(analyzers);
   auto ids = analyzers.getAnalyzerIds();
 
   auto idLeftFoot = analyzers.getAnalyzerId("Left Foot");
@@ -247,7 +244,8 @@ TEST(Analyzers, Constructors) {
 }
 
 TEST(Analyzers, Prediction) {
-  auto analyzers = generateAnalyzers();
+  analyzer::Analyzers analyzers;
+  generateAnalyzers(analyzers);
   auto ids = analyzers.getAnalyzerIds();
 
   // Check that the starting conditions are correct
@@ -302,7 +300,8 @@ TEST(Analyzers, Prediction) {
 }
 
 TEST(Analyzers, serializeConfigurations) {
-  auto analyzers = generateAnalyzers();
+  analyzer::Analyzers analyzers;
+  generateAnalyzers(analyzers);
   auto serialized = analyzers.getSerializedConfigurations();
 
   ASSERT_EQ(serialized.size(), 2);
