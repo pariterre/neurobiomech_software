@@ -66,7 +66,7 @@ class _MainScreenState extends State<MainScreen> {
 
   void _onBackendUpdated(ServerCommand command) {
     if (command == ServerCommand.stopRecording) {
-      _showLastTrialGraph();
+      _fetchLastTrialData();
     } else {
       setState(() {
         _isBusy = false;
@@ -138,9 +138,13 @@ class _MainScreenState extends State<MainScreen> {
     await _connexion.send(ServerCommand.stopRecording);
   }
 
-  Future<void> _showLastTrialGraph() async {
+  Future<void> _fetchLastTrialData() async {
     setState(() => _isBusy = true);
     await _connexion.send(ServerCommand.getLastTrial);
+    await _showLastTrialGraph();
+  }
+
+  Future<void> _showLastTrialGraph() async {
     setState(() {
       _isBusy = false;
       _showLastTrial = _connexion.lastTrialAnalogsData.isNotEmpty;

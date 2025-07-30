@@ -133,6 +133,8 @@ For example, if you want to run the server with the command port at 5000, the me
 ./main_server.exe --portCommand=5000 --portMessage=5001 --portLiveData=5002 --portLiveAnalyses=5003
 ```
 
+NOTE: If you want to connect to mocked devices, you can also pass the `--useMock=true` argument to the server. This will allow you to test the server without having any real devices connected. The default value is `false`, meaning that the server will try to connect to real devices.
+
 ## Client side
 
 The communication protocol is in two steps. First, all the connexion to the server must be made, then the client is allowed to send and receive data from the server.
