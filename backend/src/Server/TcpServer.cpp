@@ -459,62 +459,59 @@ std::shared_ptr<ClientSession> TcpServer::getOrCreateSession(std::uint32_t id) {
 
 std::uint32_t TcpServer::readSessionIdFromSocket(
     std::shared_ptr<asio::ip::tcp::socket> socket) {
-  auto id = std::make_shared<std::uint32_t>(0xFFFFFFFF); // Default invalid ID
-  auto hasValue = std::make_shared<bool>(false);
+  uint32_t id(0xFFFFFFFF); // Default invalid ID
+  bool hasValue(false);
 
   // Start a timer so a user that would not send the session ID
   // will be disconnected after a while
-  auto timer =
-      std::make_shared<asio::steady_timer>(*m_Context, m_TimeoutPeriod);
-  timer->async_wait([hasValue](const asio::error_code &ec) {
+  asio::steady_timer timer(*m_Context, m_TimeoutPeriod);
+  timer.async_wait([&hasValue](const asio::error_code &ec) {
     if (ec)
-      return;         // Timer was canceled
-    *hasValue = true; // Timeout occurred
+      return;        // Timer was canceled
+    hasValue = true; // Timeout occurred
   });
 
-  auto buffer =
-      std::make_shared<std::array<char, BYTES_IN_CLIENT_PACKET_HEADER>>();
+  auto buffer = std::array<char, BYTES_IN_CLIENT_PACKET_HEADER>();
   asio::async_read(
-      *socket, asio::buffer(*buffer),
-      [this, hasValue, id, timer, buffer](const asio::error_code &ec,
-                                          std::size_t byteRead) {
-        if (ec || byteRead != BYTES_IN_CLIENT_PACKET_HEADER || *hasValue) {
+      *socket, asio::buffer(buffer),
+      [this, &hasValue, &id, &timer, &buffer](const asio::error_code &ec,
+                                              std::size_t byteRead) {
+        if (ec || byteRead != BYTES_IN_CLIENT_PACKET_HEADER || hasValue) {
           // If anything went wrong, we will return an error value
-          *hasValue = true;
+          hasValue = true;
           return;
         }
-        timer->cancel(); // Cancel the timer since we successfully read the ID
+        timer.cancel(); // Cancel the timer since we successfully read the ID
 
-        *id = static_cast<std::uint32_t>(parseCommandPacket(*buffer));
-        *hasValue = true;
+        id = static_cast<std::uint32_t>(parseCommandPacket(buffer));
+        hasValue = true;
       });
 
   // Wait for the timer or the async read to finish
-  while (!*hasValue) {
+  while (!hasValue) {
     m_Context->run_one();
   }
 
-  if (*id < 0x10000000) {
-    *id = 0xFFFFFFFF; // Invalid ID, return error value
+  if (id < 0x10000000) {
+    id = 0xFFFFFFFF; // Invalid ID, return error value
   }
 
   std::unique_lock lock(m_SessionMutex);
-  auto &session = m_Sessions[*id]; // Get or create
+  auto &session = m_Sessions[id];
   if (session && session->isConnected()) {
     // If the session is already connected so the state is invalid
     auto &logger = utils::Logger::getInstance();
-    logger.warning("Client with ID " + std::to_string(*id) +
+    logger.warning("Client with ID " + std::to_string(id) +
                    " is already connected, please choose a different ID.");
-    *id = 0xFFFFFFFF; // Return error value
+    id = 0xFFFFFFFF; // Return error value
   }
 
-  if (*id == 0xFFFFFFFF) {
+  if (id == 0xFFFFFFFF) {
     auto &logger = utils::Logger::getInstance();
-    logger.warning("Invalid session ID received, disconnecting client.");
-    socket->close(); // Close the socket if the ID is invalid
+    socket->close();
   }
 
-  return *id;
+  return id;
 }
 
 void TcpServer::handleClientHasDisconnected(const ClientSession &session) {
@@ -565,7 +562,11 @@ void TcpServer::stopServer() {
     logger.info("Disconnecting all the clients");
     std::unique_lock lock(m_SessionMutex);
     for (auto &sessionPair : m_Sessions) {
-      sessionPair.second->disconnect();
+      auto &session = sessionPair.second;
+      if (!session || !session->isConnected()) {
+        continue; // Skip disconnected sessions
+      }
+      session->disconnect();
     }
     m_Sessions.clear();
   }
@@ -847,6 +848,10 @@ void TcpServer::notifyClientsOfStateChange(TcpServerCommand command) {
   std::shared_lock lock(m_SessionMutex);
   for (const auto &sessionPair : m_Sessions) {
     const auto &session = sessionPair.second;
+    if (!session || !session->isConnected()) {
+      continue;
+    }
+
     asio::write(*session->getResponseSocket(), asio::buffer(packet));
   }
 }
@@ -1014,9 +1019,14 @@ void TcpServer::liveDataLoop() {
     // Send the data to all the clients
     asio::error_code error;
     std::shared_lock lock(m_SessionMutex);
-    for (auto &session : m_Sessions) {
+    for (auto &sessionPair : m_Sessions) {
       try {
-        auto &socket = session.second->getLiveDataSocket();
+        const auto &session = sessionPair.second;
+        if (!session || !session->isConnected()) {
+          continue;
+        }
+
+        auto &socket = session->getLiveDataSocket();
         asio::write(*socket, asio::buffer(packet), error);
       } catch (const std::exception &) {
         // Do nothing and hope for the best
@@ -1080,9 +1090,14 @@ void TcpServer::liveAnalysesLoop() {
 
     asio::error_code error;
     std::shared_lock lock(m_SessionMutex);
-    for (auto &session : m_Sessions) {
+    for (auto &sessionPair : m_Sessions) {
       try {
-        auto &socket = session.second->getLiveAnalysesSocket();
+        auto &session = sessionPair.second;
+        if (!session || !session->isConnected()) {
+          continue; // Skip disconnected sessions
+        }
+
+        auto &socket = session->getLiveAnalysesSocket();
         if (!socket || !socket->is_open()) {
           // Skip if the socket is not connected. This should not happen, but
           // because of a race condition, it did happen once, so we
