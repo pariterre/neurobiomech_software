@@ -30,7 +30,7 @@ using namespace NEUROBIO_NAMESPACE::server;
 // Packets are at least 24 bytes long, little-endian
 // - First 4 bytes are the version number
 // - Next 4 bytes are the command the server responds to
-// - Next 4 bytes are the response message
+// - Next 4 bytes are the message
 // - Next 4 bytes are the data type (if any)
 // - Remaining 8 mandatory bytes are the timestamp of the packet
 //   (milliseconds since epoch)
@@ -86,7 +86,7 @@ ServerResponse::parseMessageFromPacket(const std::vector<char> &buffer) {
   uint32_t version;
   uint32_t command;
 
-  // Get the response
+  // Get the message
   uint32_t message;
   std::memcpy(&message, buffer.data() + sizeof(version) + sizeof(command),
               sizeof(message));
@@ -203,9 +203,9 @@ std::vector<char> ServerResponse::readDataFromSocket(tcp::socket &socket,
   return dataBuffer;
 }
 
-TcpClient::TcpClient(std::string host, int commandPort, int responsePort,
+TcpClient::TcpClient(std::string host, int commandPort, int messagePort,
                      int liveDataPort, int liveAnalysesPort)
-    : m_Host(host), m_CommandPort(commandPort), m_ResponsePort(responsePort),
+    : m_Host(host), m_CommandPort(commandPort), m_MessagePort(messagePort),
       m_LiveDataPort(liveDataPort), m_LiveAnalysesPort(liveAnalysesPort),
       m_IsConnected(false) {};
 
@@ -237,18 +237,17 @@ bool TcpClient::connect(uint32_t stateId) {
                         static_cast<TcpServerCommand>(stateId))));
       });
 
-  m_ResponseSocket = std::make_unique<tcp::socket>(m_Context);
-  auto responseHasReturned = std::make_shared<bool>(false);
+  m_MessageSocket = std::make_unique<tcp::socket>(m_Context);
+  auto messageHasReturned = std::make_shared<bool>(false);
   asio::async_connect(
-      *m_ResponseSocket,
-      resolver.resolve(m_Host, std::to_string(m_ResponsePort)),
-      [this, stateId, responseHasReturned](const asio::error_code &ec,
-                                           const tcp::endpoint &) {
-        *responseHasReturned = true;
+      *m_MessageSocket, resolver.resolve(m_Host, std::to_string(m_MessagePort)),
+      [this, stateId, messageHasReturned](const asio::error_code &ec,
+                                          const tcp::endpoint &) {
+        *messageHasReturned = true;
         if (ec) {
           return;
         }
-        asio::write(*m_ResponseSocket,
+        asio::write(*m_MessageSocket,
                     asio::buffer(constructCommandPacket(
                         static_cast<TcpServerCommand>(stateId))));
       });
@@ -287,7 +286,7 @@ bool TcpClient::connect(uint32_t stateId) {
         startUpdatingLiveAnalyses();
       });
 
-  while (!*commandHasReturned || !*responseHasReturned ||
+  while (!*commandHasReturned || !*messageHasReturned ||
          !*liveDataHasReturned || !*liveAnalysesHasReturned) {
     m_Context.run_one();
   }
@@ -296,14 +295,14 @@ bool TcpClient::connect(uint32_t stateId) {
   // Wait for the sockets to be connected
   m_ContextWorker = std::thread([this]() { m_Context.run(); });
 
-  // Response socket should always listen to the server
-  m_ResponseWorker = std::thread([this]() {
+  // Message socket should always listen to the server
+  m_MessageWorker = std::thread([this]() {
     while (m_IsConnected) {
       // For now, we do nothing with this, but it can be used to react from a
       // change in states of the server
-      m_PreviousResponse =
-          ServerResponse(*m_ResponseSocket, m_PreviousResponseMutex);
-      m_HasPreviousResponse = m_PreviousResponse.getHasReceivedData();
+      m_PreviousMessage =
+          ServerResponse(*m_MessageSocket, m_PreviousMessageMutex);
+      m_HasPreviousMessage = m_PreviousMessage.getHasReceivedData();
     }
   });
 
@@ -329,7 +328,7 @@ bool TcpClient::disconnect() {
   if (m_LiveAnalysesWorker.joinable()) {
     m_LiveAnalysesWorker.join();
   }
-  m_ResponseWorker.join();
+  m_MessageWorker.join();
 
   m_Context.stop();
   m_ContextWorker.join();
@@ -588,7 +587,7 @@ ServerResponse TcpClient::sendCommandWithData(TcpServerCommand command,
   // If the command was successful, send the length of the data
   asio::error_code error;
   size_t byteWritten =
-      asio::write(*m_ResponseSocket,
+      asio::write(*m_MessageSocket,
                   asio::buffer(constructCommandPacket(
                       static_cast<TcpServerCommand>(data.dump().size()))),
                   error);
@@ -600,9 +599,8 @@ ServerResponse TcpClient::sendCommandWithData(TcpServerCommand command,
   }
 
   // Send the data
-  m_HasPreviousResponse = false;
-  byteWritten =
-      asio::write(*m_ResponseSocket, asio::buffer(data.dump()), error);
+  m_HasPreviousMessage = false;
+  byteWritten = asio::write(*m_MessageSocket, asio::buffer(data.dump()), error);
   if (byteWritten != data.dump().size() || error) {
     logger.fatal("CLIENT: TCP write error: " + error.message());
     disconnect();
@@ -612,11 +610,11 @@ ServerResponse TcpClient::sendCommandWithData(TcpServerCommand command,
   // Wait for the acknowledgment from the server
   while (true) {
     m_Context.run_one();
-    std::shared_lock lock(m_PreviousResponseMutex);
-    if (m_HasPreviousResponse) {
-      m_HasPreviousResponse = false;
-      if (m_PreviousResponse.getCommand() == command) {
-        return m_PreviousResponse;
+    std::shared_lock lock(m_PreviousMessageMutex);
+    if (m_HasPreviousMessage) {
+      m_HasPreviousMessage = false;
+      if (m_PreviousMessage.getCommand() == command) {
+        return m_PreviousMessage;
       }
     }
   }
@@ -630,7 +628,7 @@ std::vector<char> TcpClient::sendCommandWithResponse(TcpServerCommand command) {
     return std::vector<char>();
   }
 
-  m_HasPreviousResponse = false;
+  m_HasPreviousMessage = false;
   asio::error_code error;
   size_t byteWritten = asio::write(
       *m_CommandSocket, asio::buffer(constructCommandPacket(command)), error);
@@ -644,11 +642,11 @@ std::vector<char> TcpClient::sendCommandWithResponse(TcpServerCommand command) {
   // Wait for the response from the server
   while (true) {
     m_Context.run_one();
-    std::shared_lock lock(m_PreviousResponseMutex);
-    if (m_HasPreviousResponse) {
-      m_HasPreviousResponse = false;
-      if (m_PreviousResponse.getCommand() == command) {
-        return m_PreviousResponse.getData();
+    std::shared_lock lock(m_PreviousMessageMutex);
+    if (m_HasPreviousMessage) {
+      m_HasPreviousMessage = false;
+      if (m_PreviousMessage.getCommand() == command) {
+        return m_PreviousMessage.getData();
       }
     }
   }
@@ -658,8 +656,8 @@ void TcpClient::closeSockets() {
   if (m_CommandSocket && m_CommandSocket->is_open()) {
     m_CommandSocket->close();
   }
-  if (m_ResponseSocket && m_ResponseSocket->is_open()) {
-    m_ResponseSocket->close();
+  if (m_MessageSocket && m_MessageSocket->is_open()) {
+    m_MessageSocket->close();
   }
   if (m_LiveDataSocket && m_LiveDataSocket->is_open()) {
     m_LiveDataSocket->close();

@@ -20,17 +20,17 @@ class NeurobioClient {
   static const communicationProtocolVersion = 2;
 
   Socket? _socketCommand;
-  Socket? _socketResponse;
+  Socket? _socketMessage;
   Socket? _socketLiveAnalogsData;
   Socket? _socketLiveAnalyses;
 
   Completer<ServerMessage>? _commandCompleter;
-  Completer? _responseCompleter;
+  Completer? _messageCompleter;
 
-  ServerCommand? _currentResponseCommand;
+  ServerCommand? _currentMessageCommand;
   ServerCommand? _changedStatesCommand;
-  int? _expectedResponseLength;
-  final _responseData = <int>[];
+  int? _expectedMessageLength;
+  final _messageData = <int>[];
 
   int? _expectedLiveAnalogsDataLength;
   DateTime? _lastLiveAnalogsDataTimestamp;
@@ -85,7 +85,7 @@ class NeurobioClient {
   /// If the communication initialized.
   bool get isInitialized =>
       _socketCommand != null &&
-      _socketResponse != null &&
+      _socketMessage != null &&
       _socketLiveAnalogsData != null &&
       _socketLiveAnalyses != null;
   bool get isConnectedToDelsysAnalog => _isConnectedToDelsysAnalog;
@@ -103,7 +103,7 @@ class NeurobioClient {
   Future<void> initialize({
     String serverIp = 'localhost',
     int commandPort = 5000,
-    int responsePort = 5001,
+    int messagePort = 5001,
     int liveAnalogsDataPort = 5002,
     int liveAnalysesPort = 5003,
     int? nbOfRetries,
@@ -117,7 +117,7 @@ class NeurobioClient {
     await _connectSockets(
         serverIp: serverIp,
         commandPort: commandPort,
-        responsePort: responsePort,
+        messagePort: messagePort,
         liveAnalogsDataPort: liveAnalogsDataPort,
         liveAnalysesPort: liveAnalysesPort,
         nbOfRetries: nbOfRetries,
@@ -148,8 +148,8 @@ class NeurobioClient {
     if (_commandCompleter != null && !_commandCompleter!.isCompleted) {
       _commandCompleter?.complete(ServerMessage.nok);
     }
-    if (_responseCompleter != null && !_responseCompleter!.isCompleted) {
-      _responseCompleter?.complete();
+    if (_messageCompleter != null && !_messageCompleter!.isCompleted) {
+      _messageCompleter?.complete();
     }
 
     _disconnectSockets();
@@ -164,11 +164,11 @@ class NeurobioClient {
     lastTrialAnalogsData.clear(initialTime: DateTime.now());
 
     _commandCompleter = null;
-    _responseCompleter = null;
-    _currentResponseCommand = null;
+    _messageCompleter = null;
+    _currentMessageCommand = null;
     _changedStatesCommand = null;
-    _expectedResponseLength = null;
-    _responseData.clear();
+    _expectedMessageLength = null;
+    _messageData.clear();
 
     _expectedLiveAnalogsDataLength = null;
     _lastLiveAnalogsDataTimestamp = null;
@@ -188,7 +188,7 @@ class NeurobioClient {
   Future<void> _connectSockets({
     required String serverIp,
     required int commandPort,
-    required int responsePort,
+    required int messagePort,
     required int liveAnalogsDataPort,
     required int liveAnalysesPort,
     required int? nbOfRetries,
@@ -203,12 +203,12 @@ class NeurobioClient {
         nbOfRetries: nbOfRetries,
         hasDataCallback: _receiveCommandResponse,
         onConnexionLost: onConnexionLost);
-    _socketResponse = await _connectToSocket(
+    _socketMessage = await _connectToSocket(
         id: id,
         ipAddress: serverIp,
-        port: responsePort,
+        port: messagePort,
         nbOfRetries: nbOfRetries,
-        hasDataCallback: _receiveResponse,
+        hasDataCallback: _receiveMessageResponse,
         onConnexionLost: onConnexionLost);
     _socketLiveAnalogsData = await _connectToSocket(
         id: id,
@@ -232,8 +232,8 @@ class NeurobioClient {
     await _socketCommand?.close();
     _socketCommand = null;
 
-    await _socketResponse?.close();
-    _socketResponse = null;
+    await _socketMessage?.close();
+    _socketMessage = null;
 
     await _socketLiveAnalogsData?.close();
     _socketLiveAnalogsData = null;
@@ -307,7 +307,7 @@ class NeurobioClient {
       case ServerCommand.none:
         break;
       case ServerCommand.getStates:
-        _prepareResponseCompleter();
+        _prepareMessageCompleter();
       case ServerCommand.getLastTrial:
         _prepareLastTrialResponse();
     }
@@ -336,10 +336,10 @@ class NeurobioClient {
     try {
       _commandCompleter = Completer<ServerMessage>();
       final packets = utf8.encode(json.encode(parameters));
-      _socketResponse!
+      _socketMessage!
           .add(ServerCommand.constructPacket(command: packets.length));
-      _socketResponse!.add(packets);
-      await _socketResponse!.flush();
+      _socketMessage!.add(packets);
+      await _socketMessage!.flush();
       return await _commandCompleter!.future;
     } on SocketException {
       _log.info('Connexion was closed by the server');
@@ -438,14 +438,14 @@ class NeurobioClient {
 
   void _prepareLastTrialResponse() {
     lastTrialAnalogsData.clear();
-    _prepareResponseCompleter();
+    _prepareMessageCompleter();
   }
 
-  void _prepareResponseCompleter() {
-    _responseCompleter = Completer();
-    _currentResponseCommand = null;
-    _expectedResponseLength = null;
-    _responseData.clear();
+  void _prepareMessageCompleter() {
+    _messageCompleter = Completer();
+    _currentMessageCommand = null;
+    _expectedMessageLength = null;
+    _messageData.clear();
   }
 
   void resetLiveAnalyses() => liveAnalyses.clear(initialTime: DateTime.now());
@@ -453,25 +453,25 @@ class NeurobioClient {
   void resetLiveAnalogsData() =>
       liveAnalogsData.clear(initialTime: DateTime.now());
 
-  void _receiveResponse(List<int> response) {
+  void _receiveMessageResponse(List<int> response) {
     if (!isInitialized) return;
 
-    if (_currentResponseCommand == null) {
-      _currentResponseCommand = _parseCommandFromPacket(response);
+    if (_currentMessageCommand == null) {
+      _currentMessageCommand = _parseCommandFromPacket(response);
       final serverMessage = _parseServerMessageFromPacket(response);
 
       switch (serverMessage) {
         case ServerMessage.ok:
         case ServerMessage.nok:
-          _currentResponseCommand = null;
+          _currentMessageCommand = null;
           _log.severe('Unexpected server message: $serverMessage');
           throw Exception('Unexpected server message: $serverMessage');
         case ServerMessage.listeningExtraData:
         case ServerMessage.sendingData:
           break;
         case ServerMessage.statesChanged:
-          _changedStatesCommand = _currentResponseCommand;
-          _currentResponseCommand = null;
+          _changedStatesCommand = _currentMessageCommand;
+          _currentMessageCommand = null;
           send(ServerCommand.getStates);
           return;
       }
@@ -479,7 +479,7 @@ class NeurobioClient {
       final dataType = _parseServerDataTypeFromPacket(response);
       switch (dataType) {
         case ServerDataType.none:
-          _currentResponseCommand = null;
+          _currentMessageCommand = null;
           return;
         case ServerDataType.states:
         case ServerDataType.liveData:
@@ -491,31 +491,31 @@ class NeurobioClient {
           break;
       }
 
-      _expectedResponseLength = _parseDataCountFromResponsePacket(response);
+      _expectedMessageLength = _parseDataCountFromMessagePacket(response);
       if (response.length > _serverHeaderWithDataLength) {
         // If more data came at once, recursively call the function with the rest
         // of the data.
-        _receiveResponse(response.sublist(_serverHeaderWithDataLength));
+        _receiveMessageResponse(response.sublist(_serverHeaderWithDataLength));
       }
       return;
     }
 
-    _responseData.addAll(response);
+    _messageData.addAll(response);
     _log.info(
-        'Received ${_responseData.length} / $_expectedResponseLength bytes');
-    if (_responseData.length < _expectedResponseLength!) {
+        'Received ${_messageData.length} / $_expectedMessageLength bytes');
+    if (_messageData.length < _expectedMessageLength!) {
       // Waiting for the rest of the response
       return;
-    } else if (_responseData.length > _expectedResponseLength!) {
+    } else if (_messageData.length > _expectedMessageLength!) {
       _log.severe('Received more data than expected, dropping everything');
-      _responseData.clear();
-      _expectedResponseLength = null;
+      _messageData.clear();
+      _expectedMessageLength = null;
       return;
     }
 
     // Convert the data to a string (from json)
-    _expectedResponseLength = null;
-    switch (_currentResponseCommand) {
+    _expectedMessageLength = null;
+    switch (_currentMessageCommand) {
       case ServerCommand.handshake:
       case ServerCommand.connectDelsysAnalog:
       case ServerCommand.connectDelsysEmg:
@@ -536,7 +536,7 @@ class NeurobioClient {
       case ServerCommand.getStates:
         // To string
         final jsonRaw =
-            json.decode(utf8.decode(_responseData)) as Map<String, dynamic>?;
+            json.decode(utf8.decode(_messageData)) as Map<String, dynamic>?;
         if (jsonRaw != null) {
           if (jsonRaw.containsKey('connected_devices')) {
             _setFlagsFromStates(jsonRaw['connected_devices']);
@@ -573,15 +573,15 @@ class NeurobioClient {
             );
         break;
       case ServerCommand.getLastTrial:
-        final jsonRaw = json.decode(utf8.decode(_responseData));
+        final jsonRaw = json.decode(utf8.decode(_messageData));
         if (jsonRaw != null) {
           lastTrialAnalogsData.appendFromJson(jsonRaw as Map<String, dynamic>);
         }
         break;
     }
 
-    _currentResponseCommand = null;
-    _responseCompleter!.complete();
+    _currentMessageCommand = null;
+    _messageCompleter!.complete();
   }
 
   Future<void> _receiveLiveAnalyses(List<int> raw) async {
@@ -662,7 +662,7 @@ class NeurobioClient {
       try {
         getLastTimeStamp(_parseTimestampFromPacket(raw));
         expectedDataLength =
-            getExpectedDataLength(_parseDataCountFromResponsePacket(raw));
+            getExpectedDataLength(_parseDataCountFromMessagePacket(raw));
       } catch (e) {
         _log.severe('Error while parsing $dataType: $e, resetting');
         resetData();
@@ -783,7 +783,7 @@ class NeurobioClient {
     return DateTime.fromMillisecondsSinceEpoch(timestamp);
   }
 
-  int _parseDataCountFromResponsePacket(List<int> data) {
+  int _parseDataCountFromMessagePacket(List<int> data) {
     // Parse the data length (8 bytes) from the packet data, starting from the 24th byte,
     // if data type is not none
     final dataType = _parseServerDataTypeFromPacket(data);
@@ -844,7 +844,7 @@ class NeurobioClientMock extends NeurobioClient {
   Future<void> initialize({
     String serverIp = 'localhost',
     int commandPort = 5000,
-    int responsePort = 5001,
+    int messagePort = 5001,
     int liveAnalogsDataPort = 5002,
     int liveAnalysesPort = 5003,
     int? nbOfRetries,
@@ -863,7 +863,7 @@ class NeurobioClientMock extends NeurobioClient {
   Future<void> _connectSockets({
     required String serverIp,
     required int commandPort,
-    required int responsePort,
+    required int messagePort,
     required int liveAnalogsDataPort,
     required int liveAnalysesPort,
     required int? nbOfRetries,
@@ -895,7 +895,7 @@ class NeurobioClientMock extends NeurobioClient {
       case ServerCommand.none:
         break;
       case ServerCommand.getStates:
-        _prepareResponseCompleter();
+        _prepareMessageCompleter();
       case ServerCommand.getLastTrial:
         _prepareLastTrialResponse();
     }

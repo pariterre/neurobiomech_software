@@ -147,10 +147,11 @@ The communication protocol is in two steps. First, all the connexion to the serv
 All the commands are sent over the command socket. All the commands must be formatted the same way.
 
 The command is made of exactly two 4 bytes, each little-endian. 
-  - The first 4 bytes is the version of the protocol. The current version is 1. 
+  - The first 4 bytes is the version of the protocol. The current version is 2. 
   - The second 4 bytes is the command. The list of commands is below.
 
       HANDSHAKE =                   0
+      GET_STATES =                  1
       CONNECT_DELSYS_ANALOG =      10
       CONNECT_DELSYS_EMG =         11
       CONNECT_MAGSTIM =            12
@@ -165,10 +166,11 @@ The command is made of exactly two 4 bytes, each little-endian.
       ADD_ANALYZER =               50
       REMOVE_ANALYZER =            51
       FAILED =                    100
+      NONE =               0xFFFFFFFF
 
-    For example, if you want to send a DISCONNECT_DELAYS_EMG command, you must send the following 8 bytes (I added / to make it easier to separate the two sections of the command, but they would obviously not be in the command):
+    For example, if you want to send a DISCONNECT_DELSYS_EMG (21 => 0x00000015) command, you must send the following 8 bytes (I added "/" to make it easier to separate the two sections of the command, but they would obviously not be in the command):
     ```
-    01 00 00 00   /   15 00 00 00
+    02 00 00 00   /   15 00 00 00
     ```
 
 Some of the commands are expected to pass extra data. To see how to format the extra data, please refer to the `Passing extra data to the server` section below.

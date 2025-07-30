@@ -53,13 +53,13 @@ TEST(Server, Ports) {
   {
     server::TcpServer server;
     ASSERT_EQ(server.getCommandPort(), 5000);
-    ASSERT_EQ(server.getResponsePort(), 5001);
+    ASSERT_EQ(server.getMessagePort(), 5001);
   }
 
   {
     server::TcpServer server(5010, 5011);
     ASSERT_EQ(server.getCommandPort(), 5010);
-    ASSERT_EQ(server.getResponsePort(), 5011);
+    ASSERT_EQ(server.getMessagePort(), 5011);
   }
 }
 

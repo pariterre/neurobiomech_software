@@ -79,9 +79,9 @@ public:
   /// @param socket The socket to connect the command socket to
   void connectCommandSocket(std::shared_ptr<asio::ip::tcp::socket> socket);
 
-  /// @brief Connect the response socket to the given socket
-  /// @param socket The socket to connect the response socket to
-  void connectResponseSocket(std::shared_ptr<asio::ip::tcp::socket> socket);
+  /// @brief Connect the message socket to the given socket
+  /// @param socket The socket to connect the message socket to
+  void connectMessageSocket(std::shared_ptr<asio::ip::tcp::socket> socket);
 
   /// @brief Connect the live data socket to the given socket
   /// @param socket The socket to connect the live data socket to
@@ -115,9 +115,9 @@ protected:
   /// @brief The command socket used to communicate with the client
   DECLARE_PROTECTED_MEMBER(std::shared_ptr<asio::ip::tcp::socket>,
                            CommandSocket);
-  /// @brief The response socket used to communicate with the client
+  /// @brief The message socket used to communicate with the client
   DECLARE_PROTECTED_MEMBER(std::shared_ptr<asio::ip::tcp::socket>,
-                           ResponseSocket);
+                           MessageSocket);
   /// @brief The live data socket used to communicate with the client
   DECLARE_PROTECTED_MEMBER(std::shared_ptr<asio::ip::tcp::socket>,
                            LiveDataSocket);
@@ -160,12 +160,12 @@ class TcpServer {
 public:
   /// @brief Constructor
   /// @param commandPort The port to communicate the commands (default is 5000)
-  /// @param responsePort The port to communicate the response (default is 5001)
+  /// @param messagePort The port to communicate the messages (default is 5001)
   /// @param liveDataPort The port to communicate the live data (default is
   /// 5002)
   /// @param liveAnalysesPort The port to communicate the live analyses (default
   /// is 5003)
-  TcpServer(int commandPort = 5000, int responsePort = 5001,
+  TcpServer(int commandPort = 5000, int messagePort = 5001,
             int liveDataPort = 5002, int liveAnalysesPort = 5003);
 
   /// @brief Destructor
@@ -230,10 +230,10 @@ protected:
   void
   handleCommandSocketConnexion(std::shared_ptr<asio::ip::tcp::socket> socket);
 
-  /// @brief Handle a response socket connexion
+  /// @brief Handle a message socket connexion
   /// @param socket The socket that has answered the connexion
   void
-  handleResponseSocketConnexion(std::shared_ptr<asio::ip::tcp::socket> socket);
+  handleMessageSocketConnexion(std::shared_ptr<asio::ip::tcp::socket> socket);
 
   /// @brief Handle a live data socket connexion
   /// @param socket The socket that has answered the connexion
@@ -294,8 +294,8 @@ protected:
   /// @brief The port to listen to communicate the commands
   DECLARE_PROTECTED_MEMBER(int, CommandPort);
 
-  /// @brief The port to listen to communicate the responses
-  DECLARE_PROTECTED_MEMBER(int, ResponsePort);
+  /// @brief The port to listen to communicate the messages
+  DECLARE_PROTECTED_MEMBER(int, MessagePort);
 
   /// @brief The port to listen to communicate the live data
   DECLARE_PROTECTED_MEMBER(int, LiveDataPort);
@@ -310,9 +310,9 @@ protected:
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::acceptor>,
                                  CommandAcceptor);
 
-  /// @brief The acceptor that listens to the response port
+  /// @brief The acceptor that listens to the message port
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::acceptor>,
-                                 ResponseAcceptor);
+                                 MessageAcceptor);
 
   /// @brief The acceptor that listens to the live data streaming port
   DECLARE_PROTECTED_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::acceptor>,
@@ -386,7 +386,7 @@ class TcpServerMock : public TcpServer {
 public:
   /// @brief Constructor
   /// @param commandPort The port to communicate the commands (default is 5000)
-  /// @param responsePort The port to communicate the response (default is 5001)
+  /// @param messagePort The port to communicate the messages (default is 5001)
   /// @param liveDataPort The port to communicate the live data (default is
   /// 5002)
   /// @param liveAnalysesPort The port to communicate the live analyses (default
@@ -394,10 +394,10 @@ public:
   /// @param timeoutPeriod The timeout period for the server (default is 5000
   /// ms)
   TcpServerMock(
-      int commandPort = 5000, int responsePort = 5001, int liveDataPort = 5002,
+      int commandPort = 5000, int messagePort = 5001, int liveDataPort = 5002,
       int liveAnalysesPort = 5003,
       std::chrono::milliseconds timeoutPeriod = std::chrono::milliseconds(5000))
-      : TcpServer(commandPort, responsePort, liveDataPort, liveAnalysesPort) {
+      : TcpServer(commandPort, messagePort, liveDataPort, liveAnalysesPort) {
     m_TimeoutPeriod = timeoutPeriod;
   };
 

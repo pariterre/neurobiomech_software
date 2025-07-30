@@ -68,13 +68,13 @@ public:
   /// @brief Constructor
   /// @param host The host to connect to
   /// @param commandPort The port to communicate the commands (default is 5000)
-  /// @param responsePort The port to communicate the resonses (default is 5001)
+  /// @param messagePort The port to communicate the messages (default is 5001)
   /// @param liveDataPort The port to communicate the live data (default is
   /// 5002)
   /// @param liveAnalysesPort The port to communicate the live analyses (default
   /// is 5003)
   TcpClient(std::string host = "localhost", int commandPort = 5000,
-            int responsePort = 5001, int liveDataPort = 5002,
+            int messagePort = 5001, int liveDataPort = 5002,
             int liveAnalysesPort = 5003);
 
   /// @brief Destructor
@@ -146,8 +146,8 @@ protected:
   /// @brief The port to communicate the commands
   DECLARE_PROTECTED_MEMBER(int, CommandPort);
 
-  /// @brief The port to communicate the responses
-  DECLARE_PROTECTED_MEMBER(int, ResponsePort);
+  /// @brief The port to communicate the messages
+  DECLARE_PROTECTED_MEMBER(int, MessagePort);
 
   /// @brief The port to communicate the live data
   DECLARE_PROTECTED_MEMBER(int, LiveDataPort);
@@ -194,8 +194,8 @@ protected:
   std::vector<char> sendCommandWithResponse(TcpServerCommand command);
 
   /// @brief The last message received from the server
-  DECLARE_PROTECTED_MEMBER_NOGET(ServerResponse, PreviousResponse);
-  DECLARE_PROTECTED_MEMBER_NOGET(bool, HasPreviousResponse);
+  DECLARE_PROTECTED_MEMBER_NOGET(ServerResponse, PreviousMessage);
+  DECLARE_PROTECTED_MEMBER_NOGET(bool, HasPreviousMessage);
 
   /// @brief Close the sockets
   void closeSockets();
@@ -216,11 +216,11 @@ private:
   DECLARE_PRIVATE_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
                                CommandSocket);
 
-  DECLARE_PROTECTED_MEMBER_NOGET(std::thread, ResponseWorker);
+  DECLARE_PROTECTED_MEMBER_NOGET(std::thread, MessageWorker);
 
-  /// @brief The socket that is connected to the server for responses
+  /// @brief The socket that is connected to the server for response messages
   DECLARE_PRIVATE_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
-                               ResponseSocket);
+                               MessageSocket);
 
   /// @brief The socket that is connected to the server for live data
   DECLARE_PRIVATE_MEMBER_NOGET(std::unique_ptr<asio::ip::tcp::socket>,
@@ -237,7 +237,7 @@ private:
   DECLARE_PRIVATE_MEMBER_NOGET(std::thread, LiveAnalysesWorker);
 
 private:
-  DECLARE_PRIVATE_MEMBER_NOGET(std::shared_mutex, PreviousResponseMutex);
+  DECLARE_PRIVATE_MEMBER_NOGET(std::shared_mutex, PreviousMessageMutex);
 };
 
 } // namespace NEUROBIO_NAMESPACE::server

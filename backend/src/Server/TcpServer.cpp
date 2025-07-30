@@ -65,8 +65,8 @@ TcpServerCommand parseCommandPacket(
 
 template <typename T>
 std::vector<char>
-constructResponsePacket(TcpServerCommand command, TcpServerMessage message,
-                        TcpServerDataType dataType, uint64_t dataSize, T data) {
+constructMessagePacket(TcpServerCommand command, TcpServerMessage message,
+                       TcpServerDataType dataType, uint64_t dataSize, T data) {
   // Packets are exactly 24 bytes long, litte endian if dataType is NONE,
   // otherwise a mandatory 8 bytes is added alongside the actual data
   // - First 4 bytes are the version number
@@ -102,16 +102,16 @@ constructResponsePacket(TcpServerCommand command, TcpServerMessage message,
   std::memcpy(packet.data() + sizeof(versionLittleEndian), &commandLittleEndian,
               sizeof(commandLittleEndian));
 
-  // Add the response in uint32_t format (litte endian)
-  uint32_t responseLittleEndian = htole32(static_cast<uint32_t>(message));
+  // Add the message in uint32_t format (litte endian)
+  uint32_t messageLittleEndian = htole32(static_cast<uint32_t>(message));
   std::memcpy(packet.data() + sizeof(versionLittleEndian) +
                   sizeof(commandLittleEndian),
-              &responseLittleEndian, sizeof(responseLittleEndian));
+              &messageLittleEndian, sizeof(messageLittleEndian));
 
   // Add the data type in uint32_t format (litte endian)
   uint32_t dataTypeLittleEndian = htole32(static_cast<uint32_t>(dataType));
   std::memcpy(packet.data() + sizeof(versionLittleEndian) +
-                  sizeof(commandLittleEndian) + sizeof(responseLittleEndian),
+                  sizeof(commandLittleEndian) + sizeof(messageLittleEndian),
               &dataTypeLittleEndian, sizeof(dataTypeLittleEndian));
 
   // Add the timestamps in uint64_t format (litte endian)
@@ -120,7 +120,7 @@ constructResponsePacket(TcpServerCommand command, TcpServerMessage message,
                            .count();
   uint64_t timestampLittleEndian = htole64(timestamp);
   std::memcpy(packet.data() + sizeof(versionLittleEndian) +
-                  sizeof(commandLittleEndian) + sizeof(responseLittleEndian) +
+                  sizeof(commandLittleEndian) + sizeof(messageLittleEndian) +
                   sizeof(dataTypeLittleEndian),
               &timestampLittleEndian, sizeof(timestampLittleEndian));
 
@@ -129,7 +129,7 @@ constructResponsePacket(TcpServerCommand command, TcpServerMessage message,
 
     uint64_t dataSizeLittleEndian = htole64(dataSize);
     std::memcpy(packet.data() + sizeof(versionLittleEndian) +
-                    sizeof(commandLittleEndian) + sizeof(responseLittleEndian) +
+                    sizeof(commandLittleEndian) + sizeof(messageLittleEndian) +
                     sizeof(dataTypeLittleEndian) +
                     sizeof(timestampLittleEndian),
                 &dataSizeLittleEndian, sizeof(dataSizeLittleEndian));
@@ -138,7 +138,7 @@ constructResponsePacket(TcpServerCommand command, TcpServerMessage message,
     if (dataSize > 0) {
       std::memcpy(
           packet.data() + sizeof(versionLittleEndian) +
-              sizeof(commandLittleEndian) + sizeof(responseLittleEndian) +
+              sizeof(commandLittleEndian) + sizeof(messageLittleEndian) +
               sizeof(dataTypeLittleEndian) + sizeof(timestampLittleEndian) +
               sizeof(dataSizeLittleEndian),
           data.data(), dataSize);
@@ -148,10 +148,10 @@ constructResponsePacket(TcpServerCommand command, TcpServerMessage message,
   return packet;
 }
 
-std::vector<char> constructResponsePacket(TcpServerCommand command,
-                                          TcpServerMessage message) {
-  return constructResponsePacket(command, message, TcpServerDataType::NONE, 0,
-                                 std::vector<char>());
+std::vector<char> constructMessagePacket(TcpServerCommand command,
+                                         TcpServerMessage message) {
+  return constructMessagePacket(command, message, TcpServerDataType::NONE, 0,
+                                std::vector<char>());
 }
 
 // Here are the names of the devices that can be connected (for internal use)
@@ -182,11 +182,11 @@ void ClientSession::connectCommandSocket(
   tryStartSessionLoop();
 }
 
-void ClientSession::connectResponseSocket(
+void ClientSession::connectMessageSocket(
     std::shared_ptr<asio::ip::tcp::socket> socket) {
   if (m_HasDisconnected)
     return;
-  m_ResponseSocket = socket;
+  m_MessageSocket = socket;
   tryStartSessionLoop();
 }
 
@@ -208,7 +208,7 @@ void ClientSession::connectLiveAnalysesSocket(
 
 bool ClientSession::isConnected() const {
   return !m_HasDisconnected && m_CommandSocket && m_CommandSocket->is_open() &&
-         m_ResponseSocket && m_ResponseSocket->is_open() && m_LiveDataSocket &&
+         m_MessageSocket && m_MessageSocket->is_open() && m_LiveDataSocket &&
          m_LiveDataSocket->is_open() && m_LiveAnalysesSocket &&
          m_LiveAnalysesSocket->is_open();
 }
@@ -229,7 +229,7 @@ void ClientSession::disconnect() {
 
   m_IsHandshakeDone = false;
   closeSocket(m_CommandSocket);
-  closeSocket(m_ResponseSocket);
+  closeSocket(m_MessageSocket);
   closeSocket(m_LiveDataSocket);
   closeSocket(m_LiveAnalysesSocket);
 
@@ -310,9 +310,9 @@ void ClientSession::commandSocketLoop() {
       });
 }
 
-TcpServer::TcpServer(int commandPort, int responsePort, int liveDataPort,
+TcpServer::TcpServer(int commandPort, int messagePort, int liveDataPort,
                      int liveAnalysesPort)
-    : m_CommandPort(commandPort), m_ResponsePort(responsePort),
+    : m_CommandPort(commandPort), m_MessagePort(messagePort),
       m_LiveDataPort(liveDataPort), m_LiveAnalysesPort(liveAnalysesPort),
       m_TimeoutPeriod(std::chrono::milliseconds(5000)),
       m_Status(TcpServerStatus::OFF),
@@ -366,8 +366,8 @@ void TcpServer::startServerSync() {
 void TcpServer::startAcceptingSocketConnexions() {
   acceptSocketConnexion(m_CommandAcceptor,
                         &TcpServer::handleCommandSocketConnexion);
-  acceptSocketConnexion(m_ResponseAcceptor,
-                        &TcpServer::handleResponseSocketConnexion);
+  acceptSocketConnexion(m_MessageAcceptor,
+                        &TcpServer::handleMessageSocketConnexion);
   acceptSocketConnexion(m_LiveDataAcceptor, &TcpServer::handleLiveDataSocket);
   acceptSocketConnexion(m_LiveAnalysesAcceptor,
                         &TcpServer::handleLiveAnalysesSocket);
@@ -400,7 +400,7 @@ void TcpServer::handleCommandSocketConnexion(
   session->connectCommandSocket(socket);
 }
 
-void TcpServer::handleResponseSocketConnexion(
+void TcpServer::handleMessageSocketConnexion(
     std::shared_ptr<asio::ip::tcp::socket> socket) {
   auto sessionId = readSessionIdFromSocket(socket);
   if (sessionId == 0xFFFFFFFF) {
@@ -408,7 +408,7 @@ void TcpServer::handleResponseSocketConnexion(
   }
 
   auto session = getOrCreateSession(sessionId);
-  session->connectResponseSocket(socket);
+  session->connectMessageSocket(socket);
 }
 
 void TcpServer::handleLiveDataSocket(
@@ -591,10 +591,10 @@ void TcpServer::startAcceptors() {
   logger.info("TCP Command server started on port " +
               std::to_string(m_CommandPort));
 
-  m_ResponseAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
-      *m_Context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_ResponsePort));
-  logger.info("TCP Response server started on port " +
-              std::to_string(m_ResponsePort));
+  m_MessageAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
+      *m_Context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_MessagePort));
+  logger.info("TCP Message server started on port " +
+              std::to_string(m_MessagePort));
 
   m_LiveDataAcceptor = std::make_unique<asio::ip::tcp::acceptor>(
       *m_Context, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), m_LiveDataPort));
@@ -613,8 +613,8 @@ void TcpServer::cancelAcceptors() {
     m_CommandAcceptor->cancel();
   }
 
-  if (m_ResponseAcceptor && m_ResponseAcceptor->is_open()) {
-    m_ResponseAcceptor->cancel();
+  if (m_MessageAcceptor && m_MessageAcceptor->is_open()) {
+    m_MessageAcceptor->cancel();
   }
 
   if (m_LiveDataAcceptor && m_LiveDataAcceptor->is_open()) {
@@ -640,7 +640,7 @@ bool TcpServer::handleHandshake(TcpServerCommand command,
   auto isAccepted = command == TcpServerCommand::HANDSHAKE;
   size_t byteWritten = asio::write(
       *session.getCommandSocket(),
-      asio::buffer(constructResponsePacket(
+      asio::buffer(constructMessagePacket(
           command, isAccepted ? TcpServerMessage::OK : TcpServerMessage::NOK)),
       error);
   if (!isAccepted || byteWritten != BYTES_IN_SERVER_PACKET_HEADER || error) {
@@ -671,7 +671,7 @@ bool TcpServer::handleCommand(TcpServerCommand command,
   asio::error_code error;
 
   // Handle the command
-  TcpServerMessage response = TcpServerMessage::OK;
+  TcpServerMessage message = TcpServerMessage::OK;
   bool shouldNotifyClients = false;
   switch (command) {
   case TcpServerCommand::GET_STATES: {
@@ -703,76 +703,76 @@ bool TcpServer::handleCommand(TcpServerCommand command,
     states["connected_analyzers"] = connectedAnalyzers;
 
     auto dump = states.dump();
-    asio::write(*session.getResponseSocket(),
-                asio::buffer(constructResponsePacket(
+    asio::write(*session.getMessageSocket(),
+                asio::buffer(constructMessagePacket(
                     command, TcpServerMessage::SENDING_DATA,
                     TcpServerDataType::STATES, dump.size(), dump)),
                 error);
     if (error) {
       logger.fatal("TCP write error: " + error.message());
-      response = TcpServerMessage::NOK;
+      message = TcpServerMessage::NOK;
     }
     break;
   }
   case TcpServerCommand::CONNECT_DELSYS_ANALOG:
-    response = addDevice(DEVICE_NAME_DELSYS_ANALOG) ? TcpServerMessage::OK
-                                                    : TcpServerMessage::NOK;
+    message = addDevice(DEVICE_NAME_DELSYS_ANALOG) ? TcpServerMessage::OK
+                                                   : TcpServerMessage::NOK;
     shouldNotifyClients = true;
     break;
 
   case TcpServerCommand::CONNECT_DELSYS_EMG:
-    response = addDevice(DEVICE_NAME_DELSYS_EMG) ? TcpServerMessage::OK
-                                                 : TcpServerMessage::NOK;
+    message = addDevice(DEVICE_NAME_DELSYS_EMG) ? TcpServerMessage::OK
+                                                : TcpServerMessage::NOK;
     shouldNotifyClients = true;
     break;
 
   case TcpServerCommand::CONNECT_MAGSTIM:
-    response = addDevice(DEVICE_NAME_MAGSTIM) ? TcpServerMessage::OK
-                                              : TcpServerMessage::NOK;
+    message = addDevice(DEVICE_NAME_MAGSTIM) ? TcpServerMessage::OK
+                                             : TcpServerMessage::NOK;
     shouldNotifyClients = true;
     break;
 
   case TcpServerCommand::ZERO_DELSYS_ANALOG:
-    response = m_Devices.zeroLevelDevice(DEVICE_NAME_DELSYS_ANALOG)
-                   ? TcpServerMessage::OK
-                   : TcpServerMessage::NOK;
+    message = m_Devices.zeroLevelDevice(DEVICE_NAME_DELSYS_ANALOG)
+                  ? TcpServerMessage::OK
+                  : TcpServerMessage::NOK;
     shouldNotifyClients = true;
     break;
 
   case TcpServerCommand::ZERO_DELSYS_EMG:
-    response = m_Devices.zeroLevelDevice(DEVICE_NAME_DELSYS_EMG)
-                   ? TcpServerMessage::OK
-                   : TcpServerMessage::NOK;
+    message = m_Devices.zeroLevelDevice(DEVICE_NAME_DELSYS_EMG)
+                  ? TcpServerMessage::OK
+                  : TcpServerMessage::NOK;
     shouldNotifyClients = true;
     break;
 
   case TcpServerCommand::DISCONNECT_DELSYS_ANALOG:
-    response = removeDevice(DEVICE_NAME_DELSYS_ANALOG) ? TcpServerMessage::OK
-                                                       : TcpServerMessage::NOK;
+    message = removeDevice(DEVICE_NAME_DELSYS_ANALOG) ? TcpServerMessage::OK
+                                                      : TcpServerMessage::NOK;
     shouldNotifyClients = true;
     break;
 
   case TcpServerCommand::DISCONNECT_DELSYS_EMG:
-    response = removeDevice(DEVICE_NAME_DELSYS_EMG) ? TcpServerMessage::OK
-                                                    : TcpServerMessage::NOK;
+    message = removeDevice(DEVICE_NAME_DELSYS_EMG) ? TcpServerMessage::OK
+                                                   : TcpServerMessage::NOK;
     shouldNotifyClients = true;
     break;
 
   case TcpServerCommand::DISCONNECT_MAGSTIM:
-    response = removeDevice(DEVICE_NAME_MAGSTIM) ? TcpServerMessage::OK
-                                                 : TcpServerMessage::NOK;
+    message = removeDevice(DEVICE_NAME_MAGSTIM) ? TcpServerMessage::OK
+                                                : TcpServerMessage::NOK;
     shouldNotifyClients = true;
     break;
 
   case TcpServerCommand::START_RECORDING:
-    response = m_Devices.startRecording() ? TcpServerMessage::OK
-                                          : TcpServerMessage::NOK;
+    message = m_Devices.startRecording() ? TcpServerMessage::OK
+                                         : TcpServerMessage::NOK;
     shouldNotifyClients = true;
     break;
 
   case TcpServerCommand::STOP_RECORDING:
-    response = m_Devices.stopRecording() ? TcpServerMessage::OK
-                                         : TcpServerMessage::NOK;
+    message = m_Devices.stopRecording() ? TcpServerMessage::OK
+                                        : TcpServerMessage::NOK;
     shouldNotifyClients = true;
     break;
 
@@ -780,8 +780,8 @@ bool TcpServer::handleCommand(TcpServerCommand command,
     auto data = m_Devices.getLastTrialDataSerialized();
 
     auto dump = data.dump();
-    asio::write(*session.getResponseSocket(),
-                asio::buffer(constructResponsePacket(
+    asio::write(*session.getMessageSocket(),
+                asio::buffer(constructMessagePacket(
                     command, TcpServerMessage::SENDING_DATA,
                     TcpServerDataType::FULL_TRIAL, dump.size(), dump)),
                 error);
@@ -793,10 +793,10 @@ bool TcpServer::handleCommand(TcpServerCommand command,
       m_Analyzers.add(data);
     } catch (const std::exception &e) {
       logger.fatal("Failed to get extra info: " + std::string(e.what()));
-      response = TcpServerMessage::NOK;
+      message = TcpServerMessage::NOK;
     } catch (...) {
       logger.fatal("Failed to get extra info");
-      response = TcpServerMessage::NOK;
+      message = TcpServerMessage::NOK;
     }
     shouldNotifyClients = true;
   } break;
@@ -808,7 +808,7 @@ bool TcpServer::handleCommand(TcpServerCommand command,
       m_Analyzers.remove(analyzerName);
     } catch (const std::exception &e) {
       logger.fatal("Failed to get extra info: " + std::string(e.what()));
-      response = TcpServerMessage::NOK;
+      message = TcpServerMessage::NOK;
     }
     shouldNotifyClients = true;
   } break;
@@ -816,14 +816,14 @@ bool TcpServer::handleCommand(TcpServerCommand command,
   default:
     logger.fatal("Invalid command: " +
                  std::to_string(static_cast<uint32_t>(command)));
-    response = TcpServerMessage::NOK;
+    message = TcpServerMessage::NOK;
     break;
   }
 
   // Respond to the command
   size_t byteWritten = asio::write(
       *session.getCommandSocket(),
-      asio::buffer(constructResponsePacket(command, response)), error);
+      asio::buffer(constructMessagePacket(command, message)), error);
   if (byteWritten != BYTES_IN_SERVER_PACKET_HEADER || error) {
     logger.fatal("TCP write error: " + error.message());
     return false;
@@ -837,9 +837,8 @@ bool TcpServer::handleCommand(TcpServerCommand command,
 
 void TcpServer::notifyClientsOfStateChange(TcpServerCommand command) {
   auto packet =
-      constructResponsePacket(command, TcpServerMessage::STATES_CHANGED);
+      constructMessagePacket(command, TcpServerMessage::STATES_CHANGED);
 
-  // TODO Write doc
   std::shared_lock lock(m_SessionMutex);
   for (const auto &sessionPair : m_Sessions) {
     const auto &session = sessionPair.second;
@@ -847,7 +846,7 @@ void TcpServer::notifyClientsOfStateChange(TcpServerCommand command) {
       continue;
     }
 
-    asio::write(*session->getResponseSocket(), asio::buffer(packet));
+    asio::write(*session->getMessageSocket(), asio::buffer(packet));
   }
 }
 
@@ -859,14 +858,14 @@ nlohmann::json TcpServer::handleExtraData(TcpServerCommand command,
   // Send an acknowledgment to the client we are ready to receive the data
   size_t byteWritten =
       asio::write(*session.getCommandSocket(),
-                  asio::buffer(constructResponsePacket(
+                  asio::buffer(constructMessagePacket(
                       command, TcpServerMessage::LISTENING_EXTRA_DATA)),
                   error);
 
   // Receive the size of the data
   auto buffer = std::array<char, BYTES_IN_CLIENT_PACKET_HEADER>();
   size_t byteRead =
-      asio::read(*session.getResponseSocket(), asio::buffer(buffer), error);
+      asio::read(*session.getMessageSocket(), asio::buffer(buffer), error);
   if (byteRead != BYTES_IN_CLIENT_PACKET_HEADER || error) {
     logger.fatal("TCP read error: " + error.message());
     throw std::runtime_error("Failed to read the size of the data");
@@ -876,7 +875,7 @@ nlohmann::json TcpServer::handleExtraData(TcpServerCommand command,
   uint32_t dataSize = static_cast<uint32_t>(parseCommandPacket(buffer));
   auto dataBuffer = std::vector<char>(dataSize);
   byteRead =
-      asio::read(*session.getResponseSocket(), asio::buffer(dataBuffer), error);
+      asio::read(*session.getMessageSocket(), asio::buffer(dataBuffer), error);
   if (byteRead != dataSize || error) {
     logger.fatal("TCP read error: " + error.message());
     throw std::runtime_error("Failed to read the data");
@@ -1010,7 +1009,7 @@ void TcpServer::liveDataLoop() {
     }
     auto dataDump = data.dump();
 
-    auto packet = constructResponsePacket(
+    auto packet = constructMessagePacket(
         TcpServerCommand::NONE, TcpServerMessage::SENDING_DATA,
         TcpServerDataType::LIVE_DATA, dataDump.size(), dataDump);
 
@@ -1086,7 +1085,7 @@ void TcpServer::liveAnalysesLoop() {
 
     // Serialize the predictions
     auto dataDump = predictions.serialize().dump();
-    auto packet = constructResponsePacket(
+    auto packet = constructMessagePacket(
         TcpServerCommand::NONE, TcpServerMessage::SENDING_DATA,
         TcpServerDataType::LIVE_ANALYSES, dataDump.size(), dataDump);
 
