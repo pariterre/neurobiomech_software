@@ -26,8 +26,10 @@
   - [Client side](#client-side)
     - [Connexion](#connexion)
     - [Client command packets](#client-command-packets)
+    - [GET\_STATES](#get_states)
     - [Passing extra data to the server](#passing-extra-data-to-the-server)
     - [Server message packets](#server-message-packets)
+      - [STATES](#states)
     - [Server data response packets](#server-data-response-packets)
     - [Server events](#server-events)
     - [Serialize the extra data](#serialize-the-extra-data)
@@ -183,6 +185,26 @@ Some of the commands are expected to pass extra data. To see how to format the e
 
 Some of the commands expect a data response from the server. To see how the data is formatted, please refer to the `Server data response packets` section below.
 
+
+### GET_STATES
+
+{
+  "connected_devices": {
+    "DeviceName1": {
+      "is_connected": true,
+      "is_collecting": true | false,
+      "is_recording": true | false
+    }
+  }, 
+  "connected_analyzers": {
+    "AnalyzerName1": {
+      "configuration": <The same json as the analyzers>
+    }
+  },
+}
+
+
+
 ### Passing extra data to the server
 
 If some extra data must be sent to the server in conjunction with a command, the client must first send the command, then they must wait for the OK response on the command socket. Only then can they send the extra data on the message socket.
@@ -231,6 +253,38 @@ The message packets is made of exactly five (24 bytes) parts (little-endian) wit
     ```
     02 00 00 00   /   0A 00 00 00   /   01 00 00 00   /   FF FF FF FF   /   00 9E 90 33 BB 00 00 00
     ```
+
+#### STATES
+
+When sending the GET_STATES commands, the server responds on the message socket with the following extra data:
+
+```json
+{
+  "connected_devices": {
+    "DeviceName1": {
+      "is_connected": true,
+      "is_collecting": true | false,
+      "is_recording": true | false
+    }, 
+    "DeviceName2": {
+      "is_connected": true,
+      "is_collecting": true | false,
+      "is_recording": true | false
+    },
+    ...
+  }, 
+  "connected_analyzers": {
+    "AnalyzerName1": {
+      "configuration": <The same json as add analyzer>
+    }, 
+    "AnalyzerName2": {
+      "configuration": <The same json as add analyzer>
+    },
+    ...
+  },
+}
+```
+
 
 ### Server data response packets
 
