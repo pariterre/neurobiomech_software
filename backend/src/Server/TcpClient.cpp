@@ -498,7 +498,8 @@ void TcpClient::startUpdatingLiveData() {
 void TcpClient::updateLiveData() {
   auto &logger = utils::Logger::getInstance();
 
-  auto response = ServerResponse(*m_LiveDataSocket, std::shared_mutex());
+  auto mutex = std::shared_mutex();
+  auto response = ServerResponse(*m_LiveDataSocket, mutex);
   if (!response.getHasReceivedData()) {
     // If no data received, just return
     return;
@@ -528,7 +529,8 @@ void TcpClient::updateLiveAnalyses() {
   auto &logger = utils::Logger::getInstance();
 
   try {
-    auto response = ServerResponse(*m_LiveAnalysesSocket, std::shared_mutex());
+    auto mutex = std::shared_mutex();
+    auto response = ServerResponse(*m_LiveAnalysesSocket, mutex);
     if (!response.getHasReceivedData()) {
       // If no data received, just return
       return;
@@ -564,7 +566,8 @@ ServerResponse TcpClient::sendCommand(TcpServerCommand command) {
 
   ServerResponse response;
   do {
-    response = ServerResponse(*m_CommandSocket, std::shared_mutex());
+    auto mutex = std::shared_mutex();
+    response = ServerResponse(*m_CommandSocket, mutex);
   } while (m_IsConnected && !response.getHasReceivedData());
 
   if (response.getMessage() == TcpServerMessage::NOK) {
