@@ -1,4 +1,4 @@
-import 'package:frontend/models/time_series_data.dart';
+import 'package:frontend_common/models/time_series_data.dart';
 
 enum DataGenericTypes { analogs, predictions }
 
@@ -25,9 +25,9 @@ class Data {
   }
 
   bool get isEmpty => switch (dataGenericType) {
-        DataGenericTypes.analogs => _isAnalogsEmpty,
-        DataGenericTypes.predictions => _isPredictionsEmpty
-      };
+    DataGenericTypes.analogs => _isAnalogsEmpty,
+    DataGenericTypes.predictions => _isPredictionsEmpty,
+  };
   bool get isNotEmpty => !isEmpty;
 
   bool get _isAnalogsEmpty => delsysAnalog.isEmpty && delsysEmg.isEmpty;
@@ -39,19 +39,18 @@ class Data {
     required int analogChannelCount,
     required int emgChannelCount,
     required bool isFromLiveData,
-  })  : _initialTime = initialTime,
-        delsysAnalog = TimeSeriesData(
-            initialTime: initialTime,
-            channelCount: analogChannelCount,
-            isFromLiveData: isFromLiveData),
-        delsysEmg = EmgTimeSeriesData(
-            initialTime: initialTime,
-            channelCount: emgChannelCount,
-            isFromLiveData: isFromLiveData),
-        predictions = PredictionData(
-          initialTime: initialTime,
-          channelCount: 0,
-        );
+  }) : _initialTime = initialTime,
+       delsysAnalog = TimeSeriesData(
+         initialTime: initialTime,
+         channelCount: analogChannelCount,
+         isFromLiveData: isFromLiveData,
+       ),
+       delsysEmg = EmgTimeSeriesData(
+         initialTime: initialTime,
+         channelCount: emgChannelCount,
+         isFromLiveData: isFromLiveData,
+       ),
+       predictions = PredictionData(initialTime: initialTime, channelCount: 0);
 
   void appendFromJson(Map<String, dynamic> json) {
     switch (dataGenericType) {
@@ -83,16 +82,19 @@ class Data {
     switch (dataGenericType) {
       case DataGenericTypes.analogs:
         delsysAnalog.dropBefore(
-            (t.millisecondsSinceEpoch - initialTime.millisecondsSinceEpoch)
-                .toDouble());
+          (t.millisecondsSinceEpoch - initialTime.millisecondsSinceEpoch)
+              .toDouble(),
+        );
         delsysEmg.dropBefore(
-            (t.millisecondsSinceEpoch - initialTime.millisecondsSinceEpoch)
-                .toDouble());
+          (t.millisecondsSinceEpoch - initialTime.millisecondsSinceEpoch)
+              .toDouble(),
+        );
         break;
       case DataGenericTypes.predictions:
         predictions.dropBefore(
-            (t.millisecondsSinceEpoch - initialTime.millisecondsSinceEpoch)
-                .toDouble());
+          (t.millisecondsSinceEpoch - initialTime.millisecondsSinceEpoch)
+              .toDouble(),
+        );
         break;
     }
   }

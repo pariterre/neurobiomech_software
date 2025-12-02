@@ -4,20 +4,26 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:frontend/managers/predictions_manager.dart';
-import 'package:frontend/models/server_command.dart';
-import 'package:frontend/models/data.dart';
-import 'package:frontend/models/prediction_model.dart';
-import 'package:frontend/models/server_data_type.dart';
-import 'package:frontend/models/server_message.dart';
-import 'package:frontend/utils/generic_listener.dart';
+import 'package:frontend_common/managers/predictions_manager.dart';
+import 'package:frontend_common/models/server_command.dart';
+import 'package:frontend_common/models/data.dart';
+import 'package:frontend_common/models/prediction_model.dart';
+import 'package:frontend_common/models/server_data_type.dart';
+import 'package:frontend_common/models/server_message.dart';
+import 'package:frontend_common/utils/generic_listener.dart';
 import 'package:logging/logging.dart';
+
+final _logger = Logger('NeurobioClient');
 
 const _serverHeaderLength = 24;
 const _serverHeaderWithDataLength = _serverHeaderLength + 8;
 
+NeurobioClient? _instance;
+
 class NeurobioClient {
   static const communicationProtocolVersion = 2;
+
+  bool _isInitialized = false;
 
   Socket? _socketCommand;
   Socket? _socketMessage;
@@ -36,40 +42,39 @@ class NeurobioClient {
   DateTime? _lastLiveAnalogsDataTimestamp;
   final _rawLiveAnalogsList = <int>[];
   var _liveAnalogsDataCompleter = Completer();
-  Function()? _onNewLiveAnalogsData;
 
   int? _expectedLiveAnalysesDataLength;
   DateTime? _lastLiveAnalysesTimestamp;
   final _rawLiveAnalysesList = <int>[];
   var _liveAnalysesDataCompleter = Completer();
-  Function()? _onNewLiveAnalyses;
 
   bool _isConnectedToDelsysAnalog = false;
   bool _isConnectedToDelsysEmg = false;
   bool _isConnectedToLiveAnalogsData = false;
   bool _isConnectedToLiveAnalyses = false;
   Data liveAnalogsData = Data(
-      dataGenericType: DataGenericTypes.analogs,
-      initialTime: DateTime.now(),
-      analogChannelCount: 9 * 16,
-      emgChannelCount: 16,
-      isFromLiveData: true);
+    dataGenericType: DataGenericTypes.analogs,
+    initialTime: DateTime.now(),
+    analogChannelCount: 9 * 16,
+    emgChannelCount: 16,
+    isFromLiveData: true,
+  );
   Data lastTrialAnalogsData = Data(
-      dataGenericType: DataGenericTypes.analogs,
-      initialTime: DateTime.now(),
-      analogChannelCount: 9 * 16,
-      emgChannelCount: 16,
-      isFromLiveData: false);
+    dataGenericType: DataGenericTypes.analogs,
+    initialTime: DateTime.now(),
+    analogChannelCount: 9 * 16,
+    emgChannelCount: 16,
+    isFromLiveData: false,
+  );
   Duration liveAnalogsDataTimeWindow = const Duration(seconds: 3);
   Data liveAnalyses = Data(
-      dataGenericType: DataGenericTypes.predictions,
-      initialTime: DateTime.now(),
-      analogChannelCount: 0,
-      emgChannelCount: 0,
-      isFromLiveData: true);
+    dataGenericType: DataGenericTypes.predictions,
+    initialTime: DateTime.now(),
+    analogChannelCount: 0,
+    emgChannelCount: 0,
+    isFromLiveData: true,
+  );
   Duration liveAnalysesTimeWindow = const Duration(seconds: 3);
-
-  final onBackendUpdated = GenericListener<Function(ServerCommand)>();
 
   bool _isRecording = false;
 
@@ -79,11 +84,17 @@ class NeurobioClient {
 
   ///
   /// Get the singleton instance of the TcpCommunication class.
-  static NeurobioClient get instance => _instance;
+  static NeurobioClient get instance => _instance ??= NeurobioClient._();
+
+  /// Prepare the events listeners
+  final onBackendUpdated = GenericListener<Function(ServerCommand)>();
+  final onConnexionLost = GenericListener<Function()>();
+  final onNewLiveAnalogsData = GenericListener<Function()>();
+  final onNewLiveAnalyses = GenericListener<Function()>();
 
   ///
   /// If the communication initialized.
-  bool get isInitialized =>
+  bool get isConnected =>
       _socketCommand != null &&
       _socketMessage != null &&
       _socketLiveAnalogsData != null &&
@@ -100,50 +111,51 @@ class NeurobioClient {
   /// Initialize the communication with the server. If the connection fails,
   /// the function will retry until it succeeds or the number of retries is
   /// reached.
-  Future<void> initialize({
+  Future<bool> connect({
     String serverIp = 'localhost',
     int commandPort = 5000,
     int messagePort = 5001,
     int liveAnalogsDataPort = 5002,
     int liveAnalysesPort = 5003,
     int? nbOfRetries,
-    required Function() onConnexionLost,
-    required Function() onNewLiveAnalogsData,
-    required Function() onNewLiveAnalyses,
   }) async {
-    if (isInitialized) return;
+    if (!_isInitialized) {
+      _log.severe('NeurobioClient is not initialized, call initialize() first');
+      return false;
+    }
+
+    if (isConnected) return true;
 
     _log.info('Initializing communication with the server');
     await _connectSockets(
-        serverIp: serverIp,
-        commandPort: commandPort,
-        messagePort: messagePort,
-        liveAnalogsDataPort: liveAnalogsDataPort,
-        liveAnalysesPort: liveAnalysesPort,
-        nbOfRetries: nbOfRetries,
-        onConnexionLost: onConnexionLost);
+      serverIp: serverIp,
+      commandPort: commandPort,
+      messagePort: messagePort,
+      liveAnalogsDataPort: liveAnalogsDataPort,
+      liveAnalysesPort: liveAnalysesPort,
+      nbOfRetries: nbOfRetries,
+    );
 
     if (!(await _send(ServerCommand.handshake, null))) {
       _log.severe('Handshake failed');
       await disconnect();
-      return;
+      return false;
     }
 
     _expectedLiveAnalogsDataLength = null;
     _expectedLiveAnalysesDataLength = null;
-    _onNewLiveAnalogsData = onNewLiveAnalogsData;
 
     _expectedLiveAnalysesDataLength = null;
     _lastLiveAnalysesTimestamp = null;
-    _onNewLiveAnalyses = onNewLiveAnalyses;
 
     _log.info('Communication initialized');
+    return true;
   }
 
   ///
   /// Close the connection to the server.
   Future<void> disconnect() async {
-    if (!isInitialized) return;
+    if (!isConnected) return;
 
     if (_commandCompleter != null && !_commandCompleter!.isCompleted) {
       _commandCompleter?.complete(ServerMessage.nok);
@@ -174,58 +186,85 @@ class NeurobioClient {
     _lastLiveAnalogsDataTimestamp = null;
     _rawLiveAnalogsList.clear();
     _liveAnalogsDataCompleter = Completer();
-    _onNewLiveAnalogsData = null;
 
     _expectedLiveAnalysesDataLength = null;
     _lastLiveAnalysesTimestamp = null;
     _rawLiveAnalysesList.clear();
     _liveAnalysesDataCompleter = Completer();
-    _onNewLiveAnalyses = null;
+
+    onBackendUpdated.cancelListeners();
+    onConnexionLost.cancelListeners();
+    onNewLiveAnalogsData.cancelListeners();
+    onNewLiveAnalyses.cancelListeners();
 
     _log.info('Connection closed');
   }
 
-  Future<void> _connectSockets({
+  Future<bool> _connectSockets({
     required String serverIp,
     required int commandPort,
     required int messagePort,
     required int liveAnalogsDataPort,
     required int liveAnalysesPort,
     required int? nbOfRetries,
-    required Function()? onConnexionLost,
   }) async {
     final id = Random().nextInt(0xEFFFFFFE) + 0x10000000;
 
     _socketCommand = await _connectToSocket(
-        id: id,
-        ipAddress: serverIp,
-        port: commandPort,
-        nbOfRetries: nbOfRetries,
-        hasDataCallback: _receiveCommandResponse,
-        onConnexionLost: onConnexionLost);
+      id: id,
+      ipAddress: serverIp,
+      port: commandPort,
+      nbOfRetries: nbOfRetries,
+      hasDataCallback: _receiveCommandResponse,
+    );
+    if (_socketCommand == null) {
+      _logger.severe('Failed to connect to command socket');
+      await _disconnectSockets();
+      return false;
+    }
+
     _socketMessage = await _connectToSocket(
-        id: id,
-        ipAddress: serverIp,
-        port: messagePort,
-        nbOfRetries: nbOfRetries,
-        hasDataCallback: _receiveMessageResponse,
-        onConnexionLost: onConnexionLost);
+      id: id,
+      ipAddress: serverIp,
+      port: messagePort,
+      nbOfRetries: nbOfRetries,
+      hasDataCallback: _receiveMessageResponse,
+    );
+    if (_socketMessage == null) {
+      _logger.severe('Failed to connect to message socket');
+      await _disconnectSockets();
+      return false;
+    }
+
     _socketLiveAnalogsData = await _connectToSocket(
-        id: id,
-        ipAddress: serverIp,
-        port: liveAnalogsDataPort,
-        nbOfRetries: nbOfRetries,
-        hasDataCallback: _receiveLiveAnalogsData,
-        onConnexionLost: onConnexionLost);
+      id: id,
+      ipAddress: serverIp,
+      port: liveAnalogsDataPort,
+      nbOfRetries: nbOfRetries,
+      hasDataCallback: _receiveLiveAnalogsData,
+    );
+    if (_socketLiveAnalogsData == null) {
+      _logger.severe('Failed to connect to live analogs data socket');
+      await _disconnectSockets();
+      return false;
+    }
+
     _isConnectedToLiveAnalogsData = true;
     _socketLiveAnalyses = await _connectToSocket(
-        id: id,
-        ipAddress: serverIp,
-        port: liveAnalysesPort,
-        nbOfRetries: nbOfRetries,
-        hasDataCallback: _receiveLiveAnalyses,
-        onConnexionLost: onConnexionLost);
+      id: id,
+      ipAddress: serverIp,
+      port: liveAnalysesPort,
+      nbOfRetries: nbOfRetries,
+      hasDataCallback: _receiveLiveAnalyses,
+    );
+    if (_socketLiveAnalyses == null) {
+      _logger.severe('Failed to connect to live analyses socket');
+      await _disconnectSockets();
+      return false;
+    }
+
     _isConnectedToLiveAnalyses = true;
+    return true;
   }
 
   Future<void> _disconnectSockets() async {
@@ -247,8 +286,10 @@ class NeurobioClient {
   /// can be passed as a list of strings.
   /// Returns true if the server returned OK and if the connexion to
   /// the server is still alive, false otherwise.
-  Future<bool> send(ServerCommand command,
-      {Map<String, dynamic>? parameters}) async {
+  Future<bool> send(
+    ServerCommand command, {
+    Map<String, dynamic>? parameters,
+  }) async {
     if (!command.isImplemented) {
       _log.severe('Command $command is not implemented');
       return false;
@@ -264,8 +305,10 @@ class NeurobioClient {
   }
 
   Future<bool> _send(
-      ServerCommand command, Map<String, dynamic>? parameters) async {
-    if (!isInitialized) {
+    ServerCommand command,
+    Map<String, dynamic>? parameters,
+  ) async {
+    if (!isConnected) {
       _log.severe('Communication not initialized');
       return false;
     }
@@ -331,13 +374,15 @@ class NeurobioClient {
   }
 
   Future<ServerMessage> _performSendParameters(
-      Map<String, dynamic> parameters) async {
+    Map<String, dynamic> parameters,
+  ) async {
     // Construct and send the parameters
     try {
       _commandCompleter = Completer<ServerMessage>();
       final packets = utf8.encode(json.encode(parameters));
-      _socketMessage!
-          .add(ServerCommand.constructPacket(command: packets.length));
+      _socketMessage!.add(
+        ServerCommand.constructPacket(command: packets.length),
+      );
       _socketMessage!.add(packets);
       await _socketMessage!.flush();
       return await _commandCompleter!.future;
@@ -353,15 +398,17 @@ class NeurobioClient {
   void _receiveCommandResponse(List<int> response) {
     if (_commandCompleter == null) {
       _log.severe(
-          'Got a response but the command does not exist or is already responded to');
+        'Got a response but the command does not exist or is already responded to',
+      );
       return;
     }
 
     final version = _parseVersionFromPacket(response);
     if (version != communicationProtocolVersion) {
       _log.severe(
-          'Protocol version mismatch, expected $communicationProtocolVersion, got $version. '
-          'Please update the client.');
+        'Protocol version mismatch, expected $communicationProtocolVersion, got $version. '
+        'Please update the client.',
+      );
       disconnect();
       return;
     }
@@ -429,7 +476,8 @@ class NeurobioClient {
     if (states?.containsKey('DelsysAnalogDevice') ?? false) {
       _isConnectedToDelsysAnalog =
           states!['DelsysAnalogDevice']['is_connected'] ?? false;
-      _isRecording = _isRecording ||
+      _isRecording =
+          _isRecording ||
           (states['DelsysAnalogDevice']['is_recording'] ?? false);
     }
 
@@ -454,7 +502,7 @@ class NeurobioClient {
       liveAnalogsData.clear(initialTime: DateTime.now());
 
   void _receiveMessageResponse(List<int> response) {
-    if (!isInitialized) return;
+    if (!isConnected) return;
 
     if (_currentMessageCommand == null) {
       _currentMessageCommand = _parseCommandFromPacket(response);
@@ -487,7 +535,8 @@ class NeurobioClient {
           break;
         case ServerDataType.fullTrial:
           lastTrialAnalogsData.clear(
-              initialTime: _parseTimestampFromPacket(response));
+            initialTime: _parseTimestampFromPacket(response),
+          );
           break;
       }
 
@@ -502,7 +551,8 @@ class NeurobioClient {
 
     _messageData.addAll(response);
     _log.info(
-        'Received ${_messageData.length} / $_expectedMessageLength bytes');
+      'Received ${_messageData.length} / $_expectedMessageLength bytes',
+    );
     if (_messageData.length < _expectedMessageLength!) {
       // Waiting for the rest of the response
       return;
@@ -548,8 +598,9 @@ class NeurobioClient {
                 (jsonRaw['connected_analyzers'] as Map<String, dynamic>?) ?? {};
             final manager = PredictionsManager.instance;
             for (final value in serverPredictions.values) {
-              final prediction =
-                  PredictionModel.fromSerialized(value['configuration']);
+              final prediction = PredictionModel.fromSerialized(
+                value['configuration'],
+              );
               manager.mergePrediction(prediction);
               manager.addActive(prediction);
               liveAnalyses.predictions.addPrediction(prediction.name);
@@ -566,11 +617,11 @@ class NeurobioClient {
           }
         }
         onBackendUpdated
-            .notifyListeners((callback) =>
-                callback(_changedStatesCommand ?? ServerCommand.getStates))
-            .then(
-              (value) => {_changedStatesCommand = null},
-            );
+            .notifyListeners(
+              (callback) =>
+                  callback(_changedStatesCommand ?? ServerCommand.getStates),
+            )
+            .then((value) => {_changedStatesCommand = null});
         break;
       case ServerCommand.getLastTrial:
         final jsonRaw = json.decode(utf8.decode(_messageData));
@@ -608,7 +659,7 @@ class NeurobioClient {
         return _liveAnalysesDataCompleter;
       },
       liveDataTimeWindow: liveAnalysesTimeWindow,
-      onNewData: _onNewLiveAnalyses,
+      onNewData: onNewLiveAnalyses,
       resetData: resetLiveAnalyses,
     );
   }
@@ -637,7 +688,7 @@ class NeurobioClient {
         return _liveAnalogsDataCompleter;
       },
       liveDataTimeWindow: liveAnalogsDataTimeWindow,
-      onNewData: _onNewLiveAnalogsData,
+      onNewData: onNewLiveAnalogsData,
       resetData: resetLiveAnalogsData,
     );
   }
@@ -651,18 +702,19 @@ class NeurobioClient {
     required Data Function(bool isNew) getLiveData,
     required Completer Function(bool isNew) getCompleter,
     required Duration liveDataTimeWindow,
-    required Function()? onNewData,
+    required GenericListener? onNewData,
     required Function() resetData,
   }) async {
-    if (raw.isEmpty || !isInitialized) return;
+    if (raw.isEmpty || !isConnected) return;
 
     int? expectedDataLength = getExpectedDataLength();
     if (expectedDataLength == null) {
       getCompleter(true);
       try {
         getLastTimeStamp(_parseTimestampFromPacket(raw));
-        expectedDataLength =
-            getExpectedDataLength(_parseDataCountFromMessagePacket(raw));
+        expectedDataLength = getExpectedDataLength(
+          _parseDataCountFromMessagePacket(raw),
+        );
       } catch (e) {
         _log.severe('Error while parsing $dataType: $e, resetting');
         resetData();
@@ -697,18 +749,20 @@ class NeurobioClient {
       // call the function again with the rest of the data.
       final rawRemaining = rawList.sublist(expectedDataLength);
       rawList.removeRange(expectedDataLength, rawList.length);
-      completer.future.then((_) => _receiveLiveData(
-            dataType: dataType,
-            raw: rawRemaining,
-            rawList: rawList,
-            getLastTimeStamp: getLastTimeStamp,
-            getExpectedDataLength: getExpectedDataLength,
-            getLiveData: getLiveData,
-            getCompleter: getCompleter,
-            liveDataTimeWindow: liveDataTimeWindow,
-            onNewData: onNewData,
-            resetData: resetData,
-          ));
+      completer.future.then(
+        (_) => _receiveLiveData(
+          dataType: dataType,
+          raw: rawRemaining,
+          rawList: rawList,
+          getLastTimeStamp: getLastTimeStamp,
+          getExpectedDataLength: getExpectedDataLength,
+          getLiveData: getLiveData,
+          getCompleter: getCompleter,
+          liveDataTimeWindow: liveDataTimeWindow,
+          onNewData: onNewData,
+          resetData: resetData,
+        ),
+      );
     }
 
     // Convert the data to a string (from json)
@@ -732,7 +786,7 @@ class NeurobioClient {
     completer.complete();
     getExpectedDataLength(-1);
 
-    if (onNewData != null) onNewData();
+    if (onNewData != null) onNewData.notifyListeners((callback) => callback());
   }
 
   int _parse32bitsIntFromPacket(List<int> data) {
@@ -768,13 +822,15 @@ class NeurobioClient {
   ServerMessage _parseServerMessageFromPacket(List<int> data) {
     // Parse the server message (4 bytes) from the packet data, starting from the 8th byte
     return ServerMessage.fromInt(
-        _parse32bitsIntFromPacket(data.sublist(8, 12)));
+      _parse32bitsIntFromPacket(data.sublist(8, 12)),
+    );
   }
 
   ServerDataType _parseServerDataTypeFromPacket(List<int> data) {
     // Parse the data type (4 bytes) from the packet data, starting from the 12th byte
     return ServerDataType.fromInt(
-        _parse32bitsIntFromPacket(data.sublist(12, 16)));
+      _parse32bitsIntFromPacket(data.sublist(12, 16)),
+    );
   }
 
   DateTime _parseTimestampFromPacket(List<int> data) {
@@ -794,8 +850,12 @@ class NeurobioClient {
   }
 
   // Prepare the singleton
-  static final NeurobioClient _instance = NeurobioClient._();
   NeurobioClient._();
+
+  Future<void> initialize() async {
+    // Placeholder for possible future initialization
+    _isInitialized = true;
+  }
 
   Future<Socket?> _connectToSocket({
     required int id,
@@ -803,16 +863,17 @@ class NeurobioClient {
     required int port,
     required int? nbOfRetries,
     required Function(List<int>) hasDataCallback,
-    required Function()? onConnexionLost,
   }) async {
     while (nbOfRetries == null || nbOfRetries > 0) {
       try {
         final socket = await Socket.connect(ipAddress, port);
-        socket.listen(hasDataCallback, onDone: () {
-          if (onConnexionLost == null) return;
-          disconnect();
-          onConnexionLost();
-        });
+        socket.listen(
+          hasDataCallback,
+          onDone: () async {
+            await disconnect();
+            onConnexionLost.notifyListeners((callback) => callback());
+          },
+        );
 
         socket.add(ServerCommand.constructPacket(command: id));
         await socket.flush();
@@ -832,47 +893,42 @@ class NeurobioClient {
 class NeurobioClientMock extends NeurobioClient {
   NeurobioClientMock._() : super._();
 
-  static NeurobioClient get instance => _instance;
-  static final NeurobioClient _instance = NeurobioClientMock._();
+  static NeurobioClient get instance => _instance ??= NeurobioClientMock._();
 
-  bool _isMockInitialized = false;
-
-  @override
-  bool get isInitialized => _isMockInitialized;
+  bool _isMockConnected = false;
 
   @override
-  Future<void> initialize({
+  bool get isConnected => _isMockConnected;
+
+  @override
+  Future<bool> connect({
     String serverIp = 'localhost',
     int commandPort = 5000,
     int messagePort = 5001,
     int liveAnalogsDataPort = 5002,
     int liveAnalysesPort = 5003,
     int? nbOfRetries,
-    required Function() onConnexionLost,
-    required Function() onNewLiveAnalogsData,
-    required Function() onNewLiveAnalyses,
   }) async {
-    if (isInitialized) return;
-    _isMockInitialized = true;
-
-    _onNewLiveAnalogsData = onNewLiveAnalogsData;
-    _onNewLiveAnalyses = onNewLiveAnalyses;
+    if (isConnected) return true;
+    _isMockConnected = true;
+    return true;
   }
 
   @override
-  Future<void> _connectSockets({
+  Future<bool> _connectSockets({
     required String serverIp,
     required int commandPort,
     required int messagePort,
     required int liveAnalogsDataPort,
     required int liveAnalysesPort,
     required int? nbOfRetries,
-    required Function()? onConnexionLost,
-  }) async {}
+  }) async {
+    return true;
+  }
 
   @override
   Future<void> _disconnectSockets() async {
-    _isMockInitialized = false;
+    _isMockConnected = false;
   }
 
   @override
@@ -903,22 +959,23 @@ class NeurobioClientMock extends NeurobioClient {
     // Construct and send the command
     try {
       _commandCompleter = Completer<ServerMessage>();
-      Future.delayed(const Duration(milliseconds: 500)).then((value) =>
-          _receiveCommandResponse([
-            NeurobioClient.communicationProtocolVersion,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            1
-          ]));
+      Future.delayed(const Duration(milliseconds: 500)).then(
+        (value) => _receiveCommandResponse([
+          NeurobioClient.communicationProtocolVersion,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+        ]),
+      );
       return await _commandCompleter!.future;
     } on SocketException {
       _log.info('Connexion was closed by the server');

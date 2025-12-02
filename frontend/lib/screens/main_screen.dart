@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:frontend/managers/database_manager.dart';
-import 'package:frontend/managers/neurobio_client.dart';
-import 'package:frontend/managers/predictions_manager.dart';
-import 'package:frontend/models/server_command.dart';
 import 'package:frontend/screens/predictions_dialog.dart';
 import 'package:frontend/widgets/data_graph.dart';
 import 'package:frontend/widgets/save_trial_dialog.dart';
+import 'package:frontend_common/managers/neurobio_client.dart';
+import 'package:frontend_common/managers/predictions_manager.dart';
+import 'package:frontend_common/models/server_command.dart';
 
 NeurobioClient get _connexion => NeurobioClient.instance;
 
@@ -39,7 +39,7 @@ class _MainScreenState extends State<MainScreen> {
       data: _connexion.lastTrialAnalogsData, graphType: DataGraphType.emg);
 
   bool _isBusy = false;
-  bool get isServerConnected => _connexion.isInitialized;
+  bool get isServerConnected => _connexion.isConnected;
   bool get canSendCommand => !_isBusy && isServerConnected;
 
   bool _showLastTrial = false;
@@ -53,13 +53,12 @@ class _MainScreenState extends State<MainScreen> {
       _showLiveAnalyses = false;
       _isBusy = true;
     });
-    await _connexion.initialize(
-      onConnexionLost: _disconnectServer,
-      onNewLiveAnalogsData: _onNewLiveAnalogsData,
-      onNewLiveAnalyses: _onNewLiveAnalyses,
-    );
+    await _connexion.connect();
     // Register for future messages from the backend
-    _connexion.onBackendUpdated.listen(_onBackendUpdated);
+    _connexion.onBackendUpdated.addListener(_onBackendUpdated);
+    _connexion.onConnexionLost.addListener(_disconnectServer);
+    _connexion.onNewLiveAnalogsData.addListener(_onNewLiveAnalogsData);
+    _connexion.onNewLiveAnalyses.addListener(_onNewLiveAnalyses);
 
     await _requestCurrentStates();
   }
@@ -81,7 +80,6 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _disconnectServer() async {
     setState(() => _isBusy = true);
-    await _connexion.disconnect();
     PredictionsManager.instance.clearActive();
     _resetInternalStates();
     _isBusy = false;
@@ -299,12 +297,12 @@ class _MainScreenState extends State<MainScreen> {
       children: [
         isConnected
             ? ElevatedButton(
-                onPressed: !_isBusy && _connexion.isInitialized
+                onPressed: !_isBusy && _connexion.isConnected
                     ? onClickedDisconnect
                     : null,
                 child: Text('Disconnect $name'))
             : ElevatedButton(
-                onPressed: !_isBusy && _connexion.isInitialized
+                onPressed: !_isBusy && _connexion.isConnected
                     ? onClickedConnect
                     : null,
                 child: Text('Connect $name')),
@@ -314,9 +312,8 @@ class _MainScreenState extends State<MainScreen> {
             children: [
               const SizedBox(width: 12),
               ElevatedButton(
-                  onPressed: !_isBusy && _connexion.isInitialized
-                      ? onClickedZero
-                      : null,
+                  onPressed:
+                      !_isBusy && _connexion.isConnected ? onClickedZero : null,
                   child: const Text('Zéro')),
             ],
           )
@@ -416,11 +413,11 @@ class _MainScreenState extends State<MainScreen> {
               ElevatedButton(
                 onPressed: _isBusy
                     ? null
-                    : (_connexion.isInitialized
+                    : (_connexion.isConnected
                         ? _disconnectServer
                         : _connectServer),
                 child: Text(
-                  _connexion.isInitialized ? 'Disconnect' : 'Connect',
+                  _connexion.isConnected ? 'Disconnect' : 'Connect',
                 ),
               ),
               const SizedBox(height: 12),

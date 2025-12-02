@@ -3,8 +3,8 @@ import 'dart:math';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:frontend/models/data.dart';
-import 'package:frontend/models/time_series_data.dart';
+import 'package:frontend_common/models/data.dart';
+import 'package:frontend_common/models/time_series_data.dart';
 
 enum DataGraphType { emg, analog, predictions }
 
@@ -343,28 +343,24 @@ class _RadioCombineChannels extends StatelessWidget {
     final channelsName =
         graphType == DataGraphType.predictions ? 'predictions' : 'channels';
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: 200,
-          child: RadioListTile<bool>(
-            title: Text('Combine $channelsName'),
-            value: true,
-            groupValue: combineChannels,
-            onChanged: (value) => onChanged(value!),
+    return RadioGroup(
+      groupValue: combineChannels,
+      onChanged: (value) => onChanged(value!),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 200,
+            child: RadioListTile<bool>(
+                title: Text('Combine $channelsName'), value: true),
           ),
-        ),
-        SizedBox(
-          width: 200,
-          child: RadioListTile<bool>(
-            title: Text('Separate $channelsName'),
-            value: false,
-            groupValue: combineChannels,
-            onChanged: (value) => onChanged(value!),
+          SizedBox(
+            width: 200,
+            child: RadioListTile<bool>(
+                title: Text('Separate $channelsName'), value: false),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

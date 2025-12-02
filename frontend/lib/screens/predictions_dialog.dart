@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:frontend/managers/predictions_manager.dart';
-import 'package:frontend/models/prediction_model.dart';
 import 'package:frontend/widgets/animated_expanding_card.dart';
+import 'package:frontend_common/managers/predictions_manager.dart';
+import 'package:frontend_common/models/prediction_model.dart';
 
 class DecimalInputFormatter extends TextInputFormatter {
   @override

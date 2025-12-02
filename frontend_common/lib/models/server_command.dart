@@ -1,4 +1,4 @@
-import 'package:frontend/managers/neurobio_client.dart';
+import 'package:frontend_common/managers/neurobio_client.dart';
 
 enum ServerCommand {
   handshake,
@@ -153,11 +153,13 @@ enum ServerCommand {
     final packet = <int>[];
     for (int i = 3; i >= 0; i--) {
       packet.add(
-          int.parse(protocolVersion.substring(i * 2, i * 2 + 2), radix: 16));
+        int.parse(protocolVersion.substring(i * 2, i * 2 + 2), radix: 16),
+      );
     }
     for (int i = 3; i >= 0; i--) {
-      packet
-          .add(int.parse(commandRadix.substring(i * 2, i * 2 + 2), radix: 16));
+      packet.add(
+        int.parse(commandRadix.substring(i * 2, i * 2 + 2), radix: 16),
+      );
     }
     return packet;
   }

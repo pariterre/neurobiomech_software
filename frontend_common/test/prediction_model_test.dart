@@ -1,12 +1,16 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:frontend/models/prediction_model.dart';
+import 'package:frontend_common/models/prediction_model.dart';
+import 'package:test/test.dart';
 
 void main() {
   test('PredictionStartWhenTypes enum Constructor', () {
-    expect(PredictionStartWhenTypes.fromString('threshold'),
-        PredictionStartWhenTypes.threshold);
-    expect(PredictionStartWhenTypes.fromString('direction'),
-        PredictionStartWhenTypes.direction);
+    expect(
+      PredictionStartWhenTypes.fromString('threshold'),
+      PredictionStartWhenTypes.threshold,
+    );
+    expect(
+      PredictionStartWhenTypes.fromString('direction'),
+      PredictionStartWhenTypes.direction,
+    );
   });
 
   test('PredictionStartWhenTypes enum values', () {
@@ -17,17 +21,27 @@ void main() {
   });
 
   test('PredictionComparator enum Constructor', () {
-    expect(PredictionComparators.fromString('>'),
-        PredictionComparators.greaterThan);
-    expect(PredictionComparators.fromString('>='),
-        PredictionComparators.greaterThanOrEqual);
     expect(
-        PredictionComparators.fromString('<'), PredictionComparators.lessThan);
-    expect(PredictionComparators.fromString('<='),
-        PredictionComparators.lessThanOrEqual);
+      PredictionComparators.fromString('>'),
+      PredictionComparators.greaterThan,
+    );
+    expect(
+      PredictionComparators.fromString('>='),
+      PredictionComparators.greaterThanOrEqual,
+    );
+    expect(
+      PredictionComparators.fromString('<'),
+      PredictionComparators.lessThan,
+    );
+    expect(
+      PredictionComparators.fromString('<='),
+      PredictionComparators.lessThanOrEqual,
+    );
     expect(PredictionComparators.fromString('=='), PredictionComparators.equal);
     expect(
-        PredictionComparators.fromString('!='), PredictionComparators.notEqual);
+      PredictionComparators.fromString('!='),
+      PredictionComparators.notEqual,
+    );
   });
 
   test('PredictionComparator enum values', () {
@@ -42,10 +56,14 @@ void main() {
   });
 
   test('PredictionDirections enum Constructor', () {
-    expect(PredictionDirections.fromString('positive'),
-        PredictionDirections.positive);
-    expect(PredictionDirections.fromString('negative'),
-        PredictionDirections.negative);
+    expect(
+      PredictionDirections.fromString('positive'),
+      PredictionDirections.positive,
+    );
+    expect(
+      PredictionDirections.fromString('negative'),
+      PredictionDirections.negative,
+    );
   });
 
   test('PredictionDirections enum values', () {
@@ -56,31 +74,43 @@ void main() {
   });
 
   test('PredictionAnalyzers enum Constructor', () {
-    expect(PredictionAnalyzers.fromJsonString('cyclic_timed_events'),
-        PredictionAnalyzers.cyclicTimedEvents);
+    expect(
+      PredictionAnalyzers.fromJsonString('cyclic_timed_events'),
+      PredictionAnalyzers.cyclicTimedEvents,
+    );
   });
 
   test('PredictionAnalyzers enum values', () {
     expect(PredictionAnalyzers.values.length, 1);
 
-    expect(PredictionAnalyzers.cyclicTimedEvents.toString(),
-        'Cyclic timed events');
+    expect(
+      PredictionAnalyzers.cyclicTimedEvents.toString(),
+      'Cyclic timed events',
+    );
   });
 
   test('PredictionDevices enum Constructor', () {
-    expect(PredictionDevices.fromString('DelsysAnalogDataCollector'),
-        PredictionDevices.delsysAnalogDataCollector);
-    expect(PredictionDevices.fromString('DelsysEmgDataCollector'),
-        PredictionDevices.delsysEmgDataCollector);
+    expect(
+      PredictionDevices.fromString('DelsysAnalogDataCollector'),
+      PredictionDevices.delsysAnalogDataCollector,
+    );
+    expect(
+      PredictionDevices.fromString('DelsysEmgDataCollector'),
+      PredictionDevices.delsysEmgDataCollector,
+    );
   });
 
   test('PredictionDevices enum values', () {
     expect(PredictionDevices.values.length, 2);
 
-    expect(PredictionDevices.delsysAnalogDataCollector.toString(),
-        'DelsysAnalogDataCollector');
-    expect(PredictionDevices.delsysEmgDataCollector.toString(),
-        'DelsysEmgDataCollector');
+    expect(
+      PredictionDevices.delsysAnalogDataCollector.toString(),
+      'DelsysAnalogDataCollector',
+    );
+    expect(
+      PredictionDevices.delsysEmgDataCollector.toString(),
+      'DelsysEmgDataCollector',
+    );
   });
 
   test('PredictionStartWhenThreshold', () {
@@ -89,7 +119,7 @@ void main() {
       'device': 'DelsysAnalogDataCollector',
       'channel': 0,
       'comparator': '>',
-      'value': 0.5
+      'value': 0.5,
     });
 
     expect(event.type, PredictionStartWhenTypes.threshold);
@@ -109,7 +139,9 @@ void main() {
     expect(created, isA<PredictionStartWhenThreshold>());
     final createAsThreshold = created as PredictionStartWhenThreshold;
     expect(
-        createAsThreshold.device, PredictionDevices.delsysAnalogDataCollector);
+      createAsThreshold.device,
+      PredictionDevices.delsysAnalogDataCollector,
+    );
     expect(createAsThreshold.channel, 0);
     expect(createAsThreshold.comparator, PredictionComparators.greaterThan);
     expect(createAsThreshold.value, 0.5);
@@ -120,7 +152,7 @@ void main() {
       'type': 'direction',
       'device': 'DelsysAnalogDataCollector',
       'channel': 0,
-      'direction': 'positive'
+      'direction': 'positive',
     });
 
     expect(event.type, PredictionStartWhenTypes.direction);
@@ -138,27 +170,32 @@ void main() {
     expect(created, isA<PredictionStartWhenDirection>());
     final createAsDirection = created as PredictionStartWhenDirection;
     expect(
-        createAsDirection.device, PredictionDevices.delsysAnalogDataCollector);
+      createAsDirection.device,
+      PredictionDevices.delsysAnalogDataCollector,
+    );
     expect(createAsDirection.channel, 0);
     expect(createAsDirection.direction, PredictionDirections.positive);
   });
 
   test('PredictionEvent', () {
     final event = PredictionEvent(
-        name: 'First event',
-        previousEventName: 'Last event',
-        duration: Duration.zero,
-        startWhen: [
-          PredictionStartWhenThreshold(
-              device: PredictionDevices.delsysAnalogDataCollector,
-              channel: 0,
-              comparator: PredictionComparators.greaterThan,
-              value: 0.5),
-          PredictionStartWhenDirection(
-              device: PredictionDevices.delsysAnalogDataCollector,
-              channel: 1,
-              direction: PredictionDirections.positive)
-        ]);
+      name: 'First event',
+      previousEventName: 'Last event',
+      duration: Duration.zero,
+      startWhen: [
+        PredictionStartWhenThreshold(
+          device: PredictionDevices.delsysAnalogDataCollector,
+          channel: 0,
+          comparator: PredictionComparators.greaterThan,
+          value: 0.5,
+        ),
+        PredictionStartWhenDirection(
+          device: PredictionDevices.delsysAnalogDataCollector,
+          channel: 1,
+          direction: PredictionDirections.positive,
+        ),
+      ],
+    );
 
     final serialized = event.serialize();
     expect(serialized['name'], 'First event');
@@ -195,27 +232,31 @@ void main() {
 
   test('PredictionModel', () {
     final model = PredictionModel(
-        name: 'Test Model',
-        analyzer: PredictionAnalyzers.cyclicTimedEvents,
-        timeReferenceDevice: PredictionDevices.delsysAnalogDataCollector,
-        learningRate: 0.1,
-        events: [
-          PredictionEvent(
-              name: 'First event',
-              previousEventName: 'Last event',
-              duration: const Duration(milliseconds: 123),
-              startWhen: [
-                PredictionStartWhenThreshold(
-                    device: PredictionDevices.delsysAnalogDataCollector,
-                    channel: 0,
-                    comparator: PredictionComparators.greaterThan,
-                    value: 0.5),
-                PredictionStartWhenDirection(
-                    device: PredictionDevices.delsysAnalogDataCollector,
-                    channel: 1,
-                    direction: PredictionDirections.positive)
-              ]),
-        ]);
+      name: 'Test Model',
+      analyzer: PredictionAnalyzers.cyclicTimedEvents,
+      timeReferenceDevice: PredictionDevices.delsysAnalogDataCollector,
+      learningRate: 0.1,
+      events: [
+        PredictionEvent(
+          name: 'First event',
+          previousEventName: 'Last event',
+          duration: const Duration(milliseconds: 123),
+          startWhen: [
+            PredictionStartWhenThreshold(
+              device: PredictionDevices.delsysAnalogDataCollector,
+              channel: 0,
+              comparator: PredictionComparators.greaterThan,
+              value: 0.5,
+            ),
+            PredictionStartWhenDirection(
+              device: PredictionDevices.delsysAnalogDataCollector,
+              channel: 1,
+              direction: PredictionDirections.positive,
+            ),
+          ],
+        ),
+      ],
+    );
 
     final serialized = model.serialize();
     expect(serialized['name'], 'Test Model');
@@ -227,21 +268,27 @@ void main() {
     expect(serialized['events'][0]['name'], 'First event');
     expect(serialized['events'][0]['previous'], 'Last event');
     expect(serialized['events'][0]['start_when'].length, 2);
-    expect(serialized['events'][0]['start_when'][0]['device'],
-        'DelsysAnalogDataCollector');
+    expect(
+      serialized['events'][0]['start_when'][0]['device'],
+      'DelsysAnalogDataCollector',
+    );
     expect(serialized['events'][0]['start_when'][0]['channel'], 0);
     expect(serialized['events'][0]['start_when'][0]['comparator'], '>');
     expect(serialized['events'][0]['start_when'][0]['value'], 0.5);
-    expect(serialized['events'][0]['start_when'][1]['device'],
-        'DelsysAnalogDataCollector');
+    expect(
+      serialized['events'][0]['start_when'][1]['device'],
+      'DelsysAnalogDataCollector',
+    );
     expect(serialized['events'][0]['start_when'][1]['channel'], 1);
     expect(serialized['events'][0]['start_when'][1]['direction'], 'positive');
 
     final created = PredictionModel.fromSerialized(serialized);
     expect(created.name, 'Test Model');
     expect(created.analyzer, PredictionAnalyzers.cyclicTimedEvents);
-    expect(created.timeReferenceDevice,
-        PredictionDevices.delsysAnalogDataCollector);
+    expect(
+      created.timeReferenceDevice,
+      PredictionDevices.delsysAnalogDataCollector,
+    );
     expect(created.learningRate, 0.1);
     expect(created.events.length, 1);
     expect(created.events[0].name, 'First event');

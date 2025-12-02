@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:frontend/models/prediction_model.dart';
+import 'package:frontend_common/models/prediction_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PredictionsManager {
@@ -77,8 +77,9 @@ class PredictionsManager {
     final predictions = preferences.getStringList('predictions');
     if (predictions != null) {
       for (final predictionAsJson in predictions) {
-        final prediction =
-            PredictionModel.fromSerialized(jsonDecode(predictionAsJson));
+        final prediction = PredictionModel.fromSerialized(
+          jsonDecode(predictionAsJson),
+        );
         mergePrediction(prediction);
       }
     }
