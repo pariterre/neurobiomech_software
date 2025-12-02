@@ -2,13 +2,14 @@ part of 'time_series_data.dart';
 
 class EmgTimeSeriesData extends TimeSeriesData {
   EmgTimeSeriesData({
-    required super.initialTime,
     required super.channelCount,
     required super.isFromLiveData,
     int defaultSlidingRmsWindow = 50,
-  })  : _dataRaw = List.generate(channelCount, (_) => <double>[]),
-        _slidingRmsWindows =
-            List<int>.filled(channelCount, defaultSlidingRmsWindow);
+  }) : _dataRaw = List.generate(channelCount, (_) => <double>[]),
+       _slidingRmsWindows = List<int>.filled(
+         channelCount,
+         defaultSlidingRmsWindow,
+       );
 
   final List<int> _slidingRmsWindows;
   late final List<bool> _applySlidingRms = List.filled(channelCount, true);
@@ -73,29 +74,62 @@ class EmgTimeSeriesData extends TimeSeriesData {
     for (int channelIndex = 0; channelIndex < channelCount; channelIndex++) {
       if (!_applySlidingRms[channelIndex]) continue;
 
-      for (int start = firstNewIndex - 2 * _slidingRmsWindows[channelIndex];
-          start < lastNewIndex - _slidingRmsWindows[channelIndex];
-          start++) {
+      for (
+        int start = firstNewIndex - 2 * _slidingRmsWindows[channelIndex];
+        start < lastNewIndex - _slidingRmsWindows[channelIndex];
+        start++
+      ) {
         if (start < 0) continue;
 
         // Determine the range for this chunk, and compute the RMS
         final end = start + _slidingRmsWindows[channelIndex];
-        _data[channelIndex][start] =
-            _computeRms(_dataRaw[channelIndex].sublist(start, end));
+        _data[channelIndex][start] = _computeRms(
+          _dataRaw[channelIndex].sublist(start, end),
+        );
       }
-      for (int start = lastNewIndex - _slidingRmsWindows[channelIndex];
-          start < lastNewIndex;
-          start++) {
+      for (
+        int start = lastNewIndex - _slidingRmsWindows[channelIndex];
+        start < lastNewIndex;
+        start++
+      ) {
         _data[channelIndex][start] = 0;
       }
     }
 
     return firstNewIndex;
   }
+
+  EmgTimeSeriesData._fromCopy({
+    required super.channelCount,
+    int defaultSlidingRmsWindow = 50,
+  }) : _dataRaw = List.generate(channelCount, (_) => <double>[]),
+       _slidingRmsWindows = List<int>.filled(
+         channelCount,
+         defaultSlidingRmsWindow,
+       ),
+       super(isFromLiveData: false);
+
+  @override
+  EmgTimeSeriesData copy() {
+    final newData = EmgTimeSeriesData._fromCopy(channelCount: channelCount);
+    newData._slidingRmsWindows.setAll(0, _slidingRmsWindows);
+    newData._applySlidingRms.setAll(0, _applySlidingRms);
+
+    newData.time.addAll(time);
+    for (int channelIndex = 0; channelIndex < channelCount; channelIndex++) {
+      newData._data[channelIndex].addAll(_data[channelIndex]);
+      newData._dataRaw[channelIndex].addAll(_dataRaw[channelIndex]);
+    }
+    return newData;
+  }
 }
 
 double _computeRms(List<double> data) {
-  return sqrt(data.fold<double>(
-          0, (previousValue, element) => previousValue + element * element) /
-      data.length);
+  return sqrt(
+    data.fold<double>(
+          0,
+          (previousValue, element) => previousValue + element * element,
+        ) /
+        data.length,
+  );
 }

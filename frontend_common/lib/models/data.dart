@@ -41,16 +41,22 @@ class Data {
     required bool isFromLiveData,
   }) : _initialTime = initialTime,
        delsysAnalog = TimeSeriesData(
-         initialTime: initialTime,
          channelCount: analogChannelCount,
          isFromLiveData: isFromLiveData,
        ),
        delsysEmg = EmgTimeSeriesData(
-         initialTime: initialTime,
          channelCount: emgChannelCount,
          isFromLiveData: isFromLiveData,
        ),
-       predictions = PredictionData(initialTime: initialTime, channelCount: 0);
+       predictions = PredictionData(channelCount: 0);
+
+  Data._fromCopy({
+    required this.dataGenericType,
+    required DateTime initialTime,
+    required this.delsysAnalog,
+    required this.delsysEmg,
+    required this.predictions,
+  }) : _initialTime = initialTime;
 
   void appendFromJson(Map<String, dynamic> json) {
     switch (dataGenericType) {
@@ -99,6 +105,27 @@ class Data {
     }
   }
 
+  void dropAfter(DateTime t) {
+    switch (dataGenericType) {
+      case DataGenericTypes.analogs:
+        delsysAnalog.dropAfter(
+          (t.millisecondsSinceEpoch - initialTime.millisecondsSinceEpoch)
+              .toDouble(),
+        );
+        delsysEmg.dropAfter(
+          (t.millisecondsSinceEpoch - initialTime.millisecondsSinceEpoch)
+              .toDouble(),
+        );
+        break;
+      case DataGenericTypes.predictions:
+        predictions.dropAfter(
+          (t.millisecondsSinceEpoch - initialTime.millisecondsSinceEpoch)
+              .toDouble(),
+        );
+        break;
+    }
+  }
+
   Future<void> toFile(String path) async {
     switch (dataGenericType) {
       case DataGenericTypes.analogs:
@@ -112,4 +139,12 @@ class Data {
         throw UnimplementedError();
     }
   }
+
+  Data copy() => Data._fromCopy(
+    dataGenericType: dataGenericType,
+    initialTime: initialTime,
+    delsysAnalog: delsysAnalog.copy(),
+    delsysEmg: delsysEmg.copy(),
+    predictions: predictions.copy(),
+  );
 }

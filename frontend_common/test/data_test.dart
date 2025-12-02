@@ -64,11 +64,7 @@ void main() {
   });
 
   test('TimeSeriesData', () {
-    final data = TimeSeriesData(
-      initialTime: DateTime(1000),
-      channelCount: 2,
-      isFromLiveData: false,
-    );
+    final data = TimeSeriesData(channelCount: 2, isFromLiveData: false);
     data.appendFromJson({
       'starting_time': 10,
       'data': [

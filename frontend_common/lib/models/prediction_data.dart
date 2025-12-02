@@ -1,10 +1,7 @@
 part of 'time_series_data.dart';
 
 class PredictionData extends TimeSeriesData {
-  PredictionData({
-    required super.initialTime,
-    required super.channelCount,
-  }) : super(isFromLiveData: true);
+  PredictionData({required super.channelCount}) : super(isFromLiveData: true);
 
   final List<String> labels = [];
 
@@ -46,9 +43,24 @@ class PredictionData extends TimeSeriesData {
         time.add((data.value[0] as int) / 1000.0 - _timeOffset!);
       }
       _data[i].addAll(
-          (data.value[1] as List<dynamic>).map((e) => e as double).toList());
+        (data.value[1] as List<dynamic>).map((e) => e as double).toList(),
+      );
     }
 
     return time.length;
+  }
+
+  PredictionData._fromCopy({required super.channelCount})
+    : super(isFromLiveData: false);
+
+  @override
+  PredictionData copy() {
+    final newData = PredictionData._fromCopy(channelCount: channelCount);
+    newData.time.addAll(time);
+    newData.labels.addAll(labels);
+    for (int channelIndex = 0; channelIndex < channelCount; channelIndex++) {
+      newData._data[channelIndex].addAll(_data[channelIndex]);
+    }
+    return newData;
   }
 }

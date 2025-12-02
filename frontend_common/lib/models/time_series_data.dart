@@ -29,12 +29,9 @@ class TimeSeriesData {
   bool get isEmpty => time.isEmpty;
   bool get isNotEmpty => time.isNotEmpty;
 
-  TimeSeriesData({
-    required DateTime initialTime,
-    required int channelCount,
-    required this.isFromLiveData,
-  })  : _channelCount = channelCount,
-        _data = List.generate(channelCount, (_) => <double>[]);
+  TimeSeriesData({required int channelCount, required this.isFromLiveData})
+    : _channelCount = channelCount,
+      _data = List.generate(channelCount, (_) => <double>[]);
 
   int appendFromJson(Map<String, dynamic> json) {
     final timeSeries = (json['data'] as List<dynamic>);
@@ -44,22 +41,26 @@ class TimeSeriesData {
     bool isNew = _timeOffset == null;
     _timeOffset ??=
         ((isFromLiveData ? timeSeries.last[0] : timeSeries.first[0]) as int) /
-            1000.0;
+        1000.0;
 
     final maxLength = timeSeries.length;
-    final newT =
-        timeSeries.map((e) => (e[0] as int) / 1000.0 - _timeOffset!).toList();
+    final newT = timeSeries
+        .map((e) => (e[0] as int) / 1000.0 - _timeOffset!)
+        .toList();
 
     // Find the first index where the new time is larger than the last time of t
-    final firstNewIndex =
-        isNew ? 0 : newT.indexWhere((value) => value > time.last);
+    final firstNewIndex = isNew
+        ? 0
+        : newT.indexWhere((value) => value > time.last);
     time.addAll(newT.getRange(firstNewIndex, maxLength));
 
     // Parse the data for each channel
     for (int channelIndex = 0; channelIndex < channelCount; channelIndex++) {
-      _data[channelIndex].addAll(timeSeries
-          .getRange(firstNewIndex, maxLength)
-          .map<double>((e) => e[1][channelIndex]));
+      _data[channelIndex].addAll(
+        timeSeries
+            .getRange(firstNewIndex, maxLength)
+            .map<double>((e) => e[1][channelIndex]),
+      );
     }
 
     return time.length - (maxLength - firstNewIndex);
@@ -71,7 +72,8 @@ class TimeSeriesData {
     final buffer = StringBuffer();
 
     buffer.writeln(
-        'time (s),${List.generate(channelCount, (index) => 'channel$index').join(',')}');
+      'time (s),${List.generate(channelCount, (index) => 'channel$index').join(',')}',
+    );
 
     final data = getData(raw: raw);
     for (int i = 0; i < time.length; i++) {
@@ -101,5 +103,32 @@ class TimeSeriesData {
       }
     }
     return firstIndexToKeep;
+  }
+
+  int dropAfter(double elapsedTime) {
+    if (time.isEmpty) return 0;
+
+    final lastIndexToKeep = time.indexWhere((value) => value >= elapsedTime);
+    // If we get to the end, we should keep everything, otherwise drop from lastIndexToKeep
+    if (lastIndexToKeep != -1) {
+      time.removeRange(lastIndexToKeep, time.length);
+      for (var channel in _data) {
+        channel.removeRange(lastIndexToKeep, channel.length);
+      }
+    }
+    return lastIndexToKeep;
+  }
+
+  TimeSeriesData copy() {
+    final copy = TimeSeriesData(
+      channelCount: channelCount,
+      isFromLiveData: false,
+    );
+    copy._timeOffset = null;
+    copy.time.addAll(time);
+    for (int channelIndex = 0; channelIndex < channelCount; channelIndex++) {
+      copy._data[channelIndex].addAll(_data[channelIndex]);
+    }
+    return copy;
   }
 }
