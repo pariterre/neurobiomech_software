@@ -952,6 +952,10 @@ class _NeurobioClientMockController {
       if (_isSimulatingAnalogData) {
         throw UnimplementedError('Analog data simulation not implemented yet');
       }
+
+      NeurobioClient.instance.onNewLiveAnalogsData.notifyListeners(
+        (callback) => callback(),
+      );
     });
   }
 
