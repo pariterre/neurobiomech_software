@@ -50,12 +50,17 @@ class PredictionData extends TimeSeriesData {
     return time.length;
   }
 
-  PredictionData._fromCopy({required super.channelCount})
-    : super(isFromLiveData: false);
+  PredictionData._fromCopy({
+    required super.channelCount,
+    required super.isFromLiveData,
+  });
 
   @override
-  PredictionData copy() {
-    final newData = PredictionData._fromCopy(channelCount: channelCount);
+  PredictionData copy({bool isFromLiveData = false}) {
+    final newData = PredictionData._fromCopy(
+      channelCount: channelCount,
+      isFromLiveData: isFromLiveData,
+    );
     newData.time.addAll(time);
     newData.labels.addAll(labels);
     for (int channelIndex = 0; channelIndex < channelCount; channelIndex++) {

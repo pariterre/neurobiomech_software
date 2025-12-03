@@ -890,15 +890,87 @@ class NeurobioClient {
   }
 }
 
+class _NeurobioClientMockController {
+  Timer? _analogDataTimer;
+  final Data liveAnalogsData;
+  bool _isSimulatingEmgData = false;
+  final Duration _liveDataInterval = Duration(milliseconds: 200);
+  final Duration _emgSampleRate = Duration(microseconds: 500); // 2000 Hz
+
+  late final List<double> _emgValues = List.filled(
+    liveAnalogsData.delsysEmg.channelCount,
+    0.0,
+  );
+  void setEmgChannelValue({required int channel, required double value}) {
+    if (channel < 0 || channel >= liveAnalogsData.delsysEmg.channelCount) {
+      throw ArgumentError('Channel index out of range');
+    }
+    _emgValues[channel] = value;
+  }
+
+  bool _isSimulatingAnalogData = false;
+
+  void startLiveAnalogData({
+    bool includeEmg = false,
+    bool includeAnalogs = false,
+  }) {
+    _isSimulatingEmgData |= includeEmg;
+    _isSimulatingAnalogData |= includeAnalogs;
+    liveAnalogsData.clear(initialTime: DateTime.now());
+
+    _analogDataTimer?.cancel();
+    _analogDataTimer = Timer.periodic(_liveDataInterval, (_) {
+      if (_isSimulatingEmgData) {
+        final firstTimeFrame =
+            liveAnalogsData.initialTime.microsecondsSinceEpoch +
+            liveAnalogsData.delsysEmg.length * _emgSampleRate.inMicroseconds;
+
+        final framesPerInterval =
+            _liveDataInterval.inMicroseconds ~/ _emgSampleRate.inMicroseconds;
+        final List values = [
+          for (int i = 0; i < framesPerInterval; i++)
+            List.from([
+              firstTimeFrame + (i * _emgSampleRate.inMicroseconds),
+              _emgValues,
+              null,
+            ]),
+        ];
+        liveAnalogsData.delsysEmg.appendFromJson({
+          'starting_time': liveAnalogsData.initialTime.microsecondsSinceEpoch,
+          'data': values,
+        });
+      }
+
+      if (_isSimulatingAnalogData) {
+        throw UnimplementedError('Analog data simulation not implemented yet');
+      }
+    });
+  }
+
+  void stopLiveAnalogData() {
+    _analogDataTimer?.cancel();
+    _analogDataTimer = null;
+    liveAnalogsData.clear(initialTime: DateTime.now(), fullReset: true);
+
+    _isSimulatingEmgData = false;
+    _isSimulatingAnalogData = false;
+  }
+
+  _NeurobioClientMockController._({required this.liveAnalogsData});
+}
+
 class NeurobioClientMock extends NeurobioClient {
   NeurobioClientMock._() : super._();
-
   static NeurobioClient get instance => _instance ??= NeurobioClientMock._();
 
   bool _isMockConnected = false;
 
   @override
   bool get isConnected => _isMockConnected;
+
+  late final controller = _NeurobioClientMockController._(
+    liveAnalogsData: super.liveAnalogsData.copy(isFromLiveData: true),
+  );
 
   @override
   Future<bool> connect({
@@ -934,14 +1006,20 @@ class NeurobioClientMock extends NeurobioClient {
   @override
   Future<ServerMessage> _performSend(ServerCommand command) async {
     switch (command) {
-      case ServerCommand.handshake:
-      case ServerCommand.connectDelsysAnalog:
       case ServerCommand.connectDelsysEmg:
+        _isConnectedToDelsysEmg = true;
+        controller.startLiveAnalogData(includeEmg: true);
+        break;
+      case ServerCommand.disconnectDelsysEmg:
+        _isConnectedToDelsysEmg = false;
+        controller.stopLiveAnalogData();
+        break;
+      case ServerCommand.connectDelsysAnalog:
       case ServerCommand.connectMagstim:
+      case ServerCommand.handshake:
       case ServerCommand.zeroDelsysAnalog:
       case ServerCommand.zeroDelsysEmg:
       case ServerCommand.disconnectDelsysAnalog:
-      case ServerCommand.disconnectDelsysEmg:
       case ServerCommand.disconnectMagstim:
       case ServerCommand.startRecording:
       case ServerCommand.stopRecording:
@@ -987,6 +1065,9 @@ class NeurobioClientMock extends NeurobioClient {
   bool _hasRecordedMock = false;
   @override
   bool get hasRecorded => !isRecording && _hasRecordedMock;
+
+  @override
+  Data get liveAnalogsData => controller.liveAnalogsData;
 
   @override
   void _setFlagsFromCommand(ServerCommand command) {

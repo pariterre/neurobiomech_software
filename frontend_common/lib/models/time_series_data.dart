@@ -119,10 +119,10 @@ class TimeSeriesData {
     return lastIndexToKeep;
   }
 
-  TimeSeriesData copy() {
+  TimeSeriesData copy({bool isFromLiveData = false}) {
     final copy = TimeSeriesData(
       channelCount: channelCount,
-      isFromLiveData: false,
+      isFromLiveData: isFromLiveData,
     );
     copy._timeOffset = null;
     copy.time.addAll(time);

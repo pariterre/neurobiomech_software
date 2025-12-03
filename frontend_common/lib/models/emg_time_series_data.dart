@@ -102,16 +102,19 @@ class EmgTimeSeriesData extends TimeSeriesData {
   EmgTimeSeriesData._fromCopy({
     required super.channelCount,
     int defaultSlidingRmsWindow = 50,
+    required super.isFromLiveData,
   }) : _dataRaw = List.generate(channelCount, (_) => <double>[]),
        _slidingRmsWindows = List<int>.filled(
          channelCount,
          defaultSlidingRmsWindow,
-       ),
-       super(isFromLiveData: false);
+       );
 
   @override
-  EmgTimeSeriesData copy() {
-    final newData = EmgTimeSeriesData._fromCopy(channelCount: channelCount);
+  EmgTimeSeriesData copy({bool isFromLiveData = false}) {
+    final newData = EmgTimeSeriesData._fromCopy(
+      channelCount: channelCount,
+      isFromLiveData: isFromLiveData,
+    );
     newData._slidingRmsWindows.setAll(0, _slidingRmsWindows);
     newData._applySlidingRms.setAll(0, _applySlidingRms);
 

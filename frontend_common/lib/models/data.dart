@@ -140,11 +140,11 @@ class Data {
     }
   }
 
-  Data copy() => Data._fromCopy(
+  Data copy({bool isFromLiveData = false}) => Data._fromCopy(
     dataGenericType: dataGenericType,
     initialTime: initialTime,
-    delsysAnalog: delsysAnalog.copy(),
-    delsysEmg: delsysEmg.copy(),
-    predictions: predictions.copy(),
+    delsysAnalog: delsysAnalog.copy(isFromLiveData: isFromLiveData),
+    delsysEmg: delsysEmg.copy(isFromLiveData: isFromLiveData),
+    predictions: predictions.copy(isFromLiveData: isFromLiveData),
   );
 }
