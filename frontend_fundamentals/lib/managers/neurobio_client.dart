@@ -89,6 +89,7 @@ class NeurobioClient {
   /// Prepare the events listeners
   final onBackendUpdated = GenericListener<Function(ServerCommand)>();
   final onConnexionLost = GenericListener<Function()>();
+  final onDeviceConnectionChanged = GenericListener<Function()>();
   final onNewLiveAnalogsData = GenericListener<Function()>();
   final onNewLiveAnalyses = GenericListener<Function()>();
 
@@ -192,10 +193,8 @@ class NeurobioClient {
     _rawLiveAnalysesList.clear();
     _liveAnalysesDataCompleter = Completer();
 
-    onBackendUpdated.cancelListeners();
-    onConnexionLost.cancelListeners();
-    onNewLiveAnalogsData.cancelListeners();
-    onNewLiveAnalyses.cancelListeners();
+    onDeviceConnectionChanged.notifyListeners((callback) => callback());
+    onConnexionLost.notifyListeners((callback) => callback());
 
     _log.info('Connection closed');
   }
@@ -566,15 +565,17 @@ class NeurobioClient {
     // Convert the data to a string (from json)
     _expectedMessageLength = null;
     switch (_currentMessageCommand) {
-      case ServerCommand.handshake:
       case ServerCommand.connectDelsysAnalog:
       case ServerCommand.connectDelsysEmg:
       case ServerCommand.connectMagstim:
-      case ServerCommand.zeroDelsysAnalog:
-      case ServerCommand.zeroDelsysEmg:
       case ServerCommand.disconnectDelsysAnalog:
       case ServerCommand.disconnectDelsysEmg:
       case ServerCommand.disconnectMagstim:
+        onDeviceConnectionChanged.notifyListeners((callback) => callback());
+        break;
+      case ServerCommand.handshake:
+      case ServerCommand.zeroDelsysAnalog:
+      case ServerCommand.zeroDelsysEmg:
       case ServerCommand.startRecording:
       case ServerCommand.stopRecording:
       case ServerCommand.addAnalyzer:
@@ -908,6 +909,13 @@ class _NeurobioClientMockController {
     _emgValues[channel] = value;
   }
 
+  double getEmgChannelValue({required int channel}) {
+    if (channel < 0 || channel >= liveAnalogsData.delsysEmg.channelCount) {
+      throw ArgumentError('Channel index out of range');
+    }
+    return _emgValues[channel];
+  }
+
   bool _isSimulatingAnalogData = false;
 
   void startLiveAnalogData({
@@ -1009,18 +1017,22 @@ class NeurobioClientMock extends NeurobioClient {
       case ServerCommand.connectDelsysEmg:
         _isConnectedToDelsysEmg = true;
         controller.startLiveAnalogData(includeEmg: true);
+        onDeviceConnectionChanged.notifyListeners((callback) => callback());
         break;
       case ServerCommand.disconnectDelsysEmg:
         _isConnectedToDelsysEmg = false;
         controller.stopLiveAnalogData();
+        onDeviceConnectionChanged.notifyListeners((callback) => callback());
         break;
-      case ServerCommand.connectDelsysAnalog:
       case ServerCommand.connectMagstim:
+      case ServerCommand.connectDelsysAnalog:
+      case ServerCommand.disconnectDelsysAnalog:
+      case ServerCommand.disconnectMagstim:
+        onDeviceConnectionChanged.notifyListeners((callback) => callback());
+        break;
       case ServerCommand.handshake:
       case ServerCommand.zeroDelsysAnalog:
       case ServerCommand.zeroDelsysEmg:
-      case ServerCommand.disconnectDelsysAnalog:
-      case ServerCommand.disconnectMagstim:
       case ServerCommand.startRecording:
       case ServerCommand.stopRecording:
       case ServerCommand.addAnalyzer:
