@@ -4,13 +4,13 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
-import 'package:frontend_common/managers/predictions_manager.dart';
-import 'package:frontend_common/models/server_command.dart';
-import 'package:frontend_common/models/data.dart';
-import 'package:frontend_common/models/prediction_model.dart';
-import 'package:frontend_common/models/server_data_type.dart';
-import 'package:frontend_common/models/server_message.dart';
-import 'package:frontend_common/utils/generic_listener.dart';
+import 'package:frontend_fundamentals/managers/predictions_manager.dart';
+import 'package:frontend_fundamentals/models/server_command.dart';
+import 'package:frontend_fundamentals/models/data.dart';
+import 'package:frontend_fundamentals/models/prediction_model.dart';
+import 'package:frontend_fundamentals/models/server_data_type.dart';
+import 'package:frontend_fundamentals/models/server_message.dart';
+import 'package:frontend_fundamentals/utils/generic_listener.dart';
 import 'package:logging/logging.dart';
 
 final _logger = Logger('NeurobioClient');

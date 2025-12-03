@@ -4,9 +4,9 @@ import 'package:frontend/managers/database_manager.dart';
 import 'package:frontend/screens/predictions_dialog.dart';
 import 'package:frontend/widgets/data_graph.dart';
 import 'package:frontend/widgets/save_trial_dialog.dart';
-import 'package:frontend_common/managers/neurobio_client.dart';
-import 'package:frontend_common/managers/predictions_manager.dart';
-import 'package:frontend_common/models/server_command.dart';
+import 'package:frontend_fundamentals/managers/neurobio_client.dart';
+import 'package:frontend_fundamentals/managers/predictions_manager.dart';
+import 'package:frontend_fundamentals/models/server_command.dart';
 
 NeurobioClient get _connexion => NeurobioClient.instance;
 

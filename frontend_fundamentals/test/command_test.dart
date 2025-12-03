@@ -5,8 +5,8 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
-import 'package:frontend_common/models/server_command.dart';
-import 'package:test/test.dart';
+import 'package:frontend_fundamentals/models/server_command.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('Command', () {

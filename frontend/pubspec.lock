@@ -152,10 +152,10 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  frontend_common:
+  frontend_fundamentals:
     dependency: "direct main"
     description:
-      path: "../frontend_common"
+      path: "../frontend_fundamentals"
       relative: true
     source: path
     version: "1.0.0"

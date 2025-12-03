@@ -1,5 +1,5 @@
-import 'package:frontend_common/models/prediction_model.dart';
-import 'package:test/test.dart';
+import 'package:frontend_fundamentals/models/prediction_model.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('PredictionStartWhenTypes enum Constructor', () {

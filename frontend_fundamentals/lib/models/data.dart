@@ -1,4 +1,4 @@
-import 'package:frontend_common/models/time_series_data.dart';
+import 'package:frontend_fundamentals/models/time_series_data.dart';
 
 enum DataGenericTypes { analogs, predictions }
 

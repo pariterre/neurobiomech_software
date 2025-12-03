@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/managers/database_manager.dart';
 import 'package:frontend/screens/main_screen.dart';
-import 'package:frontend_common/managers/neurobio_client.dart';
-import 'package:frontend_common/managers/predictions_manager.dart';
+import 'package:frontend_fundamentals/managers/neurobio_client.dart';
+import 'package:frontend_fundamentals/managers/predictions_manager.dart';
 import 'package:logging/logging.dart';
 
 void main() async {

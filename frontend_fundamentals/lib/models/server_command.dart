@@ -1,4 +1,4 @@
-import 'package:frontend_common/managers/neurobio_client.dart';
+import 'package:frontend_fundamentals/managers/neurobio_client.dart';
 
 enum ServerCommand {
   handshake,

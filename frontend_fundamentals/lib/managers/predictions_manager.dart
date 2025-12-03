@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:frontend_common/models/prediction_model.dart';
+import 'package:frontend_fundamentals/models/prediction_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PredictionsManager {

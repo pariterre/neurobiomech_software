@@ -3,8 +3,8 @@ import 'dart:math';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:frontend_common/models/data.dart';
-import 'package:frontend_common/models/time_series_data.dart';
+import 'package:frontend_fundamentals/models/data.dart';
+import 'package:frontend_fundamentals/models/time_series_data.dart';
 
 enum DataGraphType { emg, analog, predictions }
 

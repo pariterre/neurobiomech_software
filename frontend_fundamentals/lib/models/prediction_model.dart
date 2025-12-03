@@ -1,4 +1,4 @@
-import 'package:frontend_common/utils/collections.dart';
+import 'package:frontend_fundamentals/utils/collections.dart';
 
 enum PredictionStartWhenTypes {
   threshold,
