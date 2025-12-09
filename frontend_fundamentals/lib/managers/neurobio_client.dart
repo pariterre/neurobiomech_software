@@ -929,6 +929,13 @@ class _NeurobioClientMockController {
     _analogDataTimer?.cancel();
     _analogDataTimer = Timer.periodic(_liveDataInterval, (_) {
       if (_isSimulatingEmgData) {
+        final maxBufferSize = 50000;
+        if (liveAnalogsData.delsysEmg.length > maxBufferSize) {
+          // Prevent memory overflow. This comes from the fact that the mock
+          // timer is not perfectly accurate
+          liveAnalogsData.clear(initialTime: DateTime.now());
+        }
+
         final firstTimeFrame =
             liveAnalogsData.initialTime.microsecondsSinceEpoch +
             liveAnalogsData.delsysEmg.length * _emgSampleRate.inMicroseconds;

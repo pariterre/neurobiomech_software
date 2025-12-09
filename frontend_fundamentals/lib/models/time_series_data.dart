@@ -49,9 +49,10 @@ class TimeSeriesData {
         .toList();
 
     // Find the first index where the new time is larger than the last time of t
-    final firstNewIndex = isNew
+    int firstNewIndex = isNew
         ? 0
         : newT.indexWhere((value) => value > time.last);
+    firstNewIndex = firstNewIndex <= 0 ? 0 : firstNewIndex;
     time.addAll(newT.getRange(firstNewIndex, maxLength));
 
     // Parse the data for each channel
